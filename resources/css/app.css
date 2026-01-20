@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   SIDEBAR SCROLLBAR - Desktop uniquement
+   ============================================
+   Scrollbar discrète qui apparaît uniquement au survol
+   ============================================ */
+
+/* Masquer la scrollbar par défaut */
+.sidebar-scrollbar > div {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE et Edge */
+}
+
+.sidebar-scrollbar > div::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+}
+
+/* Afficher la scrollbar au survol du sidebar */
+.sidebar-scrollbar:hover > div {
+    scrollbar-width: thin; /* Firefox - scrollbar fine */
+    scrollbar-color: rgba(156, 163, 175, 0.3) transparent; /* Firefox - couleur grise transparente */
+}
+
+.sidebar-scrollbar:hover > div::-webkit-scrollbar {
+    display: block; /* Chrome, Safari, Opera */
+    width: 6px; /* Largeur fine */
+}
+
+.sidebar-scrollbar:hover > div::-webkit-scrollbar-track {
+    background: transparent; /* Fond transparent */
+}
+
+.sidebar-scrollbar:hover > div::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.3); /* Couleur grise transparente */
+    border-radius: 3px; /* Coins arrondis */
+    transition: background-color 0.2s ease; /* Transition fluide */
+}
+
+.sidebar-scrollbar:hover > div::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(156, 163, 175, 0.5); /* Plus visible au survol direct */
+}
+
+/* Dark mode */
+.dark .sidebar-scrollbar:hover > div {
+    scrollbar-color: rgba(156, 163, 175, 0.4) transparent; /* Firefox dark mode */
+}
+
+.dark .sidebar-scrollbar:hover > div::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.4); /* Dark mode - légèrement plus visible */
+}
+
+.dark .sidebar-scrollbar:hover > div::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(156, 163, 175, 0.6); /* Dark mode hover */
+}
+
+/* ============================================
+   DRAWER SCROLLBAR
+   ============================================
+   Scrollbar discrète pour le contenu du drawer
+   ============================================ */
+
+.drawer-content {
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+}
+
+.drawer-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.drawer-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.drawer-content::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.3);
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+}
+
+.drawer-content::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(156, 163, 175, 0.5);
+}
+
+.dark .drawer-content {
+    scrollbar-color: rgba(156, 163, 175, 0.4) transparent;
+}
+
+.dark .drawer-content::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.4);
+}
+
+.dark .drawer-content::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(156, 163, 175, 0.6);
+}

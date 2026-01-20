@@ -1,0 +1,308 @@
+import { Link } from '@inertiajs/react';
+import { useState } from 'react';
+import {
+    Home,
+    LayoutDashboard,
+    Bell,
+    ClipboardList,
+    ShoppingCart,
+    Plus,
+    FileText,
+    Receipt,
+    Users,
+    BookOpen,
+    User,
+    TrendingUp,
+    Package,
+    Tag,
+    AlertTriangle,
+    CreditCard,
+    Scroll,
+    LifeBuoy,
+    Ticket,
+    AlertCircle,
+    HelpCircle,
+    MessageCircle,
+    Settings,
+    UserCog,
+    Lock,
+    Palette,
+    Building,
+    BarChart,
+    Download,
+} from 'lucide-react';
+
+/**
+ * Component: Sidebar
+ * 
+ * Sidebar groupée avec visibilité basée sur les permissions
+ * Mobile-first : drawer/off-canvas sur mobile, fixe sur desktop
+ */
+export default function Sidebar({ permissions, isRoot = false, isOpen, onClose }) {
+    const [expandedGroups, setExpandedGroups] = useState({});
+
+    // Toggle groupe expandé
+    const toggleGroup = (groupKey) => {
+        setExpandedGroups(prev => ({
+            ...prev,
+            [groupKey]: !prev[groupKey]
+        }));
+    };
+
+    // Vérifier si un groupe a au moins une permission visible
+    const hasVisibleItem = (groupPermissions) => {
+        // Le ROOT voit tout
+        if (isRoot) {
+            return true;
+        }
+        return groupPermissions.some(perm => permissions.includes(perm));
+    };
+
+    // Définition des groupes de navigation
+    const navigationGroups = [
+        {
+            key: 'general',
+            label: 'Général',
+            icon: Home,
+            permissions: ['dashboard.view', 'notifications.view', 'activity.view'],
+            items: [
+                { label: 'Dashboard', href: '/dashboard', permission: 'dashboard.view', icon: LayoutDashboard },
+                { label: 'Notifications', href: '#', permission: 'notifications.view', icon: Bell },
+                { label: 'Activité récente', href: '#', permission: 'activity.view', icon: ClipboardList },
+            ]
+        },
+        {
+            key: 'commerce',
+            label: 'Commerce / Vente',
+            icon: ShoppingCart,
+            permissions: ['sales.view', 'sales.create', 'invoices.view', 'customers.view', 'sellers.view'],
+            items: [
+                { label: 'Nouvelle vente', href: '#', permission: 'sales.create', icon: Plus },
+                { label: 'Liste des ventes', href: '#', permission: 'sales.view', icon: FileText },
+                { label: 'Factures', href: '#', permission: 'invoices.view', icon: Receipt },
+                { label: 'Reçus', href: '#', permission: 'invoices.view', icon: Receipt },
+                { label: 'Liste des clients', href: '#', permission: 'customers.view', icon: Users },
+                { label: 'Historique client', href: '#', permission: 'customers.view', icon: BookOpen },
+                { label: 'Créer un seller', href: '#', permission: 'sellers.create', icon: Plus },
+                { label: 'Liste des sellers', href: '#', permission: 'sellers.view', icon: User },
+                { label: 'Performance des sellers', href: '#', permission: 'sellers.view', icon: TrendingUp },
+            ]
+        },
+        {
+            key: 'products',
+            label: 'Produits & Stock',
+            icon: Package,
+            permissions: ['products.view', 'products.create', 'categories.view', 'inventory.view'],
+            items: [
+                { label: 'Ajouter produit', href: '#', permission: 'products.create', icon: Plus },
+                { label: 'Liste produits', href: '#', permission: 'products.view', icon: Package },
+                { label: 'Catégories', href: '#', permission: 'categories.view', icon: Tag },
+                { label: 'Mouvement de stock', href: '#', permission: 'inventory.view', icon: BarChart },
+                { label: 'Alertes stock bas', href: '#', permission: 'inventory.view', icon: AlertTriangle },
+            ]
+        },
+        {
+            key: 'payments',
+            label: 'Paiements & Finance',
+            icon: CreditCard,
+            permissions: ['payments.view', 'payments.methods', 'finance.reports'],
+            items: [
+                { label: 'Méthodes de paiement', href: '#', permission: 'payments.methods', icon: CreditCard },
+                { label: 'Historique financier', href: '#', permission: 'payments.view', icon: Scroll },
+                { label: 'Rapports financiers', href: '#', permission: 'finance.reports', icon: BarChart },
+            ]
+        },
+        {
+            key: 'support',
+            label: 'IT / Support',
+            icon: LifeBuoy,
+            permissions: ['support.tickets.create', 'support.tickets.view', 'support.admin', 'support.faq'],
+            items: [
+                { label: 'Créer un ticket', href: '#', permission: 'support.tickets.create', icon: Plus },
+                { label: 'Mes tickets', href: '#', permission: 'support.tickets.view', icon: Ticket },
+                { label: 'Tous les tickets', href: '#', permission: 'support.admin', icon: ClipboardList },
+                { label: 'Incidents', href: '#', permission: 'support.admin', icon: AlertCircle },
+                { label: 'FAQ / Base de connaissance', href: '#', permission: 'support.faq', icon: HelpCircle },
+                { label: 'Contact support', href: '#', permission: 'support.tickets.create', icon: MessageCircle },
+                { label: 'Statut système', href: '#', permission: 'support.admin', icon: Settings },
+            ]
+        },
+        {
+            key: 'reports',
+            label: 'Rapports & Analytics',
+            icon: BarChart,
+            permissions: ['reports.view', 'reports.export', 'analytics.view'],
+            items: [
+                { label: 'Rapports globaux', href: '#', permission: 'reports.view', icon: BarChart },
+                { label: 'Statistiques ventes', href: '#', permission: 'analytics.view', icon: TrendingUp },
+                { label: 'Performance sellers', href: '#', permission: 'analytics.view', icon: Users },
+                { label: 'Exports (PDF / Excel)', href: '#', permission: 'reports.export', icon: Download },
+            ]
+        },
+        {
+            key: 'access',
+            label: 'Utilisateurs & Accès',
+            icon: Users,
+            permissions: ['access.manage', 'users.view', 'roles.view', 'permissions.view'],
+            items: [
+                { label: 'Utilisateurs', href: '/admin/users', permission: 'admin.users.view', icon: User },
+                { label: 'Rôles', href: '/admin/access/roles', permission: 'access.roles.view', icon: UserCog },
+                { label: 'Permissions', href: '/admin/access/permissions', permission: 'access.permissions.view', icon: Lock },
+                { label: 'Access Mode', href: '#', permission: 'access.manage', icon: Settings },
+            ]
+        },
+        {
+            key: 'settings',
+            label: 'Paramètres',
+            icon: Settings,
+            permissions: ['settings.view', 'settings.branding', 'settings.ui'],
+            items: [
+                { label: 'Paramètres généraux', href: '#', permission: 'settings.view', icon: Settings },
+                { label: 'Paramètres entreprise', href: '#', permission: 'settings.view', icon: Building },
+                { label: 'Branding (logo, couleurs)', href: '#', permission: 'settings.branding', icon: Palette },
+                { label: 'Préférences UI', href: '#', permission: 'settings.ui', icon: Palette },
+            ]
+        },
+        {
+            key: 'logs',
+            label: 'Logs & Audit',
+            icon: Scroll,
+            permissions: ['logs.system', 'logs.actions', 'logs.connections'],
+            items: [
+                { label: 'Logs système', href: '#', permission: 'logs.system', icon: ClipboardList },
+                { label: 'Historique des actions', href: '#', permission: 'logs.actions', icon: Scroll },
+                { label: 'Connexions utilisateurs', href: '#', permission: 'logs.connections', icon: Lock },
+            ]
+        },
+    ];
+
+    // Filtrer les groupes visibles
+    const visibleGroups = navigationGroups.filter(group => 
+        hasVisibleItem(group.permissions)
+    );
+
+    return (
+        <>
+            {/* Sidebar Desktop - Fixe */}
+            <aside className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col sidebar-scrollbar">
+                <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 px-6 pb-4">
+                    {/* Logo */}
+                    <div className="flex h-16 shrink-0 items-center">
+                        <Link href="/" className="flex items-center space-x-2 group">
+                            <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+                                <span className="text-white font-bold text-lg">POS</span>
+                            </div>
+                            <span className="text-xl font-bold text-gray-900 dark:text-white">POS SaaS</span>
+                        </Link>
+                    </div>
+
+                    {/* Navigation Groups */}
+                    <nav className="flex flex-1 flex-col">
+                        <ul role="list" className="flex flex-1 flex-col gap-y-7">
+                            {visibleGroups.map((group) => {
+                                const isExpanded = expandedGroups[group.key] ?? true;
+                                const visibleItems = group.items.filter(item => 
+                                    isRoot || permissions.includes(item.permission)
+                                );
+
+                                if (visibleItems.length === 0) return null;
+
+                                return (
+                                    <li key={group.key}>
+                                        <div className="flex items-center gap-2 text-xs font-semibold leading-6 text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+                                            {group.icon && <group.icon className="h-4 w-4" />}
+                                            {group.label}
+                                        </div>
+                                        <ul role="list" className="-mx-2 space-y-1">
+                                            {visibleItems.map((item) => {
+                                                const IconComponent = item.icon;
+                                                return (
+                                                    <li key={item.label}>
+                                                        <Link
+                                                            href={item.href}
+                                                            className="group flex gap-x-3 rounded-lg p-2 text-sm leading-6 font-medium text-gray-700 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                                        >
+                                                            {IconComponent && <IconComponent className="h-5 w-5 shrink-0" />}
+                                                            <span>{item.label}</span>
+                                                        </Link>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </nav>
+                </div>
+            </aside>
+
+            {/* Sidebar Mobile - Drawer */}
+            <aside
+                className={`fixed inset-y-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:hidden ${
+                    isOpen ? 'translate-x-0' : '-translate-x-full'
+                }`}
+            >
+                <div className="flex h-full flex-col gap-y-5 overflow-y-auto px-6 pb-4">
+                    {/* Header avec bouton fermer */}
+                    <div className="flex h-16 shrink-0 items-center justify-between">
+                        <Link href="/" className="flex items-center space-x-2">
+                            <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+                                <span className="text-white font-bold text-lg">POS</span>
+                            </div>
+                            <span className="text-xl font-bold text-gray-900 dark:text-white">POS SaaS</span>
+                        </Link>
+                        <button
+                            onClick={onClose}
+                            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300"
+                        >
+                            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    {/* Navigation Groups */}
+                    <nav className="flex flex-1 flex-col">
+                        <ul role="list" className="flex flex-1 flex-col gap-y-7">
+                            {visibleGroups.map((group) => {
+                                const visibleItems = group.items.filter(item => 
+                                    isRoot || permissions.includes(item.permission)
+                                );
+
+                                if (visibleItems.length === 0) return null;
+
+                                return (
+                                    <li key={group.key}>
+                                        <div className="flex items-center gap-2 text-xs font-semibold leading-6 text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+                                            {group.icon && <group.icon className="h-4 w-4" />}
+                                            {group.label}
+                                        </div>
+                                        <ul role="list" className="-mx-2 space-y-1">
+                                            {visibleItems.map((item) => {
+                                                const IconComponent = item.icon;
+                                                return (
+                                                    <li key={item.label}>
+                                                        <Link
+                                                            href={item.href}
+                                                            onClick={onClose}
+                                                            className="group flex gap-x-3 rounded-lg p-3 text-sm leading-6 font-medium text-gray-700 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                                        >
+                                                            {IconComponent && <IconComponent className="h-5 w-5 shrink-0" />}
+                                                            <span>{item.label}</span>
+                                                        </Link>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </nav>
+                </div>
+            </aside>
+        </>
+    );
+}
+

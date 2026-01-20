@@ -1,0 +1,183 @@
+📘 PROJECT RULES — SAAS POS WEB (DDD + Roles dynamiques)
+1️⃣ PRINCIPES GÉNÉRAUX (NON NÉGOCIABLES)
+
+Architecture Domain Driven Design (DDD) obligatoire
+
+Séparation stricte :
+
+Domain = métier pur
+
+Application = use cases
+
+Infrastructure = Laravel / DB / Eloquent
+
+UI = React + Tailwind
+
+Aucune logique métier dans :
+
+Controllers
+
+Requests
+
+React components
+
+2️⃣ GESTION DES RÔLES & PERMISSIONS (RÈGLE CLÉ)
+🎯 Principe
+
+Les rôles sont créés depuis l’interface admin
+
+Les permissions ne sont PAS codées en dur
+
+Les permissions sont définies dans :
+
+un fichier YAML ou TXT
+
+uploadé ou collé dans l’interface admin
+
+Un bouton “Générer les permissions” :
+
+lit le fichier
+
+détecte les nouvelles permissions
+
+les insère automatiquement en base de données
+
+sans supprimer les anciennes
+
+3️⃣ SOURCE DE VÉRITÉ DES PERMISSIONS
+
+Le fichier YAML/TXT est la source métier
+
+La base de données est la source d’exécution
+
+Le code ne doit jamais contenir de permissions en dur
+
+4️⃣ FORMAT DU FICHIER DE PERMISSIONS (EXEMPLE)
+sales:
+  - sale.create
+  - sale.view
+  - sale.refund
+
+products:
+  - product.create
+  - product.update
+  - product.delete
+
+inventory:
+  - stock.in
+  - stock.out
+
+
+Règles :
+
+format hiérarchique lisible
+
+permission = string unique
+
+aucune logique conditionnelle dans le fichier
+
+5️⃣ COMPORTEMENT DU BOUTON “GÉNÉRER PERMISSIONS”
+
+Lors du clic :
+
+Charger le fichier YAML/TXT
+
+Parser toutes les permissions
+
+Comparer avec celles existantes en DB
+
+Insérer uniquement les permissions manquantes
+
+Logger les nouvelles permissions créées
+
+Ne jamais supprimer automatiquement une permission existante
+
+6️⃣ RÔLES (DYNAMIQUES)
+
+Un rôle est créé depuis l’interface admin
+
+Un rôle peut :
+
+recevoir plusieurs permissions
+
+être modifié sans redéploiement
+
+Le ROOT peut :
+
+créer / modifier / supprimer des rôles
+
+assigner des rôles à n’importe quel utilisateur
+
+Les merchants ne peuvent gérer que leurs utilisateurs
+
+7️⃣ HIÉRARCHIE DES ACCÈS
+
+ROOT :
+
+accès global à toutes les boutiques
+
+gestion des tenants
+
+gestion des rôles et permissions
+
+MERCHANT :
+
+accès limité à ses boutiques
+
+gestion de ses sellers / cashiers
+
+CASHIER / SELLER :
+
+accès strictement contrôlé par permissions
+
+8️⃣ CONTRÔLE DES ACCÈS (OBLIGATOIRE)
+
+Toute action sensible doit vérifier :
+
+le rôle
+
+la permission
+
+Aucune vérification directe dans les controllers
+
+Les contrôles passent par :
+
+Policies métier
+
+Use Cases applicatifs
+
+9️⃣ INTERDICTIONS ABSOLUES 🚫
+
+❌ Pas de permissions hardcodées
+
+❌ Pas de Gate::define() avec strings en dur
+
+❌ Pas de logique d’accès dans React
+
+❌ Pas de suppression automatique de permissions
+
+❌ Pas de dépendance Laravel dans le Domain
+
+🔟 OBJECTIF FINAL
+
+Créer un POS SaaS professionnel, capable de :
+
+évoluer sans modifier le code
+
+ajouter des permissions sans déploiement
+
+servir plusieurs types de commerces
+
+être monétisable à grande échelle en Afrique
+
+✅ RÉSULTAT ATTENDU POUR CURSOR
+
+Générer du code :
+
+propre
+
+scalable
+
+testable
+
+Respecter strictement DDD
