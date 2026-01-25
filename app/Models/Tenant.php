@@ -49,6 +49,12 @@ class Tenant extends Model
         'slug',      // Slug unique pour URLs
         'email',     // Email de contact
         'is_active', // État d'activation
+        'address',   // Adresse
+        'phone',     // Téléphone
+        'idnat',     // IDNAT
+        'rccm',      // RCCM
+        'currency',  // Devise par défaut
+        'exchange_rate', // Taux de change
     ];
 
     /**

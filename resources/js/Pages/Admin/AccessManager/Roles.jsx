@@ -62,10 +62,20 @@ export default function Roles() {
             const roleData = response.data.role;
             setEditingRole(roleData);
             setIsRootRole(response.data.isRootRole);
+            
+            // S'assurer que permissions est toujours un tableau
+            let permissionsArray = [];
+            if (Array.isArray(roleData.permissions)) {
+                permissionsArray = roleData.permissions.map(p => p.id || p);
+            } else if (roleData.permissions) {
+                // Si c'est un objet, essayer de le convertir
+                permissionsArray = Object.values(roleData.permissions).map(p => p.id || p);
+            }
+            
             setData({
                 name: roleData.name || '',
                 description: roleData.description || '',
-                permissions: roleData.permissions?.map(p => p.id) || [],
+                permissions: permissionsArray,
             });
         } catch (error) {
             console.error('Error loading role:', error);
@@ -86,7 +96,13 @@ export default function Roles() {
     // Récupérer les détails des permissions sélectionnées
     const selectedPermissionsDetails = useMemo(() => {
         const allPerms = Object.values(allPermissions || {}).flat();
-        return allPerms.filter(p => data.permissions.includes(p.id));
+        const permissions = Array.isArray(data.permissions) 
+            ? data.permissions.map(id => typeof id === 'number' ? id : parseInt(id, 10)).filter(id => !isNaN(id))
+            : [];
+        return allPerms.filter(p => {
+            const permissionId = typeof p.id === 'number' ? p.id : parseInt(p.id, 10);
+            return !isNaN(permissionId) && permissions.includes(permissionId);
+        });
     }, [data.permissions, allPermissions]);
 
     const handleSubmit = (e) => {
@@ -99,18 +115,33 @@ export default function Roles() {
             return;
         }
 
-        if (data.permissions.length === 0) {
+        // S'assurer que permissions est un tableau d'IDs numériques
+        let permissionsArray = Array.isArray(data.permissions) ? data.permissions : [];
+        // Convertir tous les IDs en nombres pour s'assurer qu'ils sont bien formatés
+        permissionsArray = permissionsArray.map(id => typeof id === 'number' ? id : parseInt(id, 10)).filter(id => !isNaN(id));
+        
+        if (permissionsArray.length === 0) {
             const confirmSubmit = confirm('Aucune permission n\'est sélectionnée. Voulez-vous vraiment créer un rôle sans permission ?');
             if (!confirmSubmit) {
                 return;
             }
         }
 
+        // S'assurer que les permissions sont bien formatées avant la soumission
+        setData('permissions', permissionsArray);
+        setData('name', data.name.trim());
+        setData('description', data.description || '');
+
         if (editingRole) {
             put(`/admin/access/roles/${editingRole.id}`, {
                 preserveScroll: true,
                 onSuccess: () => {
                     closeDrawer();
+                },
+                onError: (errors) => {
+                    console.error('Erreur lors de la mise à jour:', errors);
+                    console.error('Données envoyées:', { name: data.name, permissions: permissionsArray });
+                    alert('Erreur lors de la mise à jour du rôle. Vérifiez la console pour plus de détails.');
                 },
             });
         } else {
@@ -119,23 +150,56 @@ export default function Roles() {
                 onSuccess: () => {
                     closeDrawer();
                 },
+                onError: (errors) => {
+                    console.error('Erreur lors de la création:', errors);
+                    console.error('Données envoyées:', { name: data.name, permissions: permissionsArray });
+                    alert('Erreur lors de la création du rôle. Vérifiez la console pour plus de détails.');
+                },
             });
         }
     };
 
     const togglePermission = (permissionId) => {
-        setData('permissions', (prev) => {
-            const permissions = Array.isArray(prev) ? prev : [];
-            const newPermissions = permissions.includes(permissionId)
-                ? permissions.filter(id => id !== permissionId)
-                : [...permissions, permissionId];
-            return newPermissions;
-        });
+        console.log('togglePermission appelé avec:', permissionId, 'Type:', typeof permissionId);
+        console.log('data.permissions avant:', data.permissions);
+        
+        // S'assurer que permissionId est un nombre
+        const id = typeof permissionId === 'number' ? permissionId : parseInt(permissionId, 10);
+        if (isNaN(id)) {
+            console.error('ID de permission invalide:', permissionId);
+            return;
+        }
+        
+        // Récupérer les permissions actuelles
+        const currentPermissions = Array.isArray(data.permissions) 
+            ? data.permissions.map(pId => typeof pId === 'number' ? pId : parseInt(pId, 10)).filter(pId => !isNaN(pId))
+            : [];
+        
+        console.log('Permissions actuelles normalisées:', currentPermissions);
+        console.log('ID à toggle:', id, 'Est inclus?', currentPermissions.includes(id));
+        
+        // Créer le nouveau tableau
+        const newPermissions = currentPermissions.includes(id)
+            ? currentPermissions.filter(pId => pId !== id)
+            : [...currentPermissions, id];
+        
+        console.log('Nouvelles permissions:', newPermissions);
+        
+        // Mettre à jour directement avec le nouveau tableau
+        setData('permissions', newPermissions);
+        
+        // Vérifier après un court délai
+        setTimeout(() => {
+            console.log('data.permissions après setData:', data.permissions);
+        }, 100);
     };
 
     const toggleGroup = (groupPermissions) => {
-        const groupPermissionIds = groupPermissions.map(p => p.id);
-        const currentPermissions = Array.isArray(data.permissions) ? data.permissions : [];
+        const groupPermissionIds = groupPermissions.map(p => {
+            const id = typeof p.id === 'number' ? p.id : parseInt(p.id, 10);
+            return isNaN(id) ? null : id;
+        }).filter(id => id !== null);
+        const currentPermissions = Array.isArray(data.permissions) ? data.permissions.map(id => typeof id === 'number' ? id : parseInt(id, 10)) : [];
         const allSelected = groupPermissionIds.every(id => currentPermissions.includes(id));
 
         setData('permissions', (prev) => {
@@ -477,19 +541,30 @@ export default function Roles() {
                                                 </div>
                                                 <div className="divide-y divide-gray-200 dark:divide-gray-700">
                                                     {filteredGroupPermissions.map((permission) => {
-                                                        const currentPermissions = Array.isArray(data.permissions) ? data.permissions : [];
-                                                        const isChecked = currentPermissions.includes(permission.id);
+                                                        const currentPermissions = Array.isArray(data.permissions) 
+                                                            ? data.permissions.map(id => typeof id === 'number' ? id : parseInt(id, 10))
+                                                            : [];
+                                                        const permissionId = typeof permission.id === 'number' ? permission.id : parseInt(permission.id, 10);
+                                                        const isChecked = !isNaN(permissionId) && currentPermissions.includes(permissionId);
                                                         return (
                                                             <label
                                                                 key={permission.id}
                                                                 className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    togglePermission(permission.id);
+                                                                }}
                                                             >
                                                                 <input
                                                                     type="checkbox"
                                                                     checked={isChecked}
                                                                     onChange={(e) => {
                                                                         e.stopPropagation();
+                                                                        e.preventDefault();
                                                                         togglePermission(permission.id);
+                                                                    }}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
                                                                     }}
                                                                     className="w-4 h-4 text-amber-600 rounded focus:ring-amber-500 cursor-pointer"
                                                                 />

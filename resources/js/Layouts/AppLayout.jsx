@@ -33,6 +33,7 @@ export default function AppLayout({ children, header }) {
                 isRoot={isRoot}
                 isOpen={sidebarOpen}
                 onClose={() => setSidebarOpen(false)}
+                currentUrl={url}
             />
 
             {/* Overlay pour mobile quand sidebar est ouvert */}

@@ -1,3 +1,5 @@
+import { Check, Star } from 'lucide-react';
+
 /**
  * Component: Pricing
  *
@@ -12,8 +14,9 @@ function PricingCard({ name, price, description, features, isPopular }) {
         }`}>
             {isPopular && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-900 px-4 py-1 rounded-full text-sm font-bold">
-                        ⭐ Populaire
+                    <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-900 px-4 py-1 rounded-full text-sm font-bold flex items-center gap-1">
+                        <Star className="w-4 h-4 fill-current" />
+                        Populaire
                     </span>
                 </div>
             )}
@@ -43,9 +46,7 @@ function PricingCard({ name, price, description, features, isPopular }) {
                 <div className="space-y-4">
                     {features.map((feature, idx) => (
                         <div key={idx} className="flex items-start gap-3">
-                            <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
+                            <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
                             <span className="text-sm">{feature}</span>
                         </div>
                     ))}

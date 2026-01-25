@@ -238,14 +238,22 @@ class AccessManagerController extends Controller
         if ($rootRole) {
             $permissionIds = Permission::where('is_old', false)->pluck('id')->all();
             $rootRole->permissions()->sync($permissionIds);
+            
+            // Log pour debug
+            \Log::info('Permissions sync', [
+                'root_role_id' => $rootRole->id,
+                'permissions_count' => count($permissionIds),
+                'sync_result' => $result,
+            ]);
         }
 
         return redirect()->route('admin.access.permissions')
             ->with('success', sprintf(
-                'Permissions synchronisées : %d créées, %d mises à jour, %d marquées comme obsolètes',
+                'Permissions synchronisées : %d créées, %d mises à jour, %d marquées comme obsolètes. Total actives : %d',
                 $result['created'],
                 $result['updated'],
-                $result['marked_old']
+                $result['marked_old'],
+                Permission::where('is_old', false)->count()
             ));
     }
 }

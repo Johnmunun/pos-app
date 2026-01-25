@@ -45,9 +45,14 @@ export default function Permissions() {
         <AppLayout
             header={
                 <div className="flex items-center justify-between gap-4">
-                    <h2 className="text-xl sm:text-2xl font-bold leading-tight text-gray-900 dark:text-white">
-                        Gestion des Permissions
-                    </h2>
+                    <div>
+                        <h2 className="text-xl sm:text-2xl font-bold leading-tight text-gray-900 dark:text-white">
+                            Gestion des Permissions
+                        </h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            {Object.values(permissions).flat().length} permission{Object.values(permissions).flat().length > 1 ? 's' : ''} au total
+                        </p>
+                    </div>
                     <button
                         onClick={handleSync}
                         disabled={isSyncing}

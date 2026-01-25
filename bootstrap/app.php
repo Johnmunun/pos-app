@@ -22,5 +22,20 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Handle 403 errors with Inertia
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, \Illuminate\Http\Request $request) {
+            if ($e->getStatusCode() === 403) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => $e->getMessage() ?: 'Permission denied.',
+                    ], 403);
+                }
+
+                // Render Inertia page for 403 errors
+                return \Inertia\Inertia::render('Errors/403', [
+                    'status' => 403,
+                    'message' => $e->getMessage() ?: 'Permission denied.',
+                ])->toResponse($request)->setStatusCode(403);
+            }
+        });
     })->create();

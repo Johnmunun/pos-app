@@ -1,3 +1,5 @@
+import { Share2, Linkedin, MessageCircle, Camera } from 'lucide-react';
+
 /**
  * Component: Footer
  *
@@ -22,10 +24,10 @@ export default function Footer() {
     ];
 
     const socials = [
-        { name: 'Twitter', icon: '𝕏', url: '#' },
-        { name: 'LinkedIn', icon: '💼', url: '#' },
-        { name: 'Facebook', icon: 'f', url: '#' },
-        { name: 'Instagram', icon: '📷', url: '#' },
+        { name: 'Twitter', icon: Share2, url: '#' },
+        { name: 'LinkedIn', icon: Linkedin, url: '#' },
+        { name: 'Facebook', icon: MessageCircle, url: '#' },
+        { name: 'Instagram', icon: Camera, url: '#' },
     ];
 
     return (
@@ -63,16 +65,19 @@ export default function Footer() {
                                     La plateforme complète pour gérer vos ventes digitales et faire croître votre activité.
                                 </p>
                                 <div className="flex gap-4">
-                                    {socials.map((social, idx) => (
-                                        <a
-                                            key={idx}
-                                            href={social.url}
-                                            title={social.name}
-                                            className="w-10 h-10 bg-gray-100 hover:bg-amber-500 text-gray-600 hover:text-white rounded-lg flex items-center justify-center transition-colors duration-200"
-                                        >
-                                            <span className="text-lg">{social.icon}</span>
-                                        </a>
-                                    ))}
+                                    {socials.map((social, idx) => {
+                                        const IconComponent = social.icon;
+                                        return (
+                                            <a
+                                                key={idx}
+                                                href={social.url}
+                                                title={social.name}
+                                                className="w-10 h-10 bg-gray-100 hover:bg-amber-500 text-gray-600 hover:text-white rounded-lg flex items-center justify-center transition-colors duration-200"
+                                            >
+                                                <IconComponent className="w-5 h-5" />
+                                            </a>
+                                        );
+                                    })}
                                 </div>
                             </div>
 

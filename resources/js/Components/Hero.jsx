@@ -1,3 +1,5 @@
+import { CheckCircle, Check } from 'lucide-react';
+
 /**
  * Component: Hero
  *
@@ -9,9 +11,7 @@ export default function Hero() {
             <div className="max-w-4xl mx-auto text-center">
                 {/* Badge */}
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-full text-sm font-medium text-amber-700 dark:text-amber-400 mb-8">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
+                    <CheckCircle className="w-4 h-4" />
                     Essai gratuit de 14 jours • Aucune carte bancaire requise
                 </div>
 
@@ -45,12 +45,12 @@ export default function Hero() {
                 {/* Avantages rapides */}
                 <div className="flex flex-col sm:flex-row justify-center gap-8 text-sm mb-16">
                     {[
-                        { icon: '✓', text: 'Installation en 5 minutes' },
-                        { icon: '✓', text: 'Paiements sécurisés' },
-                        { icon: '✓', text: 'Support 24/7' },
+                        { text: 'Installation en 5 minutes' },
+                        { text: 'Paiements sécurisés' },
+                        { text: 'Support 24/7' },
                     ].map((item, idx) => (
                         <div key={idx} className="flex items-center gap-2">
-                            <span className="text-emerald-500 dark:text-emerald-400 font-bold text-lg">{item.icon}</span>
+                            <Check className="w-5 h-5 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
                             <span className="text-gray-700 dark:text-gray-300 font-medium">{item.text}</span>
                         </div>
                     ))}

@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Symfony\Component\HttpFoundation\Response;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -43,5 +44,21 @@ class HandleInertiaRequests extends Middleware
                 'message' => $request->session()->get('message'),
             ],
         ];
+    }
+
+    /**
+     * Handle Inertia responses.
+     */
+    public function rootView(Request $request): string
+    {
+        return parent::rootView($request);
+    }
+
+    /**
+     * Set the root template that's loaded on the first Inertia page visit.
+     */
+    public function rootTemplate(Request $request): string
+    {
+        return parent::rootTemplate($request);
     }
 }

@@ -57,23 +57,30 @@ class PermissionSyncService
                 continue;
             }
 
+            // Toujours mettre à jour si nécessaire
             $changes = [];
+            
+            // Réactiver si marquée comme obsolète
             if ($permission->is_old) {
                 $changes['is_old'] = false;
             }
+            
+            // Mettre à jour le groupe si différent
             if ($group && $permission->group !== $group) {
                 $changes['group'] = $group;
             }
-
+            
+            // Mettre à jour même si seulement is_old change
             if (!empty($changes)) {
                 $permission->update($changes);
                 $updated++;
             }
         }
 
-        $markedOld = Permission::whereNotIn('code', $codes)
-            ->where('is_old', false)
-            ->update(['is_old' => true]);
+        // IMPORTANT: Ne jamais marquer automatiquement les permissions comme obsolètes
+        // Conformément aux règles du projet: "Ne jamais supprimer automatiquement une permission existante"
+        // Les permissions existantes qui ne sont pas dans le YAML sont conservées telles quelles
+        $markedOld = 0;
 
         return [
             'created' => $created,
@@ -102,8 +109,13 @@ class PermissionSyncService
             }
 
             // Détecter un groupe (ligne qui se termine par ':' sans être une permission)
+            // Exemple: "admin:" ou "pharmacy:"
             if (str_ends_with($line, ':') && !str_starts_with($line, '-')) {
                 $currentGroup = rtrim($line, ':');
+                // Nettoyer le groupe des commentaires
+                if (str_contains($currentGroup, '#')) {
+                    $currentGroup = trim(explode('#', $currentGroup)[0]);
+                }
                 continue;
             }
 
@@ -118,8 +130,12 @@ class PermissionSyncService
                     $code = trim(explode('#', $code)[0]);
                 }
             } 
-            // Format simple: "permission.code"
+            // Format simple: "permission.code" (sans tiret)
             else {
+                // Ignorer les lignes qui sont des groupes ou des commentaires
+                if (str_ends_with($line, ':') || str_starts_with($line, '#')) {
+                    continue;
+                }
                 $code = $line;
                 // Nettoyer les commentaires inline
                 if (str_contains($code, '#')) {

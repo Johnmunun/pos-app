@@ -1,3 +1,5 @@
+import { Star } from 'lucide-react';
+
 /**
  * Component: Testimonials
  *
@@ -9,7 +11,7 @@ function TestimonialCard({ name, role, company, content, avatar }) {
             {/* Étoiles */}
             <div className="flex gap-1 mb-4">
                 {[...Array(5)].map((_, i) => (
-                    <span key={i} className="text-yellow-400">★</span>
+                    <Star key={i} className="w-5 h-5 text-yellow-400 fill-yellow-400" />
                 ))}
             </div>
 

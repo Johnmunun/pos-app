@@ -106,4 +106,141 @@ Route::middleware(['auth', 'verified', 'root'])->group(function () {
         ->name('admin.access.permissions.sync');
 });
 
+/**
+ * Pharmacy Module Routes
+ */
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::prefix('pharmacy')->name('pharmacy.')->group(function () {
+        // Dashboard
+        Route::get('/dashboard', [\App\Http\Controllers\Pharmacy\PharmacyController::class, 'dashboard'])
+            ->middleware('permission:module.pharmacy')
+            ->name('dashboard');
+
+        // Products
+        Route::get('/products', [\App\Http\Controllers\Pharmacy\PharmacyController::class, 'products'])
+            ->middleware('permission:pharmacy.product.manage')
+            ->name('products');
+        
+        Route::get('/products/create', [\App\Http\Controllers\Pharmacy\PharmacyController::class, 'createProduct'])
+            ->middleware('permission:pharmacy.product.manage')
+            ->name('products.create');
+        
+        Route::post('/products', [\App\Http\Controllers\Pharmacy\PharmacyController::class, 'storeProduct'])
+            ->middleware('permission:pharmacy.product.manage')
+            ->name('products.store');
+        
+        Route::get('/products/{product}/edit', [\App\Http\Controllers\Pharmacy\PharmacyController::class, 'editProduct'])
+            ->middleware('permission:pharmacy.product.manage')
+            ->name('products.edit');
+        
+        Route::put('/products/{product}', [\App\Http\Controllers\Pharmacy\PharmacyController::class, 'updateProduct'])
+            ->middleware('permission:pharmacy.product.manage')
+            ->name('products.update');
+        
+        Route::delete('/products/{product}', [\App\Http\Controllers\Pharmacy\PharmacyController::class, 'destroyProduct'])
+            ->middleware('permission:pharmacy.product.manage')
+            ->name('products.destroy');
+
+        // Batches
+        Route::post('/products/{product}/batches', [\App\Http\Controllers\Pharmacy\PharmacyController::class, 'storeBatch'])
+            ->middleware('permission:pharmacy.product.manage')
+            ->name('products.batches.store');
+        
+        Route::put('/products/{product}/batches/{batch}', [\App\Http\Controllers\Pharmacy\PharmacyController::class, 'updateBatch'])
+            ->middleware('permission:pharmacy.product.manage')
+            ->name('products.batches.update');
+        
+        Route::delete('/products/{product}/batches/{batch}', [\App\Http\Controllers\Pharmacy\PharmacyController::class, 'destroyBatch'])
+            ->middleware('permission:pharmacy.product.manage')
+            ->name('products.batches.destroy');
+
+        // Stock
+        Route::get('/stock', [\App\Http\Controllers\Pharmacy\PharmacyController::class, 'stock'])
+            ->middleware('permission:pharmacy.stock.manage')
+            ->name('stock');
+
+        // Sales
+        Route::get('/sales', [\App\Http\Controllers\Pharmacy\SalesController::class, 'index'])
+            ->middleware('permission:pharmacy.sale.create')
+            ->name('sales');
+        Route::post('/sales', [\App\Http\Controllers\Pharmacy\SalesController::class, 'store'])
+            ->middleware('permission:pharmacy.sale.create')
+            ->name('sales.store');
+
+        // Expiry
+        Route::get('/expiry', [\App\Http\Controllers\Pharmacy\PharmacyController::class, 'expiry'])
+            ->middleware('permission:pharmacy.expiry.view')
+            ->name('expiry');
+
+        // Reports
+        Route::get('/reports', [\App\Http\Controllers\Pharmacy\PharmacyController::class, 'reports'])
+            ->middleware('permission:pharmacy.report.view')
+            ->name('reports');
+    });
+});
+
+/**
+ * Categories Routes
+ */
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/categories', [\App\Http\Controllers\CategoryController::class, 'index'])
+        ->middleware('permission:categories.view')
+        ->name('categories.index');
+    
+    Route::post('/categories', [\App\Http\Controllers\CategoryController::class, 'store'])
+        ->middleware('permission:categories.create')
+        ->name('categories.store');
+    
+    Route::put('/categories/{category}', [\App\Http\Controllers\CategoryController::class, 'update'])
+        ->middleware('permission:categories.update')
+        ->name('categories.update');
+    
+    Route::delete('/categories/{category}', [\App\Http\Controllers\CategoryController::class, 'destroy'])
+        ->middleware('permission:categories.delete')
+        ->name('categories.destroy');
+});
+
+/**
+ * Settings Routes
+ */
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::prefix('settings')->name('settings.')->group(function () {
+        Route::get('/company', [\App\Http\Controllers\SettingsController::class, 'company'])
+            ->middleware('permission:settings.view')
+            ->name('company');
+        
+        Route::post('/company', [\App\Http\Controllers\SettingsController::class, 'updateCompany'])
+            ->middleware('permission:settings.view')
+            ->name('company.update');
+        
+        Route::get('/currencies', [\App\Http\Controllers\Settings\CurrencyController::class, 'index'])
+            ->middleware('permission:settings.currency.view')
+            ->name('currencies');
+        
+        Route::post('/currencies', [\App\Http\Controllers\Settings\CurrencyController::class, 'store'])
+            ->middleware('permission:settings.currency.create')
+            ->name('currencies.store');
+        
+        Route::put('/currencies/{currency}', [\App\Http\Controllers\Settings\CurrencyController::class, 'update'])
+            ->middleware('permission:settings.currency.update')
+            ->name('currencies.update');
+        
+        Route::delete('/currencies/{currency}', [\App\Http\Controllers\Settings\CurrencyController::class, 'destroy'])
+            ->middleware('permission:settings.currency.delete')
+            ->name('currencies.destroy');
+        
+        Route::post('/exchange-rates', [\App\Http\Controllers\Settings\CurrencyController::class, 'storeExchangeRate'])
+            ->middleware('permission:settings.currency.update')
+            ->name('exchange-rates.store');
+        
+        Route::put('/exchange-rates/{exchangeRate}', [\App\Http\Controllers\Settings\CurrencyController::class, 'updateExchangeRate'])
+            ->middleware('permission:settings.currency.update')
+            ->name('exchange-rates.update');
+        
+        Route::delete('/exchange-rates/{exchangeRate}', [\App\Http\Controllers\Settings\CurrencyController::class, 'destroyExchangeRate'])
+            ->middleware('permission:settings.currency.update')
+            ->name('exchange-rates.destroy');
+    });
+});
+
 require __DIR__.'/auth.php';

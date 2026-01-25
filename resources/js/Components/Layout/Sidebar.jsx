@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import {
     Home,
@@ -30,6 +30,9 @@ import {
     Building,
     BarChart,
     Download,
+    Pill,
+    Calendar,
+    DollarSign,
 } from 'lucide-react';
 
 /**
@@ -38,8 +41,30 @@ import {
  * Sidebar groupée avec visibilité basée sur les permissions
  * Mobile-first : drawer/off-canvas sur mobile, fixe sur desktop
  */
-export default function Sidebar({ permissions, isRoot = false, isOpen, onClose }) {
+export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, currentUrl }) {
     const [expandedGroups, setExpandedGroups] = useState({});
+    
+    // Utiliser l'URL depuis usePage si currentUrl n'est pas fourni
+    const page = usePage();
+    const url = currentUrl || page.url;
+    
+    // Fonction pour vérifier si une route est active
+    const isActiveRoute = (href) => {
+        if (!href || href === '#') return false;
+        
+        // Normaliser les URLs (enlever les trailing slashes)
+        const normalizeUrl = (u) => u.replace(/\/$/, '') || '/';
+        const currentPath = normalizeUrl(url);
+        const itemPath = normalizeUrl(href);
+        
+        // Correspondance exacte
+        if (currentPath === itemPath) return true;
+        
+        // Correspondance pour les routes enfants (ex: /pharmacy/products active si on est sur /pharmacy/products/123)
+        if (currentPath.startsWith(itemPath + '/')) return true;
+        
+        return false;
+    };
 
     // Toggle groupe expandé
     const toggleGroup = (groupKey) => {
@@ -96,9 +121,23 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose }
             items: [
                 { label: 'Ajouter produit', href: '#', permission: 'products.create', icon: Plus },
                 { label: 'Liste produits', href: '#', permission: 'products.view', icon: Package },
-                { label: 'Catégories', href: '#', permission: 'categories.view', icon: Tag },
+                { label: 'Catégories', href: '/categories', permission: 'categories.view', icon: Tag },
                 { label: 'Mouvement de stock', href: '#', permission: 'inventory.view', icon: BarChart },
                 { label: 'Alertes stock bas', href: '#', permission: 'inventory.view', icon: AlertTriangle },
+            ]
+        },
+        {
+            key: 'pharmacy',
+            label: 'Pharmacy',
+            icon: Pill,
+            permissions: ['module.pharmacy'],
+            items: [
+                { label: 'Dashboard', href: '/pharmacy/dashboard', permission: 'module.pharmacy', icon: LayoutDashboard },
+                { label: 'Produits', href: '/pharmacy/products', permission: 'pharmacy.product.manage', icon: Package },
+                { label: 'Stock', href: '/pharmacy/stock', permission: 'pharmacy.stock.manage', icon: BarChart },
+                { label: 'Ventes', href: '/pharmacy/sales', permission: 'pharmacy.sale.create', icon: ShoppingCart },
+                { label: 'Expirations', href: '/pharmacy/expiry', permission: 'pharmacy.expiry.view', icon: Calendar },
+                { label: 'Rapports', href: '/pharmacy/reports', permission: 'pharmacy.report.view', icon: FileText },
             ]
         },
         {
@@ -143,7 +182,7 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose }
             key: 'access',
             label: 'Utilisateurs & Accès',
             icon: Users,
-            permissions: ['access.manage', 'users.view', 'roles.view', 'permissions.view'],
+            permissions: ['access.manage', 'admin.users.view', 'access.roles.view', 'access.permissions.view'],
             items: [
                 { label: 'Utilisateurs', href: '/admin/users', permission: 'admin.users.view', icon: User },
                 { label: 'Rôles', href: '/admin/access/roles', permission: 'access.roles.view', icon: UserCog },
@@ -155,10 +194,11 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose }
             key: 'settings',
             label: 'Paramètres',
             icon: Settings,
-            permissions: ['settings.view', 'settings.branding', 'settings.ui'],
+            permissions: ['settings.view', 'settings.branding', 'settings.ui', 'settings.currency.view'],
             items: [
                 { label: 'Paramètres généraux', href: '#', permission: 'settings.view', icon: Settings },
-                { label: 'Paramètres entreprise', href: '#', permission: 'settings.view', icon: Building },
+                { label: 'Informations entreprise', href: '/settings/company', permission: 'settings.view', icon: Building },
+                { label: 'Gestion des devises', href: '/settings/currencies', permission: 'settings.currency.view', icon: DollarSign },
                 { label: 'Branding (logo, couleurs)', href: '#', permission: 'settings.branding', icon: Palette },
                 { label: 'Préférences UI', href: '#', permission: 'settings.ui', icon: Palette },
             ]
@@ -216,13 +256,26 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose }
                                         <ul role="list" className="-mx-2 space-y-1">
                                             {visibleItems.map((item) => {
                                                 const IconComponent = item.icon;
+                                                const isActive = isActiveRoute(item.href);
                                                 return (
                                                     <li key={item.label}>
                                                         <Link
                                                             href={item.href}
-                                                            className="group flex gap-x-3 rounded-lg p-2 text-sm leading-6 font-medium text-gray-700 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                                            className={`group flex gap-x-3 rounded-lg p-2 text-sm leading-6 font-medium transition-colors ${
+                                                                isActive
+                                                                    ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'
+                                                                    : 'text-gray-700 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                                            }`}
                                                         >
-                                                            {IconComponent && <IconComponent className="h-5 w-5 shrink-0" />}
+                                                            {IconComponent && (
+                                                                <IconComponent 
+                                                                    className={`h-5 w-5 shrink-0 ${
+                                                                        isActive 
+                                                                            ? 'text-amber-600 dark:text-amber-400' 
+                                                                            : 'text-gray-400 dark:text-gray-500 group-hover:text-amber-600 dark:group-hover:text-amber-400'
+                                                                    }`} 
+                                                                />
+                                                            )}
                                                             <span>{item.label}</span>
                                                         </Link>
                                                     </li>
@@ -281,14 +334,27 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose }
                                         <ul role="list" className="-mx-2 space-y-1">
                                             {visibleItems.map((item) => {
                                                 const IconComponent = item.icon;
+                                                const isActive = isActiveRoute(item.href);
                                                 return (
                                                     <li key={item.label}>
                                                         <Link
                                                             href={item.href}
                                                             onClick={onClose}
-                                                            className="group flex gap-x-3 rounded-lg p-3 text-sm leading-6 font-medium text-gray-700 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                                            className={`group flex gap-x-3 rounded-lg p-3 text-sm leading-6 font-medium transition-colors ${
+                                                                isActive
+                                                                    ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'
+                                                                    : 'text-gray-700 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                                            }`}
                                                         >
-                                                            {IconComponent && <IconComponent className="h-5 w-5 shrink-0" />}
+                                                            {IconComponent && (
+                                                                <IconComponent 
+                                                                    className={`h-5 w-5 shrink-0 ${
+                                                                        isActive 
+                                                                            ? 'text-amber-600 dark:text-amber-400' 
+                                                                            : 'text-gray-400 dark:text-gray-500 group-hover:text-amber-600 dark:group-hover:text-amber-400'
+                                                                    }`} 
+                                                                />
+                                                            )}
                                                             <span>{item.label}</span>
                                                         </Link>
                                                     </li>
