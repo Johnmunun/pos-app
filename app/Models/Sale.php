@@ -2,14 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Sale extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'tenant_id',
@@ -25,6 +24,8 @@ class Sale extends Model
         'tax_amount',
         'discount_amount',
         'total',
+        'currency',
+        'exchange_rate_snapshot',
         'notes',
         'sold_at',
     ];
@@ -34,28 +35,34 @@ class Sale extends Model
         'tax_amount' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'total' => 'decimal:2',
+        'exchange_rate_snapshot' => 'array',
         'sold_at' => 'datetime',
     ];
 
     /**
      * Relations
      */
-    public function tenant(): BelongsTo
+    public function tenant()
     {
         return $this->belongsTo(Tenant::class);
     }
 
-    public function customer(): BelongsTo
+    public function customer()
     {
         return $this->belongsTo(\App\Models\Customer::class);
     }
 
-    public function seller(): BelongsTo
+    public function seller()
     {
         return $this->belongsTo(User::class, 'seller_id');
     }
 
-    public function items(): HasMany
+    public function currency()
+    {
+        return $this->belongsTo(Currency::class, 'currency', 'code');
+    }
+
+    public function items()
     {
         return $this->hasMany(SaleItem::class);
     }
@@ -81,4 +88,3 @@ class Sale extends Model
         return sprintf('%s-%s-%04d', $prefix, $date, $sequence);
     }
 }
-

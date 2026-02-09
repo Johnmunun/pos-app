@@ -2,11 +2,21 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Model Eloquent: ExchangeRate
+ *
+ * Représentation de la table 'exchange_rates'.
+ */
 class ExchangeRate extends Model
 {
+    use HasFactory;
+
+    protected $table = 'exchange_rates';
+
     protected $fillable = [
         'tenant_id',
         'from_currency_id',
@@ -18,6 +28,8 @@ class ExchangeRate extends Model
     protected $casts = [
         'rate' => 'decimal:4',
         'effective_date' => 'date',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     /**

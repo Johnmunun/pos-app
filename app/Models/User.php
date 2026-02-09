@@ -2,121 +2,177 @@
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
-/**
- * Model Eloquent: User
- *
- * Représentation de la table 'users'.
- * Utilisateurs de l'application POS SaaS.
- *
- * Types d'utilisateurs:
- * - ROOT: Propriétaire de l'application
- * - TENANT_ADMIN: Admin d'un tenant
- * - MERCHANT, SELLER, STAFF: Utilisateurs standards
- */
 class User extends Authenticatable
 {
-    use HasFactory;
+    use HasApiTokens, HasFactory, Notifiable;
 
-    protected $table = 'users';
-
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'name',
         'email',
         'password',
-        'first_name',
-        'last_name',
+        'status',
         'type',
-        'tenant_id',
-        'is_active',
-        'last_login_at',
-        'email_verified_at',
+        'slug',
+        'tenant_id'
+    ];
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'password',
         'remember_token',
     ];
 
-    protected $casts = [
-        'is_active' => 'boolean',
-        'last_login_at' => 'datetime',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-    ];
-
-    protected $hidden = ['password'];
-
     /**
-     * Scopes
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
      */
-    public function scopeActive($query)
+    protected function casts(): array
     {
-        return $query->where('is_active', true);
-    }
-
-    public function scopeRoot($query)
-    {
-        return $query->where('type', 'ROOT');
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+        ];
     }
 
     /**
-     * Relations
+     * Get the tenant that owns the user.
      */
     public function tenant()
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * Get the roles for the user.
+     * Inclut les rôles globaux (tenant_id = null) et les rôles spécifiques au tenant.
+     */
     public function roles()
     {
-        return $this->belongsToMany(Role::class, 'user_role');
+        return $this->belongsToMany(Role::class, 'user_role')
+            ->withPivot('tenant_id')
+            ->withTimestamps();
     }
 
+    /**
+     * Get the permissions for the user through roles.
+     */
     public function permissions()
     {
-        return $this->hasManyThrough(Permission::class, Role::class);
+        return $this->belongsToMany(Permission::class, 'role_permission')
+            ->withPivot('role_id');
     }
 
     /**
-     * Vérifier si l'utilisateur possède une permission.
-     * 
-     * Le ROOT user a accès à toutes les permissions par défaut.
+     * Vérifier si l'utilisateur est ROOT
+     * Vérification robuste : trim + uppercase pour éviter les problèmes de casse/espaces
+     *
+     * @return bool
      */
-    public function hasPermission(string $code): bool
+    public function isRoot(): bool
     {
-        // Le ROOT user a accès à toutes les permissions
-        if ($this->type === 'ROOT') {
-            return true;
+        $userType = strtoupper(trim($this->type ?? ''));
+        return $userType === 'ROOT';
+    }
+
+    /**
+     * Get the permission codes for the user.
+     * Récupère les permissions de tous les rôles assignés (globaux et tenant-specific).
+     */
+    public function permissionCodes()
+    {
+        // Root users have all permissions (géré dans hasPermission)
+        if ($this->isRoot()) {
+            return ['*']; // Toutes les permissions
         }
 
-        return DB::table('permissions')
-            ->join('role_permission', 'permissions.id', '=', 'role_permission.permission_id')
-            ->join('roles', 'roles.id', '=', 'role_permission.role_id')
-            ->join('user_role', 'roles.id', '=', 'user_role.role_id')
-            ->where('user_role.user_id', $this->id)
-            ->where('permissions.code', $code)
-            ->where('permissions.is_old', false)
-            ->where('roles.is_active', true)
-            ->exists();
+        // Recharger les rôles et leurs permissions pour éviter le cache
+        // Utiliser fresh() pour forcer le rechargement depuis la DB
+        $roles = $this->roles()->with('permissions')->get();
+        
+        \Log::debug('User roles loaded', [
+            'user_id' => $this->id,
+            'user_email' => $this->email,
+            'roles_count' => $roles->count(),
+            'roles' => $roles->map(function ($role) {
+                return [
+                    'id' => $role->id,
+                    'name' => $role->name,
+                    'tenant_id' => $role->pivot->tenant_id ?? null,
+                    'permissions_count' => $role->permissions->count(),
+                ];
+            })->toArray(),
+        ]);
+        
+        if ($roles->isEmpty()) {
+            \Log::debug('User has no roles', [
+                'user_id' => $this->id,
+                'user_email' => $this->email,
+                'user_type' => $this->type,
+            ]);
+            return [];
+        }
+        
+        $permissions = $roles->flatMap(function ($role) {
+            $rolePermissions = $role->permissions->pluck('code')->toArray();
+            \Log::debug('Role permissions', [
+                'user_id' => $this->id,
+                'role_id' => $role->id,
+                'role_name' => $role->name,
+                'role_tenant_id' => $role->pivot->tenant_id ?? null,
+                'permissions_count' => count($rolePermissions),
+                'permissions' => $rolePermissions,
+            ]);
+            return $rolePermissions;
+        })->unique()->values()->toArray();
+        
+        \Log::debug('User final permissions', [
+            'user_id' => $this->id,
+            'user_email' => $this->email,
+            'total_permissions' => count($permissions),
+            'permissions' => $permissions,
+        ]);
+        
+        return $permissions;
     }
 
     /**
-     * Récupérer la liste des permissions de l'utilisateur.
+     * Check if user has a specific permission.
+     * Root users have all permissions.
      *
-     * @return array<int, string>
+     * @param string $permission
+     * @return bool
      */
-    public function permissionCodes(): array
+    public function hasPermission(string $permission): bool
     {
-        return DB::table('permissions')
-            ->join('role_permission', 'permissions.id', '=', 'role_permission.permission_id')
-            ->join('roles', 'roles.id', '=', 'role_permission.role_id')
-            ->join('user_role', 'roles.id', '=', 'user_role.role_id')
-            ->where('user_role.user_id', $this->id)
-            ->where('permissions.is_old', false)
-            ->where('roles.is_active', true)
-            ->distinct()
-            ->orderBy('permissions.code')
-            ->pluck('permissions.code')
-            ->all();
+        // Root users have all permissions
+        if ($this->isRoot()) {
+            return true;
+        }
+        
+        // Check if user has the specific permission
+        $permissions = $this->permissionCodes();
+        
+        // Si l'utilisateur a '*' (toutes les permissions), retourner true
+        if (in_array('*', $permissions)) {
+            return true;
+        }
+        
+        return in_array($permission, $permissions);
     }
 }

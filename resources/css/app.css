@@ -3,9 +3,67 @@
 @tailwind utilities;
 
 /* ============================================
+   SCROLLBAR GLOBAL - Style unifié et moderne
+   ============================================
+   Scrollbar fin, discret mais visible
+   Utilise la couleur secondaire (amber) du thème
+   Compatible dark/light mode
+   ============================================ */
+
+/* Scrollbar global pour tous les éléments scrollables */
+* {
+    scrollbar-width: thin; /* Firefox - scrollbar fine */
+    scrollbar-color: rgba(245, 158, 11, 0.3) transparent; /* Firefox - amber transparent */
+}
+
+*::-webkit-scrollbar {
+    width: 6px; /* Largeur fine et moderne */
+    height: 6px; /* Pour le scroll horizontal */
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent; /* Fond transparent pour un look moderne */
+    border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background-color: rgba(245, 158, 11, 0.3); /* Amber transparent - Light mode */
+    border-radius: 3px;
+    transition: background-color 0.2s ease, width 0.2s ease;
+    border: 1px solid transparent;
+    background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(245, 158, 11, 0.5); /* Plus visible au survol */
+}
+
+*::-webkit-scrollbar-thumb:active {
+    background-color: rgba(245, 158, 11, 0.7); /* Encore plus visible lors du drag */
+}
+
+/* Dark mode - Scrollbar global */
+.dark * {
+    scrollbar-color: rgba(251, 191, 36, 0.4) transparent; /* Firefox - amber plus clair en dark mode */
+}
+
+.dark *::-webkit-scrollbar-thumb {
+    background-color: rgba(251, 191, 36, 0.4); /* Amber plus clair pour dark mode */
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(251, 191, 36, 0.6); /* Plus visible au survol en dark mode */
+}
+
+.dark *::-webkit-scrollbar-thumb:active {
+    background-color: rgba(251, 191, 36, 0.8); /* Encore plus visible lors du drag */
+}
+
+/* ============================================
    SIDEBAR SCROLLBAR - Desktop uniquement
    ============================================
    Scrollbar discrète qui apparaît uniquement au survol
+   Utilise le style global mais avec comportement spécial
    ============================================ */
 
 /* Masquer la scrollbar par défaut */
@@ -21,7 +79,7 @@
 /* Afficher la scrollbar au survol du sidebar */
 .sidebar-scrollbar:hover > div {
     scrollbar-width: thin; /* Firefox - scrollbar fine */
-    scrollbar-color: rgba(156, 163, 175, 0.3) transparent; /* Firefox - couleur grise transparente */
+    scrollbar-color: rgba(245, 158, 11, 0.4) transparent; /* Firefox - amber transparent */
 }
 
 .sidebar-scrollbar:hover > div::-webkit-scrollbar {
@@ -34,37 +92,38 @@
 }
 
 .sidebar-scrollbar:hover > div::-webkit-scrollbar-thumb {
-    background-color: rgba(156, 163, 175, 0.3); /* Couleur grise transparente */
-    border-radius: 3px; /* Coins arrondis */
-    transition: background-color 0.2s ease; /* Transition fluide */
+    background-color: rgba(245, 158, 11, 0.4); /* Amber transparent */
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
 }
 
 .sidebar-scrollbar:hover > div::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(156, 163, 175, 0.5); /* Plus visible au survol direct */
+    background-color: rgba(245, 158, 11, 0.6); /* Plus visible au survol direct */
 }
 
-/* Dark mode */
+/* Dark mode - Sidebar */
 .dark .sidebar-scrollbar:hover > div {
-    scrollbar-color: rgba(156, 163, 175, 0.4) transparent; /* Firefox dark mode */
+    scrollbar-color: rgba(251, 191, 36, 0.5) transparent; /* Firefox dark mode */
 }
 
 .dark .sidebar-scrollbar:hover > div::-webkit-scrollbar-thumb {
-    background-color: rgba(156, 163, 175, 0.4); /* Dark mode - légèrement plus visible */
+    background-color: rgba(251, 191, 36, 0.5); /* Dark mode - légèrement plus visible */
 }
 
 .dark .sidebar-scrollbar:hover > div::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(156, 163, 175, 0.6); /* Dark mode hover */
+    background-color: rgba(251, 191, 36, 0.7); /* Dark mode hover */
 }
 
 /* ============================================
    DRAWER SCROLLBAR
    ============================================
-   Scrollbar discrète pour le contenu du drawer
+   Scrollbar pour le contenu du drawer
+   Utilise le style global avec visibilité optimale
    ============================================ */
 
 .drawer-content {
     scrollbar-width: thin; /* Firefox */
-    scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+    scrollbar-color: rgba(245, 158, 11, 0.4) transparent;
 }
 
 .drawer-content::-webkit-scrollbar {
@@ -76,23 +135,140 @@
 }
 
 .drawer-content::-webkit-scrollbar-thumb {
-    background-color: rgba(156, 163, 175, 0.3);
+    background-color: rgba(245, 158, 11, 0.4);
     border-radius: 3px;
     transition: background-color 0.2s ease;
 }
 
 .drawer-content::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(156, 163, 175, 0.5);
+    background-color: rgba(245, 158, 11, 0.6);
 }
 
 .dark .drawer-content {
-    scrollbar-color: rgba(156, 163, 175, 0.4) transparent;
+    scrollbar-color: rgba(251, 191, 36, 0.5) transparent;
 }
 
 .dark .drawer-content::-webkit-scrollbar-thumb {
-    background-color: rgba(156, 163, 175, 0.4);
+    background-color: rgba(251, 191, 36, 0.5);
 }
 
 .dark .drawer-content::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(156, 163, 175, 0.6);
+    background-color: rgba(251, 191, 36, 0.7);
+}
+
+/* ============================================
+   CUSTOM SCROLLBAR - Pour éléments spécifiques
+   ============================================
+   Scrollbar toujours visible, fine et élégante
+   Compatible dark/light mode
+   ============================================ */
+
+.custom-scrollbar {
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: rgba(245, 158, 11, 0.4) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px; /* Largeur fine et moderne */
+    height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(243, 244, 246, 0.3); /* Fond léger avec transparence */
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(245, 158, 11, 0.4);
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(245, 158, 11, 0.6); /* Plus visible au survol */
+}
+
+/* Dark mode - Custom scrollbar */
+.dark .custom-scrollbar {
+    scrollbar-color: rgba(251, 191, 36, 0.5) transparent;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(31, 41, 55, 0.3); /* Fond dark mode avec transparence */
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(251, 191, 36, 0.5);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(251, 191, 36, 0.7);
+}
+
+/* ============================================
+   TABLES SCROLLBAR - Pour les tableaux
+   ============================================
+   Scrollbar optimisée pour les tableaux horizontaux
+   ============================================ */
+
+.overflow-x-auto::-webkit-scrollbar {
+    height: 6px; /* Hauteur fine pour scroll horizontal */
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+    background-color: rgba(245, 158, 11, 0.4);
+    border-radius: 3px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(245, 158, 11, 0.6);
+}
+
+.dark .overflow-x-auto::-webkit-scrollbar-thumb {
+    background-color: rgba(251, 191, 36, 0.5);
+}
+
+.dark .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(251, 191, 36, 0.7);
+}
+
+/* ============================================
+   MOBILE OPTIMIZATION
+   ============================================
+   Scrollbar optimisé pour mobile
+   Touch-friendly avec scroll fluide
+   ============================================ */
+
+@media (max-width: 640px) {
+    /* Scrollbar plus fine sur mobile pour économiser l'espace */
+    *::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+    }
+    
+    /* Scrollbar plus visible sur mobile pour faciliter l'utilisation */
+    *::-webkit-scrollbar-thumb {
+        background-color: rgba(245, 158, 11, 0.5);
+    }
+    
+    .dark *::-webkit-scrollbar-thumb {
+        background-color: rgba(251, 191, 36, 0.6);
+    }
+}
+
+/* ============================================
+   SMOOTH SCROLLING
+   ============================================
+   Scroll fluide pour une meilleure UX
+   ============================================ */
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* Désactiver smooth scroll sur les éléments avec beaucoup de contenu pour les performances */
+.overflow-auto,
+.overflow-x-auto,
+.overflow-y-auto {
+    scroll-behavior: auto; /* Scroll instantané pour les conteneurs scrollables */
 }

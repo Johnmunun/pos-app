@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * Model Eloquent: Role
@@ -45,11 +45,6 @@ class Role extends Model
     /**
      * Relations
      */
-    public function tenant()
-    {
-        return $this->belongsTo(Tenant::class);
-    }
-
     public function permissions()
     {
         return $this->belongsToMany(Permission::class, 'role_permission');
@@ -58,5 +53,10 @@ class Role extends Model
     public function users()
     {
         return $this->belongsToMany(User::class, 'user_role');
+    }
+
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class);
     }
 }

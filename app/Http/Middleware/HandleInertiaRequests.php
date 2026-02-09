@@ -31,12 +31,35 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+        
+        // Récupérer les permissions de l'utilisateur
+        $permissions = [];
+        if ($user) {
+            try {
+                $permissions = $user->permissionCodes();
+                // Log pour debug (à retirer en production)
+                \Log::debug('User permissions', [
+                    'user_id' => $user->id,
+                    'user_type' => $user->type,
+                    'permissions_count' => count($permissions),
+                    'permissions' => $permissions,
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('Error getting user permissions', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+                $permissions = [];
+            }
+        }
 
         return [
             ...parent::share($request),
             'auth' => [
                 'user' => $user,
-                'permissions' => $user ? $user->permissionCodes() : [],
+                'permissions' => $permissions,
+                'isImpersonating' => $request->session()->get('impersonate.impersonating', false),
+                'originalUserId' => $request->session()->get('impersonate.original_user_id'),
             ],
             'flash' => [
                 'success' => $request->session()->get('success'),

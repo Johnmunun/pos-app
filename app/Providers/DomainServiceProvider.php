@@ -33,6 +33,12 @@ class DomainServiceProvider extends ServiceProvider
             EloquentTenantRepository::class
         );
 
+        // User Repository
+        $this->app->bind(
+            \Domains\User\Repositories\UserRepository::class,
+            \App\Repositories\EloquentUserRepository::class
+        );
+
         // Enregistrer les services domaines
         $this->app->singleton(TenantService::class, function ($app) {
             return new TenantService(
@@ -40,7 +46,58 @@ class DomainServiceProvider extends ServiceProvider
             );
         });
 
-        // Les Use Cases seront enregistrés ici aussi au fur et à mesure
+        // User Management Use Cases
+        $this->app->bind(
+            \Src\Domains\User\UseCases\AssignUserRoleUseCase::class,
+            function ($app) {
+                return new \Src\Domains\User\UseCases\AssignUserRoleUseCase(
+                    userRepository: $app->make(\Domains\User\Repositories\UserRepository::class)
+                );
+            }
+        );
+
+        $this->app->bind(
+            \Src\Domains\User\UseCases\UpdateUserStatusUseCase::class,
+            function ($app) {
+                return new \Src\Domains\User\UseCases\UpdateUserStatusUseCase(
+                    userRepository: $app->make(\Domains\User\Repositories\UserRepository::class)
+                );
+            }
+        );
+
+        $this->app->bind(
+            \Src\Domains\User\UseCases\ResetUserPasswordUseCase::class,
+            function ($app) {
+                return new \Src\Domains\User\UseCases\ResetUserPasswordUseCase(
+                    userRepository: $app->make(\Domains\User\Repositories\UserRepository::class)
+                );
+            }
+        );
+
+        $this->app->bind(
+            \Src\Domains\User\UseCases\DeleteUserUseCase::class,
+            function ($app) {
+                return new \Src\Domains\User\UseCases\DeleteUserUseCase(
+                    userRepository: $app->make(\Domains\User\Repositories\UserRepository::class)
+                );
+            }
+        );
+
+        $this->app->bind(
+            \Src\Domains\User\UseCases\ImpersonateUserUseCase::class,
+            function ($app) {
+                return new \Src\Domains\User\UseCases\ImpersonateUserUseCase(
+                    userRepository: $app->make(\Domains\User\Repositories\UserRepository::class)
+                );
+            }
+        );
+
+        $this->app->bind(
+            \Src\Domains\User\UseCases\StopImpersonationUseCase::class,
+            function ($app) {
+                return new \Src\Domains\User\UseCases\StopImpersonationUseCase();
+            }
+        );
     }
 
     /**

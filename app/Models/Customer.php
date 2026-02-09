@@ -2,13 +2,21 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * Model Eloquent: Customer
+ *
+ * Représentation de la table 'customers'.
+ */
 class Customer extends Model
 {
     use SoftDeletes;
+    use HasFactory;
+
+    protected $table = 'customers';
 
     protected $fillable = [
         'tenant_id',
@@ -27,8 +35,8 @@ class Customer extends Model
         'credit_limit',
         'total_spent',
         'total_orders',
-        'notes',
         'is_active',
+        'notes',
     ];
 
     protected $casts = [
@@ -40,11 +48,23 @@ class Customer extends Model
     ];
 
     /**
+     * Scopes
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    /**
      * Relations
      */
-    public function tenant(): BelongsTo
+    public function tenant()
     {
         return $this->belongsTo(Tenant::class);
     }
-}
 
+    public function sales()
+    {
+        return $this->hasMany(Sale::class);
+    }
+}

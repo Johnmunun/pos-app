@@ -60,6 +60,31 @@ self.addEventListener('fetch', (event) => {
         return; // Laisser passer la requête sans interception
     }
 
+    // Mettre en cache les images produits
+    if (url.pathname.startsWith('/storage/pharmacy/products/') || 
+        url.pathname.startsWith('/storage/products/')) {
+        event.respondWith(
+            caches.match(event.request).then((cachedResponse) => {
+                if (cachedResponse) {
+                    return cachedResponse;
+                }
+                return fetch(event.request).then((response) => {
+                    if (response.status === 200) {
+                        const responseToCache = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(event.request, responseToCache);
+                        });
+                    }
+                    return response;
+                }).catch(() => {
+                    // Si offline et pas en cache, retourner une image placeholder
+                    return new Response('', { status: 404 });
+                });
+            })
+        );
+        return;
+    }
+
     // Ignorer les assets Vite (toujours fraîches, gérés par Vite)
     if (url.pathname.startsWith('/build/') || 
         url.pathname.startsWith('/assets/') ||

@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProductBatch extends Model
 {
+    use HasFactory;
+
     protected $table = 'product_batches';
 
     protected $fillable = [
@@ -31,12 +33,12 @@ class ProductBatch extends Model
     /**
      * Relations
      */
-    public function tenant(): BelongsTo
+    public function tenant()
     {
         return $this->belongsTo(Tenant::class);
     }
 
-    public function product(): BelongsTo
+    public function product()
     {
         return $this->belongsTo(Product::class);
     }

@@ -11,11 +11,14 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('guest')->group(function () {
-    Route::get('register', [RegisteredUserController::class, 'create'])
-        ->name('register');
+// Intégrer les routes d'onboarding DDD
+require __DIR__.'/onboarding.php';
 
-    Route::post('register', [RegisteredUserController::class, 'store']);
+Route::middleware('guest')->group(function () {
+    // Rediriger l'ancienne route register vers l'onboarding
+    Route::get('register', function () {
+        return redirect()->route('onboarding.step1');
+    })->name('register');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');

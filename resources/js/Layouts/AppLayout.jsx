@@ -16,6 +16,7 @@ export default function AppLayout({ children, header }) {
     const user = auth?.user;
     const permissions = auth?.permissions ?? [];
     const isRoot = user?.type === 'ROOT';
+    const isImpersonating = auth?.isImpersonating ?? false;
 
     // État pour le drawer mobile
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -51,6 +52,7 @@ export default function AppLayout({ children, header }) {
                     user={user}
                     permissions={permissions}
                     onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+                    isImpersonating={isImpersonating}
                 />
 
                 {/* Header optionnel */}

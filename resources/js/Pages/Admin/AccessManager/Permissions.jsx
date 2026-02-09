@@ -2,6 +2,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 /**
  * Page: Gestion des Permissions
@@ -20,14 +21,14 @@ export default function Permissions() {
 
     const handleSearch = (e) => {
         e.preventDefault();
-        router.get('/admin/access/permissions', { search }, {
+        router.get('/admin/access-manager/permissions', { search }, {
             preserveState: true,
             preserveScroll: true,
         });
     };
 
     const handleDelete = (permissionId) => {
-        router.delete(`/admin/access/permissions/${permissionId}`, {
+        router.delete(`/admin/access-manager/permissions/${permissionId}`, {
             preserveScroll: true,
             onSuccess: () => setShowDeleteModal(null),
         });
@@ -35,8 +36,26 @@ export default function Permissions() {
 
     const handleSync = () => {
         setIsSyncing(true);
-        router.post('/admin/access/permissions/sync', {}, {
+        router.post('/admin/access-manager/permissions/sync', {}, {
             preserveScroll: true,
+            onSuccess: (page) => {
+                if (page.props?.flash?.message) {
+                    toast.success(page.props.flash.message);
+                } else {
+                    toast.success('Permissions synchronisées avec succès');
+                }
+                // Reload the page to show updated permissions
+                router.reload({
+                    only: ['permissions'],
+                    preserveScroll: true
+                });
+                setIsSyncing(false);
+            },
+            onError: (errors) => {
+                const errorMessage = errors.message || errors.default || 'Erreur inconnue lors de la synchronisation';
+                toast.error('Erreur: ' + errorMessage);
+                setIsSyncing(false);
+            },
             onFinish: () => setIsSyncing(false),
         });
     };
@@ -108,6 +127,16 @@ export default function Permissions() {
                         </div>
                     ) : (
                         <div className="space-y-6">
+                            <div className="flex items-center justify-end mb-4">
+                                <button
+                                    onClick={() => router.reload({ only: ['permissions'] })}
+                                    className="inline-flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition"
+                                    title="Actualiser la liste"
+                                >
+                                    <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                    <span className="hidden sm:inline">Actualiser</span>
+                                </button>
+                            </div>
                             {Object.entries(permissions).map(([group, groupPermissions]) => (
                                 <div
                                     key={group}

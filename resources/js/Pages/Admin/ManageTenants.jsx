@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import FlashMessages from '@/Components/FlashMessages';
+import { RefreshCw } from 'lucide-react';
 
 export default function ManageTenants({ tenants }) {
     const [isToggling, setIsToggling] = useState(null);
@@ -34,6 +35,14 @@ export default function ManageTenants({ tenants }) {
                             </p>
                         </div>
                         <div className="flex gap-3">
+                            <button
+                                onClick={() => router.reload({ only: ['tenants'] })}
+                                className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-gray-700 bg-gray-100 hover:bg-gray-200 transition"
+                                title="Actualiser"
+                            >
+                                <RefreshCw className="h-4 w-4" />
+                                <span className="hidden sm:inline">Actualiser</span>
+                            </button>
                             <a
                                 href={route('admin.tenants.select.view')}
                                 className="inline-flex items-center px-4 py-2 rounded-lg text-gray-700 bg-gray-100 hover:bg-gray-200 transition"
@@ -71,6 +80,19 @@ export default function ManageTenants({ tenants }) {
 
                 {/* Tenants Table */}
                 <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    <div className="px-4 sm:px-6 py-3 border-b border-gray-200 flex items-center justify-between">
+                        <h3 className="text-sm font-medium text-gray-700">
+                            Liste des tenants
+                        </h3>
+                        <button
+                            onClick={() => router.reload({ only: ['tenants'] })}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition"
+                            title="Actualiser la liste"
+                        >
+                            <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            <span className="hidden sm:inline">Actualiser</span>
+                        </button>
+                    </div>
                     <table className="w-full">
                         <thead>
                             <tr className="bg-gray-50 border-b border-gray-200">

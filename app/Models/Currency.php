@@ -2,12 +2,22 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * Model Eloquent: Currency
+ *
+ * Représentation de la table 'currencies'.
+ */
 class Currency extends Model
 {
+    use HasFactory;
+
+    protected $table = 'currencies';
+
     protected $fillable = [
         'code',
         'name',
@@ -20,25 +30,9 @@ class Currency extends Model
     protected $casts = [
         'is_default' => 'boolean',
         'is_active' => 'boolean',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
-
-    /**
-     * Relations
-     */
-    public function tenant(): BelongsTo
-    {
-        return $this->belongsTo(Tenant::class);
-    }
-
-    public function exchangeRatesFrom(): HasMany
-    {
-        return $this->hasMany(ExchangeRate::class, 'from_currency_id');
-    }
-
-    public function exchangeRatesTo(): HasMany
-    {
-        return $this->hasMany(ExchangeRate::class, 'to_currency_id');
-    }
 
     /**
      * Scopes
@@ -56,5 +50,23 @@ class Currency extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    /**
+     * Relations
+     */
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
+    public function exchangeRatesFrom(): HasMany
+    {
+        return $this->hasMany(ExchangeRate::class, 'from_currency_id');
+    }
+
+    public function exchangeRatesTo(): HasMany
+    {
+        return $this->hasMany(ExchangeRate::class, 'to_currency_id');
     }
 }

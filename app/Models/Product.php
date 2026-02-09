@@ -2,12 +2,18 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
+    use HasFactory;
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'tenant_id',
         'shop_id',
@@ -17,6 +23,7 @@ class Product extends Model
         'description',
         'purchase_price',
         'selling_price',
+        'category_id',
         'tax_rate',
         'unit',
         'image',
@@ -38,19 +45,27 @@ class Product extends Model
         'image_type', // 'upload' or 'url'
     ];
 
-    protected $casts = [
-        'images' => 'array',
-        'is_active' => 'boolean',
-        'is_tracked' => 'boolean',
-        'prescription_required' => 'boolean',
-        'purchase_price' => 'decimal:2',
-        'selling_price' => 'decimal:2',
-        'tax_rate' => 'decimal:2',
-        'weight' => 'decimal:2',
-        'length' => 'decimal:2',
-        'width' => 'decimal:2',
-        'height' => 'decimal:2',
-    ];
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'images' => 'array',
+            'is_active' => 'boolean',
+            'is_tracked' => 'boolean',
+            'prescription_required' => 'boolean',
+            'purchase_price' => 'decimal:2',
+            'selling_price' => 'decimal:2',
+            'tax_rate' => 'decimal:2',
+            'weight' => 'decimal:2',
+            'length' => 'decimal:2',
+            'width' => 'decimal:2',
+            'height' => 'decimal:2',
+        ];
+    }
 
     /**
      * Get the image URL (from upload or external URL)
@@ -88,19 +103,25 @@ class Product extends Model
     }
 
     /**
-     * Relations
+     * Get the tenant that owns the product.
      */
-    public function tenant(): BelongsTo
+    public function tenant()
     {
         return $this->belongsTo(Tenant::class);
     }
 
-    public function category(): BelongsTo
+    /**
+     * Get the category that owns the product.
+     */
+    public function category()
     {
         return $this->belongsTo(Category::class);
     }
 
-    public function batches(): HasMany
+    /**
+     * Get the batches for the product.
+     */
+    public function batches()
     {
         return $this->hasMany(ProductBatch::class);
     }

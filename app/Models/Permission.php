@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * Model Eloquent: Permission
@@ -21,6 +21,7 @@ class Permission extends Model
         'description',
         'group',
         'is_old',
+        'tenant_id',
     ];
 
     protected $casts = [
@@ -43,5 +44,10 @@ class Permission extends Model
     public function roles()
     {
         return $this->belongsToMany(Role::class, 'role_permission');
+    }
+
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class);
     }
 }

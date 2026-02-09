@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -17,6 +18,9 @@ class SaleItem extends Model
         'product_sku',
         'quantity',
         'unit_price',
+        'currency',
+        'converted_price',
+        'conversion_rate',
         'tax_rate',
         'discount_amount',
         'subtotal',
@@ -28,6 +32,8 @@ class SaleItem extends Model
     protected $casts = [
         'quantity' => 'integer',
         'unit_price' => 'decimal:2',
+        'converted_price' => 'decimal:2',
+        'conversion_rate' => 'decimal:4',
         'tax_rate' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'subtotal' => 'decimal:2',
@@ -47,5 +53,9 @@ class SaleItem extends Model
     {
         return $this->belongsTo(Product::class);
     }
-}
 
+    public function currency(): BelongsTo
+    {
+        return $this->belongsTo(Currency::class, 'currency', 'code');
+    }
+}

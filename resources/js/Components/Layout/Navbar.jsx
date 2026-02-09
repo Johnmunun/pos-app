@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, router } from '@inertiajs/react';
 import Dropdown from '@/Components/Dropdown';
+import GlobalSearch from '@/Components/GlobalSearch';
 
 /**
  * Component: Navbar
@@ -13,8 +14,7 @@ import Dropdown from '@/Components/Dropdown';
  * - Menu utilisateur (dropdown)
  * - Mobile-first design
  */
-export default function Navbar({ user, permissions, onMenuClick }) {
-    const [searchQuery, setSearchQuery] = useState('');
+export default function Navbar({ user, permissions, onMenuClick, isImpersonating = false }) {
 
     // Toggle dark mode
     const toggleDarkMode = () => {
@@ -51,34 +51,20 @@ export default function Navbar({ user, permissions, onMenuClick }) {
             {/* Séparateur */}
             <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 lg:hidden" />
 
-            {/* Barre de recherche */}
+            {/* Barre de recherche globale */}
             <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-                <form className="relative flex flex-1" onSubmit={(e) => { e.preventDefault(); }}>
-                    <label htmlFor="search-field" className="sr-only">
-                        Rechercher
-                    </label>
-                    <svg
-                        className="pointer-events-none absolute inset-y-0 left-0 h-full w-5 text-gray-400 pl-3"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                    >
-                        <path
-                            fillRule="evenodd"
-                            d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-                            clipRule="evenodd"
-                        />
-                    </svg>
-                    <input
-                        id="search-field"
-                        className="block h-full w-full border-0 py-0 pl-10 pr-0 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-0 sm:text-sm bg-transparent"
-                        placeholder="Rechercher..."
-                        type="search"
-                        name="search"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                </form>
+                <GlobalSearch isRoot={user?.type === 'ROOT'} />
             </div>
+
+            {/* Indicateur d'impersonation */}
+            {isImpersonating && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 rounded-lg text-sm font-medium">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    Mode impersonation
+                </div>
+            )}
 
             {/* Actions droite */}
             <div className="flex items-center gap-x-4 lg:gap-x-6">
@@ -181,6 +167,22 @@ export default function Navbar({ user, permissions, onMenuClick }) {
                             </svg>
                             Sécurité
                         </Dropdown.Link>
+                        {isImpersonating && (
+                            <>
+                                <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                                <Dropdown.Link
+                                    href={route('admin.stop-impersonation')}
+                                    method="post"
+                                    as="button"
+                                    className="flex items-center gap-2 text-amber-600 dark:text-amber-400"
+                                >
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                    </svg>
+                                    Arrêter l'impersonation
+                                </Dropdown.Link>
+                            </>
+                        )}
                         <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
                         <Dropdown.Link
                             href="/logout"

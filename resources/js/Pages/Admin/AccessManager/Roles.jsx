@@ -3,7 +3,8 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { useState, useEffect, useMemo } from 'react';
 import { useForm } from '@inertiajs/react';
 import Drawer from '@/Components/Drawer';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, AlertCircle, RefreshCw } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import axios from 'axios';
 
 /**
@@ -17,7 +18,7 @@ import axios from 'axios';
  * - Supprimer un rôle (sauf ROOT)
  */
 export default function Roles() {
-    const { roles, search: initialSearch, allPermissions } = usePage().props;
+    const { roles, search: initialSearch, allPermissions, flash } = usePage().props;
     const [search, setSearch] = useState(initialSearch || '');
     const [permissionSearch, setPermissionSearch] = useState('');
     const [showDeleteModal, setShowDeleteModal] = useState(null);
@@ -25,6 +26,16 @@ export default function Roles() {
     const [editingRole, setEditingRole] = useState(null);
     const [isRootRole, setIsRootRole] = useState(false);
     const [loadingRole, setLoadingRole] = useState(false);
+
+    // Afficher les flash messages comme toasts
+    useEffect(() => {
+        if (flash?.success) {
+            toast.success(flash.success);
+        }
+        if (flash?.error) {
+            toast.error(flash.error);
+        }
+    }, [flash]);
 
     const { data, setData, post, put, processing, errors, reset } = useForm({
         name: '',
@@ -34,14 +45,14 @@ export default function Roles() {
 
     const handleSearch = (e) => {
         e.preventDefault();
-        router.get('/admin/access/roles', { search }, {
+        router.get(route('admin.access.roles'), { search }, {
             preserveState: true,
             preserveScroll: true,
         });
     };
 
     const handleDelete = (roleId) => {
-        router.delete(`/admin/access/roles/${roleId}`, {
+        router.delete(route('admin.access.roles.delete', roleId), {
             preserveScroll: true,
             onSuccess: () => setShowDeleteModal(null),
         });
@@ -58,7 +69,7 @@ export default function Roles() {
         setLoadingRole(true);
         setDrawerOpen(true);
         try {
-            const response = await axios.get(`/admin/access/roles/${roleId}`);
+            const response = await axios.get(route('admin.access.roles.get', roleId));
             const roleData = response.data.role;
             setEditingRole(roleData);
             setIsRootRole(response.data.isRootRole);
@@ -111,7 +122,7 @@ export default function Roles() {
         
         // Vérification avant soumission
         if (!data.name.trim()) {
-            alert('Le nom du rôle est obligatoire');
+            toast.error('Le nom du rôle est obligatoire');
             return;
         }
 
@@ -121,10 +132,79 @@ export default function Roles() {
         permissionsArray = permissionsArray.map(id => typeof id === 'number' ? id : parseInt(id, 10)).filter(id => !isNaN(id));
         
         if (permissionsArray.length === 0) {
-            const confirmSubmit = confirm('Aucune permission n\'est sélectionnée. Voulez-vous vraiment créer un rôle sans permission ?');
-            if (!confirmSubmit) {
-                return;
-            }
+            // Afficher un toast de confirmation personnalisé
+            const proceedWithSubmit = () => {
+                // S'assurer que les permissions sont bien formatées avant la soumission
+                setData('permissions', permissionsArray);
+                setData('name', data.name.trim());
+                setData('description', data.description || '');
+
+                if (editingRole) {
+                    put(route('admin.access.roles.update', editingRole.id), {
+                        preserveScroll: true,
+                        onSuccess: () => {
+                            closeDrawer();
+                            toast.success('Rôle mis à jour avec succès');
+                        },
+                        onError: (errors) => {
+                            console.error('Erreur lors de la mise à jour:', errors);
+                            toast.error('Erreur lors de la mise à jour du rôle');
+                        },
+                    });
+                } else {
+                    post(route('admin.access.roles.store'), {
+                        preserveScroll: true,
+                        onSuccess: () => {
+                            closeDrawer();
+                            toast.success('Rôle créé avec succès');
+                        },
+                        onError: (errors) => {
+                            console.error('Erreur lors de la création:', errors);
+                            toast.error('Erreur lors de la création du rôle');
+                        },
+                    });
+                }
+            };
+
+            toast.custom((t) => (
+                <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
+                    <div className="flex-1 w-0 p-4">
+                        <div className="flex items-start">
+                            <div className="flex-shrink-0">
+                                <AlertCircle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                            </div>
+                            <div className="ml-3 flex-1">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                    Aucune permission sélectionnée
+                                </p>
+                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                    Voulez-vous vraiment créer un rôle sans permission ?
+                                </p>
+                            </div>
+                        </div>
+                        <div className="mt-4 flex gap-2">
+                            <button
+                                onClick={() => {
+                                    toast.dismiss(t.id);
+                                    proceedWithSubmit();
+                                }}
+                                className="flex-1 bg-amber-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-amber-700 transition"
+                            >
+                                Continuer
+                            </button>
+                            <button
+                                onClick={() => toast.dismiss(t.id)}
+                                className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                            >
+                                Annuler
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ), {
+                duration: Infinity,
+            });
+            return; // Arrêter ici, la soumission se fera via le bouton "Continuer" du toast
         }
 
         // S'assurer que les permissions sont bien formatées avant la soumission
@@ -133,27 +213,29 @@ export default function Roles() {
         setData('description', data.description || '');
 
         if (editingRole) {
-            put(`/admin/access/roles/${editingRole.id}`, {
+            put(route('admin.access.roles.update', editingRole.id), {
                 preserveScroll: true,
                 onSuccess: () => {
                     closeDrawer();
+                    toast.success('Rôle mis à jour avec succès');
                 },
                 onError: (errors) => {
                     console.error('Erreur lors de la mise à jour:', errors);
                     console.error('Données envoyées:', { name: data.name, permissions: permissionsArray });
-                    alert('Erreur lors de la mise à jour du rôle. Vérifiez la console pour plus de détails.');
+                    toast.error('Erreur lors de la mise à jour du rôle');
                 },
             });
         } else {
-            post('/admin/access/roles', {
+            post(route('admin.access.roles.store'), {
                 preserveScroll: true,
                 onSuccess: () => {
                     closeDrawer();
+                    toast.success('Rôle créé avec succès');
                 },
                 onError: (errors) => {
                     console.error('Erreur lors de la création:', errors);
                     console.error('Données envoyées:', { name: data.name, permissions: permissionsArray });
-                    alert('Erreur lors de la création du rôle. Vérifiez la console pour plus de détails.');
+                    toast.error('Erreur lors de la création du rôle');
                 },
             });
         }
@@ -479,7 +561,7 @@ export default function Roles() {
                             </div>
 
                             <div className="space-y-4 max-h-96 overflow-y-auto">
-                                {Object.entries(allPermissions)
+                                {Object.entries(allPermissions || {})
                                     .filter(([group, groupPermissions]) => {
                                         if (!permissionSearch.trim()) return true;
                                         const searchLower = permissionSearch.toLowerCase();

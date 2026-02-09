@@ -2,67 +2,78 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Category extends Model
 {
+    use HasFactory;
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
-        'tenant_id',
-        'parent_id',
         'name',
-        'slug',
         'description',
+        'parent_id',
+        'tenant_id',
+        'level',
+        'order',
+        'status',
+        'slug',
         'image',
         'sort_order',
         'is_active',
     ];
 
-    protected $casts = [
-        'is_active' => 'boolean',
-        'sort_order' => 'integer',
-    ];
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'status' => 'boolean',
+            'parent_id' => 'integer',
+            'level' => 'integer',
+            'order' => 'integer',
+            'is_active' => 'boolean',
+            'sort_order' => 'integer',
+        ];
+    }
 
     /**
-     * Relations
+     * Get the tenant that owns the category.
      */
-    public function tenant(): BelongsTo
+    public function tenant()
     {
         return $this->belongsTo(Tenant::class);
     }
 
-    public function parent(): BelongsTo
+    /**
+     * Get the parent category.
+     */
+    public function parent()
     {
         return $this->belongsTo(Category::class, 'parent_id');
     }
 
-    public function children(): HasMany
+    /**
+     * Get the child categories.
+     */
+    public function children()
     {
         return $this->hasMany(Category::class, 'parent_id');
     }
 
-    public function products(): HasMany
+    /**
+     * Get the products for the category.
+     */
+    public function products()
     {
         return $this->hasMany(Product::class);
     }
-
-    /**
-     * Scopes
-     */
-    public function scopeForTenant($query, int $tenantId)
-    {
-        return $query->where('tenant_id', $tenantId);
-    }
-
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
-    }
-
-    public function scopeRoot($query)
-    {
-        return $query->whereNull('parent_id');
-    }
 }
-

@@ -58,6 +58,13 @@ if ('serviceWorker' in navigator) {
     });
 }
 
+// Initialiser les services offline
+if (typeof window !== 'undefined') {
+    import('./lib/syncService').then(() => {
+        console.log('Offline services initialized');
+    });
+}
+
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: (name) =>

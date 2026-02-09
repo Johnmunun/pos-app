@@ -21,7 +21,7 @@ class CheckRootUser
         }
 
         // Vérifier que l'utilisateur est ROOT
-        if (auth()->user()->type !== 'ROOT') {
+        if (!auth()->user()->isRoot()) {
             return redirect()->route('dashboard')->with('error', 'Accès non autorisé');
         }
 
