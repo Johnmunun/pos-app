@@ -3,7 +3,6 @@
 namespace Src\Domains\User\Services;
 
 use App\Models\Permission;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -31,13 +30,31 @@ class PermissionsSyncService
         ];
 
         try {
-            // Lire le fichier YAML
-            $yamlContent = Storage::get('permissions.yaml');
+            // Lire le fichier YAML directement depuis le chemin (plus fiable que Storage facade)
+            $yamlPath = storage_path('app/permissions.yaml');
+            
+            if (!file_exists($yamlPath)) {
+                $report['errors'][] = 'Fichier storage/app/permissions.yaml introuvable. Créez ce fichier ou synchronisez depuis la base.';
+                $report['total_in_db'] = Permission::count();
+                return $report;
+            }
+            
+            $yamlContent = file_get_contents($yamlPath);
+            if ($yamlContent === false) {
+                $yamlContent = '';
+                $report['errors'][] = 'Impossible de lire le fichier storage/app/permissions.yaml.';
+            }
             $permissionsData = $this->parseYaml($yamlContent);
             
             // Extraire toutes les permissions du YAML
             $yamlPermissions = $this->extractPermissionsFromYaml($permissionsData);
             $report['total_in_yaml'] = count($yamlPermissions);
+            
+            // Si aucun contenu YAML, ne pas modifier la base (éviter de marquer toutes les permissions comme obsolètes)
+            if ($report['total_in_yaml'] === 0) {
+                $report['total_in_db'] = Permission::count();
+                return $report;
+            }
             
             // Obtenir les permissions actuelles de la base de données
             $dbPermissions = Permission::pluck('code', 'id')->toArray();
@@ -94,12 +111,12 @@ class PermissionsSyncService
     /**
      * Parse un fichier YAML simple
      * 
-     * @param string $yamlContent Contenu du fichier YAML
+     * @param string|null $yamlContent Contenu du fichier YAML (null = vide)
      * @return array Données parsées
      */
-    private function parseYaml(string $yamlContent): array
+    private function parseYaml(?string $yamlContent): array
     {
-        $lines = explode("\n", $yamlContent);
+        $lines = explode("\n", $yamlContent ?? '');
         $result = [];
         $currentGroup = null;
         

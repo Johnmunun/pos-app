@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useForm } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 import Drawer from '@/Components/Drawer';
 import { Label } from '@/Components/ui/label';
 import { Input } from '@/Components/ui/input';
@@ -18,7 +18,8 @@ import {
     Upload,
     Trash2,
     WifiOff,
-    CloudUpload
+    CloudUpload,
+    Sparkles
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
@@ -28,6 +29,8 @@ import syncService from '@/lib/syncService';
 
 export default function ProductDrawer({ isOpen, onClose, product = null, categories = [] }) {
     const isEditing = !!product;
+    const { shop } = usePage().props;
+    const defaultCurrency = shop?.currency || 'CDF';
     
     const { data, setData, post, put, processing, errors, reset } = useForm({
         name: product?.name || '',
@@ -35,7 +38,7 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
         description: product?.description || '',
         category_id: product?.category_id || '',
         price: product?.price_amount || '',
-        currency: product?.price_currency || 'USD',
+        currency: product?.price_currency || defaultCurrency,
         cost: product?.cost || '',
         minimum_stock: product?.minimum_stock || '',
         unit: product?.unit || '',
@@ -51,6 +54,30 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
 
     const [isMedicine, setIsMedicine] = useState(!!product?.medicine_type);
     const [imagePreview, setImagePreview] = useState(product?.image_url || null);
+    const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+    const [suppliers, setSuppliers] = useState([]);
+    const [loadingSuppliers, setLoadingSuppliers] = useState(false);
+
+    // Load suppliers dynamically
+    useEffect(() => {
+        const fetchSuppliers = async () => {
+            setLoadingSuppliers(true);
+            try {
+                const response = await axios.get(route('pharmacy.suppliers.active'));
+                if (response.data.success) {
+                    setSuppliers(response.data.suppliers || []);
+                }
+            } catch (error) {
+                console.error('Error loading suppliers:', error);
+            } finally {
+                setLoadingSuppliers(false);
+            }
+        };
+        
+        if (isOpen) {
+            fetchSuppliers();
+        }
+    }, [isOpen]);
 
     // Reset form when product changes
     useEffect(() => {
@@ -61,7 +88,7 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
                 description: product.description || '',
                 category_id: product.category_id || '',
                 price: product.price_amount || '',
-                currency: product.price_currency || 'USD',
+                currency: product.price_currency || defaultCurrency,
                 cost: product.cost || '',
                 minimum_stock: product.minimum_stock || '',
                 unit: product.unit || '',
@@ -129,6 +156,37 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
         setImagePreview(null);
     };
 
+    const handleGenerateCode = async () => {
+        if (!data.name) {
+            toast.error('Veuillez d\'abord saisir le nom du produit.');
+            return;
+        }
+
+        if (!navigator.onLine) {
+            toast.error('La génération automatique du code nécessite une connexion internet.');
+            return;
+        }
+
+        try {
+            setIsGeneratingCode(true);
+            const response = await axios.get(route('pharmacy.products.generate-code'), {
+                params: { name: data.name },
+            });
+
+            if (response.data?.code) {
+                setData('product_code', response.data.code);
+                toast.success('Code produit généré automatiquement.');
+            } else {
+                toast.error('Impossible de générer un code produit. Réessayez.');
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error(error.response?.data?.message || 'Erreur lors de la génération du code produit.');
+        } finally {
+            setIsGeneratingCode(false);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         
@@ -177,7 +235,10 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
 
             try {
                 if (isEditing) {
-                    await axios.put(route('pharmacy.products.update', product.id), formData, {
+                    // Utiliser POST avec _method=PUT pour le method spoofing Laravel
+                    // car PHP ne lit pas les fichiers multipart dans les requêtes PUT
+                    formData.append('_method', 'PUT');
+                    await axios.post(route('pharmacy.products.update', product.id), formData, {
                         headers: {
                             'Content-Type': 'multipart/form-data',
                         },
@@ -266,15 +327,28 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
 
                         <div className="space-y-2">
                             <Label htmlFor="product_code">Code produit *</Label>
-                            <div className="relative">
-                                <Hash className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
-                                <Input
-                                    id="product_code"
-                                    value={data.product_code}
-                                    onChange={(e) => setData('product_code', e.target.value)}
-                                    placeholder="PROD-001"
-                                    className="pl-10 w-full"
-                                />
+                            <div className="flex items-center gap-2">
+                                <div className="relative flex-1">
+                                    <Hash className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                    <Input
+                                        id="product_code"
+                                        value={data.product_code}
+                                        onChange={(e) => setData('product_code', e.target.value)}
+                                        placeholder="PROD-001"
+                                        className="pl-10 w-full"
+                                    />
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleGenerateCode}
+                                    disabled={isGeneratingCode}
+                                    className="whitespace-nowrap"
+                                >
+                                    <Sparkles className="h-4 w-4 mr-1" />
+                                    {isGeneratingCode ? 'Génération...' : 'Auto'}
+                                </Button>
                             </div>
                             {errors.product_code && <p className="text-sm text-red-600 dark:text-red-400">{errors.product_code}</p>}
                         </div>
@@ -440,9 +514,17 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
                                 onChange={(e) => setData('currency', e.target.value)}
                                 className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                             >
-                                <option value="USD">USD</option>
-                                <option value="EUR">EUR</option>
-                                <option value="CDF">CDF</option>
+                                {shop?.currencies && shop.currencies.length > 0 ? (
+                                    shop.currencies.map(c => (
+                                        <option key={c.code} value={c.code}>{c.code} - {c.name}</option>
+                                    ))
+                                ) : (
+                                    <>
+                                        <option value="CDF">CDF - Franc Congolais</option>
+                                        <option value="USD">USD - Dollar US</option>
+                                        <option value="EUR">EUR - Euro</option>
+                                    </>
+                                )}
                             </select>
                             {errors.currency && <p className="text-sm text-red-600 dark:text-red-400">{errors.currency}</p>}
                         </div>
@@ -481,6 +563,25 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
                             />
                             {errors.manufacturer && <p className="text-sm text-red-600 dark:text-red-400">{errors.manufacturer}</p>}
                         </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="supplier_id">Fournisseur</Label>
+                        <select
+                            id="supplier_id"
+                            value={data.supplier_id}
+                            onChange={(e) => setData('supplier_id', e.target.value)}
+                            disabled={loadingSuppliers}
+                            className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        >
+                            <option value="">{loadingSuppliers ? 'Chargement...' : 'Sélectionner un fournisseur'}</option>
+                            {suppliers.map((supplier) => (
+                                <option key={supplier.id} value={supplier.id}>
+                                    {supplier.name}
+                                </option>
+                            ))}
+                        </select>
+                        {errors.supplier_id && <p className="text-sm text-red-600 dark:text-red-400">{errors.supplier_id}</p>}
                     </div>
                 </div>
 

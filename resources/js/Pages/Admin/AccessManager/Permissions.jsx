@@ -1,6 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Head, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -14,10 +14,15 @@ import { toast } from 'react-hot-toast';
  * - Générer/synchroniser depuis permissions.yaml
  */
 export default function Permissions() {
-    const { permissions, search: initialSearch } = usePage().props;
+    const { permissions, search: initialSearch, flash } = usePage().props;
     const [search, setSearch] = useState(initialSearch || '');
     const [showDeleteModal, setShowDeleteModal] = useState(null);
     const [isSyncing, setIsSyncing] = useState(false);
+
+    useEffect(() => {
+        if (flash?.message) toast.success(flash.message);
+        if (flash?.error) toast.error(flash.error);
+    }, [flash?.message, flash?.error]);
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -38,17 +43,8 @@ export default function Permissions() {
         setIsSyncing(true);
         router.post('/admin/access-manager/permissions/sync', {}, {
             preserveScroll: true,
-            onSuccess: (page) => {
-                if (page.props?.flash?.message) {
-                    toast.success(page.props.flash.message);
-                } else {
-                    toast.success('Permissions synchronisées avec succès');
-                }
-                // Reload the page to show updated permissions
-                router.reload({
-                    only: ['permissions'],
-                    preserveScroll: true
-                });
+            onSuccess: () => {
+                router.reload({ only: ['permissions'], preserveScroll: true });
                 setIsSyncing(false);
             },
             onError: (errors) => {

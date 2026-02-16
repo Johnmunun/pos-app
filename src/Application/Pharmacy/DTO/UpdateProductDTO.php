@@ -2,18 +2,24 @@
 
 namespace Src\Application\Pharmacy\DTO;
 
-use Src\Shared\ValueObjects\Money;
-use Src\Shared\ValueObjects\Quantity;
-
 class UpdateProductDTO
 {
     public function __construct(
-        public readonly string $id,
+        public readonly string $shopId,
         public readonly ?string $name = null,
+        public readonly ?string $productCode = null,
         public readonly ?string $description = null,
-        public readonly ?Money $price = null,
         public readonly ?string $categoryId = null,
-        public readonly ?bool $requiresPrescription = null,
+        public readonly ?float $price = null,
+        public readonly ?string $currency = null,
+        public readonly ?float $cost = null,
+        public readonly ?int $minimumStock = null,
+        public readonly ?string $unit = null,
+        public readonly ?string $medicineType = null,
+        public readonly ?string $dosage = null,
+        public readonly ?bool $prescriptionRequired = null,
+        public readonly ?string $manufacturer = null,
+        public readonly ?string $supplierId = null,
         public readonly ?bool $isActive = null
     ) {}
 }

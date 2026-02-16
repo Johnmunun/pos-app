@@ -6,6 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
+/**
+ * Category Model for Pharmacy
+ *
+ * @property string $id
+ * @property string $shop_id
+ * @property string $name
+ * @property string|null $description
+ * @property string|null $parent_id
+ * @property int $sort_order
+ * @property bool $is_active
+ * @property \Carbon\Carbon|null $created_at
+ * @property \Carbon\Carbon|null $updated_at
+ * @property \Carbon\Carbon|null $deleted_at
+ */
 class CategoryModel extends Model
 {
     use SoftDeletes, HasFactory;

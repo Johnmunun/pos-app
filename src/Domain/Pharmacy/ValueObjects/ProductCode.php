@@ -10,11 +10,18 @@ class ProductCode
 
     public function __construct(string $code)
     {
-        if (!preg_match('/^[A-Z0-9]{6,12}$/', $code)) {
-            throw new InvalidArgumentException('Product code must be 6-12 uppercase letters/numbers');
+        // Normaliser : trim + majuscules + suppression des caractères non autorisés
+        $normalized = strtoupper(trim($code));
+        $normalized = preg_replace('/[^A-Z0-9_.-]/', '', $normalized);
+
+        // Règle business assouplie :
+        // - longueur entre 4 et 12 caractères (conforme à la colonne VARCHAR(12))
+        // - lettres/chiffres + caractères spéciaux simples: _ . -
+        if ($normalized === null || !preg_match('/^[A-Z0-9_.-]{4,12}$/', $normalized)) {
+            throw new InvalidArgumentException('Product code must be 4-12 characters (letters, numbers, _ . -).');
         }
         
-        $this->value = $code;
+        $this->value = $normalized;
     }
 
     public function getValue(): string

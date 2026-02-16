@@ -12,6 +12,7 @@ use Src\Application\Pharmacy\DTO\CreateCategoryDTO;
 use Src\Application\Pharmacy\DTO\UpdateCategoryDTO;
 use Src\Domain\Pharmacy\Repositories\CategoryRepositoryInterface;
 use Src\Infrastructure\Pharmacy\Services\CategoryPdfService;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 use App\Models\User as UserModel;
@@ -106,9 +107,8 @@ class CategoryController
             $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
             
             if (!$shopId && !$user->isRoot()) {
-                return response()->json([
-                    'message' => 'Shop ID not found. Please contact administrator.'
-                ], 403);
+                return redirect()->back()
+                    ->withErrors(['message' => 'Shop ID not found. Please contact administrator.']);
             }
             
             // Validation
@@ -139,7 +139,7 @@ class CategoryController
                 ->withErrors(['message' => $e->getMessage()])
                 ->withInput();
         } catch (\Exception $e) {
-            \Log::error('Error creating category', [
+            Log::error('Error creating category', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -152,6 +152,24 @@ class CategoryController
     public function update(Request $request, string $id): RedirectResponse
     {
         try {
+            $user = $request->user();
+            $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+            $isRoot = $user->isRoot();
+            
+            // Vérifier que la catégorie appartient à cette pharmacie
+            /** @var \Src\Infrastructure\Pharmacy\Models\CategoryModel|null $categoryModel */
+            $categoryModel = \Src\Infrastructure\Pharmacy\Models\CategoryModel::query()->find($id);
+            if (!$categoryModel) {
+                return redirect()->back()
+                    ->withErrors(['message' => 'Catégorie non trouvée']);
+            }
+            
+            // Vérification d'isolation par pharmacie
+            if (!$isRoot && $categoryModel->shop_id !== $shopId) {
+                return redirect()->back()
+                    ->withErrors(['message' => 'Catégorie non trouvée']);
+            }
+            
             // Validation
             $request->validate([
                 'name' => 'sometimes|required|string|max:255',
@@ -182,7 +200,7 @@ class CategoryController
                 ->withErrors(['message' => $e->getMessage()])
                 ->withInput();
         } catch (\Exception $e) {
-            \Log::error('Error updating category', [
+            Log::error('Error updating category', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -192,9 +210,27 @@ class CategoryController
         }
     }
 
-    public function destroy(string $id)
+    public function destroy(Request $request, string $id)
     {
         try {
+            $user = $request->user();
+            $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+            $isRoot = $user->isRoot();
+            
+            // Vérifier que la catégorie appartient à cette pharmacie
+            /** @var \Src\Infrastructure\Pharmacy\Models\CategoryModel|null $categoryModel */
+            $categoryModel = \Src\Infrastructure\Pharmacy\Models\CategoryModel::query()->find($id);
+            if (!$categoryModel) {
+                return redirect()->back()
+                    ->withErrors(['message' => 'Catégorie non trouvée']);
+            }
+            
+            // Vérification d'isolation par pharmacie
+            if (!$isRoot && $categoryModel->shop_id !== $shopId) {
+                return redirect()->back()
+                    ->withErrors(['message' => 'Catégorie non trouvée']);
+            }
+            
             // Exécuter le Use Case
             $this->deleteCategoryUseCase->execute($id);
 
@@ -204,7 +240,7 @@ class CategoryController
             return redirect()->back()
                 ->withErrors(['message' => $e->getMessage()]);
         } catch (\Exception $e) {
-            \Log::error('Error deleting category', [
+            Log::error('Error deleting category', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -238,7 +274,7 @@ class CategoryController
             
             return $pdf->download($filename);
         } catch (\Exception $e) {
-            \Log::error('Error generating categories PDF', [
+            Log::error('Error generating categories PDF', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);

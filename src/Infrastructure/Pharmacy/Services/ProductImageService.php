@@ -35,10 +35,10 @@ class ProductImageService
         // Générer un nom de fichier unique
         $extension = $file->getClientOriginalExtension();
         $filename = $productId . '_' . Str::random(10) . '.' . $extension;
-        $path = $this->STORAGE_PATH . '/' . $filename;
+        $path = self::STORAGE_PATH . '/' . $filename;
 
         // Stocker le fichier
-        $storedPath = $file->storeAs($this->STORAGE_PATH, $filename, $this->STORAGE_DISK);
+        $storedPath = $file->storeAs(self::STORAGE_PATH, $filename, self::STORAGE_DISK);
 
         if (!$storedPath) {
             throw new \RuntimeException('Failed to store product image');
@@ -60,8 +60,8 @@ class ProductImageService
             return;
         }
 
-        $path = $this->STORAGE_PATH . '/' . $image->getPath();
-        Storage::disk($this->STORAGE_DISK)->delete($path);
+        $path = self::STORAGE_PATH . '/' . $image->getPath();
+        Storage::disk(self::STORAGE_DISK)->delete($path);
     }
 
     /**
@@ -77,8 +77,8 @@ class ProductImageService
             return;
         }
 
-        $path = $this->STORAGE_PATH . '/' . $imagePath;
-        Storage::disk($this->STORAGE_DISK)->delete($path);
+        $path = self::STORAGE_PATH . '/' . $imagePath;
+        Storage::disk(self::STORAGE_DISK)->delete($path);
     }
 
     /**
@@ -98,8 +98,8 @@ class ProductImageService
         }
 
         // Pour les uploads, retourner l'URL publique
-        $path = $this->STORAGE_PATH . '/' . $image->getPath();
-        return Storage::disk($this->STORAGE_DISK)->url($path);
+        $path = self::STORAGE_PATH . '/' . $image->getPath();
+        return Storage::disk(self::STORAGE_DISK)->url($path);
     }
 
     /**
@@ -112,15 +112,16 @@ class ProductImageService
     public function getUrlFromPath(?string $imagePath, string $imageType = 'upload'): string
     {
         if (!$imagePath) {
-            return asset('images/default-product.png');
+            // Placeholder par défaut si aucune image n'est définie
+            return asset('images/default-product.svg');
         }
 
         if ($imageType === 'url') {
             return $imagePath;
         }
 
-        $path = $this->STORAGE_PATH . '/' . $imagePath;
-        return Storage::disk($this->STORAGE_DISK)->url($path);
+        $path = self::STORAGE_PATH . '/' . $imagePath;
+        return Storage::disk(self::STORAGE_DISK)->url($path);
     }
 
     /**

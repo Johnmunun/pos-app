@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Head, Link, router, useForm } from '@inertiajs/react';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import AppLayout from '@/Layouts/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -22,13 +22,16 @@ import { useToast } from '@/Components/ui/use-toast';
 
 export default function ProductCreate({ auth, categories }) {
     const { toast } = useToast();
+    const { shop } = usePage().props;
+    const defaultCurrency = shop?.currency || 'CDF';
+    
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         product_code: '',
         description: '',
         category_id: '',
         price: '',
-        currency: 'USD',
+        currency: defaultCurrency,
         cost: '',
         minimum_stock: '',
         unit: '',
@@ -49,7 +52,7 @@ export default function ProductCreate({ auth, categories }) {
                     title: "Success",
                     description: "Product created successfully",
                 });
-                router.visit(route('pharmacy.products.index'));
+                router.visit(route('pharmacy.products'));
             },
             onError: (errors) => {
                 toast({
@@ -62,18 +65,17 @@ export default function ProductCreate({ auth, categories }) {
     };
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
+        <AppLayout
             header={
                 <div className="flex items-center">
                     <Button variant="ghost" asChild className="mr-4">
-                        <Link href={route('pharmacy.products.index')}>
+                        <Link href={route('pharmacy.products')}>
                             <ArrowLeft className="h-4 w-4 mr-2" />
-                            Back
+                            Retour
                         </Link>
                     </Button>
-                    <h2 className="font-semibold text-xl text-gray-800 leading-tight">
-                        Create New Product
+                    <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
+                        Créer un nouveau produit
                     </h2>
                 </div>
             }
@@ -202,16 +204,24 @@ export default function ProductCreate({ auth, categories }) {
                                         </div>
 
                                         <div className="space-y-2">
-                                            <Label htmlFor="currency">Currency *</Label>
+                                            <Label htmlFor="currency">Devise *</Label>
                                             <select
                                                 id="currency"
                                                 value={data.currency}
                                                 onChange={(e) => setData('currency', e.target.value)}
-                                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                             >
-                                                <option value="USD">USD</option>
-                                                <option value="EUR">EUR</option>
-                                                <option value="CDF">CDF</option>
+                                                {shop?.currencies && shop.currencies.length > 0 ? (
+                                                    shop.currencies.map(c => (
+                                                        <option key={c.code} value={c.code}>{c.code} - {c.name}</option>
+                                                    ))
+                                                ) : (
+                                                    <>
+                                                        <option value="CDF">CDF - Franc Congolais</option>
+                                                        <option value="USD">USD - Dollar US</option>
+                                                        <option value="EUR">EUR - Euro</option>
+                                                    </>
+                                                )}
                                             </select>
                                             {errors.currency && <p className="text-sm text-red-600">{errors.currency}</p>}
                                         </div>
@@ -327,7 +337,7 @@ export default function ProductCreate({ auth, categories }) {
                                         asChild
                                         disabled={processing}
                                     >
-                                        <Link href={route('pharmacy.products.index')}>
+                                        <Link href={route('pharmacy.products')}>
                                             Cancel
                                         </Link>
                                     </Button>
@@ -341,6 +351,6 @@ export default function ProductCreate({ auth, categories }) {
                     </form>
                 </div>
             </div>
-        </AuthenticatedLayout>
+        </AppLayout>
     );
 }

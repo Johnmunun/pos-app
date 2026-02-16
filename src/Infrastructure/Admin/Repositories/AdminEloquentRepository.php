@@ -4,11 +4,9 @@ namespace Src\Infrastructure\Admin\Repositories;
 
 use Src\Domains\Admin\Repositories\AdminRepositoryInterface;
 use Domains\User\Entities\User;
-use Src\Domains\Tenant\Entities\Tenant;
+use Domains\Tenant\Entities\Tenant;
 use App\Models\User as UserModel;
 use App\Models\Tenant as TenantModel;
-use Src\Domains\User\ValueObjects\UserId;
-use Src\Domains\Tenant\ValueObjects\TenantId;
 
 class AdminEloquentRepository implements AdminRepositoryInterface
 {
@@ -61,27 +59,29 @@ class AdminEloquentRepository implements AdminRepositoryInterface
     {
         $tenants = TenantModel::withCount(['users', 'shops'])->get();
         return $tenants->map(function ($tenantModel) {
-            return Tenant::fromPrimitives(
-                $tenantModel->id,
-                $tenantModel->name,
-                $tenantModel->code,
-                $tenantModel->email,
-                $tenantModel->phone,
-                $tenantModel->address,
-                $tenantModel->city,
-                $tenantModel->country,
-                $tenantModel->status,
-                $tenantModel->logo,
-                $tenantModel->sector,
-                $tenantModel->slug,
-                $tenantModel->business_type,
-                $tenantModel->legal_form,
-                $tenantModel->registration_number,
-                $tenantModel->tax_id,
-                $tenantModel->currency_code,
-                $tenantModel->timezone,
-                $tenantModel->locale
-            );
+            return [
+                'id' => $tenantModel->id,
+                'name' => $tenantModel->name,
+                'code' => $tenantModel->code,
+                'email' => $tenantModel->email,
+                'phone' => $tenantModel->phone,
+                'address' => $tenantModel->address,
+                'city' => $tenantModel->city,
+                'country' => $tenantModel->country,
+                'status' => $tenantModel->status,
+                'logo' => $tenantModel->logo,
+                'sector' => $tenantModel->sector,
+                'slug' => $tenantModel->slug,
+                'business_type' => $tenantModel->business_type,
+                'legal_form' => $tenantModel->legal_form,
+                'registration_number' => $tenantModel->registration_number,
+                'tax_id' => $tenantModel->tax_id,
+                'currency_code' => $tenantModel->currency_code,
+                'timezone' => $tenantModel->timezone,
+                'locale' => $tenantModel->locale,
+                'users_count' => $tenantModel->users_count ?? 0,
+                'shops_count' => $tenantModel->shops_count ?? 0,
+            ];
         })->toArray();
     }
     
@@ -113,27 +113,19 @@ class AdminEloquentRepository implements AdminRepositoryInterface
         if (!$tenantModel) {
             return null;
         }
-        
-        return Tenant::fromPrimitives(
+
+        $isActive = $tenantModel->status ?? true;
+        $createdAt = $tenantModel->created_at ? \DateTime::createFromInterface($tenantModel->created_at) : new \DateTime();
+        $updatedAt = $tenantModel->updated_at ? \DateTime::createFromInterface($tenantModel->updated_at) : null;
+
+        return Tenant::hydrate(
             $tenantModel->id,
-            $tenantModel->name,
-            $tenantModel->code,
-            $tenantModel->email,
-            $tenantModel->phone,
-            $tenantModel->address,
-            $tenantModel->city,
-            $tenantModel->country,
-            $tenantModel->status,
-            $tenantModel->logo,
-            $tenantModel->sector,
-            $tenantModel->slug,
-            $tenantModel->business_type,
-            $tenantModel->legal_form,
-            $tenantModel->registration_number,
-            $tenantModel->tax_id,
-            $tenantModel->currency_code,
-            $tenantModel->timezone,
-            $tenantModel->locale
+            $tenantModel->code ?? '',
+            $tenantModel->name ?? '',
+            $tenantModel->email ?? '',
+            $isActive,
+            $createdAt,
+            $updatedAt
         );
     }
     
@@ -155,39 +147,31 @@ class AdminEloquentRepository implements AdminRepositoryInterface
     
     public function getTenantWithStats(int $id): array
     {
-        $tenant = TenantModel::withCount(['users', 'shops'])->find($id);
-        if (!$tenant) {
+        $tenantModel = TenantModel::withCount(['users', 'shops'])->find($id);
+        if (!$tenantModel) {
             return [];
         }
-        
-        $tenantEntity = Tenant::fromPrimitives(
-            $tenant->id,
-            $tenant->name,
-            $tenant->code,
-            $tenant->email,
-            $tenant->phone,
-            $tenant->address,
-            $tenant->city,
-            $tenant->country,
-            $tenant->status,
-            $tenant->logo,
-            $tenant->sector,
-            $tenant->slug,
-            $tenant->business_type,
-            $tenant->legal_form,
-            $tenant->registration_number,
-            $tenant->tax_id,
-            $tenant->currency_code,
-            $tenant->timezone,
-            $tenant->locale
+
+        $isActive = $tenantModel->status ?? true;
+        $createdAt = $tenantModel->created_at ? \DateTime::createFromInterface($tenantModel->created_at) : new \DateTime();
+        $updatedAt = $tenantModel->updated_at ? \DateTime::createFromInterface($tenantModel->updated_at) : null;
+
+        $tenantEntity = Tenant::hydrate(
+            $tenantModel->id,
+            $tenantModel->code ?? '',
+            $tenantModel->name ?? '',
+            $tenantModel->email ?? '',
+            $isActive,
+            $createdAt,
+            $updatedAt
         );
-        
+
         return [
             'tenant' => $tenantEntity,
             'stats' => [
-                'users_count' => $tenant->users_count,
-                'shops_count' => $tenant->shops_count,
-            ]
+                'users_count' => $tenantModel->users_count ?? 0,
+                'shops_count' => $tenantModel->shops_count ?? 0,
+            ],
         ];
     }
 }

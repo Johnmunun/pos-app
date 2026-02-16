@@ -34,10 +34,9 @@ class StoreLogoService
         // Générer un nom de fichier unique
         $extension = $file->getClientOriginalExtension();
         $filename = $shopId . '_' . Str::random(10) . '.' . $extension;
-        $path = $this->STORAGE_PATH . '/' . $filename;
 
         // Stocker le fichier
-        $storedPath = $file->storeAs($this->STORAGE_PATH, $filename, $this->STORAGE_DISK);
+        $storedPath = $file->storeAs(self::STORAGE_PATH, $filename, self::STORAGE_DISK);
 
         if (!$storedPath) {
             throw new \RuntimeException('Failed to store logo');
@@ -58,10 +57,10 @@ class StoreLogoService
             return false;
         }
 
-        $fullPath = $this->STORAGE_PATH . '/' . $logoPath;
+        $fullPath = self::STORAGE_PATH . '/' . $logoPath;
         
-        if (Storage::disk($this->STORAGE_DISK)->exists($fullPath)) {
-            return Storage::disk($this->STORAGE_DISK)->delete($fullPath);
+        if (Storage::disk(self::STORAGE_DISK)->exists($fullPath)) {
+            return Storage::disk(self::STORAGE_DISK)->delete($fullPath);
         }
 
         return false;
@@ -79,10 +78,10 @@ class StoreLogoService
             return null;
         }
 
-        $fullPath = $this->STORAGE_PATH . '/' . $logoPath;
+        $fullPath = self::STORAGE_PATH . '/' . $logoPath;
         
-        if (Storage::disk($this->STORAGE_DISK)->exists($fullPath)) {
-            return Storage::disk($this->STORAGE_DISK)->url($fullPath);
+        if (Storage::disk(self::STORAGE_DISK)->exists($fullPath)) {
+            return Storage::disk(self::STORAGE_DISK)->url($fullPath);
         }
 
         return null;
@@ -100,12 +99,12 @@ class StoreLogoService
             throw new \InvalidArgumentException('Le fichier uploadé est invalide');
         }
 
-        if ($file->getSize() > $this->MAX_SIZE) {
+        if ($file->getSize() > self::MAX_SIZE) {
             throw new \InvalidArgumentException('Le fichier est trop volumineux (max 2 Mo)');
         }
 
         $mimeType = $file->getMimeType();
-        if (!in_array($mimeType, $this->ALLOWED_MIMES)) {
+        if (!in_array($mimeType, self::ALLOWED_MIMES)) {
             throw new \InvalidArgumentException('Format de fichier non autorisé (JPG, JPEG, PNG, WebP uniquement)');
         }
     }

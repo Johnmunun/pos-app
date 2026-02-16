@@ -152,8 +152,8 @@ Route::middleware(['auth', 'verified', 'root'])->group(function () {
  */
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('pharmacy')->name('pharmacy.')->group(function () {
-        // Dashboard
-        Route::get('/dashboard', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'index'])
+        // Dashboard (stats, pas la liste produits)
+        Route::get('/dashboard', [\Src\Infrastructure\Pharmacy\Http\Controllers\PharmacyDashboardController::class, 'index'])
             ->middleware('permission:module.pharmacy')
             ->name('dashboard');
 
@@ -162,6 +162,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/products', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'index'])
             ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage')
             ->name('products');
+
+        // Génération automatique de code produit
+        Route::get('/products/generate-code', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'generateCode'])
+            ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage')
+            ->name('products.generate-code');
+
+        // Exports Produits
+        Route::get('/products/export/pdf', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'exportPdf'])
+            ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage')
+            ->name('products.export.pdf');
+
+        Route::get('/products/export/excel', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'exportExcel'])
+            ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage')
+            ->name('products.export.excel');
+
+        Route::post('/products/import', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'import'])
+            ->middleware('permission:pharmacy.product.import')
+            ->name('products.import');
         
         Route::get('/products/create', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'create'])
             ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage')
@@ -188,8 +206,154 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('products.destroy');
 
         // Stock
+        Route::get('/stock', [\Src\Infrastructure\Pharmacy\Http\Controllers\StockController::class, 'index'])
+            ->middleware('permission:pharmacy.pharmacy.stock.manage|stock.view')
+            ->name('stock.index');
+
+        Route::get('/stock/movements', [\Src\Infrastructure\Pharmacy\Http\Controllers\StockController::class, 'movementsIndex'])
+            ->middleware('permission:stock.movement.view|pharmacy.pharmacy.stock.manage')
+            ->name('stock.movements.index');
+        Route::get('/stock/{id}/movements', [\Src\Infrastructure\Pharmacy\Http\Controllers\StockController::class, 'movements'])
+            ->middleware('permission:stock.movement.view|pharmacy.pharmacy.stock.manage')
+            ->name('stock.movements');
+
+        // ========== INVENTAIRES ==========
+        Route::get('/inventories', [\Src\Infrastructure\Pharmacy\Http\Controllers\InventoryController::class, 'index'])
+            ->middleware('permission:inventory.view')
+            ->name('inventories.index');
+        Route::post('/inventories', [\Src\Infrastructure\Pharmacy\Http\Controllers\InventoryController::class, 'store'])
+            ->middleware('permission:inventory.create')
+            ->name('inventories.store');
+        Route::get('/inventories/{id}', [\Src\Infrastructure\Pharmacy\Http\Controllers\InventoryController::class, 'show'])
+            ->middleware('permission:inventory.view')
+            ->name('inventories.show');
+        Route::post('/inventories/{id}/start', [\Src\Infrastructure\Pharmacy\Http\Controllers\InventoryController::class, 'start'])
+            ->middleware('permission:inventory.edit')
+            ->name('inventories.start');
+        Route::post('/inventories/{id}/counts', [\Src\Infrastructure\Pharmacy\Http\Controllers\InventoryController::class, 'updateCounts'])
+            ->middleware('permission:inventory.edit')
+            ->name('inventories.counts');
+        Route::post('/inventories/{id}/counts/{productId}', [\Src\Infrastructure\Pharmacy\Http\Controllers\InventoryController::class, 'updateSingleCount'])
+            ->middleware('permission:inventory.edit')
+            ->name('inventories.counts.single');
+        Route::post('/inventories/{id}/validate', [\Src\Infrastructure\Pharmacy\Http\Controllers\InventoryController::class, 'validate'])
+            ->middleware('permission:inventory.validate')
+            ->name('inventories.validate');
+        Route::post('/inventories/{id}/cancel', [\Src\Infrastructure\Pharmacy\Http\Controllers\InventoryController::class, 'cancel'])
+            ->middleware('permission:inventory.cancel')
+            ->name('inventories.cancel');
+
+        // Sales (Vente)
+        Route::get('/sales', [\Src\Infrastructure\Pharmacy\Http\Controllers\SaleController::class, 'index'])
+            ->middleware('permission:pharmacy.sales.view|pharmacy.sales.manage')
+            ->name('sales.index');
+        Route::get('/sales/create', [\Src\Infrastructure\Pharmacy\Http\Controllers\SaleController::class, 'create'])
+            ->middleware('permission:pharmacy.sales.manage')
+            ->name('sales.create');
+        Route::post('/sales', [\Src\Infrastructure\Pharmacy\Http\Controllers\SaleController::class, 'store'])
+            ->middleware('permission:pharmacy.sales.manage')
+            ->name('sales.store');
+        Route::get('/sales/{id}', [\Src\Infrastructure\Pharmacy\Http\Controllers\SaleController::class, 'show'])
+            ->middleware('permission:pharmacy.sales.view|pharmacy.sales.manage')
+            ->name('sales.show');
+        Route::put('/sales/{id}', [\Src\Infrastructure\Pharmacy\Http\Controllers\SaleController::class, 'update'])
+            ->middleware('permission:pharmacy.sales.manage')
+            ->name('sales.update');
+        Route::post('/sales/{id}/finalize', [\Src\Infrastructure\Pharmacy\Http\Controllers\SaleController::class, 'finalize'])
+            ->middleware('permission:pharmacy.sales.manage')
+            ->name('sales.finalize');
+        Route::post('/sales/{id}/cancel', [\Src\Infrastructure\Pharmacy\Http\Controllers\SaleController::class, 'cancel'])
+            ->middleware('permission:pharmacy.sales.cancel|pharmacy.sales.manage')
+            ->name('sales.cancel');
+
+        // Purchases (Achat)
+        Route::get('/purchases', [\Src\Infrastructure\Pharmacy\Http\Controllers\PurchaseController::class, 'index'])
+            ->middleware('permission:pharmacy.purchases.view|pharmacy.purchases.manage')
+            ->name('purchases.index');
+        Route::get('/purchases/create', [\Src\Infrastructure\Pharmacy\Http\Controllers\PurchaseController::class, 'create'])
+            ->middleware('permission:pharmacy.purchases.manage')
+            ->name('purchases.create');
+        Route::post('/purchases', [\Src\Infrastructure\Pharmacy\Http\Controllers\PurchaseController::class, 'store'])
+            ->middleware('permission:pharmacy.purchases.manage')
+            ->name('purchases.store');
+        Route::get('/purchases/{id}', [\Src\Infrastructure\Pharmacy\Http\Controllers\PurchaseController::class, 'show'])
+            ->middleware('permission:pharmacy.purchases.view|pharmacy.purchases.manage')
+            ->name('purchases.show');
+        Route::post('/purchases/{id}/confirm', [\Src\Infrastructure\Pharmacy\Http\Controllers\PurchaseController::class, 'confirm'])
+            ->middleware('permission:pharmacy.purchases.manage')
+            ->name('purchases.confirm');
+        Route::post('/purchases/{id}/receive', [\Src\Infrastructure\Pharmacy\Http\Controllers\PurchaseController::class, 'receive'])
+            ->middleware('permission:pharmacy.purchases.receive|pharmacy.purchases.manage')
+            ->name('purchases.receive');
+        Route::post('/purchases/{id}/cancel', [\Src\Infrastructure\Pharmacy\Http\Controllers\PurchaseController::class, 'cancel'])
+            ->middleware('permission:pharmacy.purchases.manage')
+            ->name('purchases.cancel');
+
+        // Suppliers (Fournisseurs) - utilise un drawer, pas de pages séparées create/edit
+        Route::get('/suppliers', [\Src\Infrastructure\Pharmacy\Http\Controllers\SupplierController::class, 'index'])
+            ->middleware('permission:pharmacy.supplier.view')
+            ->name('suppliers.index');
+        Route::post('/suppliers', [\Src\Infrastructure\Pharmacy\Http\Controllers\SupplierController::class, 'store'])
+            ->middleware('permission:pharmacy.supplier.create')
+            ->name('suppliers.store');
+        Route::get('/suppliers/active', [\Src\Infrastructure\Pharmacy\Http\Controllers\SupplierController::class, 'listActive'])
+            ->middleware('permission:pharmacy.supplier.view|pharmacy.purchases.manage')
+            ->name('suppliers.active');
+        Route::get('/suppliers/{id}', [\Src\Infrastructure\Pharmacy\Http\Controllers\SupplierController::class, 'show'])
+            ->middleware('permission:pharmacy.supplier.view')
+            ->name('suppliers.show');
+        Route::put('/suppliers/{id}', [\Src\Infrastructure\Pharmacy\Http\Controllers\SupplierController::class, 'update'])
+            ->middleware('permission:pharmacy.supplier.edit')
+            ->name('suppliers.update');
+        Route::post('/suppliers/{id}/activate', [\Src\Infrastructure\Pharmacy\Http\Controllers\SupplierController::class, 'activate'])
+            ->middleware('permission:pharmacy.supplier.activate')
+            ->name('suppliers.activate');
+        Route::post('/suppliers/{id}/deactivate', [\Src\Infrastructure\Pharmacy\Http\Controllers\SupplierController::class, 'deactivate'])
+            ->middleware('permission:pharmacy.supplier.deactivate')
+            ->name('suppliers.deactivate');
+
+        // Supplier Product Pricing (Prix fournisseur-produit)
+        Route::get('/suppliers/{supplierId}/prices', [\Src\Infrastructure\Pharmacy\Http\Controllers\SupplierPricingController::class, 'index'])
+            ->middleware('permission:pharmacy.supplier.pricing.view')
+            ->name('suppliers.prices.index');
+        Route::post('/supplier-prices', [\Src\Infrastructure\Pharmacy\Http\Controllers\SupplierPricingController::class, 'store'])
+            ->middleware('permission:pharmacy.supplier.pricing.manage')
+            ->name('suppliers.prices.store');
+        Route::get('/suppliers/{supplierId}/products/{productId}/price', [\Src\Infrastructure\Pharmacy\Http\Controllers\SupplierPricingController::class, 'getPrice'])
+            ->middleware('permission:pharmacy.supplier.pricing.view')
+            ->name('suppliers.prices.get');
+        Route::get('/products/{productId}/supplier-prices', [\Src\Infrastructure\Pharmacy\Http\Controllers\SupplierPricingController::class, 'getProductPrices'])
+            ->middleware('permission:pharmacy.supplier.pricing.view')
+            ->name('products.supplier-prices');
+        Route::delete('/supplier-prices/{id}', [\Src\Infrastructure\Pharmacy\Http\Controllers\SupplierPricingController::class, 'destroy'])
+            ->middleware('permission:pharmacy.supplier.pricing.manage')
+            ->name('suppliers.prices.destroy');
+
+        // Customers (Clients)
+        Route::get('/customers', [\Src\Infrastructure\Pharmacy\Http\Controllers\CustomerController::class, 'index'])
+            ->middleware('permission:pharmacy.customer.view')
+            ->name('customers.index');
+        Route::post('/customers', [\Src\Infrastructure\Pharmacy\Http\Controllers\CustomerController::class, 'store'])
+            ->middleware('permission:pharmacy.customer.create')
+            ->name('customers.store');
+        Route::get('/customers/active', [\Src\Infrastructure\Pharmacy\Http\Controllers\CustomerController::class, 'listActive'])
+            ->middleware('permission:pharmacy.customer.view|pharmacy.sales.manage')
+            ->name('customers.active');
+        Route::get('/customers/{id}', [\Src\Infrastructure\Pharmacy\Http\Controllers\CustomerController::class, 'show'])
+            ->middleware('permission:pharmacy.customer.view')
+            ->name('customers.show');
+        Route::put('/customers/{id}', [\Src\Infrastructure\Pharmacy\Http\Controllers\CustomerController::class, 'update'])
+            ->middleware('permission:pharmacy.customer.edit')
+            ->name('customers.update');
+        Route::post('/customers/{id}/activate', [\Src\Infrastructure\Pharmacy\Http\Controllers\CustomerController::class, 'activate'])
+            ->middleware('permission:pharmacy.customer.activate')
+            ->name('customers.activate');
+        Route::post('/customers/{id}/deactivate', [\Src\Infrastructure\Pharmacy\Http\Controllers\CustomerController::class, 'deactivate'])
+            ->middleware('permission:pharmacy.customer.deactivate')
+            ->name('customers.deactivate');
+
         Route::post('/products/{id}/stock', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'updateStock'])
-            ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage')
+            ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage|stock.adjust')
             ->name('products.stock.update');
 
         // Categories - Permissions granulaires strictes
@@ -212,6 +376,138 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/categories/export/pdf', [\Src\Infrastructure\Pharmacy\Http\Controllers\CategoryController::class, 'exportPdf'])
             ->middleware('permission:pharmacy.category.view')
             ->name('categories.export.pdf');
+
+        // Batches & Expirations (Lots et Dates d'expiration)
+        Route::get('/expirations', [\Src\Infrastructure\Pharmacy\Http\Controllers\BatchController::class, 'index'])
+            ->middleware('permission:pharmacy.expiration.view|pharmacy.batch.view')
+            ->name('expirations.index');
+        Route::get('/batches/summary', [\Src\Infrastructure\Pharmacy\Http\Controllers\BatchController::class, 'summary'])
+            ->middleware('permission:pharmacy.expiration.view|pharmacy.batch.view')
+            ->name('batches.summary');
+        Route::get('/batches/expired', [\Src\Infrastructure\Pharmacy\Http\Controllers\BatchController::class, 'expired'])
+            ->middleware('permission:pharmacy.expiration.view|pharmacy.batch.view')
+            ->name('batches.expired');
+        Route::get('/batches/expiring', [\Src\Infrastructure\Pharmacy\Http\Controllers\BatchController::class, 'expiring'])
+            ->middleware('permission:pharmacy.expiration.view|pharmacy.batch.view')
+            ->name('batches.expiring');
+        Route::post('/batches', [\Src\Infrastructure\Pharmacy\Http\Controllers\BatchController::class, 'store'])
+            ->middleware('permission:pharmacy.batch.manage')
+            ->name('batches.store');
+        Route::get('/products/{productId}/batches', [\Src\Infrastructure\Pharmacy\Http\Controllers\BatchController::class, 'getProductBatches'])
+            ->middleware('permission:pharmacy.batch.view')
+            ->name('products.batches');
+        Route::delete('/batches/{id}', [\Src\Infrastructure\Pharmacy\Http\Controllers\BatchController::class, 'destroy'])
+            ->middleware('permission:pharmacy.batch.manage')
+            ->name('batches.destroy');
+
+        // ========== EXPORTS (PDF & Excel) ==========
+        Route::prefix('exports')->name('exports.')->group(function () {
+            // Stock
+            Route::get('/stock/pdf', [\Src\Infrastructure\Pharmacy\Http\Controllers\ExportController::class, 'stockPdf'])
+                ->middleware('permission:stock.view')
+                ->name('stock.pdf');
+            Route::get('/stock/excel', [\Src\Infrastructure\Pharmacy\Http\Controllers\ExportController::class, 'stockExcel'])
+                ->middleware('permission:stock.view')
+                ->name('stock.excel');
+
+            // Ventes
+            Route::get('/sales/pdf', [\Src\Infrastructure\Pharmacy\Http\Controllers\ExportController::class, 'salesPdf'])
+                ->middleware('permission:pharmacy.sales.view')
+                ->name('sales.pdf');
+            Route::get('/sales/excel', [\Src\Infrastructure\Pharmacy\Http\Controllers\ExportController::class, 'salesExcel'])
+                ->middleware('permission:pharmacy.sales.view')
+                ->name('sales.excel');
+
+            // Achats
+            Route::get('/purchases/pdf', [\Src\Infrastructure\Pharmacy\Http\Controllers\ExportController::class, 'purchasesPdf'])
+                ->middleware('permission:pharmacy.purchases.view')
+                ->name('purchases.pdf');
+            Route::get('/purchases/excel', [\Src\Infrastructure\Pharmacy\Http\Controllers\ExportController::class, 'purchasesExcel'])
+                ->middleware('permission:pharmacy.purchases.view')
+                ->name('purchases.excel');
+
+            // Fournisseurs
+            Route::get('/suppliers/pdf', [\Src\Infrastructure\Pharmacy\Http\Controllers\ExportController::class, 'suppliersPdf'])
+                ->middleware('permission:pharmacy.supplier.view')
+                ->name('suppliers.pdf');
+            Route::get('/suppliers/excel', [\Src\Infrastructure\Pharmacy\Http\Controllers\ExportController::class, 'suppliersExcel'])
+                ->middleware('permission:pharmacy.supplier.view')
+                ->name('suppliers.excel');
+
+            // Clients
+            Route::get('/customers/pdf', [\Src\Infrastructure\Pharmacy\Http\Controllers\ExportController::class, 'customersPdf'])
+                ->middleware('permission:pharmacy.customer.view')
+                ->name('customers.pdf');
+            Route::get('/customers/excel', [\Src\Infrastructure\Pharmacy\Http\Controllers\ExportController::class, 'customersExcel'])
+                ->middleware('permission:pharmacy.customer.view')
+                ->name('customers.excel');
+
+            // Expirations
+            Route::get('/expirations/pdf', [\Src\Infrastructure\Pharmacy\Http\Controllers\ExportController::class, 'expirationsPdf'])
+                ->middleware('permission:pharmacy.expiration.view|pharmacy.batch.view')
+                ->name('expirations.pdf');
+            Route::get('/expirations/excel', [\Src\Infrastructure\Pharmacy\Http\Controllers\ExportController::class, 'expirationsExcel'])
+                ->middleware('permission:pharmacy.expiration.view|pharmacy.batch.view')
+                ->name('expirations.excel');
+
+            // Mouvements de stock
+            Route::get('/movements/pdf', [\Src\Infrastructure\Pharmacy\Http\Controllers\ExportController::class, 'movementsPdf'])
+                ->middleware('permission:stock.movement.view')
+                ->name('movements.pdf');
+            Route::get('/movements/excel', [\Src\Infrastructure\Pharmacy\Http\Controllers\ExportController::class, 'movementsExcel'])
+                ->middleware('permission:stock.movement.view')
+                ->name('movements.excel');
+        });
+
+        // ========== TRANSFERTS INTER-MAGASINS ==========
+        Route::get('/transfers', [\Src\Infrastructure\Pharmacy\Http\Controllers\StockTransferController::class, 'index'])
+            ->middleware('permission:transfer.view')
+            ->name('transfers.index');
+        Route::get('/transfers/create', [\Src\Infrastructure\Pharmacy\Http\Controllers\StockTransferController::class, 'create'])
+            ->middleware('permission:transfer.create')
+            ->name('transfers.create');
+        Route::post('/transfers', [\Src\Infrastructure\Pharmacy\Http\Controllers\StockTransferController::class, 'store'])
+            ->middleware('permission:transfer.create')
+            ->name('transfers.store');
+        Route::get('/transfers/{id}', [\Src\Infrastructure\Pharmacy\Http\Controllers\StockTransferController::class, 'show'])
+            ->middleware('permission:transfer.view')
+            ->name('transfers.show');
+        Route::post('/transfers/{id}/items', [\Src\Infrastructure\Pharmacy\Http\Controllers\StockTransferController::class, 'addItem'])
+            ->middleware('permission:transfer.create')
+            ->name('transfers.items.add');
+        Route::put('/transfers/{id}/items/{itemId}', [\Src\Infrastructure\Pharmacy\Http\Controllers\StockTransferController::class, 'updateItem'])
+            ->middleware('permission:transfer.create')
+            ->name('transfers.items.update');
+        Route::delete('/transfers/{id}/items/{itemId}', [\Src\Infrastructure\Pharmacy\Http\Controllers\StockTransferController::class, 'removeItem'])
+            ->middleware('permission:transfer.create')
+            ->name('transfers.items.remove');
+        Route::post('/transfers/{id}/validate', [\Src\Infrastructure\Pharmacy\Http\Controllers\StockTransferController::class, 'validate'])
+            ->middleware('permission:transfer.validate')
+            ->name('transfers.validate');
+        Route::post('/transfers/{id}/cancel', [\Src\Infrastructure\Pharmacy\Http\Controllers\StockTransferController::class, 'cancel'])
+            ->middleware('permission:transfer.cancel')
+            ->name('transfers.cancel');
+        Route::get('/transfers/{id}/pdf', [\Src\Infrastructure\Pharmacy\Http\Controllers\StockTransferController::class, 'exportPdf'])
+            ->middleware('permission:transfer.print')
+            ->name('transfers.pdf');
+
+        // ========== API Mouvements de Stock (Historique Produits) ==========
+        Route::prefix('api')->group(function () {
+            // Liste des mouvements avec filtres
+            Route::get('/product-movements', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductMovementController::class, 'index'])
+                ->middleware('permission:stock.movement.view')
+                ->name('api.product-movements.index');
+            
+            // Export PDF global des mouvements (DOIT être avant la route avec {id})
+            Route::get('/product-movements/export/pdf', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductMovementController::class, 'exportGlobalPdf'])
+                ->middleware('permission:stock.movement.print')
+                ->name('api.product-movements.pdf.global');
+            
+            // Export PDF d'un mouvement individuel
+            Route::get('/product-movements/{id}/pdf', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductMovementController::class, 'exportSinglePdf'])
+                ->middleware('permission:stock.movement.print')
+                ->name('api.product-movements.pdf.single');
+        });
     });
 });
 

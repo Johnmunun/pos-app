@@ -6,6 +6,31 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
+/**
+ * @property string $id
+ * @property int $shop_id
+ * @property string|null $code
+ * @property string $name
+ * @property string|null $description
+ * @property string|null $type
+ * @property string|null $dosage
+ * @property float $price_amount
+ * @property string $price_currency
+ * @property int $stock
+ * @property string|null $unit
+ * @property int|null $minimum_stock
+ * @property float|null $cost_amount
+ * @property string|null $manufacturer
+ * @property string|null $category_id
+ * @property bool $is_active
+ * @property bool $requires_prescription
+ * @property string|null $image_path
+ * @property string|null $image_type
+ * @method static \Illuminate\Database\Eloquent\Builder<static> query()
+ * @method static static|null find(string $id)
+ * @method static static create(array<string, mixed> $attributes)
+ * @method static \Illuminate\Database\Eloquent\Builder<static> where(string $column, mixed $operator = null, mixed $value = null)
+ */
 class ProductModel extends Model
 {
     use SoftDeletes, HasFactory;
@@ -26,6 +51,10 @@ class ProductModel extends Model
         'price_amount',
         'price_currency',
         'stock',
+        'unit',
+        'minimum_stock',
+        'cost_amount',
+        'manufacturer',
         'category_id',
         'is_active',
         'requires_prescription',

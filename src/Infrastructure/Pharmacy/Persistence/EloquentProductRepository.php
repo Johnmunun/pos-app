@@ -5,12 +5,12 @@ namespace Src\Infrastructure\Pharmacy\Persistence;
 use Src\Domain\Pharmacy\Entities\Product;
 use Src\Domain\Pharmacy\Repositories\ProductRepositoryInterface;
 use Src\Domain\Pharmacy\ValueObjects\ProductCode;
-use Src\Domain\Pharmacy\ValueObjects\ExpiryDate;
+use Src\Domain\Pharmacy\ValueObjects\MedicineType;
+use Src\Domain\Pharmacy\ValueObjects\Dosage;
 use Src\Shared\ValueObjects\Money;
 use Src\Shared\ValueObjects\Quantity;
 use Src\Infrastructure\Pharmacy\Models\ProductModel;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use DateTimeImmutable;
 
 class EloquentProductRepository implements ProductRepositoryInterface
 {
@@ -23,22 +23,14 @@ class EloquentProductRepository implements ProductRepositoryInterface
                 'code' => $product->getCode()->getValue(),
                 'name' => $product->getName(),
                 'description' => $product->getDescription(),
-                'category_id' => $product->getCategoryId(),
+                'type' => $product->getType()->getValue(),
+                'dosage' => $product->getDosage()?->getValue(),
                 'price_amount' => $product->getPrice()->getAmount(),
                 'price_currency' => $product->getPrice()->getCurrency(),
-                'cost_amount' => $product->getCost()?->getAmount(),
-                'cost_currency' => $product->getCost()?->getCurrency(),
-                'minimum_stock' => $product->getMinimumStock()->getValue(),
-                'current_stock' => $product->getStock()->getValue(),
-                'unit' => $product->getUnit(),
-                'medicine_type' => $product->getMedicineType()?->getValue(),
-                'dosage' => $product->getDosage()?->getValue(),
-                'prescription_required' => $product->requiresPrescription(),
-                'manufacturer' => $product->getManufacturer(),
-                'supplier_id' => $product->getSupplierId(),
+                'stock' => $product->getStock()->getValue(),
+                'category_id' => $product->getCategoryId(),
                 'is_active' => $product->isActive(),
-                'created_at' => $product->getCreatedAt(),
-                'updated_at' => $product->getUpdatedAt(),
+                'requires_prescription' => $product->requiresPrescription(),
             ]
         );
     }
@@ -143,10 +135,10 @@ class EloquentProductRepository implements ProductRepositoryInterface
     {
         $models = ProductModel::where('shop_id', $shopId)
             ->where('is_active', true)
-            ->whereColumn('current_stock', '<=', 'minimum_stock')
-            ->where('current_stock', '<=', $threshold)
+            ->whereColumn('stock', '<=', 'minimum_stock')
+            ->where('stock', '<=', $threshold)
             ->with(['category'])
-            ->orderBy('current_stock')
+            ->orderBy('stock')
             ->get();
             
         return $models->map(fn($model) => $this->toDomainEntity($model))->toArray();
@@ -169,7 +161,7 @@ class EloquentProductRepository implements ProductRepositoryInterface
     public function findByType(string $shopId, string $type): array
     {
         $models = ProductModel::where('shop_id', $shopId)
-            ->where('medicine_type', $type)
+            ->where('type', $type)
             ->where('is_active', true)
             ->with(['category'])
             ->orderBy('name')
@@ -180,23 +172,32 @@ class EloquentProductRepository implements ProductRepositoryInterface
 
     private function toDomainEntity(ProductModel $model): Product
     {
+        $code  = new ProductCode($model->code);
+        $price = new Money($model->price_amount, $model->price_currency);
+        // Si la colonne stock est null (anciens enregistrements), on retombe à 0
+        $stock = new Quantity((int) ($model->stock ?? 0));
+
+        // Type de médicament : utiliser une valeur par défaut valide si null
+        $medicineType = $model->type
+            ? new MedicineType($model->type)
+            : new MedicineType(MedicineType::getAllTypes()[0]);
+
+        $dosage = $model->dosage
+            ? new Dosage($model->dosage)
+            : null;
+
         return new Product(
             $model->id,
             $model->shop_id,
+            $code,
             $model->name,
-            new ProductCode($model->code),
-            $model->description,
-            $model->category_id,
-            new Money($model->price_amount, $model->price_currency),
-            $model->cost_amount ? new Money($model->cost_amount, $model->cost_currency) : null,
-            new Quantity($model->minimum_stock),
-            new Quantity($model->current_stock),
-            $model->unit,
-            $model->medicine_type ? new \Src\Domain\Pharmacy\ValueObjects\MedicineType($model->medicine_type) : null,
-            $model->dosage ? new \Src\Domain\Pharmacy\ValueObjects\Dosage($model->dosage) : null,
-            $model->prescription_required,
-            $model->manufacturer,
-            $model->supplier_id
+            $model->description ?? '',
+            $medicineType,
+            $dosage,
+            $price,
+            $stock,
+            (string) $model->category_id,
+            (bool) $model->requires_prescription
         );
     }
 }

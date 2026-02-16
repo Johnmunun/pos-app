@@ -33,6 +33,7 @@ import {
     Pill,
     Calendar,
     DollarSign,
+    Truck,
 } from 'lucide-react';
 
 /**
@@ -74,24 +75,19 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, 
         }));
     };
 
+    // Vérifier si l'utilisateur a au moins une des permissions d'un item (supporte "perm1|perm2")
+    const hasItemPermission = (itemPermission) => {
+        if (isRoot || permissions.includes('*')) return true;
+        if (itemPermission === '*') return true;
+        const perms = String(itemPermission).split('|').map(p => p.trim()).filter(Boolean);
+        return perms.some(p => permissions.includes(p));
+    };
+
     // Vérifier si un groupe a au moins une permission visible
     const hasVisibleItem = (groupPermissions) => {
-        // Le ROOT voit tout
-        if (isRoot) {
-            return true;
-        }
-        
-        // S'assurer que permissions est un tableau
-        if (!Array.isArray(permissions) || permissions.length === 0) {
-            return false;
-        }
-        
-        // Si l'utilisateur a '*' (toutes les permissions), retourner true
-        if (permissions.includes('*')) {
-            return true;
-        }
-        
-        // Vérifier si au moins une permission du groupe correspond
+        if (isRoot) return true;
+        if (!Array.isArray(permissions) || permissions.length === 0) return false;
+        if (permissions.includes('*')) return true;
         return groupPermissions.some(perm => permissions.includes(perm));
     };
 
@@ -142,14 +138,18 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, 
             key: 'pharmacy',
             label: 'Pharmacy',
             icon: Pill,
-            permissions: ['module.pharmacy', 'pharmacy.pharmacy', 'admin.modules.view'],
+            permissions: ['module.pharmacy', 'pharmacy.pharmacy.product.manage', 'pharmacy.product.manage', 'pharmacy.category.view', 'pharmacy.pharmacy.stock.manage', 'stock.view', 'inventory.view', 'pharmacy.sales.view', 'pharmacy.sales.manage', 'pharmacy.purchases.view', 'pharmacy.purchases.manage', 'pharmacy.supplier.view', 'pharmacy.customer.view', 'pharmacy.expiration.view', 'pharmacy.batch.view', 'pharmacy.pharmacy.report.view', 'admin.modules.view'],
             items: [
                 { label: 'Dashboard', href: '/pharmacy/dashboard', permission: 'module.pharmacy', icon: LayoutDashboard },
-                { label: 'Produits', href: '/pharmacy/products', permission: 'pharmacy.pharmacy.product.manage', icon: Package },
+                { label: 'Produits', href: '/pharmacy/products', permission: 'pharmacy.pharmacy.product.manage|pharmacy.product.manage', icon: Package },
                 { label: 'Catégories', href: '/pharmacy/categories', permission: 'pharmacy.category.view', icon: Tag },
-                { label: 'Stock', href: '/pharmacy/stock', permission: 'pharmacy.pharmacy.stock.manage', icon: BarChart },
-                { label: 'Ventes', href: '/pharmacy/sales', permission: 'pharmacy.pharmacy.sale.create', icon: ShoppingCart },
-                { label: 'Expirations', href: '/pharmacy/expiry', permission: 'pharmacy.pharmacy.expiry.view', icon: Calendar },
+                { label: 'Stock', href: '/pharmacy/stock', permission: 'pharmacy.pharmacy.stock.manage|stock.view', icon: BarChart },
+                { label: 'Inventaires', href: '/pharmacy/inventories', permission: 'inventory.view', icon: ClipboardList },
+                { label: 'Expirations', href: '/pharmacy/expirations', permission: 'pharmacy.expiration.view|pharmacy.batch.view', icon: Calendar },
+                { label: 'Ventes', href: '/pharmacy/sales', permission: 'pharmacy.sales.view|pharmacy.sales.manage|pharmacy.pharmacy.sale.create', icon: ShoppingCart },
+                { label: 'Achats', href: '/pharmacy/purchases', permission: 'pharmacy.purchases.view|pharmacy.purchases.manage', icon: Receipt },
+                { label: 'Fournisseurs', href: '/pharmacy/suppliers', permission: 'pharmacy.supplier.view', icon: Truck },
+                { label: 'Clients', href: '/pharmacy/customers', permission: 'pharmacy.customer.view', icon: Users },
                 { label: 'Rapports', href: '/pharmacy/reports', permission: 'pharmacy.pharmacy.report.view', icon: FileText },
             ]
         },
@@ -210,7 +210,7 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, 
             permissions: ['settings.view', 'settings.update', 'settings.branding', 'settings.ui', 'settings.currency.view', 'settings.settings.currency.view'],
             items: [
                 { label: 'Paramètres boutique', href: '/settings', permission: 'settings.view', icon: Building },
-                { label: 'Gestion des devises', href: '/settings/currencies', permission: 'settings.settings.currency.view', icon: DollarSign },
+                { label: 'Gestion des devises', href: '/settings/currencies', permission: 'settings.currency.view|settings.settings.currency.view', icon: DollarSign },
                 { label: 'Branding (logo, couleurs)', href: '#', permission: 'settings.branding', icon: Palette },
                 { label: 'Préférences UI', href: '#', permission: 'settings.ui', icon: Palette },
             ]
@@ -253,16 +253,7 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, 
                         <ul role="list" className="flex flex-1 flex-col gap-y-7">
                             {visibleGroups.map((group) => {
                                 const isExpanded = expandedGroups[group.key] ?? true;
-                                const visibleItems = group.items.filter(item => {
-                                    if (isRoot || permissions.includes('*')) {
-                                        return true;
-                                    }
-                                    // Si l'item a la permission '*', il est accessible à tous
-                                    if (item.permission === '*') {
-                                        return true;
-                                    }
-                                    return permissions.includes(item.permission);
-                                });
+                                const visibleItems = group.items.filter(item => hasItemPermission(item.permission));
 
                                 if (visibleItems.length === 0) return null;
 
@@ -338,16 +329,7 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, 
                     <nav className="flex flex-1 flex-col">
                         <ul role="list" className="flex flex-1 flex-col gap-y-7">
                             {visibleGroups.map((group) => {
-                                const visibleItems = group.items.filter(item => {
-                                    if (isRoot || permissions.includes('*')) {
-                                        return true;
-                                    }
-                                    // Si l'item a la permission '*', il est accessible à tous
-                                    if (item.permission === '*') {
-                                        return true;
-                                    }
-                                    return permissions.includes(item.permission);
-                                });
+                                const visibleItems = group.items.filter(item => hasItemPermission(item.permission));
 
                                 if (visibleItems.length === 0) return null;
 

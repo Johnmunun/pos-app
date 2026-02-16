@@ -10,7 +10,6 @@ use Src\Domain\Pharmacy\ValueObjects\ProductCode;
 use Src\Domain\Pharmacy\ValueObjects\MedicineType;
 use Src\Domain\Pharmacy\ValueObjects\Dosage;
 use Src\Shared\ValueObjects\Money;
-use Src\Shared\ValueObjects\Quantity;
 
 class UpdateProductUseCase
 {
@@ -27,9 +26,13 @@ class UpdateProductUseCase
             throw new \InvalidArgumentException("Product not found");
         }
 
-        // Validate business rules
-        $this->validateProductCode($dto->productCode, $productId);
-        $this->validateCategory($dto->categoryId, $dto->shopId);
+        // Validate business rules uniquement si les champs sont fournis
+        if ($dto->productCode !== null) {
+            $this->validateProductCode($dto->productCode, $productId);
+        }
+        if ($dto->categoryId !== null) {
+            $this->validateCategory($dto->categoryId, $dto->shopId);
+        }
 
         // Update product properties
         if ($dto->name !== null) {
@@ -53,19 +56,6 @@ class UpdateProductUseCase
             $product->updatePrice($price);
         }
 
-        if ($dto->cost !== null) {
-            $cost = new Money($dto->cost, $dto->currency ?? $product->getPrice()->getCurrency());
-            $product->updateCost($cost);
-        }
-
-        if ($dto->minimumStock !== null) {
-            $product->updateMinimumStock(new Quantity($dto->minimumStock));
-        }
-
-        if ($dto->unit !== null) {
-            $product->updateUnit($dto->unit);
-        }
-
         if ($dto->medicineType !== null) {
             $medicineType = $dto->medicineType ? new MedicineType($dto->medicineType) : null;
             $product->updateMedicineType($medicineType);
@@ -77,15 +67,8 @@ class UpdateProductUseCase
         }
 
         if ($dto->prescriptionRequired !== null) {
-            $product->updatePrescriptionRequirement($dto->prescriptionRequired);
-        }
-
-        if ($dto->manufacturer !== null) {
-            $product->updateManufacturer($dto->manufacturer);
-        }
-
-        if ($dto->supplierId !== null) {
-            $product->updateSupplier($dto->supplierId);
+            // L'entité de domaine expose setRequiresPrescription()
+            $product->setRequiresPrescription($dto->prescriptionRequired);
         }
 
         if ($dto->isActive !== null) {

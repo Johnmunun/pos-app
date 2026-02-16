@@ -3,7 +3,7 @@
 namespace Src\Domains\Admin\Repositories;
 
 use Domains\User\Entities\User;
-use Src\Domains\Tenant\Entities\Tenant;
+use Domains\Tenant\Entities\Tenant;
 
 interface AdminRepositoryInterface
 {

@@ -27,31 +27,35 @@ class CreateProductUseCase
         $this->validateCategory($dto->categoryId, $dto->shopId);
         $this->validateDosageForMedicine($dto);
 
-        // Create value objects
+        // Création des ValueObjects pour le Domain
         $productCode = new ProductCode($dto->productCode);
         $price = new Money($dto->price, $dto->currency);
-        $cost = $dto->cost ? new Money($dto->cost, $dto->currency) : null;
-        $minimumStock = new Quantity($dto->minimumStock);
-        
-        $medicineType = $dto->medicineType ? new MedicineType($dto->medicineType) : null;
+
+        // Le Domain Product ne connaît pas le coût, l'unité, le stock minimum, le fabricant, le supplier, etc.
+        // Ces informations sont gérées en Infrastructure (ProductModel) juste après l'appel au UseCase.
+
+        // Le Domain exige un MedicineType non-null
+        $medicineType = $dto->medicineType
+            ? new MedicineType($dto->medicineType)
+            : new MedicineType(MedicineType::getAllTypes()[0]);
+
         $dosage = $dto->dosage ? new Dosage($dto->dosage) : null;
 
-        // Create product entity
+        // Stock initial dans le Domain : 0 (les mouvements de stock sont gérés par les UseCases d'inventaire)
+        $initialStock = new Quantity(0);
+
+        // Création de l'entité Domain en respectant strictement la signature
         $product = Product::create(
-            $dto->shopId,
-            $dto->name,
-            $productCode,
-            $dto->description,
-            $dto->categoryId,
-            $price,
-            $cost,
-            $minimumStock,
-            $dto->unit,
-            $medicineType,
-            $dosage,
-            $dto->prescriptionRequired,
-            $dto->manufacturer,
-            $dto->supplierId
+            $dto->shopId,               // string $shopId
+            $productCode,               // ProductCode $code
+            $dto->name,                 // string $name
+            $dto->description ?? '',    // string $description
+            $medicineType,              // MedicineType $type
+            $dosage,                    // ?Dosage $dosage
+            $price,                     // Money $price
+            $initialStock,              // Quantity $initialStock
+            $dto->categoryId,           // string $categoryId
+            $dto->prescriptionRequired  // bool $requiresPrescription
         );
 
         // Save product

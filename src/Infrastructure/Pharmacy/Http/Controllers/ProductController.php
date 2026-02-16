@@ -4,15 +4,27 @@ namespace Src\Infrastructure\Pharmacy\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Src\Application\Pharmacy\UseCases\Product\CreateProductUseCase;
 use Src\Application\Pharmacy\UseCases\Product\UpdateProductUseCase;
 use Src\Application\Pharmacy\UseCases\Inventory\UpdateStockUseCase;
+use Src\Application\Pharmacy\UseCases\Product\GenerateProductCodeUseCase;
+use Src\Application\Pharmacy\UseCases\Product\ImportProductsUseCase;
 use Src\Domain\Pharmacy\Repositories\ProductRepositoryInterface;
 use Src\Domain\Pharmacy\Repositories\CategoryRepositoryInterface;
 use Src\Application\Pharmacy\DTO\CreateProductDTO;
 use Src\Application\Pharmacy\DTO\UpdateProductDTO;
 use Src\Application\Pharmacy\DTO\UpdateStockDTO;
 use Src\Infrastructure\Pharmacy\Services\ProductImageService;
+use Src\Application\Settings\UseCases\GetStoreSettingsUseCase;
+use Src\Infrastructure\Settings\Services\StoreLogoService;
 use Src\Shared\ValueObjects\Money;
 use Src\Shared\ValueObjects\Quantity;
 use Inertia\Inertia;
@@ -25,10 +37,29 @@ class ProductController
         private CreateProductUseCase $createProductUseCase,
         private UpdateProductUseCase $updateProductUseCase,
         private UpdateStockUseCase $updateStockUseCase,
+        private GenerateProductCodeUseCase $generateProductCodeUseCase,
+        private ImportProductsUseCase $importProductsUseCase,
         private ProductRepositoryInterface $productRepository,
         private CategoryRepositoryInterface $categoryRepository,
-        private ProductImageService $imageService
+        private ProductImageService $imageService,
+        private GetStoreSettingsUseCase $getStoreSettingsUseCase,
+        private StoreLogoService $storeLogoService
     ) {}
+
+    /**
+     * Génération automatique d'un code produit valide et unique.
+     * Utilisé par le bouton "Générer le code produit" côté frontend.
+     */
+    public function generateCode(Request $request): JsonResponse
+    {
+        $name = (string) $request->input('name', '');
+
+        $productCode = $this->generateProductCodeUseCase->execute($name);
+
+        return response()->json([
+            'code' => (string) $productCode,
+        ]);
+    }
 
     public function index(Request $request): Response
     {
@@ -39,7 +70,8 @@ class ProductController
         $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
         
         // Ensure UserModel has isRoot() method
-        $userModel = UserModel::find($user->id);
+        /** @var UserModel|null $userModel */
+        $userModel = UserModel::query()->find($user->id);
         $isRoot = $userModel ? $userModel->isRoot() : false;
         
         // ROOT users can access even without shop_id (they can see all products)
@@ -56,19 +88,31 @@ class ProductController
         
         // Get products for current shop
         // ROOT users without shop_id can see all products
-        if ($isRoot && !$shopId) {
-            $productModels = \Src\Infrastructure\Pharmacy\Models\ProductModel::with('category')
-                ->orderBy('name')
-                ->get();
-        } else {
-            $productEntities = $this->productRepository->findByShop($shopId);
-            // Convert entities to arrays for Inertia
-            // Use ProductModel directly for better serialization
-            $productModels = \Src\Infrastructure\Pharmacy\Models\ProductModel::where('shop_id', $shopId)
-                ->with('category')
-                ->orderBy('name')
-                ->get();
+        $query = \Src\Infrastructure\Pharmacy\Models\ProductModel::with('category')->orderBy('name');
+        if (!($isRoot && !$shopId)) {
+            $query->where('shop_id', $shopId);
         }
+
+        // Filtres
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('code', 'like', '%' . $search . '%');
+            });
+        }
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->input('category_id'));
+        }
+        if ($request->filled('status')) {
+            if ($request->input('status') === 'active') {
+                $query->where('is_active', true);
+            } elseif ($request->input('status') === 'inactive') {
+                $query->where('is_active', false);
+            }
+        }
+
+        $productModels = $query->get();
         
         $products = $productModels->map(function ($model) {
             return [
@@ -102,11 +146,13 @@ class ProductController
         // Get categories for filters - use model directly for serialization
         // ROOT users without shop_id can see all categories
         if ($isRoot && !$shopId) {
-            $categoryModels = \Src\Infrastructure\Pharmacy\Models\CategoryModel::where('is_active', true)
+            $categoryModels = \Src\Infrastructure\Pharmacy\Models\CategoryModel::query()
+                ->where('is_active', true)
                 ->orderBy('name')
                 ->get();
         } else {
-            $categoryModels = \Src\Infrastructure\Pharmacy\Models\CategoryModel::where('shop_id', $shopId)
+            $categoryModels = \Src\Infrastructure\Pharmacy\Models\CategoryModel::query()
+                ->where('shop_id', $shopId)
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get();
@@ -123,8 +169,285 @@ class ProductController
         return Inertia::render('Pharmacy/Products/Index', [
             'products' => $products,
             'categories' => $categories,
-            'filters' => $request->only(['search', 'category_id', 'type'])
+            'filters' => $request->only(['search', 'category_id', 'status']),
+            'canImport' => $isRoot || $request->user()->can('pharmacy.product.import'),
         ]);
+    }
+
+    /**
+     * Export PDF de la liste des produits pour la boutique courante.
+     */
+    public function exportPdf(Request $request)
+    {
+        $user = $request->user();
+
+        // Déterminer le shop courant (même logique que index)
+        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        /** @var UserModel|null $userModel */
+        $userModel = UserModel::query()->find($user->id);
+        $isRoot = $userModel ? $userModel->isRoot() : false;
+
+        if (!$shopId && !$isRoot) {
+            abort(403, 'Shop ID not found. Please contact administrator.');
+        }
+
+        // Récupérer les paramètres de boutique
+        $settings = null;
+        if ($shopId) {
+            $settings = $this->getStoreSettingsUseCase->execute((string) $shopId);
+        }
+
+        $header = [
+            'company_name' => $settings ? $settings->getCompanyIdentity()->getName() : ($user->shop->name ?? 'Boutique'),
+            'id_nat' => $settings ? $settings->getCompanyIdentity()->getIdNat() : null,
+            'rccm' => $settings ? $settings->getCompanyIdentity()->getRccm() : null,
+            'tax_number' => $settings ? $settings->getCompanyIdentity()->getTaxNumber() : null,
+            'street' => $settings ? $settings->getAddress()->getStreet() : null,
+            'city' => $settings ? $settings->getAddress()->getCity() : null,
+            'postal_code' => $settings ? $settings->getAddress()->getPostalCode() : null,
+            'country' => $settings ? $settings->getAddress()->getCountry() : null,
+            'phone' => $settings ? $settings->getPhone() : null,
+            'email' => $settings ? $settings->getEmail() : null,
+            'logo_url' => $settings && $settings->getLogoPath()
+                ? $this->storeLogoService->getUrl($settings->getLogoPath())
+                : null,
+            'exported_at' => now(),
+        ];
+
+        // Récupérer les produits pour ce shop
+        $query = \Src\Infrastructure\Pharmacy\Models\ProductModel::with('category')
+            ->orderBy('name');
+
+        if (!($isRoot && !$shopId)) {
+            $query->where('shop_id', $shopId);
+        }
+
+        $models = $query->get();
+
+        $products = $models->map(function ($model) {
+            return [
+                'name' => $model->name,
+                'code' => $model->code ?? '',
+                'category' => $model->category ? $model->category->name : null,
+                'unit' => $model->unit ?? '',
+                'price_amount' => (float) ($model->price_amount ?? 0),
+                'price_currency' => $model->price_currency ?? 'USD',
+                'cost_amount' => isset($model->cost_amount) ? (float) $model->cost_amount : null,
+                'stock' => (int) ($model->stock ?? 0),
+                'is_active' => (bool) ($model->is_active ?? true),
+            ];
+        })->toArray();
+
+        $data = [
+            'header' => $header,
+            'products' => $products,
+        ];
+
+        $pdf = Pdf::loadView('pharmacy.products.pdf', $data);
+        $pdf->setPaper('a4', 'portrait');
+
+        $filename = 'produits_' . now()->format('Ymd_His') . '.pdf';
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Export Excel (XLSX) de la liste des produits pour la boutique courante.
+     * Fichier structuré, colonnes alignées, design professionnel ERP.
+     */
+    public function exportExcel(Request $request)
+    {
+        $user = $request->user();
+
+        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        /** @var UserModel|null $userModel */
+        $userModel = UserModel::query()->find($user->id);
+        $isRoot = $userModel ? $userModel->isRoot() : false;
+
+        if (!$shopId && !$isRoot) {
+            abort(403, 'Shop ID not found. Please contact administrator.');
+        }
+
+        $settings = null;
+        if ($shopId) {
+            $settings = $this->getStoreSettingsUseCase->execute((string) $shopId);
+        }
+
+        $header = [
+            'company_name' => $settings ? $settings->getCompanyIdentity()->getName() : ($user->shop->name ?? 'Boutique'),
+            'id_nat' => $settings ? $settings->getCompanyIdentity()->getIdNat() : null,
+            'rccm' => $settings ? $settings->getCompanyIdentity()->getRccm() : null,
+            'tax_number' => $settings ? $settings->getCompanyIdentity()->getTaxNumber() : null,
+            'street' => $settings ? $settings->getAddress()->getStreet() : null,
+            'city' => $settings ? $settings->getAddress()->getCity() : null,
+            'postal_code' => $settings ? $settings->getAddress()->getPostalCode() : null,
+            'country' => $settings ? $settings->getAddress()->getCountry() : null,
+            'phone' => $settings ? $settings->getPhone() : null,
+            'email' => $settings ? $settings->getEmail() : null,
+            'exported_at' => now(),
+        ];
+
+        $query = \Src\Infrastructure\Pharmacy\Models\ProductModel::with('category')
+            ->orderBy('name');
+
+        if (!($isRoot && !$shopId)) {
+            $query->where('shop_id', $shopId);
+        }
+
+        $models = $query->get();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Produits');
+
+        $row = 1;
+
+        // Lignes 1–3 : informations boutique
+        $sheet->setCellValue('A' . $row, 'Boutique');
+        $sheet->setCellValue('B' . $row, $header['company_name'] ?? '');
+        $row++;
+
+        $addressParts = array_filter([
+            $header['street'] ?? null,
+            $header['city'] ?? null,
+            $header['postal_code'] ?? null,
+            $header['country'] ?? null,
+        ]);
+        $sheet->setCellValue('A' . $row, 'Adresse');
+        $sheet->setCellValue('B' . $row, implode(', ', $addressParts));
+        $row++;
+
+        $sheet->setCellValue('A' . $row, 'Contact');
+        $contact = trim(($header['phone'] ? 'Tél: ' . $header['phone'] . ' ' : '') . ($header['email'] ? 'Email: ' . $header['email'] : ''));
+        $sheet->setCellValue('B' . $row, $contact);
+        $row++;
+
+        if (!empty($header['id_nat']) || !empty($header['rccm']) || !empty($header['tax_number'])) {
+            $legal = array_filter([
+                $header['id_nat'] ? 'ID NAT: ' . $header['id_nat'] : null,
+                $header['rccm'] ? 'RCCM: ' . $header['rccm'] : null,
+                $header['tax_number'] ? 'N° Tva: ' . $header['tax_number'] : null,
+            ]);
+            $sheet->setCellValue('A' . $row, 'Identification');
+            $sheet->setCellValue('B' . $row, implode(' · ', $legal));
+            $row++;
+        }
+
+        $sheet->setCellValue('A' . $row, 'Date d\'export');
+        $sheet->setCellValue('B' . $row, $header['exported_at']->format('d/m/Y H:i'));
+        $row++;
+
+        $row++; // Ligne vide
+
+        // En-têtes colonnes produits (ligne 7+)
+        $headerRow = $row;
+        $headers = ['Nom', 'Code', 'Catégorie', 'Unité', 'Prix de vente', 'Prix de revient', 'Stock', 'Statut'];
+        foreach ($headers as $col => $label) {
+            $sheet->setCellValue(Coordinate::stringFromColumnIndex($col + 1) . $row, $label);
+        }
+        $row++;
+
+        // Style en-têtes : fond gris, gras
+        $headerRange = 'A' . $headerRow . ':H' . $headerRow;
+        $sheet->getStyle($headerRange)->getFont()->setBold(true);
+        $sheet->getStyle($headerRange)->getFill()
+            ->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('F1F5F9');
+        $sheet->getStyle($headerRange)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+
+        // Données produits
+        foreach ($models as $model) {
+            $status = ($model->is_active ?? true) ? 'Actif' : 'Inactif';
+            $price = ($model->price_currency ?? 'USD') . ' ' . number_format((float) ($model->price_amount ?? 0), 2);
+            $cost = isset($model->cost_amount) && $model->cost_amount > 0
+                ? ($model->price_currency ?? 'USD') . ' ' . number_format((float) $model->cost_amount, 2)
+                : '';
+
+            $sheet->setCellValue('A' . $row, $model->name);
+            $sheet->setCellValue('B' . $row, $model->code ?? '');
+            $sheet->setCellValue('C' . $row, $model->category ? $model->category->name : '');
+            $sheet->setCellValue('D' . $row, $model->unit ?? '');
+            $sheet->setCellValue('E' . $row, $price);
+            $sheet->setCellValue('F' . $row, $cost);
+            $sheet->setCellValue('G' . $row, (int) ($model->stock ?? 0));
+            $sheet->setCellValue('H' . $row, $status);
+            $row++;
+        }
+
+        // Alignement : texte à gauche, prix et stock à droite
+        $dataStartRow = $headerRow + 1;
+        $dataEndRow = $row - 1;
+        if ($dataEndRow >= $dataStartRow) {
+            $sheet->getStyle('A' . $dataStartRow . ':D' . $dataEndRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+            $sheet->getStyle('E' . $dataStartRow . ':G' . $dataEndRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $sheet->getStyle('H' . $dataStartRow . ':H' . $dataEndRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        }
+
+        // Bordures légères sur la zone données
+        $dataRange = 'A' . $headerRow . ':H' . $dataEndRow;
+        if ($dataEndRow >= $headerRow) {
+            $sheet->getStyle($dataRange)->getBorders()->getAllBorders()
+                ->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('E2E8F0');
+        }
+
+        // Auto-size des colonnes
+        foreach (range('A', 'H') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'produits_' . now()->format('Ymd_His') . '.xlsx';
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    /**
+     * Import de produits depuis fichier XLSX ou CSV.
+     * Permission requise : pharmacy.product.import
+     */
+    public function import(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,csv,txt|max:10240',
+        ], [
+            'file.required' => 'Veuillez sélectionner un fichier.',
+            'file.mimes' => 'Le fichier doit être au format .xlsx ou .csv.',
+            'file.max' => 'Le fichier ne doit pas dépasser 10 Mo.',
+        ]);
+
+        $user = $request->user();
+        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        if (!$shopId) {
+            return response()->json(['message' => 'Shop ID non trouvé.'], 403);
+        }
+
+        try {
+            $file = $request->file('file');
+            $path = $file->getRealPath();
+
+            $result = $this->importProductsUseCase->execute($shopId, $path);
+
+            $errorsFormatted = [];
+            foreach ($result['errors'] as $line => $msg) {
+                $errorsFormatted[] = "Ligne {$line}: {$msg}";
+            }
+
+            return response()->json([
+                'message' => 'Import terminé.',
+                'success' => $result['success'],
+                'failed' => $result['failed'],
+                'total' => $result['total'],
+                'errors' => $errorsFormatted,
+            ], 200);
+        } catch (\Throwable $e) {
+            Log::error('Product import error', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'message' => 'Erreur lors de l\'import : ' . $e->getMessage(),
+            ], 422);
+        }
     }
 
     public function create(): Response
@@ -201,7 +524,7 @@ class ProductController
                     $imageType = $productImage->getType();
                 } catch (\Exception $e) {
                     // Si l'upload échoue, on continue sans image
-                    \Log::warning('Failed to upload product image', [
+                    Log::warning('Failed to upload product image', [
                         'product_id' => $product->getId(),
                         'error' => $e->getMessage()
                     ]);
@@ -211,14 +534,27 @@ class ProductController
                 $imageType = 'url';
             }
 
-            // Mettre à jour le produit avec l'image
-            if ($imagePath) {
-                \Src\Infrastructure\Pharmacy\Models\ProductModel::where('id', $product->getId())
-                    ->update([
-                        'image_path' => $imagePath,
-                        'image_type' => $imageType
-                    ]);
+            // Mettre à jour le produit avec les champs infra (unité, stock min, prix de revient, fabricant, image)
+            $productUpdateData = [
+                'unit' => $request->input('unit'),
+                'minimum_stock' => (int) $request->input('minimum_stock'),
+            ];
+
+            if ($request->filled('cost')) {
+                $productUpdateData['cost_amount'] = (float) $request->input('cost');
             }
+
+            if ($request->filled('manufacturer')) {
+                $productUpdateData['manufacturer'] = $request->input('manufacturer');
+            }
+
+            if ($imagePath) {
+                $productUpdateData['image_path'] = $imagePath;
+                $productUpdateData['image_type'] = $imageType;
+            }
+
+            \Src\Infrastructure\Pharmacy\Models\ProductModel::where('id', $product->getId())
+                ->update($productUpdateData);
 
             return response()->json([
                 'message' => 'Product created successfully',
@@ -232,12 +568,23 @@ class ProductController
         }
     }
 
-    public function show(string $id): Response
+    public function show(Request $request, string $id): Response
     {
+        $user = $request->user();
+        /** @var UserModel|null $userModel */
+        $userModel = UserModel::query()->find($user->id);
+        $isRoot = $userModel?->isRoot() ?? false;
+        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        
         $product = $this->productRepository->findById($id);
         
         if (!$product) {
             abort(404);
+        }
+
+        // Vérification d'isolation par pharmacie: seuls ROOT ou les utilisateurs de la même pharmacie peuvent voir
+        if (!$isRoot && $product->getShopId() !== $shopId) {
+            abort(404, 'Produit non trouvé');
         }
 
         // Get related batches
@@ -249,16 +596,27 @@ class ProductController
         ]);
     }
 
-    public function edit(string $id): Response
+    public function edit(Request $request, string $id): Response
     {
+        $user = $request->user();
+        /** @var UserModel|null $userModel */
+        $userModel = UserModel::query()->find($user->id);
+        $isRoot = $userModel?->isRoot() ?? false;
+        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        
         $product = $this->productRepository->findById($id);
         
         if (!$product) {
             abort(404);
         }
 
+        // Vérification d'isolation par pharmacie: seuls ROOT ou les utilisateurs de la même pharmacie peuvent modifier
+        if (!$isRoot && $product->getShopId() !== $shopId) {
+            abort(404, 'Produit non trouvé');
+        }
+
         $categories = $this->categoryRepository->findByShop(
-            request()->user()->shop_id, 
+            $shopId, 
             true
         );
 
@@ -292,8 +650,27 @@ class ProductController
                 'remove_image' => 'nullable|boolean'
             ]);
 
+            // Déterminer le shop courant (même logique robuste que pour index/show)
+            $user = $request->user();
+            $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+
+            // Si pas de shop_id (cas ROOT sans shop), on se rabat sur le shop du produit existant
+            if (!$shopId) {
+                $existingProductModel = \Src\Infrastructure\Pharmacy\Models\ProductModel::find($id);
+                if ($existingProductModel) {
+                    $shopId = (string) $existingProductModel->shop_id;
+                }
+            }
+
+            // Si toujours pas de shopId, on ne peut pas continuer proprement
+            if (!$shopId) {
+                return response()->json([
+                    'message' => 'Shop ID not found. Please contact administrator.'
+                ], 403);
+            }
+
             $dto = new UpdateProductDTO(
-                $request->user()->shop_id,
+                $shopId,
                 $request->input('name'),
                 $request->input('product_code'),
                 $request->input('description'),
@@ -313,18 +690,34 @@ class ProductController
 
             $product = $this->updateProductUseCase->execute($id, $dto);
 
-            // Gérer l'upload/suppression d'image
+            // Gérer l'upload/suppression d'image + champs infra (unité, stock min, prix de revient, fabricant)
             $productModel = \Src\Infrastructure\Pharmacy\Models\ProductModel::find($id);
             if ($productModel) {
+                $productUpdateData = [];
+
+                if ($request->input('unit') !== null) {
+                    $productUpdateData['unit'] = $request->input('unit');
+                }
+
+                if ($request->input('minimum_stock') !== null) {
+                    $productUpdateData['minimum_stock'] = (int) $request->input('minimum_stock');
+                }
+
+                if ($request->input('cost') !== null) {
+                    $productUpdateData['cost_amount'] = (float) $request->input('cost');
+                }
+
+                if ($request->input('manufacturer') !== null) {
+                    $productUpdateData['manufacturer'] = $request->input('manufacturer');
+                }
+
                 // Supprimer l'image existante si demandé
                 if ($request->boolean('remove_image')) {
                     if ($productModel->image_path) {
                         $this->imageService->deleteByPath($productModel->image_path, $productModel->image_type ?? 'upload');
                     }
-                    $productModel->update([
-                        'image_path' => null,
-                        'image_type' => 'upload'
-                    ]);
+                    $productUpdateData['image_path'] = null;
+                    $productUpdateData['image_type'] = 'upload';
                 }
                 // Upload nouvelle image
                 elseif ($request->hasFile('image')) {
@@ -335,12 +728,10 @@ class ProductController
                         }
                         
                         $productImage = $this->imageService->upload($request->file('image'), $id);
-                        $productModel->update([
-                            'image_path' => $productImage->getPath(),
-                            'image_type' => $productImage->getType()
-                        ]);
+                        $productUpdateData['image_path'] = $productImage->getPath();
+                        $productUpdateData['image_type'] = $productImage->getType();
                     } catch (\Exception $e) {
-                        \Log::warning('Failed to upload product image', [
+                        Log::warning('Failed to upload product image', [
                             'product_id' => $id,
                             'error' => $e->getMessage()
                         ]);
@@ -353,10 +744,12 @@ class ProductController
                         $this->imageService->deleteByPath($productModel->image_path, 'upload');
                     }
                     
-                    $productModel->update([
-                        'image_path' => $request->input('image_url'),
-                        'image_type' => 'url'
-                    ]);
+                    $productUpdateData['image_path'] = $request->input('image_url');
+                    $productUpdateData['image_type'] = 'url';
+                }
+
+                if (!empty($productUpdateData)) {
+                    $productModel->update($productUpdateData);
                 }
             }
 
@@ -372,11 +765,24 @@ class ProductController
         }
     }
 
-    public function destroy(string $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
         try {
+            $user = $request->user();
+            /** @var UserModel|null $userModel */
+            $userModel = UserModel::query()->find($user->id);
+            $isRoot = $userModel?->isRoot() ?? false;
+            $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+            
             $product = $this->productRepository->findById($id);
             if (!$product) {
+                return response()->json([
+                    'message' => 'Product not found'
+                ], 404);
+            }
+
+            // Vérification d'isolation par pharmacie: seuls ROOT ou les utilisateurs de la même pharmacie peuvent supprimer
+            if (!$isRoot && $product->getShopId() !== $shopId) {
                 return response()->json([
                     'message' => 'Product not found'
                 ], 404);
@@ -419,15 +825,44 @@ class ProductController
                 'purchase_order_id' => 'nullable|string|max:100'
             ]);
 
+            /** @var UserModel $authUser */
+            $authUser = $request->user();
+            $shopId = $authUser->shop_id ?? ($authUser->tenant_id ? (string) $authUser->tenant_id : null);
+
+            if (!$shopId) {
+                return response()->json([
+                    'message' => 'Shop ID not found. Please contact administrator.'
+                ], 403);
+            }
+
+            // Vérifier que le produit appartient à cette pharmacie
+            $product = $this->productRepository->findById($id);
+            if (!$product) {
+                return response()->json([
+                    'message' => 'Product not found'
+                ], 404);
+            }
+
+            /** @var UserModel|null $userModel */
+            $userModel = UserModel::query()->find($authUser->id);
+            $isRoot = $userModel?->isRoot() ?? false;
+            
+            if (!$isRoot && $product->getShopId() !== $shopId) {
+                return response()->json([
+                    'message' => 'Product not found'
+                ], 404);
+            }
+
             if ($request->input('type') === 'add') {
                 $dto = new UpdateStockDTO(
-                    $request->user()->shop_id,
+                    (string) $shopId,
                     $id,
                     (int) $request->input('quantity'),
                     $request->input('batch_number'),
                     $request->input('expiry_date'),
                     $request->input('supplier_id'),
-                    $request->input('purchase_order_id')
+                    $request->input('purchase_order_id'),
+                    (int) $authUser->id
                 );
                 
                 $batch = $this->updateStockUseCase->addStock($dto);
@@ -441,7 +876,8 @@ class ProductController
                 $this->updateStockUseCase->removeStock(
                     $id,
                     (int) $request->input('quantity'),
-                    $request->user()->shop_id
+                    (string) $shopId,
+                    (int) $authUser->id
                 );
                 
                 return response()->json([
@@ -452,7 +888,8 @@ class ProductController
                 $this->updateStockUseCase->adjustStock(
                     $id,
                     (int) $request->input('quantity'),
-                    $request->user()->shop_id
+                    (string) $shopId,
+                    (int) $authUser->id
                 );
                 
                 return response()->json([

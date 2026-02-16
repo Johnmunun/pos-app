@@ -157,13 +157,10 @@ class AccessManagerController extends Controller
             $report = $syncService->syncFromYaml();
             
             if (empty($report['errors'])) {
-                return Redirect::back()->with('flash', [
-                    'message' => 'Permissions synchronisées avec succès. ' . $report['created'] . ' créées, ' . $report['updated'] . ' mises à jour, ' . $report['deleted'] . ' marquées comme obsolètes.'
-                ]);
+                $message = 'Permissions synchronisées avec succès. ' . $report['created'] . ' créées, ' . $report['updated'] . ' mises à jour, ' . $report['deleted'] . ' marquées comme obsolètes.';
+                return Redirect::back()->with('message', $message);
             } else {
-                return Redirect::back()->with('flash', [
-                    'message' => 'Erreur lors de la synchronisation: ' . implode(', ', $report['errors'])
-                ])->setStatusCode(500);
+                return Redirect::back()->with('error', 'Erreur lors de la synchronisation: ' . implode(', ', $report['errors']));
             }
         }
         

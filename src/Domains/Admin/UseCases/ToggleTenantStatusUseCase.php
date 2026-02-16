@@ -20,7 +20,7 @@ class ToggleTenantStatusUseCase
             throw new \Exception("Tenant not found");
         }
         
-        $newStatus = !$tenant->getStatus();
+        $newStatus = !$tenant->isActive();
         $this->repository->updateTenantStatus($tenantId, $newStatus);
     }
 }
