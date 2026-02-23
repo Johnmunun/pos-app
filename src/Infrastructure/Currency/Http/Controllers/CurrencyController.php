@@ -33,6 +33,9 @@ class CurrencyController
     public function index(Request $request): Response
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $tenantId = $user->tenant_id;
 
         // Récupérer les devises via Use Case
@@ -80,6 +83,9 @@ class CurrencyController
     public function store(Request $request)
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $tenantId = $user->tenant_id;
 
         $validated = $request->validate([
@@ -115,6 +121,9 @@ class CurrencyController
     public function update(Request $request, int $currency)
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $tenantId = $user->tenant_id;
 
         $validated = $request->validate([
@@ -164,6 +173,9 @@ class CurrencyController
     public function storeExchangeRate(Request $request)
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $tenantId = $user->tenant_id;
 
         $validated = $request->validate([
@@ -190,6 +202,9 @@ class CurrencyController
     public function updateExchangeRate(Request $request, ExchangeRate $exchangeRate)
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $tenantId = $user->tenant_id;
 
         $fromCurrency = $exchangeRate->fromCurrency;

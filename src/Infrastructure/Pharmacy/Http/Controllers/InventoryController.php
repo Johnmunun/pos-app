@@ -34,6 +34,9 @@ class InventoryController
     public function index(Request $request): Response
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $this->getShopId($user);
         $isRoot = $this->isRoot($user);
 
@@ -113,6 +116,9 @@ class InventoryController
     public function store(Request $request): RedirectResponse
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $this->getShopId($user);
 
         if (!$shopId) {
@@ -135,6 +141,9 @@ class InventoryController
     public function show(Request $request, string $id): Response
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $this->getShopId($user);
         $isRoot = $this->isRoot($user);
 
@@ -263,6 +272,9 @@ class InventoryController
     public function start(Request $request, string $id): RedirectResponse
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $this->getShopId($user);
 
         if (!$shopId) {
@@ -290,6 +302,9 @@ class InventoryController
     public function updateCounts(Request $request, string $id): JsonResponse
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $this->getShopId($user);
 
         if (!$shopId) {
@@ -322,6 +337,9 @@ class InventoryController
     public function updateSingleCount(Request $request, string $id, string $productId): JsonResponse
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $this->getShopId($user);
 
         if (!$shopId) {
@@ -359,6 +377,9 @@ class InventoryController
     public function validate(Request $request, string $id): RedirectResponse
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $this->getShopId($user);
 
         if (!$shopId) {
@@ -380,6 +401,9 @@ class InventoryController
     public function cancel(Request $request, string $id): RedirectResponse
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $this->getShopId($user);
 
         if (!$shopId) {
@@ -398,8 +422,14 @@ class InventoryController
     /**
      * Récupère le shop_id de l'utilisateur
      */
+    /**
+     * @param \Illuminate\Contracts\Auth\Authenticatable|null $user
+     */
     private function getShopId($user): ?string
     {
+        if ($user === null) {
+            return null;
+        }
         if (isset($user->shop_id) && $user->shop_id) {
             return (string) $user->shop_id;
         }
@@ -413,11 +443,13 @@ class InventoryController
 
     /**
      * Vérifie si l'utilisateur est ROOT
-     * 
-     * @param mixed $user
+     * @param \Illuminate\Contracts\Auth\Authenticatable|null $user
      */
     private function isRoot($user): bool
     {
+        if ($user === null) {
+            return false;
+        }
         /** @var UserModel|null $userModel */
         $userModel = UserModel::query()->find($user->id);
         return $userModel !== null && $userModel->isRoot();
@@ -429,8 +461,15 @@ class InventoryController
      * @param mixed $user
      * @return array<string, bool>
      */
+    /**
+     * @param \Illuminate\Contracts\Auth\Authenticatable|null $user
+     * @return array<string, bool>
+     */
     private function getPermissions($user): array
     {
+        if ($user === null) {
+            return ['view' => false, 'create' => false, 'edit' => false, 'validate' => false, 'cancel' => false];
+        }
         /** @var UserModel|null $userModel */
         $userModel = UserModel::query()->find($user->id);
         $isRoot = $userModel !== null && $userModel->isRoot();

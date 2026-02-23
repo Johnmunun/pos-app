@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
  * Service: ProductImageService
  * 
  * Gère l'upload, le stockage et la suppression des images produits
+ * Optimise automatiquement les images pour réduire la taille et améliorer les performances
  * Respecte l'architecture DDD (Infrastructure Layer)
  */
 class ProductImageService
@@ -18,9 +19,14 @@ class ProductImageService
     private const STORAGE_DISK = 'public';
     private const STORAGE_PATH = 'pharmacy/products';
     private const MAX_SIZE = 2 * 1024 * 1024; // 2 Mo
+    private const MAX_WIDTH = 1200; // Largeur maximale en pixels
+    private const MAX_HEIGHT = 1200; // Hauteur maximale en pixels
+    private const JPEG_QUALITY = 85; // Qualité JPEG (0-100)
+    private const PNG_QUALITY = 9; // Qualité PNG (0-9, 9 = meilleure compression)
+    private const WEBP_QUALITY = 85; // Qualité WebP (0-100)
 
     /**
-     * Upload et stocke une image produit
+     * Upload et stocke une image produit avec compression automatique
      * 
      * @param UploadedFile $file
      * @param string $productId
@@ -33,19 +39,99 @@ class ProductImageService
         ProductImage::validateFile($file);
 
         // Générer un nom de fichier unique
-        $extension = $file->getClientOriginalExtension();
+        $extension = strtolower($file->getClientOriginalExtension());
         $filename = $productId . '_' . Str::random(10) . '.' . $extension;
         $path = self::STORAGE_PATH . '/' . $filename;
+        $fullPath = Storage::disk(self::STORAGE_DISK)->path($path);
 
-        // Stocker le fichier
-        $storedPath = $file->storeAs(self::STORAGE_PATH, $filename, self::STORAGE_DISK);
-
-        if (!$storedPath) {
-            throw new \RuntimeException('Failed to store product image');
+        // Créer le répertoire s'il n'existe pas
+        $directory = dirname($fullPath);
+        if (!is_dir($directory)) {
+            mkdir($directory, 0755, true);
         }
+
+        // Compresser et optimiser l'image
+        $this->compressAndResizeImage($file, $fullPath, $extension);
 
         // Retourner le nom du fichier (sans le chemin complet)
         return ProductImage::fromUpload($filename);
+    }
+
+    /**
+     * Compresse et redimensionne une image pour optimiser les performances
+     * 
+     * @param UploadedFile $file
+     * @param string $outputPath
+     * @param string $extension
+     * @return void
+     */
+    private function compressAndResizeImage(UploadedFile $file, string $outputPath, string $extension): void
+    {
+        // Vérifier que GD est disponible
+        if (!extension_loaded('gd')) {
+            // Si GD n'est pas disponible, stocker l'image telle quelle
+            $file->move(dirname($outputPath), basename($outputPath));
+            return;
+        }
+
+        // Lire l'image selon son type
+        $imageResource = match ($extension) {
+            'jpg', 'jpeg' => imagecreatefromjpeg($file->getRealPath()),
+            'png' => imagecreatefrompng($file->getRealPath()),
+            'webp' => imagecreatefromwebp($file->getRealPath()),
+            default => throw new \InvalidArgumentException("Format d'image non supporté: {$extension}"),
+        };
+
+        if (!$imageResource) {
+            throw new \RuntimeException('Impossible de charger l\'image');
+        }
+
+        // Obtenir les dimensions originales
+        $originalWidth = imagesx($imageResource);
+        $originalHeight = imagesy($imageResource);
+
+        // Calculer les nouvelles dimensions en conservant le ratio
+        $ratio = min(self::MAX_WIDTH / $originalWidth, self::MAX_HEIGHT / $originalHeight, 1);
+        $newWidth = (int) ($originalWidth * $ratio);
+        $newHeight = (int) ($originalHeight * $ratio);
+
+        // Créer une nouvelle image redimensionnée
+        $resizedImage = imagecreatetruecolor($newWidth, $newHeight);
+
+        // Préserver la transparence pour PNG et WebP
+        if (in_array($extension, ['png', 'webp'])) {
+            imagealphablending($resizedImage, false);
+            imagesavealpha($resizedImage, true);
+            $transparent = imagecolorallocatealpha($resizedImage, 255, 255, 255, 127);
+            imagefill($resizedImage, 0, 0, $transparent);
+        }
+
+        // Redimensionner l'image avec une meilleure qualité
+        imagecopyresampled(
+            $resizedImage,
+            $imageResource,
+            0, 0, 0, 0,
+            $newWidth,
+            $newHeight,
+            $originalWidth,
+            $originalHeight
+        );
+
+        // Sauvegarder l'image compressée selon son format
+        $saved = match ($extension) {
+            'jpg', 'jpeg' => imagejpeg($resizedImage, $outputPath, self::JPEG_QUALITY),
+            'png' => imagepng($resizedImage, $outputPath, self::PNG_QUALITY),
+            'webp' => imagewebp($resizedImage, $outputPath, self::WEBP_QUALITY),
+            default => false,
+        };
+
+        // Libérer la mémoire
+        imagedestroy($imageResource);
+        imagedestroy($resizedImage);
+
+        if (!$saved) {
+            throw new \RuntimeException('Impossible de sauvegarder l\'image compressée');
+        }
     }
 
     /**

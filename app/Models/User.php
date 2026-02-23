@@ -6,8 +6,14 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\HasApiTokens;
 
+/**
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Role> $roles
+ * @property-read int $roles_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Depot> $depots
+ */
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
@@ -59,6 +65,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the depots assigned to this user (vendeurs).
+     */
+    public function depots()
+    {
+        return $this->belongsToMany(Depot::class, 'user_depot')->withTimestamps();
+    }
+
+    /**
      * Get the roles for the user.
      * Inclut les rôles globaux (tenant_id = null) et les rôles spécifiques au tenant.
      */
@@ -105,7 +119,7 @@ class User extends Authenticatable
         // Utiliser fresh() pour forcer le rechargement depuis la DB
         $roles = $this->roles()->with('permissions')->get();
         
-        \Log::debug('User roles loaded', [
+        Log::debug('User roles loaded', [
             'user_id' => $this->id,
             'user_email' => $this->email,
             'roles_count' => $roles->count(),
@@ -120,7 +134,7 @@ class User extends Authenticatable
         ]);
         
         if ($roles->isEmpty()) {
-            \Log::debug('User has no roles', [
+            Log::debug('User has no roles', [
                 'user_id' => $this->id,
                 'user_email' => $this->email,
                 'user_type' => $this->type,
@@ -130,7 +144,7 @@ class User extends Authenticatable
         
         $permissions = $roles->flatMap(function ($role) {
             $rolePermissions = $role->permissions->pluck('code')->toArray();
-            \Log::debug('Role permissions', [
+            Log::debug('Role permissions', [
                 'user_id' => $this->id,
                 'role_id' => $role->id,
                 'role_name' => $role->name,
@@ -141,7 +155,7 @@ class User extends Authenticatable
             return $rolePermissions;
         })->unique()->values()->toArray();
         
-        \Log::debug('User final permissions', [
+        Log::debug('User final permissions', [
             'user_id' => $this->id,
             'user_email' => $this->email,
             'total_permissions' => count($permissions),

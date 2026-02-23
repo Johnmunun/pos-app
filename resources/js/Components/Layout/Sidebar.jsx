@@ -34,6 +34,7 @@ import {
     Calendar,
     DollarSign,
     Truck,
+    Warehouse,
 } from 'lucide-react';
 
 /**
@@ -97,9 +98,10 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, 
             key: 'general',
             label: 'Général',
             icon: Home,
-            permissions: ['dashboard.view', 'notifications.view', 'activity.view', '*'], // '*' pour toujours afficher le groupe
+            permissions: ['dashboard.view', 'notifications.view', 'activity.view', '*'],
             items: [
-                { label: 'Dashboard', href: '/dashboard', permission: '*', icon: LayoutDashboard }, // Accessible à tous
+                { label: 'Dashboard', href: '/dashboard', permission: '*', icon: LayoutDashboard },
+                { label: 'Mon profil', href: '/profile', permission: '*', icon: User },
                 { label: 'Notifications', href: '#', permission: 'notifications.view', icon: Bell },
                 { label: 'Activité récente', href: '#', permission: 'activity.view', icon: ClipboardList },
             ]
@@ -138,7 +140,7 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, 
             key: 'pharmacy',
             label: 'Pharmacy',
             icon: Pill,
-            permissions: ['module.pharmacy', 'pharmacy.pharmacy.product.manage', 'pharmacy.product.manage', 'pharmacy.category.view', 'pharmacy.pharmacy.stock.manage', 'stock.view', 'inventory.view', 'pharmacy.sales.view', 'pharmacy.sales.manage', 'pharmacy.purchases.view', 'pharmacy.purchases.manage', 'pharmacy.supplier.view', 'pharmacy.customer.view', 'pharmacy.expiration.view', 'pharmacy.batch.view', 'pharmacy.pharmacy.report.view', 'admin.modules.view'],
+            permissions: ['module.pharmacy', 'pharmacy.pharmacy.product.manage', 'pharmacy.product.manage', 'pharmacy.category.view', 'pharmacy.pharmacy.stock.manage', 'stock.view', 'inventory.view', 'pharmacy.sales.view', 'pharmacy.sales.manage', 'pharmacy.purchases.view', 'pharmacy.purchases.manage', 'pharmacy.supplier.view', 'pharmacy.customer.view', 'pharmacy.seller.view', 'pharmacy.expiration.view', 'pharmacy.batch.view', 'pharmacy.report.view', 'admin.modules.view'],
             items: [
                 { label: 'Dashboard', href: '/pharmacy/dashboard', permission: 'module.pharmacy', icon: LayoutDashboard },
                 { label: 'Produits', href: '/pharmacy/products', permission: 'pharmacy.pharmacy.product.manage|pharmacy.product.manage', icon: Package },
@@ -150,7 +152,9 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, 
                 { label: 'Achats', href: '/pharmacy/purchases', permission: 'pharmacy.purchases.view|pharmacy.purchases.manage', icon: Receipt },
                 { label: 'Fournisseurs', href: '/pharmacy/suppliers', permission: 'pharmacy.supplier.view', icon: Truck },
                 { label: 'Clients', href: '/pharmacy/customers', permission: 'pharmacy.customer.view', icon: Users },
-                { label: 'Rapports', href: '/pharmacy/reports', permission: 'pharmacy.pharmacy.report.view', icon: FileText },
+                { label: 'Vendeurs', href: '/pharmacy/sellers', permission: 'pharmacy.seller.view', icon: User },
+                { label: 'Dépôts', href: '/pharmacy/depots', permission: 'pharmacy.seller.view', icon: Warehouse },
+                { label: 'Rapports', href: '/pharmacy/reports', permission: 'pharmacy.sales.view|pharmacy.report.view', icon: FileText },
             ]
         },
         {
@@ -228,9 +232,9 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, 
         },
     ];
 
-    // Filtrer les groupes visibles
+    // Filtrer les groupes visibles (toujours afficher "Général" pour que Dashboard soit visible)
     const visibleGroups = navigationGroups.filter(group => 
-        hasVisibleItem(group.permissions)
+        group.key === 'general' || hasVisibleItem(group.permissions)
     );
 
     return (

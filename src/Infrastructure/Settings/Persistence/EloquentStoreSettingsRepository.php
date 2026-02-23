@@ -2,6 +2,7 @@
 
 namespace Src\Infrastructure\Settings\Persistence;
 
+use Illuminate\Support\Facades\Log;
 use Src\Domain\Settings\Repositories\StoreSettingsRepositoryInterface;
 use Src\Domain\Settings\Entities\StoreSettings;
 use Src\Domain\Settings\ValueObjects\CompanyIdentity;
@@ -30,7 +31,7 @@ class EloquentStoreSettingsRepository implements StoreSettingsRepositoryInterfac
     {
         $shopId = $settings->getShopId();
         
-        \Log::info('EloquentStoreSettingsRepository::save - Starting', [
+        Log::info('EloquentStoreSettingsRepository::save - Starting', [
             'shop_id' => $shopId,
             'settings_id' => $settings->getId(),
         ]);
@@ -43,13 +44,13 @@ class EloquentStoreSettingsRepository implements StoreSettingsRepositoryInterfac
             $model->id = $settings->getId();
             // S'assurer que shop_id est un entier (la table attend unsignedBigInteger)
             $model->shop_id = (int) $shopId;
-            \Log::info('Creating new StoreSettingsModel', [
+            Log::info('Creating new StoreSettingsModel', [
                 'id' => $model->id,
                 'shop_id' => $model->shop_id,
                 'shop_id_type' => gettype($model->shop_id),
             ]);
         } else {
-            \Log::info('Updating existing StoreSettingsModel', [
+            Log::info('Updating existing StoreSettingsModel', [
                 'id' => $model->id,
                 'shop_id' => $shopId,
             ]);
@@ -76,7 +77,7 @@ class EloquentStoreSettingsRepository implements StoreSettingsRepositoryInterfac
         $model->exchange_rate = $settings->getExchangeRate();
         $model->invoice_footer_text = $settings->getInvoiceFooterText();
 
-        \Log::info('StoreSettingsModel data before save', [
+        Log::info('StoreSettingsModel data before save', [
             'shop_id' => $model->shop_id,
             'company_name' => $model->company_name,
             'currency' => $model->currency,
@@ -89,14 +90,14 @@ class EloquentStoreSettingsRepository implements StoreSettingsRepositoryInterfac
         try {
             $saved = $model->save();
             
-            \Log::info('Model save result', [
+            Log::info('Model save result', [
                 'saved' => $saved,
                 'model_exists' => $model->exists,
                 'model_id' => $model->id,
             ]);
             
             if (!$saved) {
-                \Log::error('Failed to save StoreSettings - save() returned false', [
+                Log::error('Failed to save StoreSettings - save() returned false', [
                     'shop_id' => $shopId,
                     'model_data' => $model->getAttributes(),
                     'model_errors' => method_exists($model, 'getErrors') ? $model->getErrors() : 'N/A',
@@ -107,7 +108,7 @@ class EloquentStoreSettingsRepository implements StoreSettingsRepositoryInterfac
             // Vérifier que l'enregistrement existe bien en base
             $verify = StoreSettingsModel::find($model->id);
             if (!$verify) {
-                \Log::error('StoreSettings not found after save', [
+                Log::error('StoreSettings not found after save', [
                     'shop_id' => $shopId,
                     'settings_id' => $model->id,
                 ]);
@@ -122,14 +123,14 @@ class EloquentStoreSettingsRepository implements StoreSettingsRepositoryInterfac
                 $idProperty->setValue($settings, $model->id);
             }
             
-            \Log::info('StoreSettings saved successfully', [
+            Log::info('StoreSettings saved successfully', [
                 'shop_id' => $shopId,
                 'settings_id' => $model->id,
                 'company_name' => $model->company_name,
                 'currency' => $model->currency,
             ]);
         } catch (\Illuminate\Database\QueryException $e) {
-            \Log::error('Database QueryException saving StoreSettings', [
+            Log::error('Database QueryException saving StoreSettings', [
                 'shop_id' => $shopId,
                 'error' => $e->getMessage(),
                 'sql' => $e->getSql() ?? 'N/A',
@@ -137,7 +138,7 @@ class EloquentStoreSettingsRepository implements StoreSettingsRepositoryInterfac
             ]);
             throw $e;
         } catch (\Exception $e) {
-            \Log::error('Exception saving StoreSettings', [
+            Log::error('Exception saving StoreSettings', [
                 'shop_id' => $shopId,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),

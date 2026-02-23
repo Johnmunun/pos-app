@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Model;
  * Model Eloquent: Role
  *
  * Représentation de la table 'roles'.
+ *
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Permission> $permissions
+ * @property-read int $permissions_count
  */
 class Role extends Model
 {

@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
-use Ramsey\Uuid\Uuid;
 
 return new class extends Migration
 {
@@ -13,47 +12,42 @@ return new class extends Migration
     {
         $permissions = [
             [
-                'id' => Uuid::uuid4()->toString(),
                 'code' => 'transfer.view',
-                'name' => 'Voir les transferts',
-                'description' => 'Permet de visualiser les transferts inter-magasins',
-                'module' => 'pharmacy',
+                'description' => 'Voir les transferts - Permet de visualiser les transferts inter-magasins',
+                'group' => 'pharmacy',
+                'is_old' => false,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'id' => Uuid::uuid4()->toString(),
                 'code' => 'transfer.create',
-                'name' => 'Créer des transferts',
-                'description' => 'Permet de créer de nouveaux transferts inter-magasins',
-                'module' => 'pharmacy',
+                'description' => 'Créer des transferts - Permet de créer de nouveaux transferts inter-magasins',
+                'group' => 'pharmacy',
+                'is_old' => false,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'id' => Uuid::uuid4()->toString(),
                 'code' => 'transfer.validate',
-                'name' => 'Valider les transferts',
-                'description' => 'Permet de valider les transferts inter-magasins',
-                'module' => 'pharmacy',
+                'description' => 'Valider les transferts - Permet de valider les transferts inter-magasins',
+                'group' => 'pharmacy',
+                'is_old' => false,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'id' => Uuid::uuid4()->toString(),
                 'code' => 'transfer.cancel',
-                'name' => 'Annuler les transferts',
-                'description' => 'Permet d\'annuler les transferts inter-magasins',
-                'module' => 'pharmacy',
+                'description' => 'Annuler les transferts - Permet d\'annuler les transferts inter-magasins',
+                'group' => 'pharmacy',
+                'is_old' => false,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'id' => Uuid::uuid4()->toString(),
                 'code' => 'transfer.print',
-                'name' => 'Imprimer les transferts',
-                'description' => 'Permet d\'imprimer les bons de transfert',
-                'module' => 'pharmacy',
+                'description' => 'Imprimer les transferts - Permet d\'imprimer les bons de transfert',
+                'group' => 'pharmacy',
+                'is_old' => false,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],

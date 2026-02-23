@@ -59,6 +59,9 @@ class PharmacyExportService
     public function getExportHeader(Request $request): array
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
         
         /** @var UserModel|null $userModel */

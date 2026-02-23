@@ -17,6 +17,9 @@ class PharmacyDashboardController
     public function index(Request $request): Response
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
         $isRoot = method_exists($user, 'isRoot') ? $user->isRoot() : false;
 

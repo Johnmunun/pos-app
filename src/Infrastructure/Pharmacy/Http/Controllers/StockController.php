@@ -16,6 +16,9 @@ class StockController
     public function index(Request $request): Response
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
 
         // Déterminer le shop courant
         $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
@@ -152,6 +155,9 @@ class StockController
     public function movements(Request $request, string $productId)
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
         $userModel = UserModel::find($user->id);
         $isRoot = $userModel ? $userModel->isRoot() : false;
@@ -185,6 +191,9 @@ class StockController
     public function movementsIndex(Request $request): Response
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
         $userModel = UserModel::find($user->id);
         $isRoot = $userModel ? $userModel->isRoot() : false;

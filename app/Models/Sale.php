@@ -12,6 +12,7 @@ class Sale extends Model
 
     protected $fillable = [
         'tenant_id',
+        'depot_id',
         'shop_id',
         'cash_register_id',
         'cash_register_session_id',
@@ -45,6 +46,11 @@ class Sale extends Model
     public function tenant()
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function depot()
+    {
+        return $this->belongsTo(Depot::class);
     }
 
     public function customer()

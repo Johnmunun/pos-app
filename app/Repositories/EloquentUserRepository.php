@@ -56,7 +56,11 @@ class EloquentUserRepository implements UserRepository
      */
     public function save(User $user): User
     {
+        // Construire le nom complet à partir de first_name et last_name
+        $fullName = trim($user->getFirstName() . ' ' . $user->getLastName());
+        
         $data = [
+            'name' => $fullName,
             'email' => $user->getEmail()->getValue(),
             'password' => $user->getPasswordHash(),
             'first_name' => $user->getFirstName(),

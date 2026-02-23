@@ -33,13 +33,21 @@ class StockTransferController
     private function getShopId(Request $request): string
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
+
         $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
 
-        if (!$shopId && !$this->isRoot($request)) {
+        /** @var UserModel|null $userModel */
+        $userModel = UserModel::query()->find($user->id);
+        $isRoot = $userModel !== null && $userModel->isRoot();
+
+        if (!$shopId && !$isRoot) {
             abort(403, 'Shop ID not found.');
         }
 
-        if ($this->isRoot($request) && !$shopId) {
+        if ($isRoot && !$shopId) {
             abort(403, 'Please select a shop first.');
         }
 
@@ -52,6 +60,10 @@ class StockTransferController
     private function isRoot(Request $request): bool
     {
         $user = $request->user();
+        if ($user === null) {
+            return false;
+        }
+
         /** @var UserModel|null $userModel */
         $userModel = UserModel::query()->find($user->id);
         return $userModel !== null && $userModel->isRoot();
@@ -207,6 +219,9 @@ class StockTransferController
     {
         $shopId = $this->getShopId($request);
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
 
         $validated = $request->validate([
             'from_shop_id' => 'required|integer|exists:shops,id',
@@ -433,6 +448,9 @@ class StockTransferController
     {
         $shopId = $this->getShopId($request);
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
 
         try {
             $transfer = $this->transferService->validateTransfer($id, $user->id, $shopId);

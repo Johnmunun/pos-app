@@ -46,6 +46,8 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
         dosage: product?.dosage || '',
         prescription_required: product?.prescription_required || false,
         manufacturer: product?.manufacturer || '',
+        wholesale_price: product?.wholesale_price_amount ?? '',
+        wholesale_min_quantity: product?.wholesale_min_quantity ?? '',
         supplier_id: product?.supplier_id || '',
         image: null,
         image_url: product?.image_url || '',
@@ -96,6 +98,8 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
                 dosage: product.dosage || '',
                 prescription_required: product.prescription_required || false,
                 manufacturer: product.manufacturer || '',
+                wholesale_price: product.wholesale_price_amount ?? '',
+                wholesale_min_quantity: product.wholesale_min_quantity ?? '',
                 supplier_id: product.supplier_id || '',
                 image: null,
                 image_url: product.image_url || '',
@@ -207,6 +211,8 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
             dosage: data.dosage,
             prescription_required: data.prescription_required,
             manufacturer: data.manufacturer,
+            wholesale_price: data.wholesale_price || null,
+            wholesale_min_quantity: data.wholesale_min_quantity || null,
             supplier_id: data.supplier_id
         };
 
@@ -527,6 +533,41 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
                                 )}
                             </select>
                             {errors.currency && <p className="text-sm text-red-600 dark:text-red-400">{errors.currency}</p>}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Prix gros (optionnel) */}
+                <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                        <DollarSign className="h-5 w-5 mr-2" />
+                        Vente en gros
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="wholesale_price">Prix gros (optionnel)</Label>
+                            <Input
+                                id="wholesale_price"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={data.wholesale_price}
+                                onChange={(e) => setData('wholesale_price', e.target.value)}
+                                placeholder="Prix unitaire en gros"
+                                className="w-full"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="wholesale_min_quantity">Qté min. pour prix gros</Label>
+                            <Input
+                                id="wholesale_min_quantity"
+                                type="number"
+                                min="0"
+                                value={data.wholesale_min_quantity}
+                                onChange={(e) => setData('wholesale_min_quantity', e.target.value)}
+                                placeholder="Ex: 10"
+                                className="w-full"
+                            />
                         </div>
                     </div>
                 </div>

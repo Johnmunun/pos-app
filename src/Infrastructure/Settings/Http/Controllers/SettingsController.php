@@ -4,6 +4,7 @@ namespace Src\Infrastructure\Settings\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Log;
 use Src\Application\Settings\UseCases\GetStoreSettingsUseCase;
 use Src\Application\Settings\UseCases\UpdateStoreSettingsUseCase;
 use Src\Application\Settings\DTO\UpdateStoreSettingsDTO;
@@ -32,6 +33,9 @@ class SettingsController
     public function index(Request $request): Response
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         
         // SÉCURITÉ: Récupérer le shop_id depuis l'utilisateur connecté
         $shopId = $this->getShopIdFromUser($user);
@@ -100,6 +104,9 @@ class SettingsController
     public function update(Request $request): RedirectResponse
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         
         // SÉCURITÉ: Récupérer le shop_id depuis l'utilisateur connecté (IGNORER le frontend)
         $shopId = $this->getShopIdFromUser($user);
@@ -175,7 +182,7 @@ class SettingsController
             );
 
             // Exécuter le Use Case
-            \Log::info('Executing UpdateStoreSettingsUseCase', [
+            Log::info('Executing UpdateStoreSettingsUseCase', [
                 'shop_id' => $shopId,
                 'company_name' => $validated['company_name'],
                 'currency' => $validated['currency'],
@@ -183,7 +190,7 @@ class SettingsController
             
             $savedSettings = $this->updateSettingsUseCase->execute($dto);
             
-            \Log::info('StoreSettings saved successfully', [
+            Log::info('StoreSettings saved successfully', [
                 'shop_id' => $shopId,
                 'settings_id' => $savedSettings->getId(),
                 'company_name' => $savedSettings->getCompanyIdentity()->getName(),
@@ -192,7 +199,7 @@ class SettingsController
             return redirect()->route('settings.index')
                 ->with('success', 'Paramètres mis à jour avec succès');
         } catch (\Exception $e) {
-            \Log::error('Error updating store settings', [
+            Log::error('Error updating store settings', [
                 'error' => $e->getMessage(),
                 'shop_id' => $shopId,
                 'user_id' => $user->id,
@@ -214,7 +221,7 @@ class SettingsController
     {
         // Essayer shop_id d'abord
         if (isset($user->shop_id) && $user->shop_id) {
-            \Log::info('Using user shop_id', ['shop_id' => $user->shop_id, 'user_id' => $user->id]);
+            Log::info('Using user shop_id', ['shop_id' => $user->shop_id, 'user_id' => $user->id]);
             return (string) $user->shop_id;
         }
 
@@ -225,7 +232,7 @@ class SettingsController
                 ->first();
             
             if ($shop) {
-                \Log::info('Using existing shop for tenant', ['shop_id' => $shop->id, 'tenant_id' => $user->tenant_id]);
+                Log::info('Using existing shop for tenant', ['shop_id' => $shop->id, 'tenant_id' => $user->tenant_id]);
                 return (string) $shop->id;
             }
             
@@ -241,7 +248,7 @@ class SettingsController
                         'is_active' => true,
                     ]);
                     
-                    \Log::info('Created default shop for tenant', [
+                    Log::info('Created default shop for tenant', [
                         'shop_id' => $shop->id,
                         'tenant_id' => $user->tenant_id,
                         'shop_code' => $shop->code
@@ -249,7 +256,7 @@ class SettingsController
                     
                     return (string) $shop->id;
                 } catch (\Exception $e) {
-                    \Log::error('Failed to create default shop', [
+                    Log::error('Failed to create default shop', [
                         'tenant_id' => $user->tenant_id,
                         'error' => $e->getMessage()
                     ]);
@@ -258,7 +265,7 @@ class SettingsController
             }
         }
 
-        \Log::warning('No shop_id found for user', ['user_id' => $user->id, 'tenant_id' => $user->tenant_id ?? null]);
+        Log::warning('No shop_id found for user', ['user_id' => $user->id, 'tenant_id' => $user->tenant_id ?? null]);
         return null;
     }
 }

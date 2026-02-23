@@ -16,7 +16,7 @@ class PermissionsSyncService
     /**
      * Synchronise les permissions depuis le fichier YAML vers la base de données
      * 
-     * @return array Rapport de synchronisation
+     * @return array{created: int, updated: int, deleted: int, errors: array<int, string>, total_in_yaml: int, total_in_db: int} Rapport de synchronisation
      */
     public function syncFromYaml(): array
     {
@@ -56,9 +56,8 @@ class PermissionsSyncService
                 return $report;
             }
             
-            // Obtenir les permissions actuelles de la base de données
-            $dbPermissions = Permission::pluck('code', 'id')->toArray();
-            $report['total_in_db'] = count($dbPermissions);
+            // Obtenir le nombre de permissions actuelles de la base de données
+            $report['total_in_db'] = Permission::count();
             
             // Commencer une transaction
             DB::beginTransaction();
@@ -112,7 +111,7 @@ class PermissionsSyncService
      * Parse un fichier YAML simple
      * 
      * @param string|null $yamlContent Contenu du fichier YAML (null = vide)
-     * @return array Données parsées
+     * @return array<string, array<int, string>> Données parsées (groupe => liste de permissions)
      */
     private function parseYaml(?string $yamlContent): array
     {
@@ -150,8 +149,8 @@ class PermissionsSyncService
     /**
      * Extrait toutes les permissions du tableau YAML
      * 
-     * @param array $yamlData Données YAML parsées
-     * @return array Liste des codes de permissions
+     * @param array<string, array<int, string>> $yamlData Données YAML parsées
+     * @return array<int, string> Liste des codes de permissions
      */
     private function extractPermissionsFromYaml(array $yamlData): array
     {
@@ -161,11 +160,21 @@ class PermissionsSyncService
             if (is_array($groupPermissions)) {
                 foreach ($groupPermissions as $permission) {
                     if (is_string($permission)) {
-                        // Si la permission commence déjà par le nom du groupe, l'utiliser telle quelle
-                        // Sinon, concaténer group + '.' + permission
-                        if (str_starts_with($permission, $group . '.')) {
+                        $permission = trim($permission);
+                        if (empty($permission)) {
+                            continue;
+                        }
+                        
+                        // Si la permission contient déjà un point, elle est déjà complète
+                        // Vérifier si elle commence par le groupe ou un autre préfixe complet
+                        if (str_contains($permission, '.')) {
+                            // Permission déjà complète (ex: admin.users.view, module.pharmacy)
+                            $permissionCode = $permission;
+                        } elseif (str_starts_with($permission, $group . '.')) {
+                            // Permission commence déjà par le groupe (redondant mais géré)
                             $permissionCode = $permission;
                         } else {
+                            // Permission simple, ajouter le préfixe du groupe
                             $permissionCode = $group . '.' . $permission;
                         }
                         $permissions[] = $permissionCode;
@@ -208,11 +217,18 @@ general:
     private function generateDescription(string $code): string
     {
         $parts = explode('.', $code);
+        if (empty($parts)) {
+            return ucfirst($code);
+        }
+        
         $action = end($parts);
+        if ($action === false) {
+            $action = '';
+        }
         $module = $parts[0] ?? 'general';
         
         // Pour les permissions multi-niveaux (ex: pharmacy.category.view)
-        $resource = count($parts) > 2 ? $parts[1] : null;
+        $resource = count($parts) > 2 && isset($parts[1]) ? $parts[1] : null;
         
         $actionLabels = [
             'view' => 'Voir',

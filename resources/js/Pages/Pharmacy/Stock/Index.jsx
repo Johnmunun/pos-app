@@ -18,12 +18,11 @@ import {
   Search
 } from 'lucide-react';
 import axios from 'axios';
-import { useToast } from '@/Components/ui/use-toast';
+import toast from 'react-hot-toast';
 import Modal from '@/Components/Modal';
 import ExportButtons from '@/Components/Pharmacy/ExportButtons';
 
 export default function StockManagement({ products, lowStock, expiringSoon, categories = [], filters = {}, pagination }) {
-    const { toast } = useToast();
     const { data, setData, post, processing, errors } = useForm({
         product_id: '',
         type: 'adjust',
@@ -44,26 +43,45 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
     const [movementsProduct, setMovementsProduct] = useState(null);
     const [movements, setMovements] = useState([]);
 
-    const handleStockUpdate = (e) => {
-        e.preventDefault();
-        post(route('pharmacy.products.stock.update', selectedProduct.id), {
-            onSuccess: () => {
-                toast({
-                    title: "Succès",
-                    description: "Stock mis à jour avec succès",
-                });
-                setShowStockForm(false);
-                setSelectedProduct(null);
-                router.reload();
-            },
-            onError: (errors) => {
-                toast({
-                    title: "Erreur",
-                    description: errors.message || "Échec de la mise à jour du stock",
-                    variant: "destructive",
-                });
+    const [stockSubmitting, setStockSubmitting] = useState(false);
+
+    const handleStockUpdate = async () => {
+        if (!selectedProduct) return;
+        setStockSubmitting(true);
+        try {
+            await axios.post(route('pharmacy.products.stock.update', selectedProduct.id), {
+                type: data.type,
+                quantity: data.quantity,
+                batch_number: data.batch_number || null,
+                expiry_date: data.expiry_date || null,
+                supplier_id: data.supplier_id || null,
+                purchase_order_id: data.purchase_order_id || null,
+            }, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            toast.success("Stock mis à jour avec succès");
+            setShowStockForm(false);
+            setSelectedProduct(null);
+            setData({ product_id: '', type: 'adjust', quantity: '', batch_number: '', expiry_date: '', supplier_id: '', purchase_order_id: '' });
+            router.reload();
+        } catch (err) {
+            let message = "Échec de la mise à jour du stock";
+            const resData = err.response?.data;
+            if (resData) {
+                if (typeof resData.message === 'string') message = resData.message;
+                else if (resData.errors && typeof resData.errors === 'object') {
+                    const first = Object.values(resData.errors).flat()[0];
+                    if (first) message = first;
+                }
             }
-        });
+            toast.error(String(message));
+        } finally {
+            setStockSubmitting(false);
+        }
     };
 
     const openStockForm = (product, type = 'adjust') => {
@@ -115,11 +133,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
             setMovementsProduct(product);
             setMovementsModalOpen(true);
         } catch (e) {
-            toast({
-                title: "Erreur",
-                description: "Impossible de charger l'historique",
-                variant: "destructive",
-            });
+            toast.error("Impossible de charger l'historique");
         }
     };
 
@@ -345,7 +359,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
                                 <CardTitle className="text-gray-900 dark:text-white">Mettre à jour le stock de {selectedProduct.name}</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <form onSubmit={handleStockUpdate} className="space-y-4">
+                                <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="type" className="text-gray-700 dark:text-gray-300">Type d'opération</Label>
@@ -411,13 +425,13 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
                                                 setShowStockForm(false);
                                                 setSelectedProduct(null);
                                             }}
-                                            disabled={processing}
+                                            disabled={stockSubmitting}
                                             className="border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200"
                                         >
                                             Annuler
                                         </Button>
-                                        <Button type="submit" disabled={processing} className="bg-amber-500 hover:bg-amber-600 text-white">
-                                            {processing ? 'Mise à jour...' : 'Mettre à jour'}
+                                        <Button type="button" disabled={stockSubmitting} onClick={handleStockUpdate} className="bg-amber-500 hover:bg-amber-600 text-white">
+                                            {stockSubmitting ? 'Mise à jour...' : 'Mettre à jour'}
                                         </Button>
                                     </div>
                                 </form>
@@ -484,7 +498,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
                                                                 variant="outline"
                                                                 size="sm"
                                                                 onClick={() => openStockForm(product, 'add')}
-                                                                disabled={processing}
+                                                                disabled={stockSubmitting}
                                                                 className="border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700"
                                                                 title="Ajouter"
                                                             >
@@ -494,7 +508,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
                                                                 variant="outline"
                                                                 size="sm"
                                                                 onClick={() => openStockForm(product, 'remove')}
-                                                                disabled={processing}
+                                                                disabled={stockSubmitting}
                                                                 className="border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700"
                                                                 title="Retirer"
                                                             >
@@ -504,7 +518,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
                                                                 variant="outline"
                                                                 size="sm"
                                                                 onClick={() => openStockForm(product, 'adjust')}
-                                                                disabled={processing}
+                                                                disabled={stockSubmitting}
                                                                 className="border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700"
                                                                 title="Ajuster"
                                                             >

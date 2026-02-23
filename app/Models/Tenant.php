@@ -62,4 +62,12 @@ class Tenant extends Model
     {
         return $this->hasMany(Shop::class);
     }
+
+    /**
+     * Get the depots for the tenant.
+     */
+    public function depots()
+    {
+        return $this->hasMany(Depot::class);
+    }
 }

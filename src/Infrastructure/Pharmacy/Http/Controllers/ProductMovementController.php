@@ -31,6 +31,9 @@ class ProductMovementController
     private function getShopId(Request $request): string
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
         
         /** @var UserModel|null $userModel */

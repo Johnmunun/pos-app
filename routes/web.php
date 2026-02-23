@@ -41,6 +41,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Contexte dépôt (sélection avant accès produits/stock)
+    Route::post('/depot/switch', [\App\Http\Controllers\DepotController::class, 'switch'])
+        ->name('depot.switch');
     
     // Global Search API
     Route::get('/api/search', [\Src\Infrastructure\Search\Http\Controllers\GlobalSearchController::class, 'search'])
@@ -156,6 +160,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/dashboard', [\Src\Infrastructure\Pharmacy\Http\Controllers\PharmacyDashboardController::class, 'index'])
             ->middleware('permission:module.pharmacy')
             ->name('dashboard');
+
+        // Rapports
+        Route::get('/reports', [\Src\Infrastructure\Pharmacy\Http\Controllers\PharmacyReportController::class, 'index'])
+            ->middleware('permission:pharmacy.sales.view|pharmacy.report.view')
+            ->name('reports.index');
 
         // Products
         // Support multiple permission formats for compatibility
@@ -351,6 +360,35 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/customers/{id}/deactivate', [\Src\Infrastructure\Pharmacy\Http\Controllers\CustomerController::class, 'deactivate'])
             ->middleware('permission:pharmacy.customer.deactivate')
             ->name('customers.deactivate');
+
+        // Sellers (Vendeurs) - Gestion des vendeurs de la pharmacie
+        Route::get('/sellers', [\Src\Infrastructure\Pharmacy\Http\Controllers\SellerController::class, 'index'])
+            ->middleware('permission:pharmacy.seller.view')
+            ->name('sellers.index');
+        
+        Route::post('/sellers', [\Src\Infrastructure\Pharmacy\Http\Controllers\SellerController::class, 'store'])
+            ->middleware('permission:pharmacy.seller.create')
+            ->name('sellers.store');
+        
+        Route::put('/sellers/{id}', [\Src\Infrastructure\Pharmacy\Http\Controllers\SellerController::class, 'update'])
+            ->middleware('permission:pharmacy.seller.edit')
+            ->name('sellers.update');
+        
+        Route::delete('/sellers/{id}', [\Src\Infrastructure\Pharmacy\Http\Controllers\SellerController::class, 'destroy'])
+            ->middleware('permission:pharmacy.seller.delete')
+            ->name('sellers.destroy');
+
+        Route::post('/sellers/{id}/impersonate', [\Src\Infrastructure\Pharmacy\Http\Controllers\SellerController::class, 'impersonate'])
+            ->middleware('permission:pharmacy.seller.edit')
+            ->name('sellers.impersonate');
+
+        // Dépôts - Liste et création
+        Route::get('/depots', [\App\Http\Controllers\DepotController::class, 'index'])
+            ->middleware('permission:pharmacy.seller.view')
+            ->name('depots.index');
+        Route::post('/depots', [\App\Http\Controllers\DepotController::class, 'store'])
+            ->middleware('permission:pharmacy.seller.create')
+            ->name('depots.store');
 
         Route::post('/products/{id}/stock', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'updateStock'])
             ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage|stock.adjust')

@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Middleware;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -37,11 +38,43 @@ class HandleInertiaRequests extends Middleware
         $shopCurrency = 'CDF'; // Devise par défaut (Franc Congolais)
         $shopCurrencies = []; // Liste des devises configurées
         
+        $tenantSector = null;
+        $currentDepot = null;
+        $depots = [];
         if ($user) {
             try {
                 $permissions = $user->permissionCodes();
+                
+                // Récupérer le secteur du tenant
+                if ($user->tenant_id) {
+                    $tenant = \App\Models\Tenant::find($user->tenant_id);
+                    $tenantSector = $tenant?->sector;
+
+                    // Dépôts du tenant (si table existe)
+                    if (\Illuminate\Support\Facades\Schema::hasTable('depots')) {
+                        $depots = \App\Models\Depot::where('tenant_id', $user->tenant_id)
+                            ->where('is_active', true)
+                            ->orderBy('name')
+                            ->get(['id', 'name', 'code'])
+                            ->map(fn ($d) => ['id' => $d->id, 'name' => $d->name, 'code' => $d->code])
+                            ->values()
+                            ->toArray();
+
+                        // Dépôt actuel (session ou premier dépôt si un seul)
+                        $depotId = $request->session()->get('current_depot_id');
+                        if ($depotId && count($depots) > 0) {
+                            $depot = collect($depots)->firstWhere('id', $depotId);
+                            if ($depot) {
+                                $currentDepot = $depot;
+                            }
+                        }
+                        if (!$currentDepot && count($depots) === 1) {
+                            $currentDepot = $depots[0];
+                        }
+                    }
+                }
             } catch (\Exception $e) {
-                \Log::error('Error getting user permissions', [
+                Log::error('Error getting user permissions', [
                     'user_id' => $user->id,
                     'error' => $e->getMessage(),
                 ]);
@@ -81,7 +114,7 @@ class HandleInertiaRequests extends Middleware
                     }
                 }
             } catch (\Exception $e) {
-                \Log::warning('Error getting shop currency', ['error' => $e->getMessage()]);
+                Log::warning('Error getting shop currency', ['error' => $e->getMessage()]);
             }
         }
 
@@ -90,6 +123,9 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user,
                 'permissions' => $permissions,
+                'tenantSector' => $tenantSector,
+                'currentDepot' => $currentDepot ?? null,
+                'depots' => $depots ?? [],
                 'isImpersonating' => $request->session()->get('impersonate.impersonating', false),
                 'originalUserId' => $request->session()->get('impersonate.original_user_id'),
             ],
@@ -106,18 +142,10 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Handle Inertia responses.
+     * Set the root template that's loaded on the first Inertia page visit.
      */
     public function rootView(Request $request): string
     {
         return parent::rootView($request);
-    }
-
-    /**
-     * Set the root template that's loaded on the first Inertia page visit.
-     */
-    public function rootTemplate(Request $request): string
-    {
-        return parent::rootTemplate($request);
     }
 }

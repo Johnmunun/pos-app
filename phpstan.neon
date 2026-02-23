@@ -1,0 +1,29 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+parameters:
+    level: 5
+    paths:
+        - app
+        - src
+        - database/seeders
+    treatPhpDocTypesAsCertain: false
+    excludePaths:
+        - vendor
+        - node_modules
+        - storage
+        - bootstrap/cache
+    ignoreErrors:
+        # Relations custom (user_role, role_permission) vs Spatie
+        - '#Relation .* is not found in App\\Models\\(Role|User) model#'
+        # Propriétés injectées non lues (DI)
+        - '#Property .* is never read, only written#'
+        # PHPDoc fillable/hidden (covariance avec Model parent)
+        - '~PHPDoc type array<int, string> of property .+ \$fillable~'
+        - '~PHPDoc type array<int, string> of property .+ \$hidden~'
+        # Covariance Collection dans map (roles)
+        - '~Parameter #1 \$callback of method Illuminate\\Database\\Eloquent\\Collection.*map\(\) expects~'
+        - '~Anonymous function should return array.*roles: Illuminate~'
+        # SellerController: map callback type (sellers + sales_count), impersonate return type
+        - '~Parameter #1 \$callback of method Illuminate\\Support\\Collection.*map\(\) expects callable\(array~'
+        - '#^Method Src\\Infrastructure\\Pharmacy\\Http\\Controllers\\SellerController::impersonate\(\) should return Illuminate\\Http\\RedirectResponse but returns #'
+    

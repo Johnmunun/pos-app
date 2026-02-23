@@ -64,6 +64,9 @@ class ProductController
     public function index(Request $request): Response
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         
         // ROOT users can access all shops, others need shop_id
         // For now, use tenant_id as shop_id if shop_id doesn't exist
@@ -122,6 +125,8 @@ class ProductController
                 'description' => $model->description ?? '',
                 'category_id' => $model->category_id,
                 'price_amount' => (float) ($model->price_amount ?? 0),
+                'wholesale_price_amount' => $model->wholesale_price_amount !== null ? (float) $model->wholesale_price_amount : null,
+                'wholesale_min_quantity' => $model->wholesale_min_quantity !== null ? (int) $model->wholesale_min_quantity : null,
                 'price_currency' => $model->price_currency ?? 'USD',
                 'cost' => isset($model->cost_amount) ? (float) $model->cost_amount : null,
                 'minimum_stock' => (int) ($model->minimum_stock ?? 0),
@@ -170,7 +175,7 @@ class ProductController
             'products' => $products,
             'categories' => $categories,
             'filters' => $request->only(['search', 'category_id', 'status']),
-            'canImport' => $isRoot || $request->user()->can('pharmacy.product.import'),
+            'canImport' => $isRoot || $user->can('pharmacy.product.import'),
         ]);
     }
 
@@ -180,6 +185,9 @@ class ProductController
     public function exportPdf(Request $request)
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
 
         // Déterminer le shop courant (même logique que index)
         $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
@@ -257,6 +265,9 @@ class ProductController
     public function exportExcel(Request $request)
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
 
         $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
         /** @var UserModel|null $userModel */
@@ -419,6 +430,9 @@ class ProductController
         ]);
 
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
         if (!$shopId) {
             return response()->json(['message' => 'Shop ID non trouvé.'], 403);
@@ -466,6 +480,9 @@ class ProductController
     {
         try {
             $user = $request->user();
+            if ($user === null) {
+                abort(403, 'User not authenticated.');
+            }
             $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
             
             if (!$shopId) {
@@ -491,19 +508,21 @@ class ProductController
                 'supplier_id' => 'nullable|exists:suppliers,id',
                 'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
                 'image_url' => 'nullable|url|max:500',
+                'wholesale_price' => 'nullable|numeric|min:0',
+                'wholesale_min_quantity' => 'nullable|integer|min:0',
             ]);
 
             $dto = new CreateProductDTO(
                 $shopId,
                 $request->input('product_code'),
                 $request->input('name'),
-                $request->input('description') ?: null,
                 $request->input('category_id'),
                 (float) $request->input('price'),
                 $request->input('currency'),
-                $request->filled('cost') ? (float) $request->input('cost') : null,
                 (int) $request->input('minimum_stock'),
                 $request->input('unit'),
+                $request->input('description') ?: null,
+                $request->filled('cost') ? (float) $request->input('cost') : null,
                 $request->filled('medicine_type') ? $request->input('medicine_type') : null,
                 $request->input('dosage') ?: null,
                 $request->boolean('prescription_required', false),
@@ -553,6 +572,13 @@ class ProductController
                 $productUpdateData['image_type'] = $imageType;
             }
 
+            if ($request->filled('wholesale_price')) {
+                $productUpdateData['wholesale_price_amount'] = (float) $request->input('wholesale_price');
+            }
+            if ($request->has('wholesale_min_quantity') && $request->input('wholesale_min_quantity') !== null && $request->input('wholesale_min_quantity') !== '') {
+                $productUpdateData['wholesale_min_quantity'] = (int) $request->input('wholesale_min_quantity');
+            }
+
             \Src\Infrastructure\Pharmacy\Models\ProductModel::where('id', $product->getId())
                 ->update($productUpdateData);
 
@@ -571,6 +597,9 @@ class ProductController
     public function show(Request $request, string $id): Response
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         /** @var UserModel|null $userModel */
         $userModel = UserModel::query()->find($user->id);
         $isRoot = $userModel?->isRoot() ?? false;
@@ -599,6 +628,9 @@ class ProductController
     public function edit(Request $request, string $id): Response
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         /** @var UserModel|null $userModel */
         $userModel = UserModel::query()->find($user->id);
         $isRoot = $userModel?->isRoot() ?? false;
@@ -647,11 +679,16 @@ class ProductController
                 'is_active' => 'boolean',
                 'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
                 'image_url' => 'nullable|url|max:500',
-                'remove_image' => 'nullable|boolean'
+                'remove_image' => 'nullable|boolean',
+                'wholesale_price' => 'nullable|numeric|min:0',
+                'wholesale_min_quantity' => 'nullable|integer|min:0',
             ]);
 
             // Déterminer le shop courant (même logique robuste que pour index/show)
             $user = $request->user();
+            if ($user === null) {
+                abort(403, 'User not authenticated.');
+            }
             $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
 
             // Si pas de shop_id (cas ROOT sans shop), on se rabat sur le shop du produit existant
@@ -709,6 +746,13 @@ class ProductController
 
                 if ($request->input('manufacturer') !== null) {
                     $productUpdateData['manufacturer'] = $request->input('manufacturer');
+                }
+
+                if ($request->filled('wholesale_price')) {
+                    $productUpdateData['wholesale_price_amount'] = (float) $request->input('wholesale_price');
+                }
+                if ($request->has('wholesale_min_quantity') && $request->input('wholesale_min_quantity') !== null && $request->input('wholesale_min_quantity') !== '') {
+                    $productUpdateData['wholesale_min_quantity'] = (int) $request->input('wholesale_min_quantity');
                 }
 
                 // Supprimer l'image existante si demandé
@@ -769,6 +813,9 @@ class ProductController
     {
         try {
             $user = $request->user();
+            if ($user === null) {
+                abort(403, 'User not authenticated.');
+            }
             /** @var UserModel|null $userModel */
             $userModel = UserModel::query()->find($user->id);
             $isRoot = $userModel?->isRoot() ?? false;
@@ -813,7 +860,7 @@ class ProductController
         }
     }
 
-    public function updateStock(Request $request, string $id): JsonResponse
+    public function updateStock(Request $request, string $id): JsonResponse|\Illuminate\Http\RedirectResponse
     {
         try {
             $request->validate([
@@ -825,8 +872,11 @@ class ProductController
                 'purchase_order_id' => 'nullable|string|max:100'
             ]);
 
-            /** @var UserModel $authUser */
             $authUser = $request->user();
+            if ($authUser === null) {
+                abort(403, 'User not authenticated.');
+            }
+            /** @var UserModel $authUser */
             $shopId = $authUser->shop_id ?? ($authUser->tenant_id ? (string) $authUser->tenant_id : null);
 
             if (!$shopId) {
@@ -866,10 +916,13 @@ class ProductController
                 );
                 
                 $batch = $this->updateStockUseCase->addStock($dto);
-                
+
+                if ($request->header('X-Inertia')) {
+                    return redirect()->back()->with('success', 'Stock ajouté avec succès');
+                }
                 return response()->json([
                     'message' => 'Stock added successfully',
-                    'batch' => $batch
+                    'batch' => $batch,
                 ]);
 
             } elseif ($request->input('type') === 'remove') {
@@ -879,9 +932,12 @@ class ProductController
                     (string) $shopId,
                     (int) $authUser->id
                 );
-                
+
+                if ($request->header('X-Inertia')) {
+                    return redirect()->back()->with('success', 'Stock retiré avec succès');
+                }
                 return response()->json([
-                    'message' => 'Stock removed successfully'
+                    'message' => 'Stock removed successfully',
                 ]);
 
             } else { // adjust
@@ -891,15 +947,23 @@ class ProductController
                     (string) $shopId,
                     (int) $authUser->id
                 );
-                
+
+                if ($request->header('X-Inertia')) {
+                    return redirect()->back()->with('success', 'Stock ajusté avec succès');
+                }
                 return response()->json([
-                    'message' => 'Stock adjusted successfully'
+                    'message' => 'Stock adjusted successfully',
                 ]);
             }
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors' => $e->errors(),
+            ], 422);
         } catch (\Exception $e) {
             return response()->json([
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 422);
         }
     }

@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
-use Ramsey\Uuid\Uuid;
 
 return new class extends Migration
 {
@@ -13,11 +12,10 @@ return new class extends Migration
     {
         $permissions = [
             [
-                'id' => Uuid::uuid4()->toString(),
                 'code' => 'stock.movement.print',
-                'name' => 'Imprimer mouvements stock',
-                'description' => 'Permet d\'imprimer les fiches de mouvements de stock',
-                'module' => 'pharmacy',
+                'description' => 'Imprimer mouvements stock - Permet d\'imprimer les fiches de mouvements de stock',
+                'group' => 'pharmacy',
+                'is_old' => false,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],

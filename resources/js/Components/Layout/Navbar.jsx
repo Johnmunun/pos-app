@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import Dropdown from '@/Components/Dropdown';
 import GlobalSearch from '@/Components/GlobalSearch';
+import DepotSelector from '@/Components/DepotSelector';
 
 /**
  * Component: Navbar
  * 
  * Navbar professionnelle avec :
  * - Logo / Nom
+ * - Sélecteur de dépôt (si multi-dépôts)
  * - Toggle Dark/Light mode
  * - Barre de recherche globale
  * - Notifications (badge)
@@ -15,6 +17,9 @@ import GlobalSearch from '@/Components/GlobalSearch';
  * - Mobile-first design
  */
 export default function Navbar({ user, permissions, onMenuClick, isImpersonating = false }) {
+    const { auth } = usePage().props;
+    const depots = auth?.depots ?? [];
+    const currentDepot = auth?.currentDepot ?? null;
 
     // Toggle dark mode
     const toggleDarkMode = () => {
@@ -50,6 +55,11 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
 
             {/* Séparateur */}
             <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 lg:hidden" />
+
+            {/* Sélecteur de dépôt (tenant avec dépôts) */}
+            {depots.length > 0 && user?.tenant_id && (
+                <DepotSelector depots={depots} currentDepot={currentDepot} />
+            )}
 
             {/* Barre de recherche globale */}
             <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">

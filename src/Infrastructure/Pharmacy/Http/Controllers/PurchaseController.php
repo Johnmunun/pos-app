@@ -29,6 +29,9 @@ class PurchaseController
     private function getShopId(Request $request): string
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
         $userModel = UserModel::find($user->id);
         $isRoot = $userModel ? $userModel->isRoot() : false;
@@ -131,7 +134,11 @@ class PurchaseController
         ]);
 
         $shopId = $this->getShopId($request);
-        $userId = (int) $request->user()->id;
+        $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
+        $userId = (int) $user->id;
         $expectedAt = $request->filled('expected_at') ? new \DateTimeImmutable($request->input('expected_at')) : null;
         $lines = [];
         foreach ($request->input('lines') as $row) {
@@ -288,16 +295,24 @@ class PurchaseController
                     'lines.*.expiration_date.after' => 'La date d\'expiration doit être dans le futur.',
                 ]);
 
+                $receiveUser = $request->user();
+                if ($receiveUser === null) {
+                    abort(403, 'User not authenticated.');
+                }
                 $dto = \Src\Application\Pharmacy\DTO\ReceivePurchaseOrderDTO::fromArray(
                     $id,
-                    (int) $request->user()->id,
+                    (int) $receiveUser->id,
                     $linesData
                 );
 
                 $this->receivePurchaseOrderUseCase->executeWithBatches($dto);
             } else {
                 // Backward compatible: simple reception without batch info
-                $this->receivePurchaseOrderUseCase->execute($id, (int) $request->user()->id);
+                $receiveUser = $request->user();
+                if ($receiveUser === null) {
+                    abort(403, 'User not authenticated.');
+                }
+                $this->receivePurchaseOrderUseCase->execute($id, (int) $receiveUser->id);
             }
 
             return response()->json(['message' => 'Réception enregistrée avec succès.']);

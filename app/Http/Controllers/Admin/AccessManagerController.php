@@ -7,8 +7,10 @@ use Illuminate\Http\Request;
 use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Redirect;
+use Src\Domains\User\Services\PermissionsSyncService;
 
 class AccessManagerController extends Controller
 {
@@ -153,14 +155,30 @@ class AccessManagerController extends Controller
     {
         // Si c'est une requête pour synchroniser depuis le YAML
         if ($request->isMethod('post') && $request->route()->named('admin.access.permissions.sync')) {
-            $syncService = new \Src\Domains\User\Services\PermissionsSyncService();
-            $report = $syncService->syncFromYaml();
-            
-            if (empty($report['errors'])) {
-                $message = 'Permissions synchronisées avec succès. ' . $report['created'] . ' créées, ' . $report['updated'] . ' mises à jour, ' . $report['deleted'] . ' marquées comme obsolètes.';
-                return Redirect::back()->with('message', $message);
-            } else {
-                return Redirect::back()->with('error', 'Erreur lors de la synchronisation: ' . implode(', ', $report['errors']));
+            try {
+                $syncService = new PermissionsSyncService();
+                $report = $syncService->syncFromYaml();
+                
+                // Utiliser des valeurs par défaut pour éviter les erreurs si les clés n'existent pas
+                /** @var array{created: int, updated: int, deleted: int, errors: array<int, string>, total_in_yaml: int, total_in_db: int} $report */
+                $created = $report['created'] ?? 0;
+                $updated = $report['updated'] ?? 0;
+                $deleted = $report['deleted'] ?? 0;
+                $errors = $report['errors'] ?? [];
+                
+                if (empty($errors)) {
+                    $message = 'Permissions synchronisées avec succès. ' . $created . ' créées, ' . $updated . ' mises à jour, ' . $deleted . ' marquées comme obsolètes.';
+                    return Redirect::back()->with('message', $message);
+                } else {
+                    $errorMessage = 'Erreur lors de la synchronisation: ' . implode(', ', $errors);
+                    return Redirect::back()->with('error', $errorMessage);
+                }
+            } catch (\Exception $e) {
+                Log::error('Erreur lors de la synchronisation des permissions: ' . $e->getMessage(), [
+                    'exception' => $e,
+                    'trace' => $e->getTraceAsString()
+                ]);
+                return Redirect::back()->with('error', 'Erreur lors de la synchronisation: ' . $e->getMessage());
             }
         }
         

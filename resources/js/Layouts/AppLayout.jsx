@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { usePage } from '@inertiajs/react';
 import Sidebar from '@/Components/Layout/Sidebar';
 import Navbar from '@/Components/Layout/Navbar';
+import DepotAlert from '@/Components/DepotAlert';
 import FlashMessages from '@/Components/FlashMessages';
 
 /**
@@ -53,6 +54,12 @@ export default function AppLayout({ children, header }) {
                     permissions={permissions}
                     onMenuClick={() => setSidebarOpen(!sidebarOpen)}
                     isImpersonating={isImpersonating}
+                />
+
+                {/* Alerte dépôt non sélectionné (multi-dépôts) */}
+                <DepotAlert
+                    depots={auth?.depots ?? []}
+                    currentDepot={auth?.currentDepot ?? null}
                 />
 
                 {/* Header optionnel */}

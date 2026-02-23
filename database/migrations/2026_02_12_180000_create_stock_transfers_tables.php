@@ -13,8 +13,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Table principale des transferts
-        Schema::create('pharmacy_stock_transfers', function (Blueprint $table) {
+        // Table principale des transferts - créer seulement si elle n'existe pas déjà
+        if (!Schema::hasTable('pharmacy_stock_transfers')) {
+            Schema::create('pharmacy_stock_transfers', function (Blueprint $table) {
             $table->uuid('id')->primary();
             
             // Multi-tenant : pharmacy_id (correspond à shop_id principal ou tenant_id)
@@ -72,10 +73,12 @@ return new class extends Migration
                 ->references('id')
                 ->on('users')
                 ->onDelete('set null');
-        });
+            });
+        }
 
-        // Table des items de transfert
-        Schema::create('pharmacy_stock_transfer_items', function (Blueprint $table) {
+        // Table des items de transfert - créer seulement si elle n'existe pas déjà
+        if (!Schema::hasTable('pharmacy_stock_transfer_items')) {
+            Schema::create('pharmacy_stock_transfer_items', function (Blueprint $table) {
             $table->uuid('id')->primary();
             
             // Référence au transfert parent
@@ -91,7 +94,7 @@ return new class extends Migration
             
             // Index
             $table->index('stock_transfer_id');
-            $table->unique(['stock_transfer_id', 'product_id']);
+            $table->unique(['stock_transfer_id', 'product_id'], 'pst_items_unique');
             
             // Foreign keys
             $table->foreign('stock_transfer_id')
@@ -103,7 +106,8 @@ return new class extends Migration
                 ->references('id')
                 ->on('pharmacy_products')
                 ->onDelete('restrict');
-        });
+            });
+        }
     }
 
     public function down(): void

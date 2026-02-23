@@ -30,6 +30,9 @@ class CategoryController
     public function index(Request $request): Response
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
         
         // Recherche
@@ -104,6 +107,9 @@ class CategoryController
     {
         try {
             $user = $request->user();
+            if ($user === null) {
+                abort(403, 'User not authenticated.');
+            }
             $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
             
             if (!$shopId && !$user->isRoot()) {
@@ -153,6 +159,9 @@ class CategoryController
     {
         try {
             $user = $request->user();
+            if ($user === null) {
+                abort(403, 'User not authenticated.');
+            }
             $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
             $isRoot = $user->isRoot();
             
@@ -214,6 +223,9 @@ class CategoryController
     {
         try {
             $user = $request->user();
+            if ($user === null) {
+                abort(403, 'User not authenticated.');
+            }
             $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
             $isRoot = $user->isRoot();
             
@@ -251,7 +263,15 @@ class CategoryController
 
     public function getTree(Request $request): JsonResponse
     {
-        $tree = $this->categoryRepository->getTree($request->user()->shop_id);
+        $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
+        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        if ($shopId === null) {
+            abort(403, 'Shop ID not found.');
+        }
+        $tree = $this->categoryRepository->getTree($shopId);
         
         return response()->json([
             'categories' => $tree
@@ -264,6 +284,9 @@ class CategoryController
     public function exportPdf(Request $request)
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
         $search = $request->input('search');
         

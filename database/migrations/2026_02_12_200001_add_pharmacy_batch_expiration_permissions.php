@@ -13,31 +13,36 @@ return new class extends Migration
         $permissions = [
             // Batch permissions
             [
-                'name' => 'pharmacy.batch.view',
-                'guard_name' => 'web',
+                'code' => 'pharmacy.batch.view',
+                'description' => 'Voir les lots',
+                'group' => 'pharmacy',
+                'is_old' => false,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'name' => 'pharmacy.batch.manage',
-                'guard_name' => 'web',
+                'code' => 'pharmacy.batch.manage',
+                'description' => 'Gérer les lots',
+                'group' => 'pharmacy',
+                'is_old' => false,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             // Expiration permissions
             [
-                'name' => 'pharmacy.expiration.view',
-                'guard_name' => 'web',
+                'code' => 'pharmacy.expiration.view',
+                'description' => 'Voir les expirations',
+                'group' => 'pharmacy',
+                'is_old' => false,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
         ];
 
         foreach ($permissions as $permission) {
-            // Check if permission already exists
+            // Vérifier si la permission existe déjà
             $exists = DB::table('permissions')
-                ->where('name', $permission['name'])
-                ->where('guard_name', $permission['guard_name'])
+                ->where('code', $permission['code'])
                 ->exists();
 
             if (!$exists) {
@@ -52,7 +57,7 @@ return new class extends Migration
     public function down(): void
     {
         DB::table('permissions')
-            ->whereIn('name', [
+            ->whereIn('code', [
                 'pharmacy.batch.view',
                 'pharmacy.batch.manage',
                 'pharmacy.expiration.view',

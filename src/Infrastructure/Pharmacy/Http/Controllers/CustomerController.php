@@ -38,6 +38,9 @@ class CustomerController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $user->shop_id ?? $user->tenant_id;
         $isRoot = $user->type === 'ROOT';
 
@@ -117,6 +120,9 @@ class CustomerController extends Controller
         ]);
 
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $user->shop_id ?? $user->tenant_id;
 
         try {
@@ -164,6 +170,9 @@ class CustomerController extends Controller
     public function show(Request $request, string $id): Response
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $user->shop_id ?? $user->tenant_id;
         $isRoot = $user->type === 'ROOT';
 
@@ -337,6 +346,9 @@ class CustomerController extends Controller
     public function listActive(Request $request): JsonResponse
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $user->shop_id ?? $user->tenant_id;
 
         $customers = CustomerModel::query()

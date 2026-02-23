@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class CheckPermission
@@ -23,7 +24,7 @@ class CheckPermission
 
         // ROOT users bypass toutes les vérifications de permission
         // Log pour debug
-        \Log::debug('CheckPermission middleware', [
+        Log::debug('CheckPermission middleware', [
             'user_id' => $user->id,
             'user_email' => $user->email,
             'user_type' => $user->type,
@@ -34,7 +35,7 @@ class CheckPermission
         ]);
 
         if ($user->isRoot()) {
-            \Log::debug('ROOT user detected, bypassing permission check');
+            Log::debug('ROOT user detected, bypassing permission check');
             return $next($request);
         }
 
@@ -51,7 +52,7 @@ class CheckPermission
         $hasPermission = false;
         $userPermissions = $user->permissionCodes();
         
-        \Log::debug('CheckPermission - Permission check', [
+        Log::debug('CheckPermission - Permission check', [
             'user_id' => $user->id,
             'user_email' => $user->email,
             'user_type' => $user->type,
@@ -63,14 +64,14 @@ class CheckPermission
         foreach ($permissions as $perm) {
             $perm = trim($perm);
             $hasThisPermission = $user->hasPermission($perm);
-            \Log::debug('CheckPermission - Checking permission', [
+            Log::debug('CheckPermission - Checking permission', [
                 'user_id' => $user->id,
                 'permission' => $perm,
                 'has_permission' => $hasThisPermission,
             ]);
             if ($hasThisPermission) {
                 $hasPermission = true;
-                \Log::debug('CheckPermission - Permission granted', [
+                Log::debug('CheckPermission - Permission granted', [
                     'user_id' => $user->id,
                     'permission' => $perm,
                 ]);
@@ -79,7 +80,7 @@ class CheckPermission
         }
 
         if (!$hasPermission) {
-            \Log::warning('CheckPermission - Permission denied', [
+            Log::warning('CheckPermission - Permission denied', [
                 'user_id' => $user->id,
                 'user_email' => $user->email,
                 'user_type' => $user->type,

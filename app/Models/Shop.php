@@ -17,6 +17,7 @@ class Shop extends Model
      */
     protected $fillable = [
         'tenant_id',
+        'depot_id',
         'name',
         'code',
         'type',
@@ -50,6 +51,14 @@ class Shop extends Model
     public function tenant()
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    /**
+     * Get the depot associated with this shop.
+     */
+    public function depot()
+    {
+        return $this->belongsTo(Depot::class);
     }
 
     /**

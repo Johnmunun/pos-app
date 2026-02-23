@@ -106,28 +106,33 @@ export default function ExpirationsIndex({
     };
 
     return (
-        <AppLayout>
+        <AppLayout
+            header={
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="sm" asChild className="hover:bg-gray-100 dark:hover:bg-gray-800">
+                        <Link href={route('pharmacy.stock.index')} className="inline-flex items-center gap-2">
+                            <ArrowLeft className="h-4 w-4" />
+                            <span className="hidden sm:inline">Retour au Stock</span>
+                        </Link>
+                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Calendar className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                        <h2 className="font-semibold text-xl text-gray-800 dark:text-white leading-tight">
+                            Gestion des Expirations
+                        </h2>
+                    </div>
+                </div>
+            }
+        >
             <Head title="Gestion des Expirations" />
             
             <div className="container mx-auto py-6 px-4">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                    <div className="flex items-center gap-4">
-                        <Button variant="outline" size="sm" asChild>
-                            <Link href={route('pharmacy.stock.index')}>
-                                <ArrowLeft className="h-4 w-4 mr-1" />
-                                Retour Stock
-                            </Link>
-                        </Button>
-                        <div>
-                            <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                                <Calendar className="h-6 w-6" />
-                                Gestion des Expirations
-                            </h1>
-                            <p className="text-gray-500 dark:text-gray-400 mt-1">
-                                Suivi des lots et dates de péremption
-                            </p>
-                        </div>
+                    <div>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">
+                            Suivi des lots et dates de péremption
+                        </p>
                     </div>
                     <div className="flex items-center gap-2">
                         <ExportButtons

@@ -20,6 +20,7 @@ export default function GlobalSearch({ isRoot = false }) {
     const [isLoading, setIsLoading] = useState(false);
     const searchRef = useRef(null);
     const resultsRef = useRef(null);
+    const inputRef = useRef(null);
 
     // Fermer le dropdown si on clique en dehors
     useEffect(() => {
@@ -36,6 +37,34 @@ export default function GlobalSearch({ isRoot = false }) {
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Raccourci clavier Ctrl+K ou Cmd+K pour ouvrir la recherche
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            // Vérifier si Ctrl+K (Windows/Linux) ou Cmd+K (Mac) est pressé
+            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+            const isModKeyPressed = isMac ? event.metaKey : event.ctrlKey;
+            
+            // Éviter le conflit si l'utilisateur tape dans un input, textarea ou contenteditable
+            const target = event.target;
+            const isInputFocused = 
+                target.tagName === 'INPUT' || 
+                target.tagName === 'TEXTAREA' || 
+                (target.isContentEditable && target.isContentEditable === true);
+
+            if (isModKeyPressed && event.key === 'k' && !isInputFocused) {
+                event.preventDefault();
+                // Focus sur le champ de recherche
+                if (inputRef.current) {
+                    inputRef.current.focus();
+                    inputRef.current.select();
+                }
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
     }, []);
 
     // Recherche avec debounce
@@ -106,6 +135,10 @@ export default function GlobalSearch({ isRoot = false }) {
 
     const hasResults = Object.keys(results).length > 0;
 
+    // Détecter si on est sur Mac pour afficher le bon raccourci
+    const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const shortcutKey = isMac ? '⌘K' : 'Ctrl+K';
+
     return (
         <div className="relative flex flex-1" ref={searchRef}>
             <form
@@ -133,9 +166,10 @@ export default function GlobalSearch({ isRoot = false }) {
                     />
                 </svg>
                 <input
+                    ref={inputRef}
                     id="search-field"
-                    className="block h-full w-full border-0 py-0 pl-10 pr-0 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-0 sm:text-sm bg-transparent"
-                    placeholder="Rechercher..."
+                    className="block h-full w-full border-0 py-0 pl-10 pr-20 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-0 sm:text-sm bg-transparent"
+                    placeholder={`Rechercher...`}
                     type="search"
                     name="search"
                     value={searchQuery}
@@ -147,6 +181,12 @@ export default function GlobalSearch({ isRoot = false }) {
                     }}
                     autoComplete="off"
                 />
+                {/* Badge du raccourci clavier */}
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                    <kbd className="hidden sm:inline-flex items-center gap-1 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 shadow-sm">
+                        <span className="text-xs">{shortcutKey}</span>
+                    </kbd>
+                </div>
             </form>
 
             {/* Dropdown des résultats */}

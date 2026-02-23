@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class EnsureUserIsActive
@@ -29,7 +30,7 @@ class EnsureUserIsActive
 
         // ROOT users bypass toutes les vérifications de statut
         // Log pour debug
-        \Log::debug('EnsureUserIsActive middleware', [
+        Log::debug('EnsureUserIsActive middleware', [
             'user_id' => $user->id,
             'user_email' => $user->email,
             'user_type' => $user->type,
@@ -40,7 +41,7 @@ class EnsureUserIsActive
         ]);
 
         if ($user->isRoot()) {
-            \Log::debug('ROOT user detected, bypassing status check');
+            Log::debug('ROOT user detected, bypassing status check');
             return $next($request);
         }
 

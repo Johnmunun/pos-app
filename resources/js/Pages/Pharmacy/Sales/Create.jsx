@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { Button } from '@/Components/ui/button';
@@ -21,13 +21,14 @@ import {
     Package,
     Percent,
     X,
-    ChevronRight
+    ChevronRight,
+    Store
 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { formatCurrency, getCurrencySymbol } from '@/lib/currency';
 
-export default function POSCreate({ products = [], categories = [], customers = [] }) {
+export default function POSCreate({ products = [], categories = [], customers = [], canUseWholesale = false }) {
     const { shop } = usePage().props;
     const currency = shop?.currency || 'CDF';
     
@@ -48,6 +49,7 @@ export default function POSCreate({ products = [], categories = [], customers = 
     const [paymentMethod, setPaymentMethod] = useState('cash');
     const [discount, setDiscount] = useState({ type: 'percent', value: 0 });
     const [taxRate, setTaxRate] = useState(0); // Percentage
+    const [saleMode, setSaleMode] = useState('retail'); // 'retail' | 'wholesale'
 
     function generateOrderNumber() {
         return 'A01-' + String(Math.floor(Math.random() * 900000000) + 100000000).padStart(10, '0');
@@ -72,6 +74,22 @@ export default function POSCreate({ products = [], categories = [], customers = 
         return result;
     }, [products, search, selectedCategory]);
 
+    const getProductPrice = (product) => {
+        if (saleMode === 'wholesale' && canUseWholesale && product.wholesale_price_amount != null) {
+            return product.wholesale_price_amount;
+        }
+        return product.price_amount ?? 0;
+    };
+
+    useEffect(() => {
+        if (cart.length === 0) return;
+        setCart(prev => prev.map(item => {
+            const product = products.find(p => p.id === item.product_id);
+            if (!product) return item;
+            return { ...item, price: getProductPrice(product) };
+        }));
+    }, [saleMode]);
+
     const addToCart = (product) => {
         if ((product.stock || 0) < 1) {
             toast.error('Stock insuffisant');
@@ -94,8 +112,8 @@ export default function POSCreate({ products = [], categories = [], customers = 
                 product_id: product.id,
                 name: product.name,
                 code: product.code,
-                price: product.price_amount,
-                currency: product.price_currency || currency,
+                price: getProductPrice(product),
+                currency,
                 quantity: 1,
                 max_stock: product.stock,
                 discount_percent: 0,
@@ -199,7 +217,7 @@ export default function POSCreate({ products = [], categories = [], customers = 
             // Create sale
             const storeRes = await axios.post(route('pharmacy.sales.store'), {
                 customer_id: customerId || null,
-                currency: cart[0]?.currency || currency,
+                currency,
                 lines: cart.map(item => ({
                     product_id: item.product_id,
                     quantity: item.quantity,
@@ -239,7 +257,7 @@ export default function POSCreate({ products = [], categories = [], customers = 
         try {
             const res = await axios.post(route('pharmacy.sales.store'), {
                 customer_id: customerId || null,
-                currency: cart[0]?.currency || currency,
+                currency,
                 lines: cart.map(item => ({
                     product_id: item.product_id,
                     quantity: item.quantity,
@@ -279,12 +297,38 @@ export default function POSCreate({ products = [], categories = [], customers = 
                                 </Link>
                             </Button>
                             
+                            {canUseWholesale && (
+                                <div className="flex items-center bg-amber-50 dark:bg-amber-900/20 rounded-lg p-1 border border-amber-200 dark:border-amber-800">
+                                    <button
+                                        onClick={() => setSaleMode('retail')}
+                                        className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
+                                            saleMode === 'retail'
+                                                ? 'bg-amber-500 text-white shadow-sm'
+                                                : 'text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                                        }`}
+                                    >
+                                        <Store className="h-4 w-4" />
+                                        Détail
+                                    </button>
+                                    <button
+                                        onClick={() => setSaleMode('wholesale')}
+                                        className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
+                                            saleMode === 'wholesale'
+                                                ? 'bg-amber-500 text-white shadow-sm'
+                                                : 'text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                                        }`}
+                                    >
+                                        <Package className="h-4 w-4" />
+                                        Gros
+                                    </button>
+                                </div>
+                            )}
                             <div className="flex items-center bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
                                 <button
                                     onClick={() => setViewMode('list')}
                                     className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                                        viewMode === 'list' 
-                                            ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm' 
+                                        viewMode === 'list'
+                                            ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm'
                                             : 'text-gray-600 dark:text-gray-400'
                                     }`}
                                 >
@@ -293,8 +337,8 @@ export default function POSCreate({ products = [], categories = [], customers = 
                                 <button
                                     onClick={() => setViewMode('thumbnails')}
                                     className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                                        viewMode === 'thumbnails' 
-                                            ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm' 
+                                        viewMode === 'thumbnails'
+                                            ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm'
                                             : 'text-gray-600 dark:text-gray-400'
                                     }`}
                                 >
@@ -385,7 +429,7 @@ export default function POSCreate({ products = [], categories = [], customers = 
                                             {product.name}
                                         </p>
                                         <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold">
-                                            {fmt(product.price_amount)}
+                                            {fmt(getProductPrice(product))}
                                         </p>
                                         {product.stock < 5 && product.stock > 0 && (
                                             <Badge variant="outline" className="mt-1 text-xs text-orange-600 border-orange-300">
@@ -428,8 +472,13 @@ export default function POSCreate({ products = [], categories = [], customers = 
                                         </div>
                                         <div className="text-right">
                                             <p className="font-semibold text-amber-600 dark:text-amber-400">
-                                                {fmt(product.price_amount)}
+                                                {fmt(getProductPrice(product))}
                                             </p>
+                                            {canUseWholesale && product.wholesale_price_amount != null && (
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                    {saleMode === 'wholesale' ? 'Prix gros' : `Gros: ${fmt(product.wholesale_price_amount)}`}
+                                                </p>
+                                            )}
                                             <p className="text-sm text-gray-500 dark:text-gray-400">Stock: {product.stock}</p>
                                         </div>
                                         <Plus className="h-5 w-5 text-amber-500" />

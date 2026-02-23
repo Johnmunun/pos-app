@@ -1,0 +1,2053 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Access to an undefined property App\\Models\\Role\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Role\>\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/AccessManagerController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Role\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Role\>\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/AccessManagerController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$description\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Admin/AccessManagerController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Admin/AccessManagerController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$permissions\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Admin/AccessManagerController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$role_id\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Admin/AccessManagerController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Permission\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/AccessManagerController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Permission\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Admin/AccessManagerController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Role\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/AccessManagerController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Role\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Http/Controllers/Admin/AccessManagerController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/AuthenticatedSessionController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Guard\:\:logout\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/AuthenticatedSessionController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$password\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/ConfirmablePasswordController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/NewPasswordController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$password\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/NewPasswordController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$company_name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Auth/RegisteredUserController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Auth/RegisteredUserController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Auth/RegisteredUserController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$password\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/RegisteredUserController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/RegisteredUserController.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Routing\\Route\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 3
+			path: app/Http/Middleware/CheckPermission.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:check\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Middleware/CheckRootUser.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Middleware/CheckRootUser.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Middleware/EnsureUserIsActive.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Middleware/EnsureUserIsActive.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Middleware/EnsureUserIsActive.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Middleware/EnsureUserIsActive.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Authenticatable\:\:isRoot\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Middleware/EnsureUserIsActive.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Routing\\Route\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Middleware/EnsureUserIsActive.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Currency\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Shop\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Tenant\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: '#^PHPDoc tag @var above a method has no effect\.$#'
+			identifier: varTag.misplaced
+			count: 1
+			path: app/Models/Category.php
+
+		-
+			message: '#^PHPDoc tag @var does not specify variable name\.$#'
+			identifier: varTag.noVariable
+			count: 1
+			path: app/Models/Category.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Product\:\:\$currency\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Product.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Product\:\:\$image\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Product.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Product\:\:\$image_type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Product.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Product\:\:\$stock_alert_level\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Product.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Product\:\:\$total_stock\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Product.php
+
+		-
+			message: '#^PHPDoc tag @var above a method has no effect\.$#'
+			identifier: varTag.misplaced
+			count: 1
+			path: app/Models/Product.php
+
+		-
+			message: '#^PHPDoc tag @var does not specify variable name\.$#'
+			identifier: varTag.noVariable
+			count: 1
+			path: app/Models/Product.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ProductBatch\:\:\$expiration_date\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Models/ProductBatch.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Sale\:\:\$sale_number\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Sale.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Sale\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Models/Sale.php
+
+		-
+			message: '#^PHPDoc tag @var above a method has no effect\.$#'
+			identifier: varTag.misplaced
+			count: 1
+			path: app/Models/Shop.php
+
+		-
+			message: '#^PHPDoc tag @var does not specify variable name\.$#'
+			identifier: varTag.noVariable
+			count: 1
+			path: app/Models/Shop.php
+
+		-
+			message: '#^PHPDoc tag @var above a method has no effect\.$#'
+			identifier: varTag.misplaced
+			count: 1
+			path: app/Models/Tenant.php
+
+		-
+			message: '#^PHPDoc tag @var does not specify variable name\.$#'
+			identifier: varTag.noVariable
+			count: 1
+			path: app/Models/Tenant.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Models/User.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Models/User.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Repositories/EloquentTenantRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Repositories/EloquentTenantRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Repositories/EloquentTenantRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$is_active\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Repositories/EloquentTenantRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Repositories/EloquentTenantRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Tenant\:\:\$updated_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Repositories/EloquentTenantRepository.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Tenant\:\:active\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Repositories/EloquentTenantRepository.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Tenant\:\:codeExists\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Repositories/EloquentTenantRepository.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Tenant\:\:count\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Repositories/EloquentTenantRepository.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Tenant\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Repositories/EloquentTenantRepository.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Tenant\:\:emailExists\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Repositories/EloquentTenantRepository.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Tenant\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Repositories/EloquentTenantRepository.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Tenant\:\:findByCode\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Repositories/EloquentTenantRepository.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Tenant\:\:findByEmail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Repositories/EloquentTenantRepository.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Tenant\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Repositories/EloquentTenantRepository.php
+
+		-
+			message: '#^Method App\\Repositories\\EloquentTenantRepository\:\:entityToArray\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Repositories/EloquentTenantRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Repositories/EloquentUserRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$first_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Repositories/EloquentUserRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Repositories/EloquentUserRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$is_active\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Repositories/EloquentUserRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$last_login_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Repositories/EloquentUserRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$last_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Repositories/EloquentUserRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$password\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Repositories/EloquentUserRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Repositories/EloquentUserRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Repositories/EloquentUserRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$updated_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Repositories/EloquentUserRepository.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Repositories/EloquentUserRepository.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Repositories/EloquentUserRepository.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Repositories/EloquentUserRepository.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 6
+			path: app/Repositories/EloquentUserRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Role\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Services/RootRoleService.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/RootRoleService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Permission\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/RootRoleService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Role\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/RootRoleService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Role\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/RootRoleService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: database/seeders/CreateRootUserSeeder.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: database/seeders/CreateRootUserSeeder.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Permission\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: database/seeders/DefaultSectorRolesSeeder.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Role\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: database/seeders/DefaultSectorRolesSeeder.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Role\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: database/seeders/DefaultSectorRolesSeeder.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Console\\Command\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: database/seeders/DefaultSectorRolesSeeder.php
+
+		-
+			message: '#^Method Src\\Application\\GlobalSearch\\Repositories\\GlobalSearchRepositoryInterface\:\:getAllSearchableItems\(\) has invalid return type Domains\\GlobalSearch\\ValueObjects\\GlobalSearchItem\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Application/GlobalSearch/Repositories/GlobalSearchRepositoryInterface.php
+
+		-
+			message: '#^Call to method getModule\(\) on an unknown class Domains\\GlobalSearch\\ValueObjects\\GlobalSearchItem\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Application/GlobalSearch/UseCases/SearchGlobalUseCase.php
+
+		-
+			message: '#^Call to method getRequiredPermission\(\) on an unknown class Domains\\GlobalSearch\\ValueObjects\\GlobalSearchItem\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Application/GlobalSearch/UseCases/SearchGlobalUseCase.php
+
+		-
+			message: '#^Call to method matches\(\) on an unknown class Domains\\GlobalSearch\\ValueObjects\\GlobalSearchItem\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Application/GlobalSearch/UseCases/SearchGlobalUseCase.php
+
+		-
+			message: '#^Call to method toArray\(\) on an unknown class Domains\\GlobalSearch\\ValueObjects\\GlobalSearchItem\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Application/GlobalSearch/UseCases/SearchGlobalUseCase.php
+
+		-
+			message: '#^Parameter \#2 \$callback of function array_filter expects \(callable\(Domains\\GlobalSearch\\ValueObjects\\GlobalSearchItem\)\: bool\)\|null, Closure\(Src\\Domains\\GlobalSearch\\ValueObjects\\GlobalSearchItem\)\: bool given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Application/GlobalSearch/UseCases/SearchGlobalUseCase.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Shop\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Application/Pharmacy/Services/StockTransferService.php
+
+		-
+			message: '#^Variable \$exists might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/Application/Pharmacy/UseCases/Product/GenerateProductCodeUseCase.php
+
+		-
+			message: '#^Variable \$normalizedName on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.variable
+			count: 1
+			path: src/Application/Pharmacy/UseCases/Product/GenerateProductCodeUseCase.php
+
+		-
+			message: '#^Variable \$productCode might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: src/Application/Pharmacy/UseCases/Product/GenerateProductCodeUseCase.php
+
+		-
+			message: '#^Constant Src\\Application\\Pharmacy\\UseCases\\Product\\ImportProductsUseCase\:\:OPTIONAL_COLUMNS is unused\.$#'
+			identifier: classConstant.unused
+			count: 1
+			path: src/Application/Pharmacy/UseCases/Product/ImportProductsUseCase.php
+
+		-
+			message: '#^Property Src\\Application\\Pharmacy\\UseCases\\Product\\ImportProductsUseCase\:\:\$productRepository is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Application/Pharmacy/UseCases/Product/ImportProductsUseCase.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between mixed and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 2
+			path: src/Application/Pharmacy/UseCases/Product/ImportProductsUseCase.php
+
+		-
+			message: '#^Call to an undefined method Src\\Domain\\Pharmacy\\Entities\\Product\:\:updateCategory\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Application/Pharmacy/UseCases/Product/UpdateProductUseCase.php
+
+		-
+			message: '#^Call to an undefined method Src\\Domain\\Pharmacy\\Entities\\Product\:\:updateCode\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Application/Pharmacy/UseCases/Product/UpdateProductUseCase.php
+
+		-
+			message: '#^Call to an undefined method Src\\Domain\\Pharmacy\\Entities\\Product\:\:updateDescription\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Application/Pharmacy/UseCases/Product/UpdateProductUseCase.php
+
+		-
+			message: '#^Call to an undefined method Src\\Domain\\Pharmacy\\Entities\\Product\:\:updateDosage\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Application/Pharmacy/UseCases/Product/UpdateProductUseCase.php
+
+		-
+			message: '#^Call to an undefined method Src\\Domain\\Pharmacy\\Entities\\Product\:\:updateMedicineType\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Application/Pharmacy/UseCases/Product/UpdateProductUseCase.php
+
+		-
+			message: '#^Call to an undefined method Src\\Domain\\Pharmacy\\Entities\\Product\:\:updateName\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Application/Pharmacy/UseCases/Product/UpdateProductUseCase.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Role\:\:whereIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Application/Pharmacy/UseCases/Seller/CreateSellerUseCase.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Tenant\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Application/Pharmacy/UseCases/Seller/CreateSellerUseCase.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Application/Pharmacy/UseCases/Seller/CreateSellerUseCase.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Application/Pharmacy/UseCases/Seller/CreateSellerUseCase.php
+
+		-
+			message: '#^Call to an undefined method Src\\Domain\\Pharmacy\\Entities\\Product\:\:getMinimumStock\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: src/Domain/Pharmacy/Services/InventoryService.php
+
+		-
+			message: '#^Call to function is_object\(\) with object\{name\?\: string\} will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Domains/Admin/Entities/AdminUser.php
+
+		-
+			message: '#^Call to an undefined method Domains\\User\\Entities\\User\:\:getStatus\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Domains/Admin/UseCases/ToggleUserStatusUseCase.php
+
+		-
+			message: '#^Variable \$value in empty\(\) always exists and is not falsy\.$#'
+			identifier: empty.variable
+			count: 1
+			path: src/Domains/Tenant/ValueObjects/TenantName.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Permission\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Domains/User/Services/ModulePermissionService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Permission\:\:count\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: src/Domains/User/Services/PermissionsSyncService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Permission\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Domains/User/Services/PermissionsSyncService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Permission\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Domains/User/Services/PermissionsSyncService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Permission\:\:whereNotIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Domains/User/Services/PermissionsSyncService.php
+
+		-
+			message: '#^Offset 0 on non\-empty\-list\<string\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Domains/User/Services/PermissionsSyncService.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Role\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Domains/User/UseCases/AssignUserRoleUseCase.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Role\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Domains/User/UseCases/AssignUserRoleUseCase.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: src/Domains/User/UseCases/AssignUserRoleUseCase.php
+
+		-
+			message: '#^Property Src\\Domains\\User\\UseCases\\AssignUserRoleUseCase\:\:\$userRepository is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Domains/User/UseCases/AssignUserRoleUseCase.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Domains/User/UseCases/DeleteUserUseCase.php
+
+		-
+			message: '#^Property Src\\Domains\\User\\UseCases\\DeleteUserUseCase\:\:\$userRepository is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Domains/User/UseCases/DeleteUserUseCase.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Domains/User/UseCases/ImpersonateUserUseCase.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Authenticatable\:\:hasPermission\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Domains/User/UseCases/ImpersonateUserUseCase.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Authenticatable\:\:isRoot\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Domains/User/UseCases/ImpersonateUserUseCase.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Domains/User/UseCases/ImpersonateUserUseCase.php
+
+		-
+			message: '#^Property Src\\Domains\\User\\UseCases\\ImpersonateUserUseCase\:\:\$userRepository is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Domains/User/UseCases/ImpersonateUserUseCase.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Domains/User/UseCases/ResetUserPasswordUseCase.php
+
+		-
+			message: '#^Property Src\\Domains\\User\\UseCases\\ResetUserPasswordUseCase\:\:\$userRepository is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Domains/User/UseCases/ResetUserPasswordUseCase.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Domains/User/UseCases/StopImpersonationUseCase.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Domains/User/UseCases/UpdateUserStatusUseCase.php
+
+		-
+			message: '#^Property Src\\Domains\\User\\UseCases\\UpdateUserStatusUseCase\:\:\$userRepository is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Domains/User/UseCases/UpdateUserStatusUseCase.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Role\:\:active\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Admin/Http/Controllers/AdminController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Admin/Repositories/AdminEloquentRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Admin/Repositories/AdminEloquentRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$first_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Admin/Repositories/AdminEloquentRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Admin/Repositories/AdminEloquentRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$last_login_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Admin/Repositories/AdminEloquentRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$last_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Admin/Repositories/AdminEloquentRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Admin/Repositories/AdminEloquentRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$roles\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Admin/Repositories/AdminEloquentRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$tenant\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Admin/Repositories/AdminEloquentRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Admin/Repositories/AdminEloquentRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$updated_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Admin/Repositories/AdminEloquentRepository.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Tenant\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: src/Infrastructure/Admin/Repositories/AdminEloquentRepository.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Tenant\:\:withCount\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: src/Infrastructure/Admin/Repositories/AdminEloquentRepository.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: src/Infrastructure/Admin/Repositories/AdminEloquentRepository.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\User\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: src/Infrastructure/Admin/Repositories/AdminEloquentRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ExchangeRate\:\:\$fromCurrency\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Infrastructure/Currency/Http/Controllers/CurrencyController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Currency\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: src/Infrastructure/Currency/Http/Controllers/CurrencyController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ExchangeRate\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Currency/Http/Controllers/CurrencyController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ExchangeRate\:\:whereHas\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Currency/Http/Controllers/CurrencyController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Currency\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Currency/Persistence/EloquentCurrencyRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Currency\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Currency/Persistence/EloquentCurrencyRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Currency\:\:\$is_active\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Currency/Persistence/EloquentCurrencyRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Currency\:\:\$is_default\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Currency/Persistence/EloquentCurrencyRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Currency\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Currency/Persistence/EloquentCurrencyRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Currency\:\:\$symbol\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Currency/Persistence/EloquentCurrencyRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Currency\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Currency/Persistence/EloquentCurrencyRepository.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Currency\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Currency/Persistence/EloquentCurrencyRepository.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Currency\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Currency/Persistence/EloquentCurrencyRepository.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Currency\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 4
+			path: src/Infrastructure/Currency/Persistence/EloquentCurrencyRepository.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 3
+			path: src/Infrastructure/Http/Controllers/OnboardingController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Tenant\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Http/Controllers/OnboardingController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Http/Controllers/OnboardingController.php
+
+		-
+			message: '#^Method Src\\Infrastructure\\Http\\Controllers\\OnboardingController\:\:showStep1\(\) should return Inertia\\Response but returns Symfony\\Component\\HttpFoundation\\Response\.$#'
+			identifier: return.type
+			count: 2
+			path: src/Infrastructure/Http/Controllers/OnboardingController.php
+
+		-
+			message: '#^Anonymous function has an unused use \$currency\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/ExportController.php
+
+		-
+			message: '#^Offset ''expired''\|''expiring_soon''\|''ok'' on array\{expired\: ''Expiré'', expiring_soon\: ''Expire bientôt'', ok\: ''OK''\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/ExportController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>code" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 4
+			path: src/Infrastructure/Pharmacy/Http/Controllers/ExportController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 10
+			path: src/Infrastructure/Pharmacy/Http/Controllers/ExportController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>price_amount" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: src/Infrastructure/Pharmacy/Http/Controllers/ExportController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Infrastructure/Pharmacy/Http/Controllers/InventoryController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Infrastructure/Pharmacy/Http/Controllers/InventoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Infrastructure/Pharmacy/Http/Controllers/InventoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$counted_quantity\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/InventoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$difference\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/InventoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/InventoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/InventoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/InventoryController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$system_quantity\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/InventoryController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/InventoryController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 4
+			path: src/Infrastructure/Pharmacy/Http/Controllers/ProductController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/ProductController.php
+
+		-
+			message: '#^Offset ''company_name'' on array\{company_name\: mixed, id_nat\: string\|null, rccm\: string\|null, tax_number\: string\|null, street\: string\|null, city\: string\|null, postal_code\: string\|null, country\: string\|null, \.\.\.\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/ProductController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 3
+			path: src/Infrastructure/Pharmacy/Http/Controllers/ProductMovementController.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\ProductModel\:\:\$category\.$#'
+			identifier: property.notFound
+			count: 3
+			path: src/Infrastructure/Pharmacy/Http/Controllers/ProductMovementController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/PurchaseController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Customer\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SaleController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Customer\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SaleController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SaleController.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Pharmacy\\Models\\CategoryModel\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SaleController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Role\:\:\$description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Role\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Role\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Role\:\:\$permissions\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Role\:\:\$permissions_count\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Role\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Role\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Role\>\:\:\$permissions\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Role\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Role\>\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$is_active\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$roles\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$roles_count\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Role\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Tenant\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 5
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Role\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\User\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SellerController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Query\\Builder\:\:byShop\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/StockController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Query\\Builder\:\:expiringSoon\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/StockController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: src/Infrastructure/Pharmacy/Http/Controllers/StockController.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Pharmacy\\Models\\StockMovementModel\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/StockController.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: src/Infrastructure/Pharmacy/Http/Controllers/StockController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<\(int\|string\),mixed\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/StockController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Shop\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Infrastructure/Pharmacy/Http/Controllers/StockTransferController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Shop\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Infrastructure/Pharmacy/Http/Controllers/StockTransferController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Shop\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 8
+			path: src/Infrastructure/Pharmacy/Http/Controllers/StockTransferController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 6
+			path: src/Infrastructure/Pharmacy/Http/Controllers/StockTransferController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>code" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SupplierController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SupplierController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>price_amount" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: src/Infrastructure/Pharmacy/Http/Controllers/SupplierController.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\BatchModel\:\:\$expiry_date\.$#'
+			identifier: property.notFound
+			count: 5
+			path: src/Infrastructure/Pharmacy/Models/BatchModel.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\BatchModel\:\:\$initial_quantity\.$#'
+			identifier: property.notFound
+			count: 3
+			path: src/Infrastructure/Pharmacy/Models/BatchModel.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\BatchModel\:\:\$quantity\.$#'
+			identifier: property.notFound
+			count: 6
+			path: src/Infrastructure/Pharmacy/Models/BatchModel.php
+
+		-
+			message: '#^Method Src\\Infrastructure\\Pharmacy\\Models\\BatchModel\:\:getDaysUntilExpiryAttribute\(\) should return int but returns float\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Infrastructure/Pharmacy/Models/BatchModel.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\CategoryModel\:\:\$parent\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Models/CategoryModel.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\BatchModel\:\:\$batch_number\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentBatchRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\BatchModel\:\:\$expiry_date\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentBatchRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\BatchModel\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentBatchRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\BatchModel\:\:\$product_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentBatchRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\BatchModel\:\:\$purchase_order_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentBatchRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\BatchModel\:\:\$quantity\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentBatchRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\BatchModel\:\:\$shop_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentBatchRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\BatchModel\:\:\$supplier_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentBatchRepository.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Pharmacy\\Models\\BatchModel\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentBatchRepository.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Pharmacy\\Models\\BatchModel\:\:updateOrCreate\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentBatchRepository.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Pharmacy\\Models\\BatchModel\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 6
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentBatchRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\CategoryModel\:\:\$children\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentCategoryRepository.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Pharmacy\\Models\\CategoryModel\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentCategoryRepository.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Pharmacy\\Models\\CategoryModel\:\:updateOrCreate\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentCategoryRepository.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Pharmacy\\Models\\CategoryModel\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 5
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentCategoryRepository.php
+
+		-
+			message: '#^Parameter \#1 \$query of method Src\\Infrastructure\\Pharmacy\\Persistence\\EloquentInventoryRepository\:\:applyFilters\(\) expects Illuminate\\Database\\Eloquent\\Builder\<Src\\Infrastructure\\Pharmacy\\Models\\InventoryModel\>, Illuminate\\Database\\Query\\Builder given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentInventoryRepository.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Query\\Builder\:\:with\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentProductRepository.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Pharmacy\\Models\\ProductModel\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentProductRepository.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Pharmacy\\Models\\ProductModel\:\:updateOrCreate\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentProductRepository.php
+
+		-
+			message: '#^Parameter \#1 \$model of method Src\\Infrastructure\\Pharmacy\\Persistence\\EloquentProductRepository\:\:toDomainEntity\(\) expects Src\\Infrastructure\\Pharmacy\\Models\\ProductModel, stdClass given\.$#'
+			identifier: argument.type
+			count: 4
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentProductRepository.php
+
+		-
+			message: '#^Parameter \#2 \$shopId of class Src\\Domain\\Pharmacy\\Entities\\Product constructor expects string, int given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentProductRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderLineModel\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderLineRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderLineModel\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderLineRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderLineModel\:\:\$line_total_amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderLineRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderLineModel\:\:\$ordered_quantity\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderLineRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderLineModel\:\:\$product_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderLineRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderLineModel\:\:\$purchase_order_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderLineRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderLineModel\:\:\$received_quantity\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderLineRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderLineModel\:\:\$unit_cost_amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderLineRepository.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderLineModel\:\:updateOrCreate\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderLineRepository.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderLineModel\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderLineRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderModel\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderModel\:\:\$created_by\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderModel\:\:\$expected_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderModel\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderModel\:\:\$ordered_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderModel\:\:\$received_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderModel\:\:\$shop_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderModel\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderModel\:\:\$supplier_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderModel\:\:\$total_amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderRepository.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderModel\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderRepository.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderModel\:\:updateOrCreate\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderRepository.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,stdClass\>\:\:map\(\) expects callable\(stdClass, int\)\: Src\\Domain\\Pharmacy\\Entities\\PurchaseOrder, Closure\(Src\\Infrastructure\\Pharmacy\\Models\\PurchaseOrderModel\)\: Src\\Domain\\Pharmacy\\Entities\\PurchaseOrder given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentPurchaseOrderRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\SaleLineModel\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleLineRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\SaleLineModel\:\:\$discount_percent\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleLineRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\SaleLineModel\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleLineRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\SaleLineModel\:\:\$line_total_amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleLineRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\SaleLineModel\:\:\$product_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleLineRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\SaleLineModel\:\:\$quantity\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleLineRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\SaleLineModel\:\:\$sale_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleLineRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\SaleLineModel\:\:\$unit_price_amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleLineRepository.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Pharmacy\\Models\\SaleLineModel\:\:updateOrCreate\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleLineRepository.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Pharmacy\\Models\\SaleLineModel\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleLineRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\SaleModel\:\:\$balance_amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\SaleModel\:\:\$cancelled_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\SaleModel\:\:\$completed_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\SaleModel\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\SaleModel\:\:\$created_by\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\SaleModel\:\:\$customer_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\SaleModel\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\SaleModel\:\:\$paid_amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\SaleModel\:\:\$shop_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\SaleModel\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Pharmacy\\Models\\SaleModel\:\:\$total_amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleRepository.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Pharmacy\\Models\\SaleModel\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleRepository.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Pharmacy\\Models\\SaleModel\:\:updateOrCreate\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleRepository.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,stdClass\>\:\:map\(\) expects callable\(stdClass, int\)\: Src\\Domain\\Pharmacy\\Entities\\Sale, Closure\(Src\\Infrastructure\\Pharmacy\\Models\\SaleModel\)\: Src\\Domain\\Pharmacy\\Entities\\Sale given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Infrastructure/Pharmacy/Persistence/EloquentSaleRepository.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Pharmacy/Services/CategoryPdfService.php
+
+		-
+			message: '#^Cannot call method products\(\) on stdClass\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: src/Infrastructure/Pharmacy/Services/CategoryPdfService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Filesystem\\Filesystem\:\:url\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: src/Infrastructure/Pharmacy/Services/ProductImageService.php
+
+		-
+			message: '#^Constant Src\\Infrastructure\\Pharmacy\\Services\\ProductImageService\:\:MAX_SIZE is unused\.$#'
+			identifier: classConstant.unused
+			count: 1
+			path: src/Infrastructure/Pharmacy/Services/ProductImageService.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Authenticatable\:\:isRoot\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Infrastructure/Search/Http/Controllers/GlobalSearchController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Authenticatable\:\:permissionCodes\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Infrastructure/Search/Http/Controllers/GlobalSearchController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Shop\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Http/Controllers/SettingsController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Shop\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Http/Controllers/SettingsController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Tenant\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Http/Controllers/SettingsController.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Settings\\Models\\StoreSettingsModel\:\:\$city\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Persistence/EloquentStoreSettingsRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Settings\\Models\\StoreSettingsModel\:\:\$company_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Persistence/EloquentStoreSettingsRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Settings\\Models\\StoreSettingsModel\:\:\$country\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Persistence/EloquentStoreSettingsRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Settings\\Models\\StoreSettingsModel\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Persistence/EloquentStoreSettingsRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Settings\\Models\\StoreSettingsModel\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Persistence/EloquentStoreSettingsRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Settings\\Models\\StoreSettingsModel\:\:\$exchange_rate\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Persistence/EloquentStoreSettingsRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Settings\\Models\\StoreSettingsModel\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Infrastructure/Settings/Persistence/EloquentStoreSettingsRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Settings\\Models\\StoreSettingsModel\:\:\$id_nat\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Persistence/EloquentStoreSettingsRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Settings\\Models\\StoreSettingsModel\:\:\$invoice_footer_text\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Persistence/EloquentStoreSettingsRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Settings\\Models\\StoreSettingsModel\:\:\$logo_path\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Persistence/EloquentStoreSettingsRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Settings\\Models\\StoreSettingsModel\:\:\$phone\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Persistence/EloquentStoreSettingsRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Settings\\Models\\StoreSettingsModel\:\:\$postal_code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Persistence/EloquentStoreSettingsRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Settings\\Models\\StoreSettingsModel\:\:\$rccm\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Persistence/EloquentStoreSettingsRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Settings\\Models\\StoreSettingsModel\:\:\$shop_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Infrastructure/Settings/Persistence/EloquentStoreSettingsRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Settings\\Models\\StoreSettingsModel\:\:\$street\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Persistence/EloquentStoreSettingsRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Settings\\Models\\StoreSettingsModel\:\:\$tax_number\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Persistence/EloquentStoreSettingsRepository.php
+
+		-
+			message: '#^Access to an undefined property Src\\Infrastructure\\Settings\\Models\\StoreSettingsModel\:\:\$updated_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Persistence/EloquentStoreSettingsRepository.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Settings\\Models\\StoreSettingsModel\:\:find\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Persistence/EloquentStoreSettingsRepository.php
+
+		-
+			message: '#^Call to an undefined static method Src\\Infrastructure\\Settings\\Models\\StoreSettingsModel\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 4
+			path: src/Infrastructure/Settings/Persistence/EloquentStoreSettingsRepository.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Filesystem\\Filesystem\:\:url\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Infrastructure/Settings/Services/StoreLogoService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$password\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/User/Http/Controllers/UserManagementController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$role_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/User/Http/Controllers/UserManagementController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Infrastructure/User/Http/Controllers/UserManagementController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Infrastructure/User/Http/Controllers/UserManagementController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Authenticatable\:\:hasPermission\(\)\.$#'
+			identifier: method.notFound
+			count: 5
+			path: src/Infrastructure/User/Http/Controllers/UserManagementController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Authenticatable\:\:isRoot\(\)\.$#'
+			identifier: method.notFound
+			count: 5
+			path: src/Infrastructure/User/Http/Controllers/UserManagementController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\User\:\:findOrFail\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Infrastructure/User/Http/Controllers/UserManagementController.php

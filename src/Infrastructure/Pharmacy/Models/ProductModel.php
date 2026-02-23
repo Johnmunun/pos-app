@@ -15,6 +15,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  * @property string|null $type
  * @property string|null $dosage
  * @property float $price_amount
+ * @property float|null $wholesale_price_amount
+ * @property int|null $wholesale_min_quantity
  * @property string $price_currency
  * @property int $stock
  * @property string|null $unit
@@ -49,6 +51,8 @@ class ProductModel extends Model
         'type',
         'dosage',
         'price_amount',
+        'wholesale_price_amount',
+        'wholesale_min_quantity',
         'price_currency',
         'stock',
         'unit',
@@ -66,6 +70,7 @@ class ProductModel extends Model
         'is_active' => 'boolean',
         'requires_prescription' => 'boolean',
         'price_amount' => 'decimal:2',
+        'wholesale_price_amount' => 'decimal:2',
         'stock' => 'integer',
     ];
 

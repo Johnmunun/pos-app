@@ -81,4 +81,47 @@ class AssignUserRoleUseCase
             throw new \Exception('Aucune permission trouvée après l\'assignation du rôle. Vérifiez que le rôle a des permissions.');
         }
     }
+
+    /**
+     * Assigner plusieurs rôles à un utilisateur pour un tenant (remplace les rôles existants pour ce tenant).
+     *
+     * @param int $userId
+     * @param array<int, int> $roleIds
+     * @param int $tenantId
+     * @throws \Exception
+     */
+    public function assignRolesForTenant(int $userId, array $roleIds, int $tenantId): void
+    {
+        $userModel = UserModel::findOrFail($userId);
+        if ($userModel->isRoot()) {
+            throw new \Exception('Impossible de modifier les rôles d\'un utilisateur ROOT');
+        }
+
+        DB::table('user_role')
+            ->where('user_id', $userId)
+            ->where('tenant_id', $tenantId)
+            ->delete();
+
+        // Dédupliquer pour éviter "Duplicate entry" sur (user_id, role_id, tenant_id)
+        $roleIds = array_values(array_unique(array_map('intval', $roleIds)));
+
+        $now = now();
+        foreach ($roleIds as $roleId) {
+            $roleIdInt = (int) $roleId;
+            $role = Role::find($roleIdInt);
+            if (!$role || $role->permissions()->count() === 0) {
+                continue;
+            }
+            DB::table('user_role')->insert([
+                'user_id' => $userId,
+                'role_id' => $roleIdInt,
+                'tenant_id' => $tenantId,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+
+        $userModel->refresh();
+        $userModel->load('roles.permissions');
+    }
 }

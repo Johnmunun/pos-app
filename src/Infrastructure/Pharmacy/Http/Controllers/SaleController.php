@@ -17,6 +17,9 @@ use Src\Domain\Pharmacy\Repositories\SaleLineRepositoryInterface;
 use Src\Application\Pharmacy\DTO\SaleLineDTO;
 use Src\Infrastructure\Pharmacy\Models\ProductModel;
 use Src\Infrastructure\Pharmacy\Models\SaleModel;
+use App\Models\Currency;
+use App\Models\Shop;
+use App\Services\CurrencyConversionService;
 
 class SaleController
 {
@@ -27,12 +30,31 @@ class SaleController
         private CancelSaleUseCase $cancelSaleUseCase,
         private AttachCustomerToSaleUseCase $attachCustomerToSaleUseCase,
         private SaleRepositoryInterface $saleRepository,
-        private SaleLineRepositoryInterface $saleLineRepository
+        private SaleLineRepositoryInterface $saleLineRepository,
+        private CurrencyConversionService $currencyConversion
     ) {}
+
+    private function getEffectiveShopCurrency(string $shopId, $authUser): string
+    {
+        $shop = Shop::find($shopId);
+        $tenantId = $authUser !== null ? ($authUser->tenant_id ?? $shopId) : $shopId;
+        $defaultCurrency = Currency::where('tenant_id', $tenantId)
+            ->where('is_active', true)
+            ->where('is_default', true)
+            ->first();
+        if ($defaultCurrency) {
+            return $defaultCurrency->code;
+        }
+
+        return $shop?->currency ?? 'CDF';
+    }
 
     private function getShopId(Request $request): string
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
         $userModel = UserModel::find($user->id);
         $isRoot = $userModel ? $userModel->isRoot() : false;
@@ -79,23 +101,43 @@ class SaleController
     public function create(Request $request): Response
     {
         $shopId = $this->getShopId($request);
-        
-        // Products with images
+        $authUser = $request->user();
+        $shopCurrency = $this->getEffectiveShopCurrency($shopId, $authUser);
+
+        // Products with images - conversion vers devise boutique si nécessaire
+        $tenantId = $authUser !== null ? ($authUser->tenant_id ?? $shopId) : $shopId;
         $imageService = app(\Src\Infrastructure\Pharmacy\Services\ProductImageService::class);
         $products = ProductModel::where('shop_id', $shopId)
             ->where('is_active', true)
             ->orderBy('name')
             ->get()
-            ->map(fn ($p) => [
-                'id' => $p->id,
-                'name' => $p->name,
-                'code' => $p->code ?? '',
-                'price_amount' => (float) ($p->price_amount ?? 0),
-                'price_currency' => $p->price_currency ?? 'USD',
-                'stock' => (int) ($p->stock ?? 0),
-                'category_id' => $p->category_id,
-                'image_url' => $imageService->getUrlFromPath($p->image_path, $p->image_type ?? 'upload'),
-            ])->toArray();
+            ->map(function ($p) use ($shopCurrency, $tenantId, $imageService) {
+                $productCurrency = $p->price_currency ?? $shopCurrency;
+                $priceAmount = (float) ($p->price_amount ?? 0);
+                $wholesaleAmount = $p->wholesale_price_amount !== null ? (float) $p->wholesale_price_amount : null;
+
+                if ($productCurrency !== $shopCurrency) {
+                    $priceAmount = $this->currencyConversion->convertOrKeep($priceAmount, $productCurrency, $shopCurrency, $tenantId);
+                    if ($wholesaleAmount !== null) {
+                        $wholesaleAmount = $this->currencyConversion->convertOrKeep($wholesaleAmount, $productCurrency, $shopCurrency, $tenantId);
+                    }
+                }
+
+                return [
+                    'id' => $p->id,
+                    'name' => $p->name,
+                    'code' => $p->code ?? '',
+                    'price_amount' => $priceAmount,
+                    'wholesale_price_amount' => $wholesaleAmount,
+                    'wholesale_min_quantity' => $p->wholesale_min_quantity !== null ? (int) $p->wholesale_min_quantity : null,
+                    'price_currency' => $shopCurrency,
+                    'stock' => (int) ($p->stock ?? 0),
+                    'category_id' => $p->category_id,
+                    'image_url' => $imageService->getUrlFromPath($p->image_path, $p->image_type ?? 'upload'),
+                ];
+            })->toArray();
+
+        $canUseWholesale = $authUser !== null && ($authUser->isRoot() || $authUser->hasPermission('pharmacy.sales.wholesale'));
 
         // Categories
         $categories = \Src\Infrastructure\Pharmacy\Models\CategoryModel::where('shop_id', $shopId)
@@ -108,7 +150,6 @@ class SaleController
                 'name' => $c->name,
             ])->toArray();
 
-        $tenantId = $request->user()->tenant_id ?? $shopId;
         $customers = \App\Models\Customer::where('tenant_id', $tenantId)
             ->where('is_active', true)
             ->orderBy('full_name')
@@ -124,6 +165,7 @@ class SaleController
             'products' => $products,
             'categories' => $categories,
             'customers' => $customers,
+            'canUseWholesale' => $canUseWholesale,
         ]);
     }
 
@@ -140,9 +182,14 @@ class SaleController
         ]);
 
         $shopId = $this->getShopId($request);
-        $userId = (int) $request->user()->id;
+        $authUser = $request->user();
+        if ($authUser === null) {
+            abort(403, 'User not authenticated.');
+        }
+        $userId = (int) $authUser->id;
         $customerId = $request->input('customer_id') ?: null;
-        $currency = $request->input('currency', 'USD');
+        $shopCurrency = $this->getEffectiveShopCurrency($shopId, $authUser);
+        $currency = $request->input('currency') ?? $shopCurrency;
         $linesInput = $request->input('lines', []);
 
         $sale = $this->createDraftSaleUseCase->execute($shopId, $customerId, $currency, $userId);
@@ -282,7 +329,11 @@ class SaleController
         }
 
         try {
-            $this->finalizeSaleUseCase->execute($id, (float) $request->input('paid_amount'), (int) $request->user()->id);
+            $authUser = $request->user();
+            if ($authUser === null) {
+                abort(403, 'User not authenticated.');
+            }
+            $this->finalizeSaleUseCase->execute($id, (float) $request->input('paid_amount'), (int) $authUser->id);
             return response()->json(['message' => 'Sale finalized successfully']);
         } catch (\Throwable $e) {
             return response()->json(['message' => $e->getMessage()], 422);

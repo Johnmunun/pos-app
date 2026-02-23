@@ -30,6 +30,7 @@ return new class extends Migration
                     'code' => $permission['code'],
                     'description' => $permission['description'],
                     'group' => $permission['group'],
+                    'is_old' => false,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);

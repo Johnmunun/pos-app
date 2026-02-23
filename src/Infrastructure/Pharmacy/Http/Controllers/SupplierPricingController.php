@@ -35,6 +35,9 @@ class SupplierPricingController extends Controller
     public function index(Request $request, string $supplierId): JsonResponse
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $user->shop_id ?? $user->tenant_id;
 
         // Vérifier que le fournisseur appartient à la boutique
@@ -90,6 +93,9 @@ class SupplierPricingController extends Controller
         ]);
 
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $user->shop_id ?? $user->tenant_id;
 
         // Vérifier que le fournisseur appartient à la boutique
@@ -182,6 +188,9 @@ class SupplierPricingController extends Controller
     public function getProductPrices(Request $request, string $productId): JsonResponse
     {
         $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
         $shopId = $user->shop_id ?? $user->tenant_id;
 
         // Vérifier que le produit appartient à la boutique

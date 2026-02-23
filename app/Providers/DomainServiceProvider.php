@@ -98,6 +98,29 @@ class DomainServiceProvider extends ServiceProvider
                 return new \Src\Domains\User\UseCases\StopImpersonationUseCase();
             }
         );
+
+        // User Service (déjà enregistré via singleton si nécessaire)
+        // Le UserService sera résolu automatiquement par Laravel via l'injection de dépendances
+
+        // Module Permission Service
+        $this->app->singleton(
+            \Src\Domains\User\Services\ModulePermissionService::class,
+            function ($app) {
+                return new \Src\Domains\User\Services\ModulePermissionService();
+            }
+        );
+
+        // Pharmacy Use Cases
+        $this->app->bind(
+            \Src\Application\Pharmacy\UseCases\Seller\CreateSellerUseCase::class,
+            function ($app) {
+                return new \Src\Application\Pharmacy\UseCases\Seller\CreateSellerUseCase(
+                    userService: $app->make(\Domains\User\Services\UserService::class),
+                    assignRoleUseCase: $app->make(\Src\Domains\User\UseCases\AssignUserRoleUseCase::class),
+                    modulePermissionService: $app->make(\Src\Domains\User\Services\ModulePermissionService::class)
+                );
+            }
+        );
     }
 
     /**
