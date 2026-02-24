@@ -20,6 +20,7 @@ class EloquentInventoryRepository implements InventoryRepositoryInterface
             ['id' => $inventory->getId()],
             [
                 'shop_id' => $inventory->getShopId(),
+                'depot_id' => $inventory->getDepotId(),
                 'reference' => $inventory->getReference(),
                 'status' => $inventory->getStatus(),
                 'started_at' => $inventory->getStartedAt()?->format('Y-m-d H:i:s'),
@@ -107,6 +108,10 @@ class EloquentInventoryRepository implements InventoryRepositoryInterface
             $query->where('status', $filters['status']);
         }
 
+        if (array_key_exists('depot_id', $filters) && $filters['depot_id'] !== null && $filters['depot_id'] !== '') {
+            $query->where('depot_id', $filters['depot_id']);
+        }
+
         if (!empty($filters['from'])) {
             $query->whereDate('created_at', '>=', $filters['from']);
         }
@@ -128,6 +133,7 @@ class EloquentInventoryRepository implements InventoryRepositoryInterface
         return new Inventory(
             $model->id,
             $model->shop_id,
+            $model->depot_id !== null ? (int) $model->depot_id : null,
             $model->reference,
             $model->status,
             $model->started_at ? new DateTimeImmutable($model->started_at->format('Y-m-d H:i:s')) : null,

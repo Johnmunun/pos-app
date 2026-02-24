@@ -22,6 +22,7 @@ class Inventory
 
     private string $id;
     private string $shopId;
+    private ?int $depotId;
     private string $reference;
     private string $status;
     private ?DateTimeImmutable $startedAt;
@@ -37,6 +38,7 @@ class Inventory
     public function __construct(
         string $id,
         string $shopId,
+        ?int $depotId,
         string $reference,
         string $status,
         ?DateTimeImmutable $startedAt,
@@ -48,6 +50,7 @@ class Inventory
     ) {
         $this->id = $id;
         $this->shopId = $shopId;
+        $this->depotId = $depotId;
         $this->reference = $reference;
         $this->status = $status;
         $this->startedAt = $startedAt;
@@ -60,8 +63,9 @@ class Inventory
 
     /**
      * Crée un nouvel inventaire en brouillon
+     * @param int|null $depotId Dépôt concerné (optionnel)
      */
-    public static function create(string $shopId, int $createdBy): self
+    public static function create(string $shopId, ?int $depotId, int $createdBy): self
     {
         $now = new DateTimeImmutable();
         $reference = self::generateReference($now);
@@ -69,6 +73,7 @@ class Inventory
         return new self(
             Uuid::uuid4()->toString(),
             $shopId,
+            $depotId,
             $reference,
             self::STATUS_DRAFT,
             null,
@@ -181,6 +186,7 @@ class Inventory
     // Getters
     public function getId(): string { return $this->id; }
     public function getShopId(): string { return $this->shopId; }
+    public function getDepotId(): ?int { return $this->depotId; }
     public function getReference(): string { return $this->reference; }
     public function getStatus(): string { return $this->status; }
     public function getStartedAt(): ?DateTimeImmutable { return $this->startedAt; }

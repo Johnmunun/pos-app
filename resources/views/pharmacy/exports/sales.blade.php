@@ -45,14 +45,15 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 5%;">#</th>
-                <th style="width: 12%;">Référence</th>
-                <th style="width: 12%;">Date</th>
-                <th style="width: 18%;">Client</th>
-                <th class="align-center" style="width: 8%;">Articles</th>
-                <th class="align-right" style="width: 15%;">Total</th>
-                <th class="align-right" style="width: 15%;">Payé</th>
-                <th class="align-center" style="width: 15%;">Statut</th>
+                <th style="width: 4%;">#</th>
+                <th style="width: 10%;">Référence</th>
+                <th style="width: 10%;">Date</th>
+                <th style="width: 14%;">Client</th>
+                <th style="width: 12%;">Vendeur</th>
+                <th class="align-center" style="width: 6%;">Articles</th>
+                <th class="align-right" style="width: 12%;">Total</th>
+                <th class="align-right" style="width: 12%;">Payé</th>
+                <th class="align-center" style="width: 10%;">Statut</th>
             </tr>
         </thead>
         <tbody>
@@ -62,6 +63,7 @@
                     <td class="nowrap font-bold">{{ $item['reference'] ?? '—' }}</td>
                     <td class="nowrap">{{ $item['date'] ?? '—' }}</td>
                     <td>{{ $item['customer'] ?? 'Client comptoir' }}</td>
+                    <td>{{ $item['seller'] ?? '—' }}</td>
                     <td class="align-center">{{ $item['items_count'] ?? 0 }}</td>
                     <td class="align-right nowrap">{{ number_format($item['total'] ?? 0, 2, ',', ' ') }} {{ $header['currency'] ?? 'CDF' }}</td>
                     <td class="align-right nowrap">{{ number_format($item['paid'] ?? 0, 2, ',', ' ') }} {{ $header['currency'] ?? 'CDF' }}</td>
@@ -87,7 +89,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8" class="align-center text-muted" style="padding: 20px;">Aucune vente trouvée.</td>
+                    <td colspan="9" class="align-center text-muted" style="padding: 20px;">Aucune vente trouvée.</td>
                 </tr>
             @endforelse
         </tbody>

@@ -1,30 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Badge } from '@/Components/ui/badge';
-import { 
-    ShoppingCart, 
-    Plus, 
-    Eye, 
-    Filter, 
-    DollarSign, 
-    CheckCircle, 
-    XCircle, 
+import {
+    ShoppingCart,
+    Plus,
+    Eye,
+    Filter,
+    DollarSign,
+    CheckCircle,
+    XCircle,
     Search,
     FileText,
-    TrendingUp
+    TrendingUp,
+    Printer,
+    Wallet as CashRegister
 } from 'lucide-react';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/currency';
 import ExportButtons from '@/Components/Pharmacy/ExportButtons';
 
-export default function SalesIndex({ sales = [], filters = {} }) {
+export default function SalesIndex({ sales = [], filters = {}, canViewAllSales = true }) {
     const { shop } = usePage().props;
     const currency = shop?.currency || 'CDF';
     const [from, setFrom] = useState(filters.from || '');
     const [to, setTo] = useState(filters.to || '');
     const [status, setStatus] = useState(filters.status || '');
+
+    // Resynchroniser les champs avec l’URL quand on charge la page avec ?from=&to= ou après navigation
+    useEffect(() => {
+        setFrom(filters.from ?? '');
+        setTo(filters.to ?? '');
+        setStatus(filters.status ?? '');
+    }, [filters.from, filters.to, filters.status]);
 
     const handleFilter = (e) => {
         e.preventDefault();
@@ -59,8 +68,13 @@ export default function SalesIndex({ sales = [], filters = {} }) {
     const completedSales = sales.filter(s => s.status === 'COMPLETED').length;
     const draftSales = sales.filter(s => s.status === 'DRAFT').length;
     const totalRevenue = sales.filter(s => s.status === 'COMPLETED').reduce((acc, s) => acc + Number(s.total_amount), 0);
+    const lastCompletedSale = sales.find(s => s.status === 'COMPLETED') ?? null;
 
     const formatCurrency = (amount) => formatCurrencyUtil(amount, currency);
+
+    const openReceipt = (saleId) => {
+        window.open(route('pharmacy.sales.receipt', saleId), '_blank', 'noopener,noreferrer');
+    };
 
     return (
         <AppLayout>
@@ -74,16 +88,38 @@ export default function SalesIndex({ sales = [], filters = {} }) {
                             <ShoppingCart className="h-6 w-6" />
                             Gestion des Ventes
                         </h1>
-                        <p className="text-gray-500 dark:text-gray-400 mt-1">
-                            {sales.length} vente(s) au total
+                        <p className="text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-3 flex-wrap">
+                            <span>{sales.length} vente(s) au total</span>
+                            {!canViewAllSales && (
+                                <span className="text-amber-600 dark:text-amber-400 text-sm font-medium">Vous consultez uniquement vos ventes.</span>
+                            )}
+                            <span className="text-xs text-gray-400 dark:text-gray-500">Raccourci: <kbd className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono">1</kbd> cette page · <kbd className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono">2</kbd> nouvelle vente</span>
                         </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            disabled={!lastCompletedSale}
+                            onClick={() => lastCompletedSale && openReceipt(lastCompletedSale.id)}
+                            className="inline-flex items-center gap-2 shrink-0"
+                            title={lastCompletedSale ? 'Ouvrir le reçu de la dernière vente terminée pour impression thermique' : 'Aucune vente terminée à imprimer'}
+                        >
+                            <Printer className="h-4 w-4 shrink-0" />
+                            <span className="whitespace-nowrap">Print thermique</span>
+                        </Button>
                         <ExportButtons
                             pdfUrl={route('pharmacy.exports.sales.pdf', { from, to, status })}
                             excelUrl={route('pharmacy.exports.sales.excel', { from, to, status })}
                             disabled={!sales.length}
                         />
+                        <Button variant="outline" size="sm" asChild>
+                            <Link href={route('pharmacy.cash-registers.index')} className="inline-flex items-center gap-2">
+                                <CashRegister className="h-4 w-4" />
+                                Caisses
+                            </Link>
+                        </Button>
                         <Button asChild>
                             <Link href={route('pharmacy.sales.create')} className="inline-flex items-center gap-2">
                                 <Plus className="h-4 w-4" />
@@ -237,6 +273,14 @@ export default function SalesIndex({ sales = [], filters = {} }) {
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                                             Statut
                                         </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                                            Type
+                                        </th>
+                                        {canViewAllSales && (
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                                                Vendeur
+                                            </th>
+                                        )}
                                         <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                                             Total
                                         </th>
@@ -260,6 +304,22 @@ export default function SalesIndex({ sales = [], filters = {} }) {
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 {getStatusBadge(sale.status)}
                                             </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                {sale.sale_type === 'wholesale' ? (
+                                                    <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+                                                        Gros
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge className="bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                                                        Détail
+                                                    </Badge>
+                                                )}
+                                            </td>
+                                            {canViewAllSales && (
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                                                    {sale.seller_name ?? '—'}
+                                                </td>
+                                            )}
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900 dark:text-gray-100">
                                                 {formatCurrency(Number(sale.total_amount))}
                                             </td>
@@ -272,16 +332,27 @@ export default function SalesIndex({ sales = [], filters = {} }) {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="sm" 
-                                                    asChild
-                                                    className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                                                >
-                                                    <Link href={route('pharmacy.sales.show', sale.id)}>
-                                                        <Eye className="h-4 w-4" />
-                                                    </Link>
-                                                </Button>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => openReceipt(sale.id)}
+                                                        className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                                                        title="Print thermique"
+                                                    >
+                                                        <Printer className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        asChild
+                                                        className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                                                    >
+                                                        <Link href={route('pharmacy.sales.show', sale.id)} title="Voir">
+                                                            <Eye className="h-4 w-4" />
+                                                        </Link>
+                                                    </Button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}

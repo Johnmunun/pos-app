@@ -46,6 +46,7 @@ class CustomerModel extends Model
     protected $fillable = [
         'id',
         'shop_id',
+        'depot_id',
         'name',
         'phone',
         'email',
@@ -58,6 +59,7 @@ class CustomerModel extends Model
 
     protected $casts = [
         'shop_id' => 'integer',
+        'depot_id' => 'integer',
         'credit_limit' => 'float',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -69,6 +71,11 @@ class CustomerModel extends Model
     public function shop(): BelongsTo
     {
         return $this->belongsTo(Shop::class, 'shop_id');
+    }
+
+    public function depot(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Depot::class, 'depot_id');
     }
 
     /**

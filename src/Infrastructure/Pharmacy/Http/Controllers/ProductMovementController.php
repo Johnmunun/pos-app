@@ -34,20 +34,26 @@ class ProductMovementController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
-        
+        $shopId = null;
+        $depotId = $request->session()->get('current_depot_id');
+        if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
+            $shopByDepot = \App\Models\Shop::where('depot_id', $depotId)->where('tenant_id', $user->tenant_id)->first();
+            if ($shopByDepot) {
+                $shopId = (string) $shopByDepot->id;
+            }
+        }
+        if ($shopId === null) {
+            $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        }
         /** @var UserModel|null $userModel */
         $userModel = UserModel::query()->find($user->id);
         $isRoot = $userModel !== null && $userModel->isRoot();
-        
         if (!$shopId && !$isRoot) {
             abort(403, 'Shop ID not found. Please contact administrator.');
         }
-        
         if ($isRoot && !$shopId) {
             abort(403, 'Please select a shop first.');
         }
-        
         return (string) $shopId;
     }
 

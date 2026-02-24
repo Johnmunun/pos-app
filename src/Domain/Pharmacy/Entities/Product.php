@@ -109,6 +109,44 @@ class Product
         $this->updatedAt = new DateTimeImmutable();
     }
 
+    public function updateName(string $name): void
+    {
+        $this->name = $name;
+        $this->updatedAt = new DateTimeImmutable();
+    }
+
+    public function updateCode(ProductCode $code): void
+    {
+        $this->code = $code;
+        $this->updatedAt = new DateTimeImmutable();
+    }
+
+    public function updateDescription(string $description): void
+    {
+        $this->description = $description;
+        $this->updatedAt = new DateTimeImmutable();
+    }
+
+    public function updateCategory(string $categoryId): void
+    {
+        $this->categoryId = $categoryId;
+        $this->updatedAt = new DateTimeImmutable();
+    }
+
+    public function updateMedicineType(?MedicineType $type): void
+    {
+        if ($type !== null) {
+            $this->type = $type;
+            $this->updatedAt = new DateTimeImmutable();
+        }
+    }
+
+    public function updateDosage(?Dosage $dosage): void
+    {
+        $this->dosage = $dosage;
+        $this->updatedAt = new DateTimeImmutable();
+    }
+
     public function setRequiresPrescription(bool $requires): void
     {
         $this->requiresPrescription = $requires;

@@ -19,9 +19,11 @@ final class EloquentProductBatchRepository implements ProductBatchRepositoryInte
 {
     public function save(ProductBatch $batch): void
     {
+        $depotId = request()?->session()->get('current_depot_id');
         ProductBatchModel::create([
             'id' => $batch->getId(),
             'shop_id' => $batch->getShopId(),
+            'depot_id' => $depotId ? (int) $depotId : null,
             'product_id' => $batch->getProductId(),
             'batch_number' => $batch->getBatchNumber()->getValue(),
             'quantity' => $batch->getQuantity()->getValue(),

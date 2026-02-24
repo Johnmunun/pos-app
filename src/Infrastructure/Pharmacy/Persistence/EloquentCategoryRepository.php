@@ -11,10 +11,12 @@ class EloquentCategoryRepository implements CategoryRepositoryInterface
 {
     public function save(Category $category): void
     {
+        $depotId = request()?->session()->get('current_depot_id');
         CategoryModel::updateOrCreate(
             ['id' => $category->getId()],
             [
                 'shop_id' => $category->getShopId(),
+                'depot_id' => $depotId ? (int) $depotId : null,
                 'name' => $category->getName(),
                 'description' => $category->getDescription(),
                 'parent_id' => $category->getParentId(),

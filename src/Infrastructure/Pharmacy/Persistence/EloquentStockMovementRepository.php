@@ -14,9 +14,11 @@ class EloquentStockMovementRepository implements StockMovementRepositoryInterfac
 {
     public function save(StockMovement $movement): void
     {
+        $depotId = request()?->session()->get('current_depot_id');
         StockMovementModel::query()->create([
             'id' => $movement->getId(),
             'shop_id' => $movement->getShopId(),
+            'depot_id' => $depotId ? (int) $depotId : null,
             'product_id' => $movement->getProductId(),
             'type' => $movement->getType(),
             'quantity' => $movement->getQuantity()->getValue(),

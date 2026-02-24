@@ -47,6 +47,7 @@ class SupplierModel extends Model
     protected $fillable = [
         'id',
         'shop_id',
+        'depot_id',
         'name',
         'contact_person',
         'phone',
@@ -57,6 +58,7 @@ class SupplierModel extends Model
 
     protected $casts = [
         'shop_id' => 'integer',
+        'depot_id' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -67,6 +69,11 @@ class SupplierModel extends Model
     public function shop(): BelongsTo
     {
         return $this->belongsTo(Shop::class, 'shop_id');
+    }
+
+    public function depot(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Depot::class, 'depot_id');
     }
 
     /**

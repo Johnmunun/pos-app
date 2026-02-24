@@ -17,6 +17,7 @@ import {
     Clock,
     FileText,
     Save,
+    Download,
     TrendingUp,
     TrendingDown,
     Minus,
@@ -48,11 +49,14 @@ export default function InventoryShow({ inventory, items, stats, availableProduc
     });
     const [isSaving, setIsSaving] = useState(false);
     const [selectedProducts, setSelectedProducts] = useState([]);
+    const [showValidateModal, setShowValidateModal] = useState(false);
+    const [showCancelModal, setShowCancelModal] = useState(false);
 
     const canEdit = permissions?.edit && ['draft', 'in_progress'].includes(inventory.status);
     const canValidate = permissions?.validate && inventory.status === 'in_progress';
     const canCancel = permissions?.cancel && inventory.status !== 'validated';
     const isDraft = inventory.status === 'draft';
+    const canExportPdf = permissions?.view;
 
     // Filtrer les items
     const filteredItems = useMemo(() => {
@@ -159,17 +163,15 @@ export default function InventoryShow({ inventory, items, stats, availableProduc
         });
     };
 
-    const handleValidate = () => {
-        if (!confirm('Êtes-vous sûr de vouloir valider cet inventaire ? Les ajustements de stock seront appliqués.')) {
-            return;
-        }
+    const handleValidateClick = () => setShowValidateModal(true);
+    const handleValidateConfirm = () => {
+        setShowValidateModal(false);
         router.post(route('pharmacy.inventories.validate', inventory.id));
     };
 
-    const handleCancel = () => {
-        if (!confirm('Êtes-vous sûr de vouloir annuler cet inventaire ?')) {
-            return;
-        }
+    const handleCancelClick = () => setShowCancelModal(true);
+    const handleCancelConfirm = () => {
+        setShowCancelModal(false);
         router.post(route('pharmacy.inventories.cancel', inventory.id));
     };
 
@@ -241,6 +243,13 @@ export default function InventoryShow({ inventory, items, stats, availableProduc
                                         {getStatusBadge(inventory.status)}
                                     </div>
                                     <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
+                                        {inventory.depot && (
+                                            <span className="flex items-center gap-1">
+                                                <Package className="h-4 w-4 text-amber-500" />
+                                                Dépôt : {inventory.depot.name}
+                                                {inventory.depot.code && ` (${inventory.depot.code})`}
+                                            </span>
+                                        )}
                                         <span className="flex items-center gap-1">
                                             <Calendar className="h-4 w-4" />
                                             Créé le {inventory.created_at}
@@ -258,6 +267,17 @@ export default function InventoryShow({ inventory, items, stats, availableProduc
                                     </div>
                                 </div>
                                 <div className="flex flex-wrap gap-2">
+                                    {canExportPdf && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => window.open(route('pharmacy.exports.inventories.pdf', inventory.id), '_blank')}
+                                            className="border-gray-300 dark:border-slate-600"
+                                        >
+                                            <Download className="h-4 w-4 mr-2" />
+                                            PDF
+                                        </Button>
+                                    )}
                                     {isDraft && canEdit && (
                                         <Button
                                             onClick={handleStart}
@@ -279,7 +299,7 @@ export default function InventoryShow({ inventory, items, stats, availableProduc
                                     )}
                                     {canValidate && (
                                         <Button
-                                            onClick={handleValidate}
+                                            onClick={handleValidateClick}
                                             className="bg-green-500 hover:bg-green-600 text-white"
                                         >
                                             <CheckCircle className="h-4 w-4 mr-2" />
@@ -288,7 +308,7 @@ export default function InventoryShow({ inventory, items, stats, availableProduc
                                     )}
                                     {canCancel && (
                                         <Button
-                                            onClick={handleCancel}
+                                            onClick={handleCancelClick}
                                             variant="outline"
                                             className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
                                         >
@@ -389,7 +409,7 @@ export default function InventoryShow({ inventory, items, stats, availableProduc
                                                 placeholder="Rechercher..."
                                                 value={searchTerm}
                                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                                className="pl-9 w-48 bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600"
+                                                className="pl-9 w-48 bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                                             />
                                         </div>
                                         <select
@@ -462,7 +482,7 @@ export default function InventoryShow({ inventory, items, stats, availableProduc
                                                                 min="0"
                                                                 value={counts[item.product_id] ?? ''}
                                                                 onChange={(e) => handleCountChange(item.product_id, e.target.value)}
-                                                                className="w-24 mx-auto text-center bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600"
+                                                                className="w-24 mx-auto text-center bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                                                                 placeholder="—"
                                                             />
                                                         ) : (
@@ -489,6 +509,69 @@ export default function InventoryShow({ inventory, items, stats, availableProduc
                     )}
                 </div>
             </div>
+
+            {/* Modal confirmation validation inventaire */}
+            {showValidateModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full mx-4 p-6 border border-gray-200 dark:border-slate-700">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                            Valider l'inventaire
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                            Êtes-vous sûr de vouloir valider cet inventaire ? Les ajustements de stock seront appliqués.
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setShowValidateModal(false)}
+                                className="border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300"
+                            >
+                                Annuler
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={handleValidateConfirm}
+                                className="bg-green-500 hover:bg-green-600 text-white"
+                            >
+                                Valider
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal confirmation annulation inventaire */}
+            {showCancelModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full mx-4 p-6 border border-gray-200 dark:border-slate-700">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                            Annuler l'inventaire
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                            Êtes-vous sûr de vouloir annuler cet inventaire ?
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setShowCancelModal(false)}
+                                className="border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300"
+                            >
+                                Non
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={handleCancelConfirm}
+                                variant="outline"
+                                className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+                            >
+                                Oui, annuler
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AppLayout>
     );
 }

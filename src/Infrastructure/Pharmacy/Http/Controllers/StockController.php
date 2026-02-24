@@ -13,15 +13,38 @@ use Src\Infrastructure\Pharmacy\Models\StockMovementModel;
 
 class StockController
 {
+    private function getShopId(Request $request): string
+    {
+        $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
+        $shopId = null;
+        $depotId = $request->session()->get('current_depot_id');
+        if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
+            $shopByDepot = \App\Models\Shop::where('depot_id', $depotId)->where('tenant_id', $user->tenant_id)->first();
+            if ($shopByDepot) {
+                $shopId = (string) $shopByDepot->id;
+            }
+        }
+        if ($shopId === null) {
+            $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        }
+        $userModel = UserModel::find($user->id);
+        $isRoot = $userModel ? $userModel->isRoot() : false;
+        if (!$shopId && !$isRoot) {
+            abort(403, 'Shop ID not found. Please contact administrator.');
+        }
+        return (string) $shopId;
+    }
+
     public function index(Request $request): Response
     {
         $user = $request->user();
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-
-        // Déterminer le shop courant
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        $shopId = $this->getShopId($request);
         $userModel = UserModel::find($user->id);
         $isRoot = $userModel ? $userModel->isRoot() : false;
 
@@ -158,13 +181,9 @@ class StockController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        $shopId = $this->getShopId($request);
         $userModel = UserModel::find($user->id);
         $isRoot = $userModel ? $userModel->isRoot() : false;
-
-        if (!$shopId && !$isRoot) {
-            return response()->json(['message' => 'Shop ID not found.'], 403);
-        }
 
         $query = StockMovementModel::where('product_id', $productId)->orderBy('created_at', 'desc');
         if (!($isRoot && !$shopId)) {
@@ -177,7 +196,7 @@ class StockController
                 'type' => $model->type,
                 'quantity' => (int) $model->quantity,
                 'reference' => $model->reference,
-                'created_at' => $model->created_at ? $model->created_at->format('Y-m-d H:i') : null,
+                'created_at' => $model->created_at ? \Carbon\Carbon::parse($model->created_at)->format('Y-m-d H:i') : null,
                 'created_by' => $model->created_by,
             ];
         })->toArray();
@@ -194,13 +213,9 @@ class StockController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        $shopId = $this->getShopId($request);
         $userModel = UserModel::find($user->id);
         $isRoot = $userModel ? $userModel->isRoot() : false;
-
-        if (!$shopId && !$isRoot) {
-            abort(403, 'Shop ID not found. Please contact administrator.');
-        }
 
         $query = StockMovementModel::with('product:id,name,code')->orderBy('created_at', 'desc');
         if (!($isRoot && !$shopId)) {
@@ -231,7 +246,7 @@ class StockController
                 'product_id' => $model->product_id,
                 'product_name' => $model->product ? $model->product->name : null,
                 'product_code' => $model->product ? ($model->product->code ?? '') : null,
-                'created_at' => $model->created_at ? $model->created_at->format('Y-m-d H:i') : null,
+                'created_at' => $model->created_at ? \Carbon\Carbon::parse($model->created_at)->format('Y-m-d H:i') : null,
                 'created_by' => $model->created_by,
             ];
         })->toArray();

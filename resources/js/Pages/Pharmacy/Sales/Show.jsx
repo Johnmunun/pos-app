@@ -114,6 +114,19 @@ export default function SalesShow({ auth, sale, lines = [], customer }) {
                                     </div>
                                 </div>
 
+                                {/* Vendeur */}
+                                {(sale.seller_name) && (
+                                    <div className="flex items-start gap-3">
+                                        <div className="h-10 w-10 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <User className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">Vendeur</p>
+                                            <p className="font-medium text-gray-900 dark:text-gray-100">{sale.seller_name}</p>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Date finalisation */}
                                 {sale.completed_at && (
                                     <div className="flex items-start gap-3">

@@ -12,10 +12,12 @@ class EloquentPurchaseOrderRepository implements PurchaseOrderRepositoryInterfac
 {
     public function save(PurchaseOrder $purchaseOrder): void
     {
+        $depotId = request()?->session()->get('current_depot_id');
         PurchaseOrderModel::updateOrCreate(
             ['id' => $purchaseOrder->getId()],
             [
                 'shop_id' => $purchaseOrder->getShopId(),
+                'depot_id' => $depotId ? (int) $depotId : null,
                 'supplier_id' => $purchaseOrder->getSupplierId(),
                 'status' => $purchaseOrder->getStatus(),
                 'total_amount' => $purchaseOrder->getTotal()->getAmount(),

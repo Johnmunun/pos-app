@@ -32,6 +32,7 @@ class CategoryModel extends Model
     protected $fillable = [
         'id',
         'shop_id',
+        'depot_id',
         'name',
         'description',
         'parent_id',
@@ -42,6 +43,7 @@ class CategoryModel extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'sort_order' => 'integer',
+        'depot_id' => 'integer',
     ];
 
     // Relations
@@ -63,6 +65,11 @@ class CategoryModel extends Model
     public function shop()
     {
         return $this->belongsTo(\App\Models\Shop::class, 'shop_id');
+    }
+
+    public function depot()
+    {
+        return $this->belongsTo(\App\Models\Depot::class, 'depot_id');
     }
 
     // Scopes

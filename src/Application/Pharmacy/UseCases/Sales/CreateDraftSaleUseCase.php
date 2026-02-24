@@ -11,13 +11,16 @@ class CreateDraftSaleUseCase
         private SaleRepositoryInterface $saleRepository
     ) {}
 
-    public function execute(string $shopId, ?string $customerId, string $currency, int $createdBy): Sale
+    public function execute(string $shopId, ?string $customerId, string $currency, int $createdBy, ?int $cashRegisterId = null, ?int $cashRegisterSessionId = null, string $saleType = Sale::SALE_TYPE_RETAIL): Sale
     {
         $sale = Sale::createDraft(
             $shopId,
             $customerId,
             $currency,
-            $createdBy
+            $createdBy,
+            $cashRegisterId,
+            $cashRegisterSessionId,
+            $saleType
         );
 
         $this->saleRepository->save($sale);

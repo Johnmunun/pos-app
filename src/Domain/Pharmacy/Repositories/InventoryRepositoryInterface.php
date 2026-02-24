@@ -27,10 +27,10 @@ interface InventoryRepositoryInterface
     public function findByIdAndShop(string $id, string $shopId): ?Inventory;
 
     /**
-     * Récupère tous les inventaires d'une boutique
-     * 
+     * Récupère tous les inventaires d'une boutique (optionnellement filtrés par dépôt)
+     *
      * @param string $shopId
-     * @param array<string, mixed> $filters
+     * @param array<string, mixed> $filters (status, from, to, reference, depot_id)
      * @return Inventory[]
      */
     public function findByShop(string $shopId, array $filters = []): array;

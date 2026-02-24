@@ -39,7 +39,9 @@ class StockTransferModel extends Model
         'pharmacy_id',
         'reference',
         'from_shop_id',
+        'from_depot_id',
         'to_shop_id',
+        'to_depot_id',
         'status',
         'created_by',
         'validated_by',
@@ -52,7 +54,9 @@ class StockTransferModel extends Model
      */
     protected $casts = [
         'from_shop_id' => 'integer',
+        'from_depot_id' => 'integer',
         'to_shop_id' => 'integer',
+        'to_depot_id' => 'integer',
         'created_by' => 'integer',
         'validated_by' => 'integer',
         'validated_at' => 'datetime',
@@ -72,6 +76,16 @@ class StockTransferModel extends Model
     public function toShop(): BelongsTo
     {
         return $this->belongsTo(Shop::class, 'to_shop_id');
+    }
+
+    public function fromDepot(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Depot::class, 'from_depot_id');
+    }
+
+    public function toDepot(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Depot::class, 'to_depot_id');
     }
 
     /**

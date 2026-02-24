@@ -17,9 +17,13 @@ use Src\Domain\Pharmacy\Repositories\SaleLineRepositoryInterface;
 use Src\Application\Pharmacy\DTO\SaleLineDTO;
 use Src\Infrastructure\Pharmacy\Models\ProductModel;
 use Src\Infrastructure\Pharmacy\Models\SaleModel;
+use App\Models\CashRegister;
 use App\Models\Currency;
+use App\Models\ExchangeRate;
 use App\Models\Shop;
 use App\Services\CurrencyConversionService;
+use Src\Application\Settings\UseCases\GetStoreSettingsUseCase;
+use Src\Infrastructure\Settings\Services\StoreLogoService;
 
 class SaleController
 {
@@ -31,7 +35,9 @@ class SaleController
         private AttachCustomerToSaleUseCase $attachCustomerToSaleUseCase,
         private SaleRepositoryInterface $saleRepository,
         private SaleLineRepositoryInterface $saleLineRepository,
-        private CurrencyConversionService $currencyConversion
+        private CurrencyConversionService $currencyConversion,
+        private GetStoreSettingsUseCase $getStoreSettingsUseCase,
+        private StoreLogoService $storeLogoService
     ) {}
 
     private function getEffectiveShopCurrency(string $shopId, $authUser): string
@@ -55,7 +61,17 @@ class SaleController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        $shopId = null;
+        $depotId = $request->session()->get('current_depot_id');
+        if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
+            $shopByDepot = \App\Models\Shop::where('depot_id', $depotId)->where('tenant_id', $user->tenant_id)->first();
+            if ($shopByDepot) {
+                $shopId = (string) $shopByDepot->id;
+            }
+        }
+        if ($shopId === null) {
+            $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        }
         $userModel = UserModel::find($user->id);
         $isRoot = $userModel ? $userModel->isRoot() : false;
         if (!$shopId && !$isRoot) {
@@ -70,31 +86,45 @@ class SaleController
     public function index(Request $request): Response
     {
         $shopId = $this->getShopId($request);
+        $authUser = $request->user();
+        $userModel = $authUser ? UserModel::find($authUser->id) : null;
+        $canViewAllSales = $userModel && ($userModel->isRoot() || $userModel->hasPermission('pharmacy.sales.view.all'));
+
         $from = $request->filled('from') ? new \DateTimeImmutable($request->input('from')) : null;
         $to = $request->filled('to') ? new \DateTimeImmutable($request->input('to')) : null;
         $status = $request->input('status');
 
         $sales = $this->saleRepository->findByShop($shopId, $from, $to);
+        if (!$canViewAllSales && $authUser) {
+            $sales = array_values(array_filter($sales, fn ($s) => (int) $s->getCreatedBy() === (int) $authUser->id));
+        }
         if ($status && in_array($status, ['DRAFT', 'COMPLETED', 'CANCELLED'], true)) {
             $sales = array_values(array_filter($sales, fn ($s) => $s->getStatus() === $status));
         }
 
-        $salesData = array_map(function ($sale) {
+        $creatorIds = array_unique(array_map(fn ($s) => $s->getCreatedBy(), $sales));
+        $creators = $creatorIds !== [] ? UserModel::whereIn('id', $creatorIds)->get()->keyBy('id') : collect();
+
+        $salesData = array_map(function ($sale) use ($creators) {
+            $creator = $creators->get($sale->getCreatedBy());
             return [
                 'id' => $sale->getId(),
                 'status' => $sale->getStatus(),
+                'sale_type' => $sale->getSaleType(),
                 'total_amount' => $sale->getTotal()->getAmount(),
                 'paid_amount' => $sale->getPaidAmount()->getAmount(),
                 'balance_amount' => $sale->getBalance()->getAmount(),
                 'currency' => $sale->getCurrency(),
                 'customer_id' => $sale->getCustomerId(),
                 'created_at' => $sale->getCreatedAt()->format('Y-m-d H:i'),
+                'seller_name' => $creator ? $creator->name : '—',
             ];
         }, $sales);
 
         return Inertia::render('Pharmacy/Sales/Index', [
             'sales' => $salesData,
             'filters' => $request->only(['from', 'to', 'status']),
+            'canViewAllSales' => $canViewAllSales,
         ]);
     }
 
@@ -161,11 +191,74 @@ class SaleController
                 'email' => $c->email,
             ])->toArray();
 
+        $cashRegisters = CashRegister::where('shop_id', $shopId)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get()
+            ->map(function ($reg) {
+                $openSession = $reg->sessions()->where('status', 'open')->first();
+                return [
+                    'id' => $reg->id,
+                    'name' => $reg->name,
+                    'code' => $reg->code,
+                    'open_session' => $openSession ? [
+                        'id' => $openSession->id,
+                        'opening_balance' => (float) $openSession->opening_balance,
+                    ] : null,
+                ];
+            })->toArray();
+
+        // Devises et taux pour la conversion (dollar ↔ franc, etc.)
+        $currenciesList = Currency::where('tenant_id', $tenantId)
+            ->where('is_active', true)
+            ->orderByDesc('is_default')
+            ->orderBy('code')
+            ->get();
+        $defaultCurrencyModel = $currenciesList->firstWhere('is_default', true) ?? $currenciesList->first();
+        $defaultCode = $defaultCurrencyModel ? strtoupper($defaultCurrencyModel->code) : strtoupper($shopCurrency);
+        $currenciesForPos = $currenciesList->map(fn ($c) => [
+            'code' => strtoupper($c->code),
+            'name' => $c->name,
+            'symbol' => $c->symbol ?? $c->code,
+        ])->toArray();
+        $exchangeRatesMap = [$defaultCode => 1.0];
+        if ($defaultCurrencyModel) {
+            foreach ($currenciesList as $c) {
+                $code = strtoupper($c->code);
+                if ($code === $defaultCode) {
+                    continue;
+                }
+                $fromDefault = ExchangeRate::where('tenant_id', $tenantId)
+                    ->where('from_currency_id', $defaultCurrencyModel->id)
+                    ->where('to_currency_id', $c->id)
+                    ->orderByDesc('effective_date')
+                    ->first();
+                if ($fromDefault && (float) $fromDefault->rate > 0) {
+                    $exchangeRatesMap[$code] = (float) $fromDefault->rate;
+                } else {
+                    $toDefault = ExchangeRate::where('tenant_id', $tenantId)
+                        ->where('from_currency_id', $c->id)
+                        ->where('to_currency_id', $defaultCurrencyModel->id)
+                        ->orderByDesc('effective_date')
+                        ->first();
+                    if ($toDefault && (float) $toDefault->rate > 0) {
+                        $exchangeRatesMap[$code] = 1.0 / (float) $toDefault->rate;
+                    } else {
+                        $exchangeRatesMap[$code] = 1.0;
+                    }
+                }
+            }
+        }
+
         return Inertia::render('Pharmacy/Sales/Create', [
             'products' => $products,
             'categories' => $categories,
             'customers' => $customers,
             'canUseWholesale' => $canUseWholesale,
+            'cashRegisters' => $cashRegisters,
+            'currency' => $defaultCode,
+            'currencies' => $currenciesForPos,
+            'exchangeRates' => $exchangeRatesMap,
         ]);
     }
 
@@ -179,6 +272,9 @@ class SaleController
             'lines.*.quantity' => 'required|integer|min:1',
             'lines.*.unit_price' => 'required|numeric|min:0',
             'lines.*.discount_percent' => 'nullable|numeric|min:0|max:100',
+            'cash_register_id' => 'nullable|integer',
+            'cash_register_session_id' => 'nullable|integer',
+            'sale_mode' => 'nullable|string|in:retail,wholesale',
         ]);
 
         $shopId = $this->getShopId($request);
@@ -192,7 +288,27 @@ class SaleController
         $currency = $request->input('currency') ?? $shopCurrency;
         $linesInput = $request->input('lines', []);
 
-        $sale = $this->createDraftSaleUseCase->execute($shopId, $customerId, $currency, $userId);
+        $cashRegisterId = $request->filled('cash_register_id') ? (int) $request->input('cash_register_id') : null;
+        $cashRegisterSessionId = $request->filled('cash_register_session_id') ? (int) $request->input('cash_register_session_id') : null;
+        if ($cashRegisterSessionId !== null) {
+            $session = \App\Models\CashRegisterSession::where('id', $cashRegisterSessionId)
+                ->where('status', 'open')
+                ->whereHas('cashRegister', fn ($q) => $q->where('shop_id', $shopId))
+                ->first();
+            if (!$session) {
+                return response()->json(['message' => 'Session de caisse invalide ou fermée.'], 422);
+            }
+            $cashRegisterId = $cashRegisterId ?? $session->cash_register_id;
+        }
+
+        $canUseWholesale = $authUser->isRoot() || $authUser->hasPermission('pharmacy.sales.wholesale');
+        $saleMode = $request->input('sale_mode', 'retail');
+        if ($saleMode === 'wholesale' && !$canUseWholesale) {
+            $saleMode = 'retail';
+        }
+        $saleType = $saleMode === 'wholesale' ? \Src\Domain\Pharmacy\Entities\Sale::SALE_TYPE_WHOLESALE : \Src\Domain\Pharmacy\Entities\Sale::SALE_TYPE_RETAIL;
+
+        $sale = $this->createDraftSaleUseCase->execute($shopId, $customerId, $currency, $userId, $cashRegisterId, $cashRegisterSessionId, $saleType);
 
         $lines = [];
         foreach ($linesInput as $row) {
@@ -224,12 +340,55 @@ class SaleController
         ], 201);
     }
 
+    public function quickCreateCustomer(Request $request): JsonResponse
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'nullable|string|max:50',
+        ]);
+        $shopId = $this->getShopId($request);
+        $authUser = $request->user();
+        $tenantId = $authUser && $authUser->tenant_id ? $authUser->tenant_id : $shopId;
+        $name = trim($request->input('name'));
+        $phone = $request->filled('phone') ? trim($request->input('phone')) : null;
+
+        try {
+            $code = 'C' . now()->format('YmdHis') . substr(uniqid(), -4);
+            $customer = \App\Models\Customer::create([
+                'tenant_id' => $tenantId,
+                'code' => $code,
+                'full_name' => $name,
+                'phone' => $phone,
+                'email' => null,
+                'is_active' => true,
+            ]);
+            return response()->json([
+                'success' => true,
+                'customer' => [
+                    'id' => (string) $customer->id,
+                    'full_name' => $customer->full_name,
+                    'phone' => $customer->phone ?? '',
+                    'email' => $customer->email ?? '',
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Quick create customer failed', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json(['success' => false, 'message' => 'Erreur lors de la création du client.'], 500);
+        }
+    }
+
     public function show(Request $request, string $id): Response|JsonResponse
     {
         $shopId = $this->getShopId($request);
         $sale = $this->saleRepository->findById($id);
         if (!$sale || $sale->getShopId() !== $shopId) {
             abort(404);
+        }
+        $authUser = $request->user();
+        $userModel = $authUser ? UserModel::find($authUser->id) : null;
+        $canViewAllSales = $userModel && ($userModel->isRoot() || $userModel->hasPermission('pharmacy.sales.view.all'));
+        if (!$canViewAllSales && $authUser && (int) $sale->getCreatedBy() !== (int) $authUser->id) {
+            abort(403, 'Vous ne pouvez consulter que vos propres ventes.');
         }
 
         $lines = $this->saleLineRepository->findBySale($id);
@@ -255,6 +414,8 @@ class SaleController
             }
         }
 
+        $seller = UserModel::find($sale->getCreatedBy());
+
         return Inertia::render('Pharmacy/Sales/Show', [
             'sale' => [
                 'id' => $sale->getId(),
@@ -265,6 +426,66 @@ class SaleController
                 'currency' => $sale->getCurrency(),
                 'created_at' => $sale->getCreatedAt()->format('Y-m-d H:i'),
                 'completed_at' => $sale->getCompletedAt() ? $sale->getCompletedAt()->format('Y-m-d H:i') : null,
+                'seller_name' => $seller ? $seller->name : '—',
+            ],
+            'lines' => $linesData,
+            'customer' => $customer,
+        ]);
+    }
+
+    public function receipt(Request $request, string $id)
+    {
+        $shopId = $this->getShopId($request);
+        $sale = $this->saleRepository->findById($id);
+        if (!$sale || $sale->getShopId() !== $shopId) {
+            abort(404);
+        }
+        $authUser = $request->user();
+        $userModel = $authUser ? UserModel::find($authUser->id) : null;
+        $canViewAllSales = $userModel && ($userModel->isRoot() || $userModel->hasPermission('pharmacy.sales.view.all'));
+        if (!$canViewAllSales && $authUser && (int) $sale->getCreatedBy() !== (int) $authUser->id) {
+            abort(403, 'Vous ne pouvez consulter que vos propres ventes.');
+        }
+
+        $lines = $this->saleLineRepository->findBySale($id);
+        $linesData = [];
+        foreach ($lines as $line) {
+            $product = ProductModel::find($line->getProductId());
+            $linesData[] = [
+                'product_name' => $product ? $product->name : '—',
+                'quantity' => $line->getQuantity()->getValue(),
+                'unit_price' => (float) $line->getUnitPrice()->getAmount(),
+                'line_total' => (float) $line->getLineTotal()->getAmount(),
+                'currency' => $line->getUnitPrice()->getCurrency(),
+            ];
+        }
+
+        $shop = Shop::find($shopId);
+        $seller = UserModel::find($sale->getCreatedBy());
+        $customer = null;
+        if ($sale->getCustomerId()) {
+            $c = \App\Models\Customer::find($sale->getCustomerId());
+            if ($c) {
+                $customer = $c->full_name;
+            }
+        }
+
+        $settings = $this->getStoreSettingsUseCase->execute($shopId);
+        $logoUrl = $settings && $settings->getLogoPath()
+            ? $this->storeLogoService->getUrl($settings->getLogoPath())
+            : null;
+
+        return view('pharmacy.receipt', [
+            'shop_name' => $shop ? $shop->name : 'Boutique',
+            'logo_url' => $logoUrl,
+            'sale' => [
+                'id' => $sale->getId(),
+                'created_at' => $sale->getCreatedAt()->format('d/m/Y H:i'),
+                'total_amount' => (float) $sale->getTotal()->getAmount(),
+                'paid_amount' => (float) $sale->getPaidAmount()->getAmount(),
+                'balance_amount' => (float) $sale->getBalance()->getAmount(),
+                'currency' => $sale->getCurrency(),
+                'seller_name' => $seller ? $seller->name : '—',
             ],
             'lines' => $linesData,
             'customer' => $customer,

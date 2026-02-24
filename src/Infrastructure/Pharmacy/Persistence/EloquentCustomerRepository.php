@@ -21,9 +21,11 @@ final class EloquentCustomerRepository implements CustomerRepositoryInterface
 {
     public function save(Customer $customer): void
     {
+        $depotId = request()?->session()->get('current_depot_id');
         CustomerModel::create([
             'id' => $customer->getId(),
             'shop_id' => $customer->getShopId(),
+            'depot_id' => $depotId ? (int) $depotId : null,
             'name' => $customer->getName(),
             'phone' => $customer->getPhone()->getValue(),
             'email' => $customer->getEmail()->getValue(),

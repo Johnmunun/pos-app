@@ -135,7 +135,7 @@ export default function SupplierDrawer({
                             value={data.name}
                             onChange={(e) => handleChange('name', e.target.value)}
                             placeholder="Ex: Pharma Distribution SARL"
-                            className="mt-1 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                            className="mt-1 bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
                             required
                             disabled={processing}
                         />
@@ -156,7 +156,7 @@ export default function SupplierDrawer({
                             value={data.contact_person}
                             onChange={(e) => handleChange('contact_person', e.target.value)}
                             placeholder="Ex: Jean Dupont"
-                            className="mt-1 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                            className="mt-1 bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
                             disabled={processing}
                         />
                         {errors.contact_person && (
@@ -176,7 +176,7 @@ export default function SupplierDrawer({
                             value={data.phone}
                             onChange={(e) => handleChange('phone', e.target.value)}
                             placeholder="Ex: +243 999 000 000"
-                            className="mt-1 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                            className="mt-1 bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
                             disabled={processing}
                         />
                         {errors.phone && (
@@ -196,7 +196,7 @@ export default function SupplierDrawer({
                             value={data.email}
                             onChange={(e) => handleChange('email', e.target.value)}
                             placeholder="Ex: contact@pharma.com"
-                            className="mt-1 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                            className="mt-1 bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
                             disabled={processing}
                         />
                         {errors.email && (
@@ -216,7 +216,7 @@ export default function SupplierDrawer({
                             onChange={(e) => handleChange('address', e.target.value)}
                             placeholder="Ex: 123 Avenue du Commerce, Kinshasa"
                             rows={3}
-                            className="mt-1 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                            className="mt-1 bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
                             disabled={processing}
                         />
                         {errors.address && (

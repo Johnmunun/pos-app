@@ -62,8 +62,18 @@ class PharmacyExportService
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
-        
+        $shopId = null;
+        $depotId = $request->session()->get('current_depot_id');
+        if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
+            $shopByDepot = \App\Models\Shop::where('depot_id', $depotId)->where('tenant_id', $user->tenant_id)->first();
+            if ($shopByDepot) {
+                $shopId = (string) $shopByDepot->id;
+            }
+        }
+        if ($shopId === null) {
+            $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        }
+
         /** @var UserModel|null $userModel */
         $userModel = UserModel::query()->find($user->id);
         $isRoot = $userModel ? $userModel->isRoot() : false;
@@ -104,6 +114,36 @@ class PharmacyExportService
             'exported_at' => now(),
             'exported_by' => $user->name ?? $user->email ?? 'Utilisateur',
         ];
+    }
+
+    /**
+     * Enrichit l'en-tête d'export avec les infos et le logo d'une boutique donnée.
+     * Utile quand l'export concerne une entité liée à un shop (ex: inventaire d'une autre boutique).
+     *
+     * @param array<string, mixed> $header En-tête retourné par getExportHeader
+     * @param string $shopId ID de la boutique pour laquelle enrichir l'en-tête
+     * @return array<string, mixed>
+     */
+    public function enrichHeaderWithShop(array $header, string $shopId): array
+    {
+        $settings = $this->getStoreSettingsUseCase->execute($shopId);
+        if ($settings === null) {
+            return $header;
+        }
+        $header['company_name'] = $settings->getCompanyIdentity()->getName();
+        $header['id_nat'] = $settings->getCompanyIdentity()->getIdNat();
+        $header['rccm'] = $settings->getCompanyIdentity()->getRccm();
+        $header['tax_number'] = $settings->getCompanyIdentity()->getTaxNumber();
+        $header['street'] = $settings->getAddress()->getStreet();
+        $header['city'] = $settings->getAddress()->getCity();
+        $header['postal_code'] = $settings->getAddress()->getPostalCode();
+        $header['country'] = $settings->getAddress()->getCountry();
+        $header['phone'] = $settings->getPhone();
+        $header['email'] = $settings->getEmail();
+        $header['logo_url'] = $settings->getLogoPath()
+            ? $this->storeLogoService->getUrl($settings->getLogoPath())
+            : null;
+        return $header;
     }
 
     /**

@@ -34,16 +34,16 @@ class InventoryService
 
     /**
      * Crée un nouvel inventaire en brouillon
-     * 
+     *
      * @param string $shopId
+     * @param int|null $depotId Dépôt concerné (optionnel)
      * @param int $createdBy
      * @return Inventory
      */
-    public function createInventory(string $shopId, int $createdBy): Inventory
+    public function createInventory(string $shopId, ?int $depotId, int $createdBy): Inventory
     {
-        return DB::transaction(function () use ($shopId, $createdBy): Inventory {
-            // Créer l'inventaire en brouillon
-            $inventory = Inventory::create($shopId, $createdBy);
+        return DB::transaction(function () use ($shopId, $depotId, $createdBy): Inventory {
+            $inventory = Inventory::create($shopId, $depotId, $createdBy);
             $this->inventoryRepository->save($inventory);
 
             return $inventory;

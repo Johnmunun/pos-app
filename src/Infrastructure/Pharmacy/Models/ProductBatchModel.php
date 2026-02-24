@@ -53,6 +53,7 @@ class ProductBatchModel extends Model
     protected $fillable = [
         'id',
         'shop_id',
+        'depot_id',
         'product_id',
         'batch_number',
         'quantity',
@@ -69,6 +70,7 @@ class ProductBatchModel extends Model
         'quantity' => 'integer',
         'is_active' => 'boolean',
         'expiration_date' => 'date',
+        'depot_id' => 'integer',
     ];
 
     /**

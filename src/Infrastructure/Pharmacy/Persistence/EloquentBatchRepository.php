@@ -14,10 +14,12 @@ class EloquentBatchRepository implements BatchRepositoryInterface
 {
     public function save(Batch $batch): void
     {
+        $depotId = request()?->session()->get('current_depot_id');
         BatchModel::updateOrCreate(
             ['id' => $batch->getId()],
             [
                 'shop_id' => $batch->getShopId(),
+                'depot_id' => $depotId ? (int) $depotId : null,
                 'product_id' => $batch->getProductId(),
                 'batch_number' => $batch->getBatchNumber(),
                 'expiry_date' => $batch->getExpiryDate()->getDate(),

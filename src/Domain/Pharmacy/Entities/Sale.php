@@ -18,10 +18,16 @@ class Sale
     public const STATUS_COMPLETED = 'COMPLETED';
     public const STATUS_CANCELLED = 'CANCELLED';
 
+    public const SALE_TYPE_RETAIL = 'retail';
+    public const SALE_TYPE_WHOLESALE = 'wholesale';
+
     private string $id;
     private string $shopId;
     private ?string $customerId;
+    private ?int $cashRegisterId;
+    private ?int $cashRegisterSessionId;
     private string $status;
+    private string $saleType;
     private Money $total;
     private Money $paidAmount;
     private Money $balance;
@@ -43,12 +49,18 @@ class Sale
         int $createdBy,
         DateTimeImmutable $createdAt,
         ?DateTimeImmutable $completedAt = null,
-        ?DateTimeImmutable $cancelledAt = null
+        ?DateTimeImmutable $cancelledAt = null,
+        ?int $cashRegisterId = null,
+        ?int $cashRegisterSessionId = null,
+        string $saleType = self::SALE_TYPE_RETAIL
     ) {
         $this->id = $id;
         $this->shopId = $shopId;
         $this->customerId = $customerId;
+        $this->cashRegisterId = $cashRegisterId;
+        $this->cashRegisterSessionId = $cashRegisterSessionId;
         $this->status = $status;
+        $this->saleType = $saleType === self::SALE_TYPE_WHOLESALE ? self::SALE_TYPE_WHOLESALE : self::SALE_TYPE_RETAIL;
         $this->total = $total;
         $this->paidAmount = $paidAmount;
         $this->balance = $balance;
@@ -63,7 +75,10 @@ class Sale
         string $shopId,
         ?string $customerId,
         string $currency,
-        int $createdBy
+        int $createdBy,
+        ?int $cashRegisterId = null,
+        ?int $cashRegisterSessionId = null,
+        string $saleType = self::SALE_TYPE_RETAIL
     ): self {
         $zero = new Money(0, $currency);
 
@@ -77,7 +92,12 @@ class Sale
             $zero,
             $currency,
             $createdBy,
-            new DateTimeImmutable()
+            new DateTimeImmutable(),
+            null,
+            null,
+            $cashRegisterId,
+            $cashRegisterSessionId,
+            $saleType
         );
     }
 
@@ -85,7 +105,10 @@ class Sale
     public function getId(): string { return $this->id; }
     public function getShopId(): string { return $this->shopId; }
     public function getCustomerId(): ?string { return $this->customerId; }
+    public function getCashRegisterId(): ?int { return $this->cashRegisterId; }
+    public function getCashRegisterSessionId(): ?int { return $this->cashRegisterSessionId; }
     public function getStatus(): string { return $this->status; }
+    public function getSaleType(): string { return $this->saleType; }
     public function getTotal(): Money { return $this->total; }
     public function getPaidAmount(): Money { return $this->paidAmount; }
     public function getBalance(): Money { return $this->balance; }

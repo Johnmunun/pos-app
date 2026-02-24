@@ -30,6 +30,9 @@ use Src\Shared\ValueObjects\Quantity;
 use Inertia\Inertia;
 use Inertia\Response;
 use App\Models\User as UserModel;
+use App\Models\Shop;
+use Illuminate\Support\Str;
+use Src\Infrastructure\Pharmacy\Models\ProductModel as ProductModelInfra;
 
 class ProductController
 {
@@ -505,7 +508,7 @@ class ProductController
                 'dosage' => 'nullable|string|max:100',
                 'prescription_required' => 'boolean',
                 'manufacturer' => 'nullable|string|max:255',
-                'supplier_id' => 'nullable|exists:suppliers,id',
+                'supplier_id' => 'nullable|exists:pharmacy_suppliers,id',
                 'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
                 'image_url' => 'nullable|url|max:500',
                 'wholesale_price' => 'nullable|numeric|min:0',
@@ -625,6 +628,112 @@ class ProductController
         ]);
     }
 
+    /**
+     * Duplique un produit vers un autre dépôt (même infos, nouveau code, stock à 0).
+     */
+    public function duplicateToDepot(Request $request, string $id): JsonResponse
+    {
+        $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
+        $request->validate([
+            'target_depot_id' => 'required|exists:depots,id',
+        ]);
+        $targetDepotId = (int) $request->input('target_depot_id');
+
+        /** @var UserModel|null $userModel */
+        $userModel = UserModel::query()->find($user->id);
+        $isRoot = $userModel?->isRoot() ?? false;
+        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+
+        $product = $this->productRepository->findById($id);
+        if (!$product) {
+            return response()->json(['message' => 'Produit non trouvé.'], 404);
+        }
+        if (!$isRoot && $product->getShopId() !== $shopId) {
+            return response()->json(['message' => 'Produit non trouvé.'], 404);
+        }
+
+        $sourceModel = ProductModelInfra::find($id);
+        $sourceUnit = $sourceModel?->unit ?? 'unit';
+        $sourceMinimumStock = (int) ($sourceModel?->minimum_stock ?? 0);
+        $sourceCost = $sourceModel !== null && $sourceModel->cost_amount !== null ? (float) $sourceModel->cost_amount : null;
+        $sourceManufacturer = $sourceModel?->manufacturer;
+
+        $targetShop = Shop::where('depot_id', $targetDepotId)->where('tenant_id', $user->tenant_id)->first();
+        if (!$targetShop) {
+            return response()->json(['message' => 'Aucune boutique associée à ce dépôt.'], 422);
+        }
+        $targetShopId = (string) $targetShop->id;
+
+        $targetCategories = $this->categoryRepository->findByShop($targetShopId, false);
+        if (empty($targetCategories)) {
+            return response()->json(['message' => 'Le dépôt cible n\'a aucune catégorie. Créez-en une avant de dupliquer.'], 422);
+        }
+        $targetCategoryId = $targetCategories[0]->getId();
+
+        $sourceCode = $product->getCode()->getValue();
+        $newCode = $sourceCode . '-CP' . strtoupper(substr(str_replace('-', '', Str::uuid()->toString()), 0, 4));
+        while ($this->productRepository->existsByCode($newCode)) {
+            $newCode = $sourceCode . '-CP' . strtoupper(substr(str_replace('-', '', Str::uuid()->toString()), 0, 4));
+        }
+
+        $price = $product->getPrice();
+        $dto = new CreateProductDTO(
+            $targetShopId,
+            $newCode,
+            $product->getName(),
+            $targetCategoryId,
+            (float) $price->getAmount(),
+            $price->getCurrency(),
+            (int) $sourceMinimumStock,
+            $sourceUnit,
+            $product->getDescription() ?: null,
+            $sourceCost,
+            $product->getType()->getValue(),
+            $product->getDosage()?->getValue(),
+            $product->requiresPrescription(),
+            $sourceManufacturer,
+            null
+        );
+
+        $previousDepotId = $request->session()->get('current_depot_id');
+        $request->session()->put('current_depot_id', $targetDepotId);
+        try {
+            $newProduct = $this->createProductUseCase->execute($dto);
+        } finally {
+            if ($previousDepotId !== null) {
+                $request->session()->put('current_depot_id', $previousDepotId);
+            } else {
+                $request->session()->forget('current_depot_id');
+            }
+        }
+
+        if ($sourceModel) {
+            $updateData = [];
+            if ($sourceModel->image_path !== null) {
+                $updateData['image_path'] = $sourceModel->image_path;
+                $updateData['image_type'] = $sourceModel->image_type ?? 'upload';
+            }
+            if ($sourceModel->wholesale_price_amount !== null) {
+                $updateData['wholesale_price_amount'] = (float) $sourceModel->wholesale_price_amount;
+            }
+            if ($sourceModel->wholesale_min_quantity !== null) {
+                $updateData['wholesale_min_quantity'] = (int) $sourceModel->wholesale_min_quantity;
+            }
+            if (!empty($updateData)) {
+                ProductModelInfra::where('id', $newProduct->getId())->update($updateData);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'product_id' => $newProduct->getId(),
+            'message' => 'Produit dupliqué vers le dépôt cible. Stock initial à 0.',
+        ], 201);
+    }
+
     public function edit(Request $request, string $id): Response
     {
         $user = $request->user();
@@ -675,7 +784,7 @@ class ProductController
                 'dosage' => 'nullable|string|max:100',
                 'prescription_required' => 'boolean',
                 'manufacturer' => 'nullable|string|max:255',
-                'supplier_id' => 'nullable|exists:suppliers,id',
+                'supplier_id' => 'nullable|exists:pharmacy_suppliers,id',
                 'is_active' => 'boolean',
                 'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
                 'image_url' => 'nullable|url|max:500',
@@ -868,7 +977,7 @@ class ProductController
                 'quantity' => 'required|integer|min:1',
                 'batch_number' => 'nullable|string|max:100',
                 'expiry_date' => 'nullable|date|after:today',
-                'supplier_id' => 'nullable|exists:suppliers,id',
+                'supplier_id' => 'nullable|exists:pharmacy_suppliers,id',
                 'purchase_order_id' => 'nullable|string|max:100'
             ]);
 

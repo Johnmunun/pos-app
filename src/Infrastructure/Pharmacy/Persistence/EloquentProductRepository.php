@@ -16,10 +16,12 @@ class EloquentProductRepository implements ProductRepositoryInterface
 {
     public function save(Product $product): void
     {
+        $depotId = request()?->session()->get('current_depot_id');
         ProductModel::updateOrCreate(
             ['id' => $product->getId()],
             [
                 'shop_id' => $product->getShopId(),
+                'depot_id' => $depotId ? (int) $depotId : null,
                 'code' => $product->getCode()->getValue(),
                 'name' => $product->getName(),
                 'description' => $product->getDescription(),

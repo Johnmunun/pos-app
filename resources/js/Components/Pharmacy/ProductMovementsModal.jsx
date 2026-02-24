@@ -88,7 +88,8 @@ export default function ProductMovementsModal({
             if (filters.from) params.append('from', filters.from);
             if (filters.to) params.append('to', filters.to);
 
-            const response = await axios.get(`/api/pharmacy/product-movements?${params.toString()}`);
+            const url = `${route('pharmacy.api.product-movements.index')}?${params.toString()}`;
+            const response = await axios.get(url);
             setMovements(response.data.movements || []);
             setStats(response.data.stats || {});
             setCurrentPage(1);
@@ -142,18 +143,19 @@ export default function ProductMovementsModal({
             if (filters.from) params.append('from', filters.from);
             if (filters.to) params.append('to', filters.to);
 
-            const response = await axios.get(`/api/pharmacy/product-movements/export/pdf?${params.toString()}`, {
+            const pdfUrl = `${route('pharmacy.api.product-movements.pdf.global')}?${params.toString()}`;
+            const response = await axios.get(pdfUrl, {
                 responseType: 'blob'
             });
 
-            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
-            link.href = url;
+            link.href = blobUrl;
             link.setAttribute('download', `mouvements_stock_${new Date().toISOString().slice(0, 10)}.pdf`);
             document.body.appendChild(link);
             link.click();
             link.remove();
-            window.URL.revokeObjectURL(url);
+            window.URL.revokeObjectURL(blobUrl);
 
             toast.success('Export PDF généré avec succès');
         } catch (error) {
@@ -173,18 +175,18 @@ export default function ProductMovementsModal({
 
         setExportingSingle(movementId);
         try {
-            const response = await axios.get(`/api/pharmacy/product-movements/${movementId}/pdf`, {
+            const response = await axios.get(route('pharmacy.api.product-movements.pdf.single', { id: movementId }), {
                 responseType: 'blob'
             });
 
-            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
-            link.href = url;
+            link.href = blobUrl;
             link.setAttribute('download', `mouvement_${movementId.slice(0, 8)}.pdf`);
             document.body.appendChild(link);
             link.click();
             link.remove();
-            window.URL.revokeObjectURL(url);
+            window.URL.revokeObjectURL(blobUrl);
 
             toast.success('Fiche de mouvement générée');
         } catch (error) {

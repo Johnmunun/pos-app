@@ -14,12 +14,15 @@ class EloquentStockTransferRepository implements StockTransferRepositoryInterfac
 {
     public function save(StockTransfer $transfer): void
     {
+        $depotId = request()?->session()->get('current_depot_id');
         StockTransferModel::query()->create([
             'id' => $transfer->getId(),
             'pharmacy_id' => $transfer->getPharmacyId(),
             'reference' => $transfer->getReference(),
             'from_shop_id' => $transfer->getFromShopId(),
+            'from_depot_id' => $depotId ? (int) $depotId : null,
             'to_shop_id' => $transfer->getToShopId(),
+            'to_depot_id' => null,
             'status' => $transfer->getStatus(),
             'created_by' => $transfer->getCreatedBy(),
             'validated_by' => $transfer->getValidatedBy(),

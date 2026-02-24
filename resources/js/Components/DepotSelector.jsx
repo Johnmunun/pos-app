@@ -10,8 +10,8 @@ export default function DepotSelector({ depots = [], currentDepot }) {
 
     const handleSwitch = (depotId) => {
         router.post(route('depot.switch'), { depot_id: depotId || null }, {
-            preserveState: true,
-            preserveScroll: true,
+            preserveState: false,
+            preserveScroll: false,
         });
     };
 

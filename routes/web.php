@@ -201,7 +201,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/products/{id}', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'show'])
             ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage')
             ->name('products.show');
-        
+        Route::post('/products/{id}/duplicate-to-depot', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'duplicateToDepot'])
+            ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage')
+            ->name('products.duplicate-to-depot');
         Route::get('/products/{id}/edit', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'edit'])
             ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage')
             ->name('products.edit');
@@ -262,6 +264,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/sales', [\Src\Infrastructure\Pharmacy\Http\Controllers\SaleController::class, 'store'])
             ->middleware('permission:pharmacy.sales.manage')
             ->name('sales.store');
+        Route::post('/sales/quick-customer', [\Src\Infrastructure\Pharmacy\Http\Controllers\SaleController::class, 'quickCreateCustomer'])
+            ->middleware('permission:pharmacy.sales.manage')
+            ->name('sales.quick-customer');
         Route::get('/sales/{id}', [\Src\Infrastructure\Pharmacy\Http\Controllers\SaleController::class, 'show'])
             ->middleware('permission:pharmacy.sales.view|pharmacy.sales.manage')
             ->name('sales.show');
@@ -274,6 +279,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/sales/{id}/cancel', [\Src\Infrastructure\Pharmacy\Http\Controllers\SaleController::class, 'cancel'])
             ->middleware('permission:pharmacy.sales.cancel|pharmacy.sales.manage')
             ->name('sales.cancel');
+        Route::get('/sales/{id}/receipt', [\Src\Infrastructure\Pharmacy\Http\Controllers\SaleController::class, 'receipt'])
+            ->middleware('permission:pharmacy.sales.view|pharmacy.sales.manage')
+            ->name('sales.receipt');
+
+        // Caisse (cash registers & sessions)
+        Route::get('/cash-registers', [\Src\Infrastructure\Pharmacy\Http\Controllers\CashRegisterController::class, 'index'])
+            ->middleware('permission:pharmacy.sales.view|pharmacy.sales.manage')
+            ->name('cash-registers.index');
+        Route::post('/cash-registers', [\Src\Infrastructure\Pharmacy\Http\Controllers\CashRegisterController::class, 'store'])
+            ->middleware('permission:pharmacy.sales.manage')
+            ->name('cash-registers.store');
+        Route::post('/cash-registers/{id}/open', [\Src\Infrastructure\Pharmacy\Http\Controllers\CashRegisterController::class, 'openSession'])
+            ->middleware('permission:pharmacy.sales.manage')
+            ->name('cash-registers.open');
+        Route::post('/cash-registers/sessions/{sessionId}/close', [\Src\Infrastructure\Pharmacy\Http\Controllers\CashRegisterController::class, 'closeSession'])
+            ->middleware('permission:pharmacy.sales.manage')
+            ->name('cash-registers.sessions.close');
 
         // Purchases (Achat)
         Route::get('/purchases', [\Src\Infrastructure\Pharmacy\Http\Controllers\PurchaseController::class, 'index'])
@@ -495,6 +517,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/movements/excel', [\Src\Infrastructure\Pharmacy\Http\Controllers\ExportController::class, 'movementsExcel'])
                 ->middleware('permission:stock.movement.view')
                 ->name('movements.excel');
+
+            // Rapport d'activité
+            Route::get('/reports/pdf', [\Src\Infrastructure\Pharmacy\Http\Controllers\ExportController::class, 'reportPdf'])
+                ->middleware('permission:pharmacy.sales.view|pharmacy.report.view')
+                ->name('reports.pdf');
+            Route::get('/reports/excel', [\Src\Infrastructure\Pharmacy\Http\Controllers\ExportController::class, 'reportExcel'])
+                ->middleware('permission:pharmacy.sales.view|pharmacy.report.view')
+                ->name('reports.excel');
         });
 
         // ========== TRANSFERTS INTER-MAGASINS ==========

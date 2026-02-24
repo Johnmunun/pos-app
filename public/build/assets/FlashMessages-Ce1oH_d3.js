@@ -1,0 +1,1 @@
+import{u as r,r as c,z as e}from"./app-Bu58nmqp.js";function o(){const{flash:s}=r().props;return c.useEffect(()=>{s?.success&&e.success(s.success),s?.error&&e.error(s.error),s?.message&&e.success(s.message)},[s]),null}export{o as F};

@@ -30,11 +30,16 @@ class StockMovementModel extends Model
     protected $fillable = [
         'id',
         'shop_id',
+        'depot_id',
         'product_id',
         'type',
         'quantity',
         'reference',
         'created_by',
+    ];
+
+    protected $casts = [
+        'depot_id' => 'integer',
     ];
 
     public $incrementing = false;
@@ -54,6 +59,11 @@ class StockMovementModel extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function depot(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Depot::class, 'depot_id');
     }
 }
 

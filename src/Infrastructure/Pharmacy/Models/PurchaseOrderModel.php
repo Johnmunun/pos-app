@@ -17,6 +17,7 @@ class PurchaseOrderModel extends Model
     protected $fillable = [
         'id',
         'shop_id',
+        'depot_id',
         'supplier_id',
         'status',
         'total_amount',
@@ -32,6 +33,7 @@ class PurchaseOrderModel extends Model
         'ordered_at' => 'datetime',
         'expected_at' => 'datetime',
         'received_at' => 'datetime',
+        'depot_id' => 'integer',
     ];
 
     public function lines()
@@ -47,6 +49,11 @@ class PurchaseOrderModel extends Model
     public function shop()
     {
         return $this->belongsTo(\App\Models\Shop::class, 'shop_id');
+    }
+
+    public function depot()
+    {
+        return $this->belongsTo(\App\Models\Depot::class, 'depot_id');
     }
 }
 

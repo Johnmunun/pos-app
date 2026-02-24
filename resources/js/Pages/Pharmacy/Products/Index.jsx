@@ -22,13 +22,14 @@ import {
   X,
   CheckCircle,
   XCircle,
-  History
+  History,
+  Copy
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
 
 export default function ProductsIndex({ auth, products, categories, filters, canImport = false }) {
-    const { auth: authPage } = usePage().props;
+    const { auth: authPage, depots = [], currentDepot } = usePage().props ?? {};
     const permissions = authPage?.permissions || [];
     
     const hasPermission = (permission) => {
@@ -51,6 +52,10 @@ export default function ProductsIndex({ auth, products, categories, filters, can
     const [importResult, setImportResult] = useState(null);
     const [movementsModalOpen, setMovementsModalOpen] = useState(false);
     const [movementsProduct, setMovementsProduct] = useState(null);
+    const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
+    const [duplicateProduct, setDuplicateProduct] = useState(null);
+    const [duplicateTargetDepotId, setDuplicateTargetDepotId] = useState('');
+    const [duplicateSubmitting, setDuplicateSubmitting] = useState(false);
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -116,6 +121,38 @@ export default function ProductsIndex({ auth, products, categories, filters, can
     const handleViewMovements = (product = null) => {
         setMovementsProduct(product);
         setMovementsModalOpen(true);
+    };
+
+    const handleDuplicateToDepot = (product) => {
+        setDuplicateProduct(product);
+        setDuplicateTargetDepotId('');
+        setDuplicateModalOpen(true);
+    };
+
+    const handleDuplicateSubmit = async (e) => {
+        e.preventDefault();
+        if (!duplicateProduct || !duplicateTargetDepotId) {
+            toast.error('Veuillez sélectionner un dépôt cible.');
+            return;
+        }
+        setDuplicateSubmitting(true);
+        try {
+            const res = await axios.post(route('pharmacy.products.duplicate-to-depot', duplicateProduct.id), {
+                target_depot_id: duplicateTargetDepotId,
+            });
+            if (res.data?.success && res.data?.product_id) {
+                toast.success(res.data.message || 'Produit dupliqué avec succès.');
+                setDuplicateModalOpen(false);
+                setDuplicateProduct(null);
+                setDuplicateTargetDepotId('');
+                router.visit(route('pharmacy.products.edit', res.data.product_id));
+            }
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Erreur lors de la duplication.';
+            toast.error(msg);
+        } finally {
+            setDuplicateSubmitting(false);
+        }
     };
 
     const handleDelete = (product) => {
@@ -459,6 +496,17 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                                                             >
                                                                 <Edit className="h-4 w-4" />
                                                             </Button>
+                                                            {depots?.length >= 1 && (
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleDuplicateToDepot(product)}
+                                                                    title="Dupliquer vers un autre dépôt"
+                                                                    className="text-blue-600 hover:text-blue-700 hover:border-blue-300"
+                                                                >
+                                                                    <Copy className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
                                                             <Button
                                                                 variant="destructive"
                                                                 size="sm"
@@ -573,6 +621,69 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                             </div>
                         </div>
                     </div>
+                )}
+            </Modal>
+
+            {/* Modal Dupliquer vers un dépôt */}
+            <Modal
+                show={duplicateModalOpen}
+                onClose={() => {
+                    setDuplicateModalOpen(false);
+                    setDuplicateProduct(null);
+                    setDuplicateTargetDepotId('');
+                }}
+                maxWidth="sm"
+            >
+                {duplicateProduct && (
+                    <form onSubmit={handleDuplicateSubmit} className="p-6">
+                        <div className="flex justify-between items-start mb-4">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                Dupliquer vers un dépôt
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => setDuplicateModalOpen(false)}
+                                className="rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                            Créer une copie de « {duplicateProduct.name} » dans un autre dépôt (même infos, nouveau code, stock à 0).
+                        </p>
+                        <div className="mb-4">
+                            <label htmlFor="duplicate-depot" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Dépôt cible
+                            </label>
+                            <select
+                                id="duplicate-depot"
+                                value={duplicateTargetDepotId}
+                                onChange={(e) => setDuplicateTargetDepotId(e.target.value)}
+                                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:ring-orange-500 focus:border-orange-500"
+                                required
+                            >
+                                <option value="">— Choisir un dépôt —</option>
+                                {(depots ?? []).map((d) => (
+                                    <option key={d.id} value={d.id}>
+                                        {d.name || `Dépôt ${d.id}`}
+                                        {currentDepot?.id === d.id ? ' (actuel)' : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setDuplicateModalOpen(false)}
+                            >
+                                Annuler
+                            </Button>
+                            <Button type="submit" disabled={duplicateSubmitting || !duplicateTargetDepotId}>
+                                {duplicateSubmitting ? 'Duplication…' : 'Dupliquer'}
+                            </Button>
+                        </div>
+                    </form>
                 )}
             </Modal>
 

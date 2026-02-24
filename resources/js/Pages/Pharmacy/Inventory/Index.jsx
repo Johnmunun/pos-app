@@ -17,7 +17,8 @@ import {
     CheckCircle,
     XCircle,
     Clock,
-    FileText
+    FileText,
+    Package
 } from 'lucide-react';
 
 const statusConfig = {
@@ -27,9 +28,10 @@ const statusConfig = {
     cancelled: { label: 'Annulé', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300', icon: XCircle },
 };
 
-export default function InventoryIndex({ inventories, filters = {}, pagination, permissions }) {
+export default function InventoryIndex({ inventories, depots = [], filters = {}, pagination, permissions }) {
     const [searchRef, setSearchRef] = useState(filters.reference || '');
     const [selectedStatus, setSelectedStatus] = useState(filters.status || '');
+    const [selectedDepotId, setSelectedDepotId] = useState(filters.depot_id ?? '');
     const [fromDate, setFromDate] = useState(filters.from || '');
     const [toDate, setToDate] = useState(filters.to || '');
 
@@ -38,6 +40,7 @@ export default function InventoryIndex({ inventories, filters = {}, pagination, 
         router.get(route('pharmacy.inventories.index'), {
             reference: searchRef || undefined,
             status: selectedStatus || undefined,
+            depot_id: selectedDepotId || undefined,
             from: fromDate || undefined,
             to: toDate || undefined,
         }, {
@@ -49,6 +52,7 @@ export default function InventoryIndex({ inventories, filters = {}, pagination, 
     const handleResetFilters = () => {
         setSearchRef('');
         setSelectedStatus('');
+        setSelectedDepotId('');
         setFromDate('');
         setToDate('');
         router.get(route('pharmacy.inventories.index'));
@@ -65,7 +69,8 @@ export default function InventoryIndex({ inventories, filters = {}, pagination, 
     };
 
     const handleCreateInventory = () => {
-        router.post(route('pharmacy.inventories.store'));
+        const data = selectedDepotId ? { depot_id: selectedDepotId } : {};
+        router.post(route('pharmacy.inventories.store'), data);
     };
 
     const getStatusBadge = (status) => {
@@ -122,7 +127,7 @@ export default function InventoryIndex({ inventories, filters = {}, pagination, 
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <form onSubmit={handleFilterSubmit} className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                            <form onSubmit={handleFilterSubmit} className="grid grid-cols-1 md:grid-cols-6 gap-4">
                                 <div>
                                     <Label htmlFor="reference" className="text-gray-700 dark:text-gray-300">Référence</Label>
                                     <Input
@@ -146,6 +151,20 @@ export default function InventoryIndex({ inventories, filters = {}, pagination, 
                                         <option value="in_progress">En cours</option>
                                         <option value="validated">Validé</option>
                                         <option value="cancelled">Annulé</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <Label htmlFor="depot_id" className="text-gray-700 dark:text-gray-300">Dépôt</Label>
+                                    <select
+                                        id="depot_id"
+                                        value={selectedDepotId}
+                                        onChange={(e) => setSelectedDepotId(e.target.value)}
+                                        className="w-full h-10 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 px-3 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                    >
+                                        <option value="">Tous les dépôts</option>
+                                        {(depots || []).map((depot) => (
+                                            <option key={depot.id} value={depot.id}>{depot.name} {depot.code ? `(${depot.code})` : ''}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div>
@@ -217,6 +236,9 @@ export default function InventoryIndex({ inventories, filters = {}, pagination, 
                                                     Référence
                                                 </th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                                    Dépôt
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                                     Statut
                                                 </th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -244,6 +266,17 @@ export default function InventoryIndex({ inventories, filters = {}, pagination, 
                                                             <div className="text-xs text-gray-500 dark:text-gray-400">
                                                                 Validé le {inventory.validated_at}
                                                             </div>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        {inventory.depot ? (
+                                                            <span className="inline-flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300">
+                                                                <Package className="h-4 w-4 text-amber-500" />
+                                                                {inventory.depot.name}
+                                                                {inventory.depot.code && <span className="text-xs text-gray-500">({inventory.depot.code})</span>}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-xs text-gray-400">—</span>
                                                         )}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">

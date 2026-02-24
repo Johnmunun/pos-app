@@ -45,6 +45,7 @@ class ProductModel extends Model
     protected $fillable = [
         'id',
         'shop_id',
+        'depot_id',
         'code',
         'name',
         'description',
@@ -72,9 +73,15 @@ class ProductModel extends Model
         'price_amount' => 'decimal:2',
         'wholesale_price_amount' => 'decimal:2',
         'stock' => 'integer',
+        'depot_id' => 'integer',
     ];
 
     // Relations
+    public function depot()
+    {
+        return $this->belongsTo(\App\Models\Depot::class, 'depot_id');
+    }
+
     public function category()
     {
         return $this->belongsTo(CategoryModel::class, 'category_id');

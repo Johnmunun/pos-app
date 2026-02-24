@@ -1,1 +1,0 @@
-import{z as t}from"./app-DZtTOeIE.js";function e(){return{toast:t,success:(s,o)=>t.success(s,o),error:(s,o)=>t.error(s,o),info:(s,o)=>t(s,o),warning:(s,o)=>t(s,o),promise:(s,o,r)=>t.promise(s,o,r),dismiss:s=>t.dismiss(s),loading:(s,o)=>t.loading(s,o)}}function a(){return e()}export{a as u};

@@ -18,6 +18,7 @@ class BatchModel extends Model
     protected $fillable = [
         'id',
         'shop_id',
+        'depot_id',
         'product_id',
         'batch_number',
         'expiry_date',
@@ -31,6 +32,7 @@ class BatchModel extends Model
         'expiry_date' => 'date',
         'quantity' => 'integer',
         'initial_quantity' => 'integer',
+        'depot_id' => 'integer',
     ];
 
     // Relations
@@ -47,6 +49,11 @@ class BatchModel extends Model
     public function shop()
     {
         return $this->belongsTo(\App\Models\Shop::class, 'shop_id');
+    }
+
+    public function depot()
+    {
+        return $this->belongsTo(\App\Models\Depot::class, 'depot_id');
     }
 
     // Scopes

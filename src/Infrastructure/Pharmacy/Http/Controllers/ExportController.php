@@ -8,6 +8,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Src\Infrastructure\Pharmacy\Services\PharmacyExportService;
 use Src\Infrastructure\Pharmacy\Models\ProductModel;
+use Src\Infrastructure\Pharmacy\Models\InventoryModel;
+use Src\Infrastructure\Pharmacy\Models\InventoryItemModel;
 use Src\Infrastructure\Pharmacy\Models\SupplierModel;
 use Src\Infrastructure\Pharmacy\Models\CustomerModel;
 use Src\Infrastructure\Pharmacy\Models\SaleModel;
@@ -115,6 +117,88 @@ class ExportController extends Controller
         );
     }
 
+    // ========== INVENTAIRES ==========
+
+    /**
+     * Export PDF d'un inventaire (détail).
+     */
+    public function inventoryPdf(Request $request, string $id): Response
+    {
+        $header = $this->exportService->getExportHeader($request);
+        $shopId = $header['shop_id'];
+        $isRoot = $header['is_root'];
+
+        $invQuery = InventoryModel::query()
+            ->with(['depot:id,name,code', 'creator:id,name,email', 'validator:id,name,email']);
+
+        if (!$isRoot || $shopId) {
+            $invQuery->where('shop_id', $shopId);
+        }
+
+        /** @var InventoryModel|null $inventory */
+        $inventory = $invQuery->where('id', $id)->first();
+        if ($inventory === null) {
+            abort(404, 'Inventaire non trouvé.');
+        }
+
+        // Enrichir l'en-tête avec les infos et le logo de la boutique de l'inventaire
+        $header = $this->exportService->enrichHeaderWithShop($header, (string) $inventory->shop_id);
+
+        $items = InventoryItemModel::query()
+            ->with(['product:id,name,code,stock,category_id', 'product.category:id,name'])
+            ->where('inventory_id', $inventory->id)
+            ->orderBy('created_at')
+            ->get()
+            ->map(function ($item) {
+                $productName = $item->product?->name ?? 'Produit inconnu';
+                $productCode = $item->product?->code ?? '';
+                $categoryName = $item->product?->category?->name ?? '';
+
+                return [
+                    'product_name' => $productName,
+                    'product_code' => $productCode,
+                    'category_name' => $categoryName,
+                    'system_quantity' => (int) ($item->system_quantity ?? 0),
+                    'counted_quantity' => $item->counted_quantity !== null ? (int) $item->counted_quantity : null,
+                    'difference' => (int) ($item->difference ?? 0),
+                ];
+            })->toArray();
+
+        $summary = [
+            'total_items' => count($items),
+            'counted_items' => collect($items)->filter(fn ($i) => $i['counted_quantity'] !== null)->count(),
+            'items_with_difference' => collect($items)->filter(fn ($i) => (int) $i['difference'] !== 0)->count(),
+            'total_positive' => collect($items)->filter(fn ($i) => (int) $i['difference'] > 0)->sum('difference'),
+            'total_negative' => abs(collect($items)->filter(fn ($i) => (int) $i['difference'] < 0)->sum('difference')),
+        ];
+
+        $subtitleParts = [
+            'Réf: ' . ($inventory->reference ?? $inventory->id),
+            'Statut: ' . ($inventory->status ?? 'draft'),
+        ];
+        if ($inventory->depot) {
+            $subtitleParts[] = 'Dépôt: ' . $inventory->depot->name . (!empty($inventory->depot->code) ? ' (' . $inventory->depot->code . ')' : '');
+        }
+
+        return $this->exportService->exportPdf('pharmacy.exports.inventory', [
+            'header' => $header,
+            'inventory' => [
+                'id' => $inventory->id,
+                'reference' => $inventory->reference,
+                'status' => $inventory->status,
+                'started_at' => $inventory->started_at,
+                'validated_at' => $inventory->validated_at,
+                'created_at' => $inventory->created_at,
+                'creator_name' => $inventory->creator?->name,
+                'validator_name' => $inventory->validator?->name,
+                'depot' => $inventory->depot ? ['name' => $inventory->depot->name, 'code' => $inventory->depot->code] : null,
+            ],
+            'items' => $items,
+            'summary' => $summary,
+            'subtitle' => implode(' · ', array_filter($subtitleParts)),
+        ], 'inventaire');
+    }
+
     // ========== VENTES ==========
 
     /**
@@ -126,10 +210,16 @@ class ExportController extends Controller
         $shopId = $header['shop_id'];
         $isRoot = $header['is_root'];
         $currency = $header['currency'];
+        $user = $request->user();
+        $userModel = $user ? \App\Models\User::find($user->id) : null;
+        $canViewAllSales = $isRoot || ($userModel && $userModel->hasPermission('pharmacy.sales.view.all'));
 
-        $query = SaleModel::query()->with('customer')->orderByDesc('created_at');
+        $query = SaleModel::query()->with(['customer', 'creator'])->withCount('lines')->orderByDesc('created_at');
         if (!$isRoot || $shopId) {
             $query->where('shop_id', $shopId);
+        }
+        if (!$canViewAllSales && $user) {
+            $query->where('created_by', $user->id);
         }
 
         // Filtres de date
@@ -143,13 +233,14 @@ class ExportController extends Controller
         $sales = $query->get();
 
         $items = $sales->map(fn($s) => [
-            'reference' => $s->reference ?? 'SALE-' . $s->id,
+            'reference' => 'SALE-' . $s->id,
             'date' => $s->created_at?->format('d/m/Y H:i') ?? '',
-            'customer' => $s->customer?->name ?? 'Client comptoir',
-            'items_count' => $s->items_count ?? 0,
+            'customer' => $s->customer?->full_name ?? $s->customer?->name ?? 'Client comptoir',
+            'items_count' => (int) ($s->lines_count ?? 0),
             'total' => (float) ($s->total_amount ?? 0),
             'paid' => (float) ($s->paid_amount ?? 0),
-            'status' => $s->status ?? 'pending',
+            'status' => $s->status === 'COMPLETED' ? 'completed' : ($s->status === 'CANCELLED' ? 'cancelled' : 'pending'),
+            'seller' => $s->creator?->name ?? '—',
         ])->toArray();
 
         $summary = [
@@ -177,10 +268,16 @@ class ExportController extends Controller
         $shopId = $header['shop_id'];
         $isRoot = $header['is_root'];
         $currency = $header['currency'];
+        $user = $request->user();
+        $userModel = $user ? \App\Models\User::find($user->id) : null;
+        $canViewAllSales = $isRoot || ($userModel && $userModel->hasPermission('pharmacy.sales.view.all'));
 
-        $query = SaleModel::query()->with('customer')->orderByDesc('created_at');
+        $query = SaleModel::query()->with(['customer', 'creator'])->withCount('lines')->orderByDesc('created_at');
         if (!$isRoot || $shopId) {
             $query->where('shop_id', $shopId);
+        }
+        if (!$canViewAllSales && $user) {
+            $query->where('created_by', $user->id);
         }
 
         if ($request->filled('from')) {
@@ -192,22 +289,24 @@ class ExportController extends Controller
 
         $sales = $query->get();
 
-        $columns = ['#', 'Référence', 'Date', 'Client', 'Articles', 'Total', 'Payé', 'Statut'];
+        $columns = ['#', 'Référence', 'Date', 'Client', 'Vendeur', 'Articles', 'Total', 'Payé', 'Statut'];
         $rows = [];
         $index = 1;
 
         $statusLabels = [
-            'paid' => 'Payé', 'completed' => 'Payé', 'partial' => 'Partiel',
-            'pending' => 'En attente', 'cancelled' => 'Annulé'
+            'paid' => 'Payé', 'completed' => 'Payé', 'COMPLETED' => 'Payé',
+            'partial' => 'Partiel', 'pending' => 'En attente', 'DRAFT' => 'Brouillon',
+            'cancelled' => 'Annulé', 'CANCELLED' => 'Annulé',
         ];
 
         foreach ($sales as $s) {
             $rows[] = [
                 $index++,
-                $s->reference ?? 'SALE-' . $s->id,
+                'SALE-' . $s->id,
                 $s->created_at?->format('d/m/Y H:i') ?? '',
-                $s->customer?->name ?? 'Client comptoir',
-                $s->items_count ?? 0,
+                $s->customer?->full_name ?? $s->customer?->name ?? 'Client comptoir',
+                $s->creator?->name ?? '—',
+                (int) ($s->lines_count ?? 0),
                 number_format((float) ($s->total_amount ?? 0), 2) . ' ' . $currency,
                 number_format((float) ($s->paid_amount ?? 0), 2) . ' ' . $currency,
                 $statusLabels[$s->status ?? 'pending'] ?? $s->status,
@@ -220,7 +319,7 @@ class ExportController extends Controller
             $columns,
             $rows,
             'ventes',
-            ['F' => 'right', 'G' => 'right', 'H' => 'center']
+            ['F' => 'right', 'G' => 'right', 'H' => 'right', 'I' => 'center']
         );
     }
 
@@ -726,6 +825,65 @@ class ExportController extends Controller
             $rows,
             'mouvements',
             ['E' => 'center', 'F' => 'right', 'G' => 'right', 'H' => 'right']
+        );
+    }
+
+    // ========== RAPPORT D'ACTIVITÉ ==========
+
+    /**
+     * Export PDF du rapport d'activité (période from/to).
+     */
+    public function reportPdf(Request $request): Response
+    {
+        $header = $this->exportService->getExportHeader($request);
+        $report = app(PharmacyReportController::class)->getReportData($request);
+
+        return $this->exportService->exportPdf('pharmacy.exports.report', [
+            'header' => $header,
+            'report' => $report,
+            'filters' => $request->only(['from', 'to']),
+        ], 'rapport-activite', 'portrait');
+    }
+
+    /**
+     * Export Excel du rapport d'activité (période from/to).
+     */
+    public function reportExcel(Request $request): StreamedResponse
+    {
+        $header = $this->exportService->getExportHeader($request);
+        $currency = $header['currency'];
+        $report = app(PharmacyReportController::class)->getReportData($request);
+
+        $from = $report['period']['from'] ?? $request->input('from', '');
+        $to = $report['period']['to'] ?? $request->input('to', '');
+        $sales = $report['sales'] ?? [];
+        $purchases = $report['purchases'] ?? [];
+        $movements = $report['movements'] ?? [];
+        $stock = $report['stock'] ?? [];
+
+        $columns = ['Indicateur', 'Valeur'];
+        $rows = [
+            ['Période', $from . ' → ' . $to],
+            ['Chiffre d\'affaires', number_format($sales['total'] ?? 0, 2, ',', ' ') . ' ' . $currency],
+            ['Nombre de ventes', $sales['count'] ?? 0],
+            ['Achats reçus (nombre)', $purchases['count'] ?? 0],
+            ['Achats reçus (montant)', number_format($purchases['total'] ?? 0, 2, ',', ' ') . ' ' . $currency],
+            ['Mouvements de stock (total opérations)', $movements['total_ops'] ?? 0],
+            ['Entrées stock', $movements['qty_in'] ?? 0],
+            ['Sorties stock', $movements['qty_out'] ?? 0],
+            ['Ajustements', $movements['qty_adjustment'] ?? 0],
+            ['Produits actifs', $stock['product_count'] ?? 0],
+            ['Valeur du stock', number_format($stock['total_value'] ?? 0, 2, ',', ' ') . ' ' . $currency],
+            ['Produits en stock bas', $stock['low_stock_count'] ?? 0],
+        ];
+
+        return $this->exportService->exportExcel(
+            $header,
+            'Rapport d\'activité',
+            $columns,
+            $rows,
+            'rapport-activite',
+            ['B' => 'right']
         );
     }
 }
