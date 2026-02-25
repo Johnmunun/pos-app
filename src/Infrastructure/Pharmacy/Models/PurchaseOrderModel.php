@@ -5,6 +5,19 @@ namespace Src\Infrastructure\Pharmacy\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
+/**
+ * @property string $id
+ * @property string $shop_id
+ * @property string|null $supplier_id
+ * @property string $status
+ * @property float|string $total_amount
+ * @property string $currency
+ * @property \Carbon\Carbon|\DateTimeInterface|null $ordered_at
+ * @property \Carbon\Carbon|\DateTimeInterface|null $expected_at
+ * @property \Carbon\Carbon|\DateTimeInterface|null $received_at
+ * @property int|null $created_by
+ * @property \Carbon\Carbon $created_at
+ */
 class PurchaseOrderModel extends Model
 {
     use HasFactory;

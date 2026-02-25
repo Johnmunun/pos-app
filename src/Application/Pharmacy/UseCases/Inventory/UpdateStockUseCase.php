@@ -72,46 +72,48 @@ class UpdateStockUseCase
         });
     }
 
-    public function removeStock(string $productId, int $quantity, string $shopId, int $createdBy = 0, ?string $reference = null): void
+    /** @param float $quantity Quantité à retirer (décimale autorisée, ex. 0.5 pour demi-plaquette) */
+    public function removeStock(string $productId, float $quantity, string $shopId, int $createdBy = 0, ?string $reference = null): void
     {
         $ref = $reference ?? 'STOCK_OUT';
+        $quantity = round($quantity, 4);
         DB::transaction(function () use ($productId, $quantity, $shopId, $createdBy, $ref): void {
             // Validate product exists
             $product = $this->productRepository->findById($productId);
             if (!$product) {
                 throw new \InvalidArgumentException("Product not found");
             }
-            
+
             // Validate sufficient stock (interdiction stock négatif)
             if ($product->getStock()->getValue() < $quantity) {
                 throw new \InvalidArgumentException("Insufficient stock available");
             }
-            
+
             // Get available batches (FIFO approach)
             $batches = $this->batchRepository->findByProduct($productId);
             $remainingQuantity = $quantity;
-            
+
             foreach ($batches as $batch) {
                 if ($remainingQuantity <= 0) {
                     break;
                 }
-                
+
                 $batchQuantity = $batch->getQuantity()->getValue();
                 $consumeQuantity = min($batchQuantity, $remainingQuantity);
-                
-                if ($consumeQuantity > 0) {
+
+                if ($consumeQuantity > 0.0001) {
                     $batch->consume(new Quantity($consumeQuantity));
                     $this->batchRepository->update($batch);
                     $remainingQuantity -= $consumeQuantity;
                 }
             }
-            
-            // Update product stock
+
+            // Update product stock (règles Domain : divisible → décimal autorisé, sinon entier uniquement)
             $qtyVo = new Quantity($quantity);
-            $product->removeStock($qtyVo);
+            $product->decreaseStock($qtyVo);
             $this->productRepository->update($product);
-            
-            if ($remainingQuantity > 0) {
+
+            if ($remainingQuantity > 0.0001) {
                 throw new \LogicException("Could not consume all requested quantity");
             }
 
@@ -127,15 +129,17 @@ class UpdateStockUseCase
         });
     }
 
-    public function adjustStock(string $productId, int $newQuantity, string $shopId, int $createdBy = 0): void
+    /** @param float $newQuantity Nouvelle quantité en stock (décimale autorisée) */
+    public function adjustStock(string $productId, float $newQuantity, string $shopId, int $createdBy = 0): void
     {
+        $newQuantity = round($newQuantity, 4);
         DB::transaction(function () use ($productId, $newQuantity, $shopId, $createdBy): void {
             // Validate product exists
             $product = $this->productRepository->findById($productId);
             if (!$product) {
                 throw new \InvalidArgumentException("Product not found");
             }
-            
+
             $currentStock = $product->getStock()->getValue();
             $difference = $newQuantity - $currentStock;
             

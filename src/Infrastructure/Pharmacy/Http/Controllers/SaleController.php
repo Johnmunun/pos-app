@@ -12,6 +12,8 @@ use Src\Application\Pharmacy\UseCases\Sales\UpdateSaleLinesUseCase;
 use Src\Application\Pharmacy\UseCases\Sales\FinalizeSaleUseCase;
 use Src\Application\Pharmacy\UseCases\Sales\CancelSaleUseCase;
 use Src\Application\Pharmacy\UseCases\Sales\AttachCustomerToSaleUseCase;
+use Src\Application\Finance\UseCases\Invoice\CreateInvoiceFromSaleUseCase;
+use Src\Application\Finance\UseCases\Debt\CreateDebtUseCase;
 use Src\Domain\Pharmacy\Repositories\SaleRepositoryInterface;
 use Src\Domain\Pharmacy\Repositories\SaleLineRepositoryInterface;
 use Src\Application\Pharmacy\DTO\SaleLineDTO;
@@ -37,7 +39,9 @@ class SaleController
         private SaleLineRepositoryInterface $saleLineRepository,
         private CurrencyConversionService $currencyConversion,
         private GetStoreSettingsUseCase $getStoreSettingsUseCase,
-        private StoreLogoService $storeLogoService
+        private StoreLogoService $storeLogoService,
+        private CreateInvoiceFromSaleUseCase $createInvoiceFromSaleUseCase,
+        private CreateDebtUseCase $createDebtUseCase
     ) {}
 
     private function getEffectiveShopCurrency(string $shopId, $authUser): string
@@ -161,9 +165,12 @@ class SaleController
                     'wholesale_price_amount' => $wholesaleAmount,
                     'wholesale_min_quantity' => $p->wholesale_min_quantity !== null ? (int) $p->wholesale_min_quantity : null,
                     'price_currency' => $shopCurrency,
-                    'stock' => (int) ($p->stock ?? 0),
+                    'stock' => (float) ($p->stock ?? 0),
                     'category_id' => $p->category_id,
                     'image_url' => $imageService->getUrlFromPath($p->image_path, $p->image_type ?? 'upload'),
+                    'type_unite' => $p->type_unite ?? 'UNITE',
+                    'quantite_par_unite' => (int) ($p->quantite_par_unite ?? 1),
+                    'est_divisible' => (bool) ($p->est_divisible ?? true),
                 ];
             })->toArray();
 
@@ -269,7 +276,7 @@ class SaleController
             'currency' => 'required|string|size:3',
             'lines' => 'required|array',
             'lines.*.product_id' => 'required|string',
-            'lines.*.quantity' => 'required|integer|min:1',
+            'lines.*.quantity' => 'required|numeric|min:0.01',
             'lines.*.unit_price' => 'required|numeric|min:0',
             'lines.*.discount_percent' => 'nullable|numeric|min:0|max:100',
             'cash_register_id' => 'nullable|integer',
@@ -314,14 +321,18 @@ class SaleController
         foreach ($linesInput as $row) {
             $lines[] = new SaleLineDTO(
                 $row['product_id'],
-                (int) $row['quantity'],
+                (float) $row['quantity'],
                 (float) $row['unit_price'],
                 isset($row['discount_percent']) ? (float) $row['discount_percent'] : null
             );
         }
 
         if (count($lines) > 0) {
-            $this->updateSaleLinesUseCase->execute($sale->getId(), $lines);
+            try {
+                $this->updateSaleLinesUseCase->execute($sale->getId(), $lines);
+            } catch (\InvalidArgumentException $e) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
         }
 
         if ($customerId) {
@@ -498,7 +509,7 @@ class SaleController
             'customer_id' => 'nullable|string',
             'lines' => 'required|array',
             'lines.*.product_id' => 'required|string',
-            'lines.*.quantity' => 'required|integer|min:1',
+            'lines.*.quantity' => 'required|numeric|min:0.01',
             'lines.*.unit_price' => 'required|numeric|min:0',
             'lines.*.discount_percent' => 'nullable|numeric|min:0|max:100',
         ]);
@@ -513,7 +524,7 @@ class SaleController
         foreach ($request->input('lines', []) as $row) {
             $lines[] = new SaleLineDTO(
                 $row['product_id'],
-                (int) $row['quantity'],
+                (float) $row['quantity'],
                 (float) $row['unit_price'],
                 isset($row['discount_percent']) ? (float) $row['discount_percent'] : null
             );
@@ -555,6 +566,34 @@ class SaleController
                 abort(403, 'User not authenticated.');
             }
             $this->finalizeSaleUseCase->execute($id, (float) $request->input('paid_amount'), (int) $authUser->id);
+
+            // Liaison Caisse → Finance : facture + dette client si paiement partiel
+            $sale = $this->saleRepository->findById($id);
+            if ($sale && $sale->getStatus() === \Src\Domain\Pharmacy\Entities\Sale::STATUS_COMPLETED) {
+                $tenantId = (string) ($authUser->tenant_id ?? $shopId);
+                $this->createInvoiceFromSaleUseCase->execute(
+                    $tenantId,
+                    $shopId,
+                    $id,
+                    $sale->getTotal(),
+                    $sale->getPaidAmount(),
+                    \Src\Domain\Finance\Entities\Invoice::STATUS_VALIDATED
+                );
+                if ($sale->getBalance()->getAmount() > 0 && $sale->getCustomerId() !== null) {
+                    $this->createDebtUseCase->execute(
+                        $tenantId,
+                        $shopId,
+                        'client',
+                        $sale->getCustomerId(),
+                        $sale->getTotal(),
+                        $sale->getPaidAmount(),
+                        'sale',
+                        $id,
+                        null
+                    );
+                }
+            }
+
             return response()->json(['message' => 'Sale finalized successfully']);
         } catch (\Throwable $e) {
             return response()->json(['message' => $e->getMessage()], 422);

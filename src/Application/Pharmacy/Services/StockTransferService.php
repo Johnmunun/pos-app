@@ -243,8 +243,8 @@ class StockTransferService
                 $quantity = new Quantity($item->getQuantity());
                 $reference = 'TRANSFER-' . $transfer->getReference();
 
-                // Retirer du magasin source
-                $product->removeStock($quantity);
+                // Retirer du magasin source (règles Domain : entier si non divisible)
+                $product->decreaseStock($quantity);
                 $this->productRepository->update($product);
 
                 // Mouvement OUT pour le magasin source

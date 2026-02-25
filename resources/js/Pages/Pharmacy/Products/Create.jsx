@@ -39,7 +39,10 @@ export default function ProductCreate({ auth, categories }) {
         dosage: '',
         prescription_required: false,
         manufacturer: '',
-        supplier_id: ''
+        supplier_id: '',
+        type_unite: 'UNITE',
+        quantite_par_unite: 1,
+        est_divisible: true
     });
 
     const [isMedicine, setIsMedicine] = useState(false);
@@ -166,6 +169,54 @@ export default function ProductCreate({ auth, categories }) {
                                             placeholder="e.g., bottle, box, tablet"
                                         />
                                         {errors.unit && <p className="text-sm text-red-600">{errors.unit}</p>}
+                                    </div>
+                                </div>
+
+                                {/* Unité de vente (divisible / non divisible) */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="type_unite">Type d'unité *</Label>
+                                        <select
+                                            id="type_unite"
+                                            value={data.type_unite}
+                                            onChange={(e) => setData('type_unite', e.target.value)}
+                                            className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        >
+                                            <option value="PLAQUETTE">Plaquette</option>
+                                            <option value="BOITE">Boîte</option>
+                                            <option value="FLACON">Flacon</option>
+                                            <option value="TUBE">Tube</option>
+                                            <option value="SACHET">Sachet</option>
+                                            <option value="UNITE">Unité</option>
+                                        </select>
+                                        {errors.type_unite && <p className="text-sm text-red-600">{errors.type_unite}</p>}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="quantite_par_unite">Quantité par unité *</Label>
+                                        <Input
+                                            id="quantite_par_unite"
+                                            type="number"
+                                            min={1}
+                                            value={data.quantite_par_unite}
+                                            onChange={(e) => setData('quantite_par_unite', parseInt(e.target.value, 10) || 1)}
+                                            placeholder="ex: 10 comprimés"
+                                        />
+                                        <p className="text-xs text-gray-500">ex: 10 comprimés par plaquette</p>
+                                        {errors.quantite_par_unite && <p className="text-sm text-red-600">{errors.quantite_par_unite}</p>}
+                                    </div>
+                                    <div className="space-y-2 flex flex-col justify-end">
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                id="est_divisible"
+                                                checked={data.est_divisible}
+                                                onChange={(e) => setData('est_divisible', e.target.checked)}
+                                                className="rounded border-gray-300"
+                                            />
+                                            <Label htmlFor="est_divisible" className="cursor-pointer">Vente en fraction autorisée</Label>
+                                        </div>
+                                        <p className="text-xs text-gray-500">Désactiver pour boîte/flacon (quantité entière uniquement)</p>
+                                        {errors.est_divisible && <p className="text-sm text-red-600">{errors.est_divisible}</p>}
                                     </div>
                                 </div>
 

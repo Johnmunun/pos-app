@@ -14,7 +14,7 @@ class EloquentStockMovementRepository implements StockMovementRepositoryInterfac
 {
     public function save(StockMovement $movement): void
     {
-        $depotId = request()?->session()->get('current_depot_id');
+        $depotId = request()->session()->get('current_depot_id');
         StockMovementModel::query()->create([
             'id' => $movement->getId(),
             'shop_id' => $movement->getShopId(),
@@ -160,7 +160,7 @@ class EloquentStockMovementRepository implements StockMovementRepositoryInterfac
             $model->shop_id,
             $model->product_id,
             $model->type,
-            new Quantity((int) $model->quantity),
+            new Quantity((float) $model->quantity),
             $model->reference ?? '',
             (int) $model->created_by,
             new DateTimeImmutable($model->created_at ?? 'now')

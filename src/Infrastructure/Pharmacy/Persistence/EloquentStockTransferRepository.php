@@ -14,7 +14,7 @@ class EloquentStockTransferRepository implements StockTransferRepositoryInterfac
 {
     public function save(StockTransfer $transfer): void
     {
-        $depotId = request()?->session()->get('current_depot_id');
+        $depotId = request()->session()->get('current_depot_id');
         StockTransferModel::query()->create([
             'id' => $transfer->getId(),
             'pharmacy_id' => $transfer->getPharmacyId(),

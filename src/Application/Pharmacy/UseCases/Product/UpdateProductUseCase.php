@@ -9,6 +9,7 @@ use Src\Domain\Pharmacy\Entities\Product;
 use Src\Domain\Pharmacy\ValueObjects\ProductCode;
 use Src\Domain\Pharmacy\ValueObjects\MedicineType;
 use Src\Domain\Pharmacy\ValueObjects\Dosage;
+use Src\Domain\Pharmacy\ValueObjects\TypeUnite;
 use Src\Shared\ValueObjects\Money;
 
 class UpdateProductUseCase
@@ -77,6 +78,16 @@ class UpdateProductUseCase
             } else {
                 $product->deactivate();
             }
+        }
+
+        if ($dto->typeUnite !== null) {
+            $product->updateTypeUnite(new TypeUnite($dto->typeUnite));
+        }
+        if ($dto->quantiteParUnite !== null) {
+            $product->updateQuantiteParUnite(max(1, $dto->quantiteParUnite));
+        }
+        if ($dto->estDivisible !== null) {
+            $product->setEstDivisible($dto->estDivisible);
         }
 
         // Save updated product

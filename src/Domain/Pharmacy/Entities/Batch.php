@@ -28,6 +28,7 @@ class Batch
         string $batchNumber,
         ExpiryDate $expiryDate,
         Quantity $quantity,
+        ?Quantity $initialQuantity = null,
         ?string $supplierId = null,
         ?string $purchaseOrderId = null
     ) {
@@ -37,7 +38,7 @@ class Batch
         $this->batchNumber = $batchNumber;
         $this->expiryDate = $expiryDate;
         $this->quantity = $quantity;
-        $this->initialQuantity = $quantity;
+        $this->initialQuantity = $initialQuantity ?? $quantity;
         $this->supplierId = $supplierId;
         $this->purchaseOrderId = $purchaseOrderId;
         $this->createdAt = new DateTimeImmutable();
@@ -127,6 +128,7 @@ class Batch
             $batchNumber,
             $expiryDate,
             $quantity,
+            null,
             $supplierId,
             $purchaseOrderId
         );

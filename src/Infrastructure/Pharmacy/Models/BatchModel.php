@@ -30,8 +30,8 @@ class BatchModel extends Model
 
     protected $casts = [
         'expiry_date' => 'date',
-        'quantity' => 'integer',
-        'initial_quantity' => 'integer',
+        'quantity' => 'float',
+        'initial_quantity' => 'float',
         'depot_id' => 'integer',
     ];
 

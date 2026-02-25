@@ -206,7 +206,7 @@ class PharmacyServiceProvider extends ServiceProvider
                 return new DashboardService(
                     $app->make(ProductRepositoryInterface::class),
                     $app->make(BatchRepositoryInterface::class),
-                    $app->make(InventoryService::class),
+                    $app->make(DomainInventoryService::class),
                     $app->make(ExpiryAlertService::class)
                 );
             }

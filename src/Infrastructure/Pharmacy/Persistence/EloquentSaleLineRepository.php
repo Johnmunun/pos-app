@@ -40,7 +40,7 @@ class EloquentSaleLineRepository implements SaleLineRepositoryInterface
                     $model->id,
                     $model->sale_id,
                     $model->product_id,
-                    new Quantity((int) $model->quantity),
+                    new Quantity((float) $model->quantity),
                     new Money((float) $model->unit_price_amount, $currency),
                     new Money((float) $model->line_total_amount, $currency),
                     $model->discount_percent !== null ? (float) $model->discount_percent : null,

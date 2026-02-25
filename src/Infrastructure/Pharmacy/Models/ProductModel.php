@@ -65,14 +65,19 @@ class ProductModel extends Model
         'requires_prescription',
         'image_path',
         'image_type',
+        'type_unite',
+        'quantite_par_unite',
+        'est_divisible',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'requires_prescription' => 'boolean',
+        'est_divisible' => 'boolean',
+        'quantite_par_unite' => 'integer',
         'price_amount' => 'decimal:2',
         'wholesale_price_amount' => 'decimal:2',
-        'stock' => 'integer',
+        'stock' => 'float',
         'depot_id' => 'integer',
     ];
 

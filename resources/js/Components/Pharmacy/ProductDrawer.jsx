@@ -51,7 +51,10 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
         supplier_id: product?.supplier_id || '',
         image: null,
         image_url: product?.image_url || '',
-        remove_image: false
+        remove_image: false,
+        type_unite: product?.type_unite || 'UNITE',
+        quantite_par_unite: product?.quantite_par_unite ?? 1,
+        est_divisible: product?.est_divisible !== false
     });
 
     const [isMedicine, setIsMedicine] = useState(!!product?.medicine_type);
@@ -103,7 +106,10 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
                 supplier_id: product.supplier_id || '',
                 image: null,
                 image_url: product.image_url || '',
-                remove_image: false
+                remove_image: false,
+                type_unite: product.type_unite || 'UNITE',
+                quantite_par_unite: product.quantite_par_unite ?? 1,
+                est_divisible: product.est_divisible !== false
             });
             setIsMedicine(!!product.medicine_type);
             
@@ -213,7 +219,10 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
             manufacturer: data.manufacturer,
             wholesale_price: data.wholesale_price || null,
             wholesale_min_quantity: data.wholesale_min_quantity || null,
-            supplier_id: data.supplier_id
+            supplier_id: data.supplier_id,
+            type_unite: data.type_unite || 'UNITE',
+            quantite_par_unite: data.quantite_par_unite ?? 1,
+            est_divisible: data.est_divisible
         };
 
         if (isOnline) {
@@ -472,6 +481,54 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
                                 className="w-full"
                             />
                             {errors.unit && <p className="text-sm text-red-600 dark:text-red-400">{errors.unit}</p>}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="type_unite">Type d'unité *</Label>
+                            <select
+                                id="type_unite"
+                                value={data.type_unite}
+                                onChange={(e) => setData('type_unite', e.target.value)}
+                                className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            >
+                                <option value="PLAQUETTE">Plaquette</option>
+                                <option value="BOITE">Boîte</option>
+                                <option value="FLACON">Flacon</option>
+                                <option value="TUBE">Tube</option>
+                                <option value="SACHET">Sachet</option>
+                                <option value="UNITE">Unité</option>
+                            </select>
+                            {errors.type_unite && <p className="text-sm text-red-600 dark:text-red-400">{errors.type_unite}</p>}
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="quantite_par_unite">Quantité par unité *</Label>
+                            <Input
+                                id="quantite_par_unite"
+                                type="number"
+                                min={1}
+                                value={data.quantite_par_unite}
+                                onChange={(e) => setData('quantite_par_unite', parseInt(e.target.value, 10) || 1)}
+                                placeholder="ex: 10"
+                                className="w-full"
+                            />
+                            <p className="text-xs text-gray-500 dark:text-gray-400">ex: 10 comprimés par plaquette</p>
+                            {errors.quantite_par_unite && <p className="text-sm text-red-600 dark:text-red-400">{errors.quantite_par_unite}</p>}
+                        </div>
+                        <div className="space-y-2 flex flex-col justify-end">
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    id="est_divisible"
+                                    checked={data.est_divisible}
+                                    onChange={(e) => setData('est_divisible', e.target.checked)}
+                                    className="rounded border-gray-300 dark:border-gray-600"
+                                />
+                                <Label htmlFor="est_divisible" className="cursor-pointer">Vente en fraction autorisée</Label>
+                            </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Désactiver pour boîte/flacon (qté entière uniquement)</p>
+                            {errors.est_divisible && <p className="text-sm text-red-600 dark:text-red-400">{errors.est_divisible}</p>}
                         </div>
                     </div>
                 </div>

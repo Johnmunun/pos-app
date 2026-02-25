@@ -32,8 +32,21 @@ Route::get('/login', function () {
 
 /**
  * Protected Routes - Dashboard and Profile
+ * Redirige vers le dashboard du module (pharmacy / finance) selon les permissions.
  */
-Route::get('/dashboard', function () {
+Route::get('/dashboard', function (\Illuminate\Http\Request $request) {
+    $user = $request->user();
+    if ($user === null) {
+        return redirect()->route('login');
+    }
+    if (method_exists($user, 'hasPermission')) {
+        if ($user->hasPermission('module.pharmacy') || $user->isRoot()) {
+            return redirect()->route('pharmacy.dashboard', $request->only(['period']));
+        }
+        if ($user->hasPermission('finance.dashboard.view') || $user->hasPermission('finance.report.view')) {
+            return redirect()->route('finance.dashboard', $request->only(['from', 'to']));
+        }
+    }
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
@@ -576,6 +589,57 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->middleware('permission:stock.movement.print')
                 ->name('api.product-movements.pdf.single');
         });
+    });
+
+    /*
+     * Finance Module Routes (DDD)
+     */
+    Route::prefix('finance')->name('finance.')->group(function () {
+        Route::get('/dashboard', [\Src\Infrastructure\Finance\Http\Controllers\FinanceDashboardController::class, 'index'])
+            ->middleware('permission:finance.dashboard.view|finance.report.view')
+            ->name('dashboard');
+        Route::get('/dashboard/export/pdf', [\Src\Infrastructure\Finance\Http\Controllers\FinanceExportController::class, 'dashboardPdf'])
+            ->middleware('permission:finance.dashboard.view|finance.report.view|finance.reports')
+            ->name('dashboard.export.pdf');
+
+        Route::get('/expenses', [\Src\Infrastructure\Finance\Http\Controllers\ExpenseController::class, 'index'])
+            ->middleware('permission:finance.expense.view|finance.expense.manage')
+            ->name('expenses.index');
+        Route::post('/expenses', [\Src\Infrastructure\Finance\Http\Controllers\ExpenseController::class, 'store'])
+            ->middleware('permission:finance.expense.manage')
+            ->name('expenses.store');
+        Route::get('/expenses/export/pdf', [\Src\Infrastructure\Finance\Http\Controllers\FinanceExportController::class, 'expensesPdf'])
+            ->middleware('permission:finance.expense.view|finance.expense.manage')
+            ->name('expenses.export.pdf');
+        Route::get('/expenses/{id}', [\Src\Infrastructure\Finance\Http\Controllers\ExpenseController::class, 'show'])
+            ->middleware('permission:finance.expense.view|finance.expense.manage')
+            ->name('expenses.show');
+        Route::delete('/expenses/{id}', [\Src\Infrastructure\Finance\Http\Controllers\ExpenseController::class, 'destroy'])
+            ->middleware('permission:finance.expense.manage')
+            ->name('expenses.destroy');
+
+        Route::get('/debts', [\Src\Infrastructure\Finance\Http\Controllers\DebtController::class, 'index'])
+            ->middleware('permission:finance.debt.view|finance.debt.settle')
+            ->name('debts.index');
+        Route::post('/debts', [\Src\Infrastructure\Finance\Http\Controllers\DebtController::class, 'store'])
+            ->middleware('permission:finance.debt.settle')
+            ->name('debts.store');
+        Route::get('/debts/{id}', [\Src\Infrastructure\Finance\Http\Controllers\DebtController::class, 'show'])
+            ->middleware('permission:finance.debt.view|finance.debt.settle')
+            ->name('debts.show');
+        Route::post('/debts/{id}/settle', [\Src\Infrastructure\Finance\Http\Controllers\DebtController::class, 'settle'])
+            ->middleware('permission:finance.debt.settle')
+            ->name('debts.settle');
+
+        Route::get('/invoices', [\Src\Infrastructure\Finance\Http\Controllers\InvoiceController::class, 'index'])
+            ->middleware('permission:finance.invoice.view|finance.invoice.manage')
+            ->name('invoices.index');
+        Route::get('/invoices/{id}', [\Src\Infrastructure\Finance\Http\Controllers\InvoiceController::class, 'show'])
+            ->middleware('permission:finance.invoice.view|finance.invoice.manage')
+            ->name('invoices.show');
+        Route::post('/invoices/from-sale', [\Src\Infrastructure\Finance\Http\Controllers\InvoiceController::class, 'createFromSale'])
+            ->middleware('permission:finance.invoice.manage')
+            ->name('invoices.from-sale');
     });
 });
 

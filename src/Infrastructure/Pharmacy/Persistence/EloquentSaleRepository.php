@@ -12,7 +12,7 @@ class EloquentSaleRepository implements SaleRepositoryInterface
 {
     public function save(Sale $sale): void
     {
-        $depotId = request()?->session()->get('current_depot_id');
+        $depotId = request()->session()->get('current_depot_id');
         SaleModel::updateOrCreate(
             ['id' => $sale->getId()],
             [

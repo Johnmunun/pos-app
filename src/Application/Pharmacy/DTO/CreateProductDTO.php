@@ -19,6 +19,9 @@ class CreateProductDTO
         public readonly ?string $dosage = null,
         public readonly bool $prescriptionRequired = false,
         public readonly ?string $manufacturer = null,
-        public readonly ?string $supplierId = null
+        public readonly ?string $supplierId = null,
+        public readonly string $typeUnite = 'UNITE',
+        public readonly int $quantiteParUnite = 1,
+        public readonly bool $estDivisible = true
     ) {}
 }

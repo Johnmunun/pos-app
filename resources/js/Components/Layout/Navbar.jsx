@@ -56,8 +56,8 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
             {/* Séparateur */}
             <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 lg:hidden" />
 
-            {/* Sélecteur de dépôt (tenant avec dépôts) */}
-            {depots.length > 0 && user?.tenant_id && (
+            {/* Sélecteur de dépôt (affiché dès qu'il y a des dépôts) */}
+            {depots.length > 0 && (
                 <DepotSelector depots={depots} currentDepot={currentDepot} />
             )}
 

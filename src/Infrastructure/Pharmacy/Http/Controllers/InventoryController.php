@@ -37,7 +37,7 @@ class InventoryController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $this->getShopId($user);
+        $shopId = $this->getShopId($request);
         $isRoot = $this->isRoot($user);
 
         if (!$shopId && !$isRoot) {
@@ -119,14 +119,17 @@ class InventoryController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $this->getShopId($user);
+        $shopId = $this->getShopId($request);
 
         if (!$shopId) {
             return redirect()->back()->withErrors(['message' => 'Shop ID not found.']);
         }
 
+        $depotId = $request->session()->get('current_depot_id');
+        $depotId = $depotId !== null ? (int) $depotId : null;
+
         try {
-            $inventory = $this->inventoryService->createInventory($shopId, $user->id);
+            $inventory = $this->inventoryService->createInventory($shopId, $depotId, (int) $user->id);
 
             return redirect()->route('pharmacy.inventories.show', $inventory->getId())
                 ->with('success', 'Inventaire créé avec succès. Vous pouvez maintenant le démarrer.');
@@ -144,7 +147,7 @@ class InventoryController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $this->getShopId($user);
+        $shopId = $this->getShopId($request);
         $isRoot = $this->isRoot($user);
 
         if (!$shopId && !$isRoot) {
@@ -275,7 +278,7 @@ class InventoryController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $this->getShopId($user);
+        $shopId = $this->getShopId($request);
 
         if (!$shopId) {
             return redirect()->back()->withErrors(['message' => 'Shop ID not found.']);
@@ -305,7 +308,7 @@ class InventoryController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $this->getShopId($user);
+        $shopId = $this->getShopId($request);
 
         if (!$shopId) {
             return response()->json(['message' => 'Shop ID not found.'], 403);
@@ -340,7 +343,7 @@ class InventoryController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $this->getShopId($user);
+        $shopId = $this->getShopId($request);
 
         if (!$shopId) {
             return response()->json(['message' => 'Shop ID not found.'], 403);
@@ -380,7 +383,7 @@ class InventoryController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $this->getShopId($user);
+        $shopId = $this->getShopId($request);
 
         if (!$shopId) {
             return redirect()->back()->withErrors(['message' => 'Shop ID not found.']);
@@ -404,7 +407,7 @@ class InventoryController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $this->getShopId($user);
+        $shopId = $this->getShopId($request);
 
         if (!$shopId) {
             return redirect()->back()->withErrors(['message' => 'Shop ID not found.']);
@@ -420,25 +423,26 @@ class InventoryController
     }
 
     /**
-     * Récupère le shop_id de l'utilisateur
+     * Shop ID selon le dépôt sélectionné en session (ou fallback user).
      */
-    /**
-     * @param \Illuminate\Contracts\Auth\Authenticatable|null $user
-     */
-    private function getShopId($user): ?string
+    private function getShopId(Request $request): ?string
     {
+        $user = $request->user();
         if ($user === null) {
             return null;
         }
-        if (isset($user->shop_id) && $user->shop_id) {
-            return (string) $user->shop_id;
+        $shopId = null;
+        $depotId = $request->session()->get('current_depot_id');
+        if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
+            $shopByDepot = \App\Models\Shop::where('depot_id', $depotId)->where('tenant_id', $user->tenant_id)->first();
+            if ($shopByDepot) {
+                $shopId = (string) $shopByDepot->id;
+            }
         }
-
-        if (isset($user->tenant_id) && $user->tenant_id) {
-            return (string) $user->tenant_id;
+        if ($shopId === null) {
+            $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
         }
-
-        return null;
+        return $shopId !== null ? (string) $shopId : null;
     }
 
     /**

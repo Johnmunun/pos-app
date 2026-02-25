@@ -54,6 +54,16 @@ class UpdateSaleLinesUseCase
                     throw new \InvalidArgumentException('Product not found for line');
                 }
 
+                // Règle métier : produit non divisible → quantité entière obligatoire
+                if (!$product->estDivisible()) {
+                    $q = $lineDto->quantity;
+                    if (abs($q - (int) $q) > 0.0001) {
+                        throw new \InvalidArgumentException(
+                            'Le produit "' . $product->getName() . '" ne se vend pas en fraction. Quantité entière requise.'
+                        );
+                    }
+                }
+
                 $quantity = new Quantity($lineDto->quantity);
                 $unitPrice = new Money($lineDto->unitPrice, $currency);
 

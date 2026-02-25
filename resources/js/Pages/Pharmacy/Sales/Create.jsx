@@ -227,20 +227,23 @@ export default function POSCreate({ products = [], categories = [], customers = 
     }, []);
 
     const addToCart = (product) => {
-        if ((product.stock || 0) < 1) {
+        const stock = Number(product.stock) ?? 0;
+        const estDivisible = Boolean(product.est_divisible ?? true);
+        const minQty = estDivisible ? 0.01 : 1;
+        if (stock < minQty) {
             toast.error('Stock insuffisant');
             return;
         }
         
         const existing = cart.find(item => item.product_id === product.id);
         if (existing) {
-            if (existing.quantity >= product.stock) {
+            if (existing.quantity >= stock) {
                 toast.error('Stock insuffisant');
                 return;
             }
             setCart(cart.map(item => 
                 item.product_id === product.id 
-                    ? { ...item, quantity: item.quantity + 1 }
+                    ? { ...item, quantity: estDivisible ? item.quantity + 1 : Math.min(item.quantity + 1, Math.floor(stock)) }
                     : item
             ));
         } else {
@@ -252,30 +255,37 @@ export default function POSCreate({ products = [], categories = [], customers = 
                 price: getProductPrice(product),
                 price_currency: productCurrency,
                 quantity: 1,
-                max_stock: product.stock,
+                max_stock: stock,
                 discount_percent: 0,
-                image_url: product.image_url
+                image_url: product.image_url,
+                est_divisible: estDivisible,
+                type_unite: product.type_unite ?? 'UNITE',
             }]);
         }
         persistRecentProduct(product.id);
     };
 
     const updateQuantity = (productId, newQuantity) => {
-        if (newQuantity < 1) {
+        const q = Number(newQuantity);
+        if (isNaN(q)) return;
+        const item = cart.find(i => i.product_id === productId);
+        if (!item) return;
+        const estDivisible = Boolean(item.est_divisible ?? true);
+        const minQty = estDivisible ? 0.01 : 1;
+        if (q < minQty) {
             removeFromCart(productId);
             return;
         }
-        
-        const item = cart.find(i => i.product_id === productId);
-        if (item && newQuantity > item.max_stock) {
+        const maxStock = item.max_stock ?? 0;
+        if (q > maxStock) {
             toast.error('Stock insuffisant');
             return;
         }
-        
-        setCart(cart.map(item =>
-            item.product_id === productId
-                ? { ...item, quantity: newQuantity }
-                : item
+        const normalized = estDivisible
+            ? Math.round(q * 10000) / 10000
+            : Math.max(1, Math.floor(q));
+        setCart(cart.map(i =>
+            i.product_id === productId ? { ...i, quantity: normalized } : i
         ));
     };
 
@@ -879,14 +889,25 @@ export default function POSCreate({ products = [], categories = [], customers = 
                                             
                                             <div className="flex items-center gap-2 mt-2">
                                                 <button
-                                                    onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
+                                                    onClick={() => updateQuantity(item.product_id, (item.est_divisible !== false ? item.quantity - 0.5 : item.quantity - 1))}
                                                     className="w-6 h-6 rounded-full bg-gray-200 dark:bg-slate-600 flex items-center justify-center hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors text-gray-700 dark:text-gray-200"
                                                 >
                                                     <Minus className="h-3 w-3" />
                                                 </button>
-                                                <span className="w-8 text-center font-medium text-sm text-gray-900 dark:text-gray-100 tabular-nums">{item.quantity}</span>
+                                                <input
+                                                    type="number"
+                                                    step={item.est_divisible !== false ? 0.5 : 1}
+                                                    min={item.est_divisible !== false ? 0.01 : 1}
+                                                    value={item.quantity}
+                                                    onChange={(e) => {
+                                                        const v = parseFloat(e.target.value);
+                                                        if (!Number.isNaN(v)) updateQuantity(item.product_id, v);
+                                                    }}
+                                                    className="w-14 text-center rounded border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 text-sm font-medium tabular-nums py-1"
+                                                    title={item.est_divisible !== false ? 'Quantité (ex. 0.5 = demi-plaquette)' : 'Quantité entière uniquement'}
+                                                />
                                                 <button
-                                                    onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
+                                                    onClick={() => updateQuantity(item.product_id, (item.est_divisible !== false ? item.quantity + 0.5 : item.quantity + 1))}
                                                     className="w-6 h-6 rounded-full bg-gray-200 dark:bg-slate-600 flex items-center justify-center hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors text-gray-700 dark:text-gray-200"
                                                 >
                                                     <Plus className="h-3 w-3" />

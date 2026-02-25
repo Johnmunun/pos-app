@@ -84,20 +84,19 @@ class PharmacyExportService
 
         $settings = null;
         $currency = 'CDF';
-        
+        $shop = $shopId ? \App\Models\Shop::find($shopId) : null;
+
         if ($shopId) {
             $settings = $this->getStoreSettingsUseCase->execute((string) $shopId);
-            
-            // Récupérer la devise de la boutique
-            if ($user->shop && isset($user->shop->currency)) {
-                $currency = $user->shop->currency;
+            if ($shop && isset($shop->currency)) {
+                $currency = $shop->currency;
             }
         }
 
         return [
             'shop_id' => $shopId,
             'is_root' => $isRoot,
-            'company_name' => $settings ? $settings->getCompanyIdentity()->getName() : ($user->shop->name ?? 'Pharmacie'),
+            'company_name' => $settings ? $settings->getCompanyIdentity()->getName() : ($shop?->name ?? 'Pharmacie'),
             'id_nat' => $settings ? $settings->getCompanyIdentity()->getIdNat() : null,
             'rccm' => $settings ? $settings->getCompanyIdentity()->getRccm() : null,
             'tax_number' => $settings ? $settings->getCompanyIdentity()->getTaxNumber() : null,

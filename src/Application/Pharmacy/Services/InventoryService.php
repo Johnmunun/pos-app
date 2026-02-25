@@ -233,9 +233,9 @@ class InventoryService
                     // Écart négatif: on a moins en réalité qu'en système → retirer
                     $absValue = abs($difference);
                     
-                    // Vérifier que le stock est suffisant
+                    // Vérifier que le stock est suffisant et respecte les règles (entier si non divisible)
                     if ($product->getStock()->getValue() >= $absValue) {
-                        $product->removeStock(new Quantity($absValue));
+                        $product->decreaseStock(new Quantity($absValue));
                         $this->productRepository->update($product);
 
                         // Enregistrer le mouvement

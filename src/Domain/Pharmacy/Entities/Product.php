@@ -5,6 +5,7 @@ namespace Src\Domain\Pharmacy\Entities;
 use Src\Domain\Pharmacy\ValueObjects\ProductCode;
 use Src\Domain\Pharmacy\ValueObjects\MedicineType;
 use Src\Domain\Pharmacy\ValueObjects\Dosage;
+use Src\Domain\Pharmacy\ValueObjects\TypeUnite;
 use Src\Shared\ValueObjects\Money;
 use Src\Shared\ValueObjects\Quantity;
 use DateTimeImmutable;
@@ -21,9 +22,13 @@ class Product
     private ?Dosage $dosage;
     private Money $price;
     private Quantity $stock;
+    private TypeUnite $typeUnite;
+    private int $quantiteParUnite;
+    private bool $estDivisible;
     private string $categoryId;
     private bool $isActive;
     private bool $requiresPrescription;
+    private Quantity $minimumStock;
     private DateTimeImmutable $createdAt;
     private DateTimeImmutable $updatedAt;
 
@@ -37,9 +42,16 @@ class Product
         ?Dosage $dosage,
         Money $price,
         Quantity $stock,
+        TypeUnite $typeUnite,
+        int $quantiteParUnite,
+        bool $estDivisible,
         string $categoryId,
-        bool $requiresPrescription = false
+        bool $requiresPrescription = false,
+        ?Quantity $minimumStock = null
     ) {
+        if ($quantiteParUnite < 1) {
+            throw new \InvalidArgumentException('quantite_par_unite must be at least 1');
+        }
         $this->id = $id;
         $this->shopId = $shopId;
         $this->code = $code;
@@ -49,8 +61,12 @@ class Product
         $this->dosage = $dosage;
         $this->price = $price;
         $this->stock = $stock;
+        $this->typeUnite = $typeUnite;
+        $this->quantiteParUnite = $quantiteParUnite;
+        $this->estDivisible = $estDivisible;
         $this->categoryId = $categoryId;
         $this->requiresPrescription = $requiresPrescription;
+        $this->minimumStock = $minimumStock ?? new Quantity(0);
         $this->isActive = true;
         $this->createdAt = new DateTimeImmutable();
         $this->updatedAt = new DateTimeImmutable();
@@ -66,6 +82,10 @@ class Product
     public function getDosage(): ?Dosage { return $this->dosage; }
     public function getPrice(): Money { return $this->price; }
     public function getStock(): Quantity { return $this->stock; }
+    public function getMinimumStock(): Quantity { return $this->minimumStock; }
+    public function getTypeUnite(): TypeUnite { return $this->typeUnite; }
+    public function getQuantiteParUnite(): int { return $this->quantiteParUnite; }
+    public function estDivisible(): bool { return $this->estDivisible; }
     public function getCategoryId(): string { return $this->categoryId; }
     public function isActive(): bool { return $this->isActive; }
     public function requiresPrescription(): bool { return $this->requiresPrescription; }
@@ -89,6 +109,30 @@ class Product
     {
         $this->stock = $this->stock->subtract($quantity);
         $this->updatedAt = new DateTimeImmutable();
+    }
+
+    /**
+     * Décrémente le stock en respectant les règles métier :
+     * - Si estDivisible = false, la quantité doit être un entier (pas de fraction).
+     * - Sinon, les décimales sont autorisées (ex. 0.5 plaquette).
+     */
+    public function decreaseStock(Quantity $quantity): void
+    {
+        if (!$this->estDivisible) {
+            $v = $quantity->getValue();
+            if (abs($v - (int) $v) > 0.0001) {
+                throw new \InvalidArgumentException(
+                    'Ce produit n\'est pas vendu en fraction. La quantité doit être un nombre entier.'
+                );
+            }
+        }
+        if ($quantity->getValue() <= 0) {
+            throw new \InvalidArgumentException('La quantité à retirer doit être strictement positive.');
+        }
+        if ($this->stock->getValue() < $quantity->getValue()) {
+            throw new \InvalidArgumentException('Stock insuffisant.');
+        }
+        $this->removeStock($quantity);
     }
 
     public function deactivate(): void
@@ -147,6 +191,27 @@ class Product
         $this->updatedAt = new DateTimeImmutable();
     }
 
+    public function updateTypeUnite(TypeUnite $typeUnite): void
+    {
+        $this->typeUnite = $typeUnite;
+        $this->updatedAt = new DateTimeImmutable();
+    }
+
+    public function updateQuantiteParUnite(int $quantiteParUnite): void
+    {
+        if ($quantiteParUnite < 1) {
+            throw new \InvalidArgumentException('quantite_par_unite must be at least 1');
+        }
+        $this->quantiteParUnite = $quantiteParUnite;
+        $this->updatedAt = new DateTimeImmutable();
+    }
+
+    public function setEstDivisible(bool $estDivisible): void
+    {
+        $this->estDivisible = $estDivisible;
+        $this->updatedAt = new DateTimeImmutable();
+    }
+
     public function setRequiresPrescription(bool $requires): void
     {
         $this->requiresPrescription = $requires;
@@ -173,8 +238,12 @@ class Product
         ?Dosage $dosage,
         Money $price,
         Quantity $initialStock,
+        TypeUnite $typeUnite,
+        int $quantiteParUnite,
+        bool $estDivisible,
         string $categoryId,
-        bool $requiresPrescription = false
+        bool $requiresPrescription = false,
+        ?Quantity $minimumStock = null
     ): self {
         return new self(
             Uuid::uuid4()->toString(),
@@ -186,8 +255,12 @@ class Product
             $dosage,
             $price,
             $initialStock,
+            $typeUnite,
+            $quantiteParUnite,
+            $estDivisible,
             $categoryId,
-            $requiresPrescription
+            $requiresPrescription,
+            $minimumStock
         );
     }
 }

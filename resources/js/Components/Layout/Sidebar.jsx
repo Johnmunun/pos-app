@@ -92,6 +92,21 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, 
         return groupPermissions.some(perm => permissions.includes(perm));
     };
 
+    // Pour le groupe Pharmacy : afficher si l'utilisateur a une permission pharmacy.* ou module.pharmacy ou stock.* ou inventory.*
+    const hasPharmacyAccess = () => {
+        if (isRoot || permissions.includes('*')) return true;
+        if (!Array.isArray(permissions)) return false;
+        return permissions.some(
+            (p) =>
+                p === 'module.pharmacy' ||
+                p.startsWith('pharmacy.') ||
+                p.startsWith('stock.') ||
+                p === 'inventory.view' ||
+                p === 'inventory.create' ||
+                p === 'inventory.edit'
+        );
+    };
+
     // Définition des groupes de navigation
     const navigationGroups = [
         {
@@ -100,7 +115,7 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, 
             icon: Home,
             permissions: ['dashboard.view', 'notifications.view', 'activity.view', '*'],
             items: [
-                { label: 'Dashboard', href: '/dashboard', permission: '*', icon: LayoutDashboard },
+                { label: 'Dashboard', href: '/dashboard', permission: '*', icon: LayoutDashboard, rootOnly: true },
                 { label: 'Mon profil', href: '/profile', permission: '*', icon: User },
                 { label: 'Notifications', href: '#', permission: 'notifications.view', icon: Bell },
                 { label: 'Activité récente', href: '#', permission: 'activity.view', icon: ClipboardList },
@@ -142,7 +157,7 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, 
             icon: Pill,
             permissions: ['module.pharmacy', 'pharmacy.pharmacy.product.manage', 'pharmacy.product.manage', 'pharmacy.category.view', 'pharmacy.pharmacy.stock.manage', 'stock.view', 'inventory.view', 'pharmacy.sales.view', 'pharmacy.sales.manage', 'pharmacy.purchases.view', 'pharmacy.purchases.manage', 'pharmacy.supplier.view', 'pharmacy.customer.view', 'pharmacy.seller.view', 'pharmacy.expiration.view', 'pharmacy.batch.view', 'pharmacy.report.view', 'admin.modules.view'],
             items: [
-                { label: 'Dashboard', href: '/pharmacy/dashboard', permission: 'module.pharmacy', icon: LayoutDashboard },
+                { label: 'Dashboard', href: '/pharmacy/dashboard', permission: 'module.pharmacy|pharmacy.sales.view|pharmacy.product.manage|pharmacy.pharmacy.product.manage|stock.view|inventory.view|pharmacy.report.view|pharmacy.purchases.view', icon: LayoutDashboard },
                 { label: 'Produits', href: '/pharmacy/products', permission: 'pharmacy.pharmacy.product.manage|pharmacy.product.manage', icon: Package },
                 { label: 'Catégories', href: '/pharmacy/categories', permission: 'pharmacy.category.view', icon: Tag },
                 { label: 'Stock', href: '/pharmacy/stock', permission: 'pharmacy.pharmacy.stock.manage|stock.view', icon: BarChart },
@@ -161,11 +176,12 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, 
             key: 'payments',
             label: 'Paiements & Finance',
             icon: CreditCard,
-            permissions: ['payments.view', 'payments.methods', 'finance.reports'],
+            permissions: ['payments.view', 'payments.methods', 'finance.reports', 'finance.dashboard.view', 'finance.expense.view'],
             items: [
                 { label: 'Méthodes de paiement', href: '#', permission: 'payments.methods', icon: CreditCard },
                 { label: 'Historique financier', href: '#', permission: 'payments.view', icon: Scroll },
-                { label: 'Rapports financiers', href: '#', permission: 'finance.reports', icon: BarChart },
+                { label: 'Dashboard Finance', href: '/finance/dashboard', permission: 'finance.dashboard.view|finance.report.view|finance.reports', icon: BarChart },
+                { label: 'Dépenses', href: '/finance/expenses', permission: 'finance.expense.view|finance.expense.manage', icon: DollarSign },
             ]
         },
         {
@@ -232,10 +248,12 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, 
         },
     ];
 
-    // Filtrer les groupes visibles (toujours afficher "Général" pour que Dashboard soit visible)
-    const visibleGroups = navigationGroups.filter(group => 
-        group.key === 'general' || hasVisibleItem(group.permissions)
-    );
+    // Filtrer les groupes visibles (Général toujours visible ; Pharmacy si hasPharmacyAccess)
+    const visibleGroups = navigationGroups.filter((group) => {
+        if (group.key === 'general') return true;
+        if (group.key === 'pharmacy') return hasPharmacyAccess();
+        return hasVisibleItem(group.permissions);
+    });
 
     return (
         <>
@@ -257,7 +275,11 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, 
                         <ul role="list" className="flex flex-1 flex-col gap-y-7">
                             {visibleGroups.map((group) => {
                                 const isExpanded = expandedGroups[group.key] ?? true;
-                                const visibleItems = group.items.filter(item => hasItemPermission(item.permission));
+                                const visibleItems = group.items.filter((item) => {
+                                    if (!hasItemPermission(item.permission)) return false;
+                                    if (item.rootOnly && !isRoot) return false;
+                                    return true;
+                                });
 
                                 if (visibleItems.length === 0) return null;
 
@@ -333,7 +355,11 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, 
                     <nav className="flex flex-1 flex-col">
                         <ul role="list" className="flex flex-1 flex-col gap-y-7">
                             {visibleGroups.map((group) => {
-                                const visibleItems = group.items.filter(item => hasItemPermission(item.permission));
+                                const visibleItems = group.items.filter((item) => {
+                                    if (!hasItemPermission(item.permission)) return false;
+                                    if (item.rootOnly && !isRoot) return false;
+                                    return true;
+                                });
 
                                 if (visibleItems.length === 0) return null;
 

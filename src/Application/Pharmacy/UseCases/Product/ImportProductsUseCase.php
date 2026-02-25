@@ -189,7 +189,10 @@ class ImportProductsUseCase
             $this->toStringOrNull($row['dosage'] ?? null),
             $prescription,
             $this->toStringOrNull($row['fabricant'] ?? null),
-            null
+            null,
+            $this->toString($row['type_unite'] ?? 'UNITE'),
+            max(1, (int) ($row['quantite_par_unite'] ?? 1)),
+            in_array(strtolower((string) ($row['est_divisible'] ?? 'true')), ['1', 'oui', 'yes', 'true'], true)
         );
     }
 

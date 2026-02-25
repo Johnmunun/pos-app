@@ -20,6 +20,9 @@ class UpdateProductDTO
         public readonly ?bool $prescriptionRequired = null,
         public readonly ?string $manufacturer = null,
         public readonly ?string $supplierId = null,
-        public readonly ?bool $isActive = null
+        public readonly ?bool $isActive = null,
+        public readonly ?string $typeUnite = null,
+        public readonly ?int $quantiteParUnite = null,
+        public readonly ?bool $estDivisible = null
     ) {}
 }

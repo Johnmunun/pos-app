@@ -7,6 +7,7 @@ use Src\Domain\Pharmacy\Repositories\ProductRepositoryInterface;
 use Src\Domain\Pharmacy\ValueObjects\ProductCode;
 use Src\Domain\Pharmacy\ValueObjects\MedicineType;
 use Src\Domain\Pharmacy\ValueObjects\Dosage;
+use Src\Domain\Pharmacy\ValueObjects\TypeUnite;
 use Src\Shared\ValueObjects\Money;
 use Src\Shared\ValueObjects\Quantity;
 use Src\Infrastructure\Pharmacy\Models\ProductModel;
@@ -30,6 +31,9 @@ class EloquentProductRepository implements ProductRepositoryInterface
                 'price_amount' => $product->getPrice()->getAmount(),
                 'price_currency' => $product->getPrice()->getCurrency(),
                 'stock' => $product->getStock()->getValue(),
+                'type_unite' => $product->getTypeUnite()->getValue(),
+                'quantite_par_unite' => $product->getQuantiteParUnite(),
+                'est_divisible' => $product->estDivisible(),
                 'category_id' => $product->getCategoryId(),
                 'is_active' => $product->isActive(),
                 'requires_prescription' => $product->requiresPrescription(),
@@ -177,7 +181,7 @@ class EloquentProductRepository implements ProductRepositoryInterface
         $code  = new ProductCode($model->code);
         $price = new Money($model->price_amount, $model->price_currency);
         // Si la colonne stock est null (anciens enregistrements), on retombe à 0
-        $stock = new Quantity((int) ($model->stock ?? 0));
+        $stock = new Quantity((float) ($model->stock ?? 0));
 
         // Type de médicament : utiliser une valeur par défaut valide si null
         $medicineType = $model->type
@@ -187,6 +191,11 @@ class EloquentProductRepository implements ProductRepositoryInterface
         $dosage = $model->dosage
             ? new Dosage($model->dosage)
             : null;
+
+        $typeUnite = isset($model->type_unite) ? new TypeUnite($model->type_unite) : new TypeUnite(TypeUnite::UNITE);
+        $quantiteParUnite = isset($model->quantite_par_unite) ? (int) $model->quantite_par_unite : 1;
+        $estDivisible = isset($model->est_divisible) ? (bool) $model->est_divisible : true;
+        $minimumStock = new Quantity((float) ($model->minimum_stock ?? 0));
 
         return new Product(
             $model->id,
@@ -198,8 +207,12 @@ class EloquentProductRepository implements ProductRepositoryInterface
             $dosage,
             $price,
             $stock,
+            $typeUnite,
+            $quantiteParUnite,
+            $estDivisible,
             (string) $model->category_id,
-            (bool) $model->requires_prescription
+            (bool) $model->requires_prescription,
+            $minimumStock
         );
     }
 }

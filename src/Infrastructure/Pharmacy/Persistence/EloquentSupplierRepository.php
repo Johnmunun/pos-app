@@ -21,7 +21,7 @@ final class EloquentSupplierRepository implements SupplierRepositoryInterface
 {
     public function save(Supplier $supplier): void
     {
-        $depotId = request()?->session()->get('current_depot_id');
+        $depotId = request()->session()->get('current_depot_id');
         SupplierModel::create([
             'id' => $supplier->getId(),
             'shop_id' => $supplier->getShopId(),

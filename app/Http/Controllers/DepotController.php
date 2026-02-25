@@ -88,11 +88,12 @@ class DepotController extends Controller
         }
 
         $depotId = $request->input('depot_id');
-        if (!$depotId) {
+        if ($depotId === null || $depotId === '' || $depotId === false) {
             $request->session()->forget('current_depot_id');
             return back()->with('success', 'Dépôt désélectionné.');
         }
 
+        $depotId = (int) $depotId;
         $depot = Depot::where('id', $depotId)
             ->where('tenant_id', $user->tenant_id)
             ->where('is_active', true)

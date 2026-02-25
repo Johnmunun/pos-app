@@ -5,6 +5,23 @@ namespace Src\Infrastructure\Pharmacy\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
+/**
+ * @property string $id
+ * @property string $shop_id
+ * @property int|null $customer_id
+ * @property string $status
+ * @property float|string $total_amount
+ * @property float|string $paid_amount
+ * @property float|string $balance_amount
+ * @property string $currency
+ * @property int|null $created_by
+ * @property \Carbon\Carbon $created_at
+ * @property \Carbon\Carbon|null $completed_at
+ * @property \Carbon\Carbon|null $cancelled_at
+ * @property int|null $cash_register_id
+ * @property int|null $cash_register_session_id
+ * @property string|null $sale_type
+ */
 class SaleModel extends Model
 {
     use HasFactory;

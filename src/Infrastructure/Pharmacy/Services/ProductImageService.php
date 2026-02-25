@@ -35,6 +35,9 @@ class ProductImageService
      */
     public function upload(UploadedFile $file, string $productId): ProductImage
     {
+        if ($file->getSize() !== false && $file->getSize() > self::MAX_SIZE) {
+            throw new \InvalidArgumentException('La taille du fichier ne doit pas dépasser 2 Mo.');
+        }
         // Valider le fichier
         ProductImage::validateFile($file);
 
@@ -184,8 +187,8 @@ class ProductImageService
         }
 
         // Pour les uploads, retourner l'URL publique
-        $path = self::STORAGE_PATH . '/' . $image->getPath();
-        return Storage::disk(self::STORAGE_DISK)->url($path);
+        $path = self::STORAGE_PATH . '/' . ltrim($image->getPath(), '/');
+        return asset('storage/' . $path);
     }
 
     /**
@@ -206,8 +209,8 @@ class ProductImageService
             return $imagePath;
         }
 
-        $path = self::STORAGE_PATH . '/' . $imagePath;
-        return Storage::disk(self::STORAGE_DISK)->url($path);
+        $path = self::STORAGE_PATH . '/' . ltrim($imagePath, '/');
+        return asset('storage/' . $path);
     }
 
     /**

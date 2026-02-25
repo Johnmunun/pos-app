@@ -9,6 +9,7 @@ use Src\Domain\Pharmacy\Entities\Product;
 use Src\Domain\Pharmacy\ValueObjects\ProductCode;
 use Src\Domain\Pharmacy\ValueObjects\MedicineType;
 use Src\Domain\Pharmacy\ValueObjects\Dosage;
+use Src\Domain\Pharmacy\ValueObjects\TypeUnite;
 use Src\Shared\ValueObjects\Money;
 use Src\Shared\ValueObjects\Quantity;
 use DateTimeImmutable;
@@ -41,21 +42,28 @@ class CreateProductUseCase
 
         $dosage = $dto->dosage ? new Dosage($dto->dosage) : null;
 
+        $typeUnite = new TypeUnite($dto->typeUnite);
+        $quantiteParUnite = max(1, $dto->quantiteParUnite);
+        $estDivisible = $dto->estDivisible;
+
         // Stock initial dans le Domain : 0 (les mouvements de stock sont gérés par les UseCases d'inventaire)
         $initialStock = new Quantity(0);
 
         // Création de l'entité Domain en respectant strictement la signature
         $product = Product::create(
-            $dto->shopId,               // string $shopId
-            $productCode,               // ProductCode $code
-            $dto->name,                 // string $name
-            $dto->description ?? '',    // string $description
-            $medicineType,              // MedicineType $type
-            $dosage,                    // ?Dosage $dosage
-            $price,                     // Money $price
-            $initialStock,              // Quantity $initialStock
-            $dto->categoryId,           // string $categoryId
-            $dto->prescriptionRequired  // bool $requiresPrescription
+            $dto->shopId,
+            $productCode,
+            $dto->name,
+            $dto->description ?? '',
+            $medicineType,
+            $dosage,
+            $price,
+            $initialStock,
+            $typeUnite,
+            $quantiteParUnite,
+            $estDivisible,
+            $dto->categoryId,
+            $dto->prescriptionRequired
         );
 
         // Save product

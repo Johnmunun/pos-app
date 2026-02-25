@@ -19,6 +19,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  * @property \Carbon\Carbon|null $created_at
  * @property \Carbon\Carbon|null $updated_at
  * @property \Carbon\Carbon|null $deleted_at
+ * @property-read self|null $parent
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, self> $children
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, ProductModel> $products
  */
 class CategoryModel extends Model
 {
@@ -47,16 +50,19 @@ class CategoryModel extends Model
     ];
 
     // Relations
+    /** @return \Illuminate\Database\Eloquent\Relations\BelongsTo<self, self> */
     public function parent()
     {
         return $this->belongsTo(self::class, 'parent_id');
     }
 
+    /** @return \Illuminate\Database\Eloquent\Relations\HasMany<self, self> */
     public function children()
     {
         return $this->hasMany(self::class, 'parent_id');
     }
 
+    /** @return \Illuminate\Database\Eloquent\Relations\HasMany<self, ProductModel> */
     public function products()
     {
         return $this->hasMany(ProductModel::class, 'category_id');

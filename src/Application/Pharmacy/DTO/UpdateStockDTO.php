@@ -12,7 +12,7 @@ class UpdateStockDTO
     public function __construct(
         public readonly string $shopId,
         public readonly string $productId,
-        public readonly int $quantity,
+        public readonly int|float $quantity,
         public readonly ?string $batchNumber = null,
         public readonly ?string $expiryDate = null,
         public readonly ?string $supplierId = null,

@@ -64,38 +64,50 @@ class ProductController
         ]);
     }
 
+    /**
+     * Shop ID selon le dépôt sélectionné en session (ou fallback user).
+     */
+    private function getShopId(Request $request): ?string
+    {
+        $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
+        $shopId = null;
+        $depotId = $request->session()->get('current_depot_id');
+        if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
+            $shopByDepot = \App\Models\Shop::where('depot_id', $depotId)->where('tenant_id', $user->tenant_id)->first();
+            if ($shopByDepot) {
+                $shopId = (string) $shopByDepot->id;
+            }
+        }
+        if ($shopId === null) {
+            $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        }
+        $userModel = UserModel::query()->find($user->id);
+        $isRoot = $userModel ? $userModel->isRoot() : false;
+        if (!$shopId && !$isRoot) {
+            abort(403, 'Shop ID not found. Please contact administrator.');
+        }
+        if ($isRoot && !$shopId) {
+            return null;
+        }
+        return $shopId ? (string) $shopId : null;
+    }
+
     public function index(Request $request): Response
     {
         $user = $request->user();
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        
-        // ROOT users can access all shops, others need shop_id
-        // For now, use tenant_id as shop_id if shop_id doesn't exist
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
-        
-        // Ensure UserModel has isRoot() method
+        $shopId = $this->getShopId($request);
         /** @var UserModel|null $userModel */
         $userModel = UserModel::query()->find($user->id);
         $isRoot = $userModel ? $userModel->isRoot() : false;
-        
-        // ROOT users can access even without shop_id (they can see all products)
-        // For non-ROOT users, shop_id is required
-        if (!$shopId && !$isRoot) {
-            abort(403, 'Shop ID not found. Please contact administrator.');
-        }
-        
-        // For ROOT users without shop_id, show all products or redirect to shop selection
-        // For now, if ROOT has no shop_id, we'll use a default or show empty list
-        if ($isRoot && !$shopId) {
-            $shopId = null; // ROOT can see all, we'll handle this in the query
-        }
-        
-        // Get products for current shop
-        // ROOT users without shop_id can see all products
+
         $query = \Src\Infrastructure\Pharmacy\Models\ProductModel::with('category')->orderBy('name');
-        if (!($isRoot && !$shopId)) {
+        if ($shopId !== null) {
             $query->where('shop_id', $shopId);
         }
 
@@ -144,6 +156,9 @@ class ProductController
                 'image_path' => $model->image_path ?? null,
                 'image_type' => $model->image_type ?? 'upload',
                 'image_url' => $this->imageService->getUrlFromPath($model->image_path, $model->image_type ?? 'upload'),
+                'type_unite' => $model->type_unite ?? 'UNITE',
+                'quantite_par_unite' => (int) ($model->quantite_par_unite ?? 1),
+                'est_divisible' => (bool) ($model->est_divisible ?? true),
                 'category' => $model->category ? [
                     'id' => $model->category->id,
                     'name' => $model->category->name,
@@ -192,17 +207,11 @@ class ProductController
             abort(403, 'User not authenticated.');
         }
 
-        // Déterminer le shop courant (même logique que index)
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        $shopId = $this->getShopId($request);
         /** @var UserModel|null $userModel */
         $userModel = UserModel::query()->find($user->id);
         $isRoot = $userModel ? $userModel->isRoot() : false;
 
-        if (!$shopId && !$isRoot) {
-            abort(403, 'Shop ID not found. Please contact administrator.');
-        }
-
-        // Récupérer les paramètres de boutique
         $settings = null;
         if ($shopId) {
             $settings = $this->getStoreSettingsUseCase->execute((string) $shopId);
@@ -229,7 +238,7 @@ class ProductController
         $query = \Src\Infrastructure\Pharmacy\Models\ProductModel::with('category')
             ->orderBy('name');
 
-        if (!($isRoot && !$shopId)) {
+        if ($shopId !== null) {
             $query->where('shop_id', $shopId);
         }
 
@@ -271,15 +280,10 @@ class ProductController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        $shopId = $this->getShopId($request);
         /** @var UserModel|null $userModel */
         $userModel = UserModel::query()->find($user->id);
         $isRoot = $userModel ? $userModel->isRoot() : false;
-
-        if (!$shopId && !$isRoot) {
-            abort(403, 'Shop ID not found. Please contact administrator.');
-        }
 
         $settings = null;
         if ($shopId) {
@@ -302,11 +306,9 @@ class ProductController
 
         $query = \Src\Infrastructure\Pharmacy\Models\ProductModel::with('category')
             ->orderBy('name');
-
-        if (!($isRoot && !$shopId)) {
+        if ($shopId !== null) {
             $query->where('shop_id', $shopId);
         }
-
         $models = $query->get();
 
         $spreadsheet = new Spreadsheet();
@@ -436,15 +438,13 @@ class ProductController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        $shopId = $this->getShopId($request);
         if (!$shopId) {
-            return response()->json(['message' => 'Shop ID non trouvé.'], 403);
+            return response()->json(['message' => 'Veuillez sélectionner un dépôt en haut.'], 403);
         }
-
         try {
             $file = $request->file('file');
             $path = $file->getRealPath();
-
             $result = $this->importProductsUseCase->execute($shopId, $path);
 
             $errorsFormatted = [];
@@ -467,13 +467,13 @@ class ProductController
         }
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
-        $categories = $this->categoryRepository->findByShop(
-            request()->user()->shop_id, 
-            true
-        );
-        
+        $shopId = $this->getShopId($request);
+        if (!$shopId) {
+            abort(403, 'Veuillez sélectionner un dépôt en haut.');
+        }
+        $categories = $this->categoryRepository->findByShop($shopId, true);
         return Inertia::render('Pharmacy/Products/Create', [
             'categories' => $categories
         ]);
@@ -486,14 +486,12 @@ class ProductController
             if ($user === null) {
                 abort(403, 'User not authenticated.');
             }
-            $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
-            
+            $shopId = $this->getShopId($request);
             if (!$shopId) {
                 return response()->json([
-                    'message' => 'Shop ID not found. Please contact administrator.'
+                    'message' => 'Veuillez sélectionner un dépôt en haut.'
                 ], 403);
             }
-            
             $request->validate([
                 'name' => 'required|string|max:255',
                 'product_code' => 'required|string|max:50|unique:pharmacy_products,code',
@@ -513,6 +511,9 @@ class ProductController
                 'image_url' => 'nullable|url|max:500',
                 'wholesale_price' => 'nullable|numeric|min:0',
                 'wholesale_min_quantity' => 'nullable|integer|min:0',
+                'type_unite' => 'required|string|in:PLAQUETTE,BOITE,FLACON,TUBE,SACHET,UNITE',
+                'quantite_par_unite' => 'required|integer|min:1',
+                'est_divisible' => 'boolean',
             ]);
 
             $dto = new CreateProductDTO(
@@ -530,7 +531,10 @@ class ProductController
                 $request->input('dosage') ?: null,
                 $request->boolean('prescription_required', false),
                 $request->input('manufacturer') ?: null,
-                $request->input('supplier_id') ?: null
+                $request->input('supplier_id') ?: null,
+                $request->input('type_unite', 'UNITE'),
+                (int) $request->input('quantite_par_unite', 1),
+                $request->boolean('est_divisible', true)
             );
 
             $product = $this->createProductUseCase->execute($dto);
@@ -606,16 +610,13 @@ class ProductController
         /** @var UserModel|null $userModel */
         $userModel = UserModel::query()->find($user->id);
         $isRoot = $userModel?->isRoot() ?? false;
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
-        
+        $shopId = $this->getShopId($request);
+
         $product = $this->productRepository->findById($id);
-        
         if (!$product) {
             abort(404);
         }
-
-        // Vérification d'isolation par pharmacie: seuls ROOT ou les utilisateurs de la même pharmacie peuvent voir
-        if (!$isRoot && $product->getShopId() !== $shopId) {
+        if ($shopId !== null && $product->getShopId() !== $shopId && !$isRoot) {
             abort(404, 'Produit non trouvé');
         }
 
@@ -645,13 +646,13 @@ class ProductController
         /** @var UserModel|null $userModel */
         $userModel = UserModel::query()->find($user->id);
         $isRoot = $userModel?->isRoot() ?? false;
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        $shopId = $this->getShopId($request);
 
         $product = $this->productRepository->findById($id);
         if (!$product) {
             return response()->json(['message' => 'Produit non trouvé.'], 404);
         }
-        if (!$isRoot && $product->getShopId() !== $shopId) {
+        if ($shopId !== null && !$isRoot && $product->getShopId() !== $shopId) {
             return response()->json(['message' => 'Produit non trouvé.'], 404);
         }
 
@@ -695,7 +696,10 @@ class ProductController
             $product->getDosage()?->getValue(),
             $product->requiresPrescription(),
             $sourceManufacturer,
-            null
+            null,
+            $product->getTypeUnite()->getValue(),
+            $product->getQuantiteParUnite(),
+            $product->estDivisible()
         );
 
         $previousDepotId = $request->session()->get('current_depot_id');
@@ -743,23 +747,17 @@ class ProductController
         /** @var UserModel|null $userModel */
         $userModel = UserModel::query()->find($user->id);
         $isRoot = $userModel?->isRoot() ?? false;
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
-        
+        $shopId = $this->getShopId($request);
+
         $product = $this->productRepository->findById($id);
-        
         if (!$product) {
             abort(404);
         }
-
-        // Vérification d'isolation par pharmacie: seuls ROOT ou les utilisateurs de la même pharmacie peuvent modifier
-        if (!$isRoot && $product->getShopId() !== $shopId) {
+        if ($shopId !== null && !$isRoot && $product->getShopId() !== $shopId) {
             abort(404, 'Produit non trouvé');
         }
-
-        $categories = $this->categoryRepository->findByShop(
-            $shopId, 
-            true
-        );
+        $categoriesShopId = $shopId ?? $product->getShopId();
+        $categories = $this->categoryRepository->findByShop($categoriesShopId, true);
 
         return Inertia::render('Pharmacy/Products/Edit', [
             'product' => $product,
@@ -791,30 +789,25 @@ class ProductController
                 'remove_image' => 'nullable|boolean',
                 'wholesale_price' => 'nullable|numeric|min:0',
                 'wholesale_min_quantity' => 'nullable|integer|min:0',
+                'type_unite' => 'sometimes|string|in:PLAQUETTE,BOITE,FLACON,TUBE,SACHET,UNITE',
+                'quantite_par_unite' => 'sometimes|integer|min:1',
+                'est_divisible' => 'nullable|boolean',
             ]);
 
-            // Déterminer le shop courant (même logique robuste que pour index/show)
             $user = $request->user();
             if ($user === null) {
                 abort(403, 'User not authenticated.');
             }
-            $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
-
-            // Si pas de shop_id (cas ROOT sans shop), on se rabat sur le shop du produit existant
+            $shopId = $this->getShopId($request);
             if (!$shopId) {
                 $existingProductModel = \Src\Infrastructure\Pharmacy\Models\ProductModel::find($id);
-                if ($existingProductModel) {
-                    $shopId = (string) $existingProductModel->shop_id;
-                }
+                $shopId = $existingProductModel ? (string) $existingProductModel->shop_id : null;
             }
-
-            // Si toujours pas de shopId, on ne peut pas continuer proprement
             if (!$shopId) {
                 return response()->json([
-                    'message' => 'Shop ID not found. Please contact administrator.'
+                    'message' => 'Veuillez sélectionner un dépôt en haut.'
                 ], 403);
             }
-
             $dto = new UpdateProductDTO(
                 $shopId,
                 $request->input('name'),
@@ -831,7 +824,10 @@ class ProductController
                 $request->boolean('prescription_required', false),
                 $request->input('manufacturer'),
                 $request->input('supplier_id'),
-                $request->input('is_active')
+                $request->input('is_active'),
+                $request->filled('type_unite') ? $request->input('type_unite') : null,
+                $request->has('quantite_par_unite') && $request->input('quantite_par_unite') !== null ? (int) $request->input('quantite_par_unite') : null,
+                $request->has('est_divisible') ? $request->boolean('est_divisible') : null
             );
 
             $product = $this->updateProductUseCase->execute($id, $dto);
@@ -928,17 +924,15 @@ class ProductController
             /** @var UserModel|null $userModel */
             $userModel = UserModel::query()->find($user->id);
             $isRoot = $userModel?->isRoot() ?? false;
-            $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
-            
+            $shopId = $this->getShopId($request);
+
             $product = $this->productRepository->findById($id);
             if (!$product) {
                 return response()->json([
                     'message' => 'Product not found'
                 ], 404);
             }
-
-            // Vérification d'isolation par pharmacie: seuls ROOT ou les utilisateurs de la même pharmacie peuvent supprimer
-            if (!$isRoot && $product->getShopId() !== $shopId) {
+            if ($shopId !== null && !$isRoot && $product->getShopId() !== $shopId) {
                 return response()->json([
                     'message' => 'Product not found'
                 ], 404);
@@ -985,27 +979,21 @@ class ProductController
             if ($authUser === null) {
                 abort(403, 'User not authenticated.');
             }
-            /** @var UserModel $authUser */
-            $shopId = $authUser->shop_id ?? ($authUser->tenant_id ? (string) $authUser->tenant_id : null);
-
+            $shopId = $this->getShopId($request);
             if (!$shopId) {
                 return response()->json([
-                    'message' => 'Shop ID not found. Please contact administrator.'
+                    'message' => 'Veuillez sélectionner un dépôt en haut.'
                 ], 403);
             }
-
-            // Vérifier que le produit appartient à cette pharmacie
             $product = $this->productRepository->findById($id);
             if (!$product) {
                 return response()->json([
                     'message' => 'Product not found'
                 ], 404);
             }
-
             /** @var UserModel|null $userModel */
             $userModel = UserModel::query()->find($authUser->id);
             $isRoot = $userModel?->isRoot() ?? false;
-            
             if (!$isRoot && $product->getShopId() !== $shopId) {
                 return response()->json([
                     'message' => 'Product not found'

@@ -53,7 +53,7 @@ class CategoryPdfService
             'total' => $categories->count(),
             'generated_at' => now()->format('d/m/Y H:i:s'),
             'generated_by' => $user->name ?? $user->email,
-            'shop_name' => $shopId ? ($user->shop->name ?? 'N/A') : 'Toutes les boutiques (ROOT)',
+            'shop_name' => $shopId ? (\App\Models\Shop::find($shopId)?->name ?? 'N/A') : 'Toutes les boutiques (ROOT)',
         ];
         
         // Générer le PDF avec une vue propre

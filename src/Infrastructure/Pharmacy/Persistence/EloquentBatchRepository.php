@@ -150,13 +150,18 @@ class EloquentBatchRepository implements BatchRepositoryInterface
 
     private function toDomainEntity(BatchModel $model): Batch
     {
+        $quantity = new Quantity((float) $model->quantity);
+        $initialQuantity = isset($model->initial_quantity)
+            ? new Quantity((float) $model->initial_quantity)
+            : null;
         return new Batch(
             $model->id,
             $model->shop_id,
             $model->product_id,
             $model->batch_number,
             new ExpiryDate(new DateTimeImmutable($model->expiry_date->format('Y-m-d'))),
-            new Quantity($model->quantity),
+            $quantity,
+            $initialQuantity,
             $model->supplier_id,
             $model->purchase_order_id
         );
