@@ -28,7 +28,7 @@ import {
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
 
-export default function ProductsIndex({ auth, products, categories, filters, canImport = false }) {
+export default function ProductsIndex({ auth, products, categories, filters, canImport = false, routePrefix = 'pharmacy', pageTitle = 'Gestion des Produits' }) {
     const { auth: authPage, depots = [], currentDepot } = usePage().props ?? {};
     const permissions = authPage?.permissions || [];
     
@@ -37,7 +37,7 @@ export default function ProductsIndex({ auth, products, categories, filters, can
         return permissions.includes(permission);
     };
     
-    const canViewMovements = hasPermission('stock.movement.view');
+    const canViewMovements = hasPermission('stock.movement.view') || (routePrefix === 'hardware' && hasPermission('hardware.stock.movement.view'));
     
     const [searchTerm, setSearchTerm] = useState(filters?.search || '');
     const [selectedCategory, setSelectedCategory] = useState(filters?.category_id || '');
@@ -59,7 +59,7 @@ export default function ProductsIndex({ auth, products, categories, filters, can
 
     const handleSearch = (e) => {
         e.preventDefault();
-        router.get(route('pharmacy.products'), {
+        router.get(route(`${routePrefix}.products`), {
             search: searchTerm,
             category_id: selectedCategory,
             status: selectedStatus || undefined
@@ -83,7 +83,7 @@ export default function ProductsIndex({ auth, products, categories, filters, can
         try {
             const formData = new FormData();
             formData.append('file', importFile);
-            const res = await axios.post(route('pharmacy.products.import'), formData, {
+            const res = await axios.post(route(`${routePrefix}.products.import`), formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             setImportResult(res.data);
@@ -137,7 +137,7 @@ export default function ProductsIndex({ auth, products, categories, filters, can
         }
         setDuplicateSubmitting(true);
         try {
-            const res = await axios.post(route('pharmacy.products.duplicate-to-depot', duplicateProduct.id), {
+            const res = await axios.post(route(`${routePrefix}.products.duplicate-to-depot`, duplicateProduct.id), {
                 target_depot_id: duplicateTargetDepotId,
             });
             if (res.data?.success && res.data?.product_id) {
@@ -145,7 +145,7 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                 setDuplicateModalOpen(false);
                 setDuplicateProduct(null);
                 setDuplicateTargetDepotId('');
-                router.visit(route('pharmacy.products.edit', res.data.product_id));
+                router.visit(route(`${routePrefix}.products.edit`, res.data.product_id));
             }
         } catch (err) {
             const msg = err.response?.data?.message || 'Erreur lors de la duplication.';
@@ -176,7 +176,7 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                         <button
                             onClick={() => {
                                 toast.dismiss(t.id);
-                                router.delete(route('pharmacy.products.destroy', product.id), {
+                                router.delete(route(`${routePrefix}.products.destroy`, product.id), {
                                     preserveScroll: true,
                                     onSuccess: () => {
                                         toast.success('Produit supprimé avec succès');
@@ -219,15 +219,15 @@ export default function ProductsIndex({ auth, products, categories, filters, can
     return (
         <AppLayout
             header={
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                     <h2 className="font-semibold text-xl text-gray-800 dark:text-white leading-tight">
-                        Gestion des Produits
+                        {pageTitle}
                     </h2>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                         {/* Boutons d'export colorés et bien alignés */}
                         <div className="hidden sm:flex items-center gap-2">
                             <a
-                                href={products.length ? route('pharmacy.products.export.pdf') : '#'}
+                                href={products.length ? route(`${routePrefix}.products.export.pdf`) : '#'}
                                 target="_blank"
                                 rel="noreferrer"
                                 aria-disabled={products.length === 0}
@@ -241,7 +241,7 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                                 Exporter PDF
                             </a>
                             <a
-                                href={products.length ? route('pharmacy.products.export.excel') : '#'}
+                                href={products.length ? route(`${routePrefix}.products.export.excel`) : '#'}
                                 aria-disabled={products.length === 0}
                                 className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 px-3 h-10 shadow-sm hover:shadow-md ${
                                     products.length === 0
@@ -256,7 +256,7 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                         {/* Version compacte pour mobile */}
                         <div className="flex sm:hidden items-center gap-2">
                             <a
-                                href={products.length ? route('pharmacy.products.export.pdf') : '#'}
+                                href={products.length ? route(`${routePrefix}.products.export.pdf`) : '#'}
                                 target="_blank"
                                 rel="noreferrer"
                                 aria-disabled={products.length === 0}
@@ -270,7 +270,7 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                                 PDF
                             </a>
                             <a
-                                href={products.length ? route('pharmacy.products.export.excel') : '#'}
+                                href={products.length ? route(`${routePrefix}.products.export.excel`) : '#'}
                                 aria-disabled={products.length === 0}
                                 className={`inline-flex items-center justify-center rounded-md text-xs font-medium px-2 h-8 shadow-sm ${
                                     products.length === 0
@@ -314,10 +314,8 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                 </div>
             }
         >
-            <Head title="Gestion des Produits" />
-
-            <div className="py-12">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <Head title={pageTitle} />
+            <div className="py-6 space-y-6">
                     {/* Search and Filters */}
                     <Card className="mb-6 bg-white dark:bg-gray-800">
                         <CardHeader>
@@ -524,7 +522,6 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                             )}
                         </CardContent>
                     </Card>
-                </div>
             </div>
 
             {/* Modal détail produit */}
@@ -773,6 +770,7 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                 }}
                 product={editingProduct}
                 categories={categories}
+                routePrefix={routePrefix}
             />
 
             {/* Product Movements Modal */}
@@ -784,6 +782,7 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                         setMovementsProduct(null);
                     }}
                     product={movementsProduct}
+                    routePrefix={routePrefix}
                 />
             )}
         </AppLayout>

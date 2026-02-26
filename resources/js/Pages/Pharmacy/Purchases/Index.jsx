@@ -26,7 +26,8 @@ export default function PurchasesIndex({
     purchase_orders = [], 
     filters = {}, 
     suppliers = [], 
-    products = [] 
+    products = [],
+    routePrefix = 'pharmacy'
 }) {
     const { shop } = usePage().props;
     const currency = shop?.currency || 'CDF';
@@ -40,7 +41,7 @@ export default function PurchasesIndex({
 
     const handleFilter = (e) => {
         e.preventDefault();
-        router.get(route('pharmacy.purchases.index'), { 
+        router.get(route(`${routePrefix}.purchases.index`), { 
             from: from || undefined, 
             to: to || undefined, 
             status: status || undefined 
@@ -127,8 +128,8 @@ export default function PurchasesIndex({
                     </div>
                     <div className="flex items-center gap-2">
                         <ExportButtons
-                            pdfUrl={route('pharmacy.exports.purchases.pdf', { from, to, status })}
-                            excelUrl={route('pharmacy.exports.purchases.excel', { from, to, status })}
+                            pdfUrl={route(`${routePrefix}.exports.purchases.pdf`, { from, to, status })}
+                            excelUrl={route(`${routePrefix}.exports.purchases.excel`, { from, to, status })}
                             disabled={!purchase_orders.length}
                         />
                         <Button onClick={openCreateDrawer}>
@@ -333,7 +334,7 @@ export default function PurchasesIndex({
                                                         asChild
                                                         className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                                                     >
-                                                        <Link href={route('pharmacy.purchases.show', po.id)}>
+                                                        <Link href={route(`${routePrefix}.purchases.show`, po.id)}>
                                                             <Eye className="h-4 w-4" />
                                                         </Link>
                                                     </Button>
@@ -357,6 +358,7 @@ export default function PurchasesIndex({
                 products={products}
                 currency={currency}
                 onSuccess={handleDrawerSuccess}
+                routePrefix={routePrefix}
             />
         </AppLayout>
     );

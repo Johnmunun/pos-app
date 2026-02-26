@@ -23,6 +23,12 @@ class PharmacyReportController
 {
     private const CACHE_TTL_SECONDS = 300;
 
+    private function getModule(): string
+    {
+        $prefix = request()->route()?->getPrefix();
+        return $prefix === 'hardware' ? 'Hardware' : 'Pharmacy';
+    }
+
     private function getShopId(Request $request): string
     {
         $user = $request->user();
@@ -63,9 +69,10 @@ class PharmacyReportController
             return $this->buildReport($shopId, $from, $to);
         });
 
-        return Inertia::render('Pharmacy/Reports/Index', [
+        return Inertia::render($this->getModule() . '/Reports/Index', [
             'report' => $report,
             'filters' => ['from' => $from, 'to' => $to],
+            'routePrefix' => $this->getModule() === 'Hardware' ? 'hardware' : 'pharmacy',
         ]);
     }
 

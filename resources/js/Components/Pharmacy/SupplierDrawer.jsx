@@ -23,7 +23,8 @@ export default function SupplierDrawer({
     supplier = null, 
     onSuccess = null,
     canCreate = false, 
-    canUpdate = false 
+    canUpdate = false,
+    routePrefix = 'pharmacy'
 }) {
     const isEditing = !!supplier;
     
@@ -86,9 +87,9 @@ export default function SupplierDrawer({
         try {
             let response;
             if (isEditing) {
-                response = await axios.put(route('pharmacy.suppliers.update', supplier.id), data);
+                response = await axios.put(route(`${routePrefix}.suppliers.update`, supplier.id), data);
             } else {
-                response = await axios.post(route('pharmacy.suppliers.store'), data);
+                response = await axios.post(route(`${routePrefix}.suppliers.store`), data);
             }
 
             if (response.data.success) {

@@ -18,6 +18,12 @@ use Src\Infrastructure\Pharmacy\Models\SupplierModel;
 
 class PurchaseController
 {
+    private function getModule(): string
+    {
+        $prefix = request()->route()?->getPrefix();
+        return $prefix === 'hardware' ? 'Hardware' : 'Pharmacy';
+    }
+
     public function __construct(
         private CreatePurchaseOrderUseCase $createPurchaseOrderUseCase,
         private ConfirmPurchaseOrderUseCase $confirmPurchaseOrderUseCase,
@@ -101,7 +107,7 @@ class PurchaseController
                 'cost_amount' => isset($p->cost_amount) ? (float) $p->cost_amount : 0,
             ])->toArray();
 
-        return Inertia::render('Pharmacy/Purchases/Index', [
+        return Inertia::render($this->getModule() . '/Purchases/Index', [
             'purchase_orders' => $list,
             'filters' => $request->only(['from', 'to', 'status']),
             'suppliers' => $suppliers,
@@ -125,7 +131,7 @@ class PurchaseController
             'phone' => $s->phone,
         ])->toArray();
 
-        return Inertia::render('Pharmacy/Purchases/Create', [
+        return Inertia::render($this->getModule() . '/Purchases/Create', [
             'products' => $products,
             'suppliers' => $suppliers,
         ]);
@@ -229,7 +235,7 @@ class PurchaseController
                 'cost_amount' => isset($p->cost_amount) ? (float) $p->cost_amount : 0,
             ])->toArray();
 
-        return Inertia::render('Pharmacy/Purchases/Show', [
+        return Inertia::render($this->getModule() . '/Purchases/Show', [
             'purchase_order' => [
                 'id' => $po->getId(),
                 'status' => $po->getStatus(),

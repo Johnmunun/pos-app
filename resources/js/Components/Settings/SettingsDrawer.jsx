@@ -41,6 +41,7 @@ export default function SettingsDrawer({ isOpen, onClose, settings = null, canUp
         currency: (settings?.currency && settings.currency.trim()) || 'XAF',
         exchange_rate: settings?.exchange_rate || null,
         invoice_footer_text: settings?.invoice_footer_text || '',
+        receipt_auto_print: settings?.receipt_auto_print ?? false,
     });
 
     const { data, setData, put, processing, errors, reset } = form;
@@ -64,6 +65,7 @@ export default function SettingsDrawer({ isOpen, onClose, settings = null, canUp
                 currency: (settings.currency && settings.currency.trim()) || 'XAF',
                 exchange_rate: settings.exchange_rate || null,
                 invoice_footer_text: settings.invoice_footer_text || '',
+                receipt_auto_print: settings.receipt_auto_print ?? false,
             });
             setLogoPreview(settings.logo_url || null);
         } else {
@@ -84,6 +86,7 @@ export default function SettingsDrawer({ isOpen, onClose, settings = null, canUp
                 currency: 'XAF',
                 exchange_rate: null,
                 invoice_footer_text: '',
+                receipt_auto_print: false,
             });
             setLogoPreview(null);
         }
@@ -210,6 +213,7 @@ export default function SettingsDrawer({ isOpen, onClose, settings = null, canUp
             formData.append('exchange_rate', String(data.exchange_rate));
         }
         if (data.invoice_footer_text) formData.append('invoice_footer_text', String(data.invoice_footer_text).trim());
+        formData.append('receipt_auto_print', data.receipt_auto_print ? '1' : '0');
         if (data.logo) formData.append('logo', data.logo);
         if (data.remove_logo) formData.append('remove_logo', '1');
 
@@ -496,6 +500,24 @@ export default function SettingsDrawer({ isOpen, onClose, settings = null, canUp
                             rows={3}
                             className="mt-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         />
+                    </div>
+
+                    <div className="flex items-start gap-2">
+                        <input
+                            id="receipt_auto_print"
+                            type="checkbox"
+                            checked={data.receipt_auto_print}
+                            onChange={(e) => setData('receipt_auto_print', e.target.checked)}
+                            className="mt-1 h-4 w-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500"
+                        />
+                        <div>
+                            <Label htmlFor="receipt_auto_print" className="text-gray-700 dark:text-gray-300">
+                                Impression automatique du reçu après une vente
+                            </Label>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                Si activé, après validation d&apos;une vente, le reçu s&apos;ouvre automatiquement dans un nouvel onglet pour impression.
+                            </p>
+                        </div>
                     </div>
                 </div>
 

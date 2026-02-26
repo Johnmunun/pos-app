@@ -4,6 +4,7 @@ namespace Src\Infrastructure\Pharmacy\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
 use App\Models\User as UserModel;
@@ -29,6 +30,12 @@ use Src\Infrastructure\Settings\Services\StoreLogoService;
 
 class SaleController
 {
+    private function getModule(): string
+    {
+        $prefix = request()->route()?->getPrefix();
+        return $prefix === 'hardware' ? 'Hardware' : 'Pharmacy';
+    }
+
     public function __construct(
         private CreateDraftSaleUseCase $createDraftSaleUseCase,
         private UpdateSaleLinesUseCase $updateSaleLinesUseCase,
@@ -56,7 +63,7 @@ class SaleController
             return $defaultCurrency->code;
         }
 
-        return $shop?->currency ?? 'CDF';
+        return $shop !== null ? ($shop->currency ?? 'CDF') : 'CDF';
     }
 
     private function getShopId(Request $request): string
@@ -97,6 +104,7 @@ class SaleController
         $from = $request->filled('from') ? new \DateTimeImmutable($request->input('from')) : null;
         $to = $request->filled('to') ? new \DateTimeImmutable($request->input('to')) : null;
         $status = $request->input('status');
+        $saleType = $request->input('sale_type');
 
         $sales = $this->saleRepository->findByShop($shopId, $from, $to);
         if (!$canViewAllSales && $authUser) {
@@ -105,12 +113,28 @@ class SaleController
         if ($status && in_array($status, ['DRAFT', 'COMPLETED', 'CANCELLED'], true)) {
             $sales = array_values(array_filter($sales, fn ($s) => $s->getStatus() === $status));
         }
+        if ($saleType && in_array($saleType, ['retail', 'wholesale'], true)) {
+            $sales = array_values(array_filter($sales, fn ($s) => $s->getSaleType() === $saleType));
+        }
 
         $creatorIds = array_unique(array_map(fn ($s) => $s->getCreatedBy(), $sales));
         $creators = $creatorIds !== [] ? UserModel::whereIn('id', $creatorIds)->get()->keyBy('id') : collect();
 
-        $salesData = array_map(function ($sale) use ($creators) {
+        $customerIds = array_unique(array_filter(array_map(fn ($s) => $s->getCustomerId(), $sales)));
+        $customers = [];
+        if ($customerIds !== []) {
+            $customerModels = \App\Models\Customer::whereIn('id', $customerIds)->get(['id', 'full_name']);
+            foreach ($customerModels as $c) {
+                $full = $c->full_name ?? '';
+                $short = strlen($full) > 25 ? mb_substr($full, 0, 22) . '…' : $full;
+                $customers[(string) $c->id] = $short ?: '—';
+            }
+        }
+
+        $salesData = array_map(function ($sale) use ($creators, $customers) {
             $creator = $creators->get($sale->getCreatedBy());
+            $customerId = $sale->getCustomerId();
+            $customerShortName = $customerId && isset($customers[(string) $customerId]) ? $customers[(string) $customerId] : null;
             return [
                 'id' => $sale->getId(),
                 'status' => $sale->getStatus(),
@@ -119,16 +143,18 @@ class SaleController
                 'paid_amount' => $sale->getPaidAmount()->getAmount(),
                 'balance_amount' => $sale->getBalance()->getAmount(),
                 'currency' => $sale->getCurrency(),
-                'customer_id' => $sale->getCustomerId(),
+                'customer_id' => $customerId,
+                'customer_short_name' => $customerShortName,
                 'created_at' => $sale->getCreatedAt()->format('Y-m-d H:i'),
                 'seller_name' => $creator ? $creator->name : '—',
             ];
         }, $sales);
 
-        return Inertia::render('Pharmacy/Sales/Index', [
+        return Inertia::render($this->getModule() . '/Sales/Index', [
             'sales' => $salesData,
-            'filters' => $request->only(['from', 'to', 'status']),
+            'filters' => $request->only(['from', 'to', 'status', 'sale_type']),
             'canViewAllSales' => $canViewAllSales,
+            'routePrefix' => $this->getModule() === 'Hardware' ? 'hardware' : 'pharmacy',
         ]);
     }
 
@@ -257,7 +283,7 @@ class SaleController
             }
         }
 
-        return Inertia::render('Pharmacy/Sales/Create', [
+        return Inertia::render($this->getModule() . '/Sales/Create', [
             'products' => $products,
             'categories' => $categories,
             'customers' => $customers,
@@ -266,6 +292,7 @@ class SaleController
             'currency' => $defaultCode,
             'currencies' => $currenciesForPos,
             'exchangeRates' => $exchangeRatesMap,
+            'routePrefix' => $this->getModule() === 'Hardware' ? 'hardware' : 'pharmacy',
         ]);
     }
 
@@ -356,12 +383,14 @@ class SaleController
         $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:50',
+            'email' => 'nullable|email|max:255',
         ]);
         $shopId = $this->getShopId($request);
         $authUser = $request->user();
         $tenantId = $authUser && $authUser->tenant_id ? $authUser->tenant_id : $shopId;
         $name = trim($request->input('name'));
         $phone = $request->filled('phone') ? trim($request->input('phone')) : null;
+        $email = $request->filled('email') ? trim($request->input('email')) : null;
 
         try {
             $code = 'C' . now()->format('YmdHis') . substr(uniqid(), -4);
@@ -370,7 +399,7 @@ class SaleController
                 'code' => $code,
                 'full_name' => $name,
                 'phone' => $phone,
-                'email' => null,
+                'email' => $email,
                 'is_active' => true,
             ]);
             return response()->json([
@@ -427,7 +456,8 @@ class SaleController
 
         $seller = UserModel::find($sale->getCreatedBy());
 
-        return Inertia::render('Pharmacy/Sales/Show', [
+        return Inertia::render($this->getModule() . '/Sales/Show', [
+            'routePrefix' => $this->getModule() === 'Hardware' ? 'hardware' : 'pharmacy',
             'sale' => [
                 'id' => $sale->getId(),
                 'status' => $sale->getStatus(),
@@ -459,6 +489,9 @@ class SaleController
         }
 
         $lines = $this->saleLineRepository->findBySale($id);
+        $shop = Shop::find($shopId);
+        $displayCurrency = $this->getEffectiveShopCurrency($shopId, $authUser) ?: 'CDF';
+
         $linesData = [];
         foreach ($lines as $line) {
             $product = ProductModel::find($line->getProductId());
@@ -467,11 +500,10 @@ class SaleController
                 'quantity' => $line->getQuantity()->getValue(),
                 'unit_price' => (float) $line->getUnitPrice()->getAmount(),
                 'line_total' => (float) $line->getLineTotal()->getAmount(),
-                'currency' => $line->getUnitPrice()->getCurrency(),
+                'currency' => $displayCurrency,
             ];
         }
 
-        $shop = Shop::find($shopId);
         $seller = UserModel::find($sale->getCreatedBy());
         $customer = null;
         if ($sale->getCustomerId()) {
@@ -495,7 +527,7 @@ class SaleController
                 'total_amount' => (float) $sale->getTotal()->getAmount(),
                 'paid_amount' => (float) $sale->getPaidAmount()->getAmount(),
                 'balance_amount' => (float) $sale->getBalance()->getAmount(),
-                'currency' => $sale->getCurrency(),
+                'currency' => $displayCurrency,
                 'seller_name' => $seller ? $seller->name : '—',
             ],
             'lines' => $linesData,
@@ -614,5 +646,59 @@ class SaleController
         } catch (\Throwable $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+    }
+
+    public function emailReceipt(Request $request, string $id): JsonResponse
+    {
+        $shopId = $this->getShopId($request);
+        $sale = $this->saleRepository->findById($id);
+        if (!$sale || $sale->getShopId() !== $shopId) {
+            return response()->json(['message' => 'Vente introuvable'], 404);
+        }
+
+        $authUser = $request->user();
+        if ($authUser === null) {
+            return response()->json(['message' => 'Utilisateur non authentifié'], 403);
+        }
+
+        $userModel = UserModel::find($authUser->id);
+        $canViewAllSales = $userModel && ($userModel->isRoot() || $userModel->hasPermission('pharmacy.sales.view.all'));
+        if (!$canViewAllSales && (int) $sale->getCreatedBy() !== (int) $authUser->id) {
+            return response()->json(['message' => 'Vous ne pouvez envoyer que vos propres ventes.'], 403);
+        }
+
+        if ($sale->getCustomerId() === null) {
+            return response()->json(['message' => 'Aucun client associé à cette vente.'], 422);
+        }
+
+        $customer = \App\Models\Customer::find($sale->getCustomerId());
+        if (!$customer || empty($customer->email)) {
+            return response()->json(['message' => 'Ce client n\'a pas d\'adresse email.'], 422);
+        }
+
+        $shop = Shop::find($shopId);
+        $shopName = $shop?->name ?? config('app.name', 'Boutique');
+        $receiptUrl = route('pharmacy.sales.receipt', ['id' => $sale->getId()]);
+
+        Mail::send(
+            'emails.pharmacy.sale_receipt',
+            [
+                'shopName' => $shopName,
+                'customerName' => $customer->full_name ?? $customer->name ?? null,
+                'saleId' => $sale->getId(),
+                'saleDate' => $sale->getCreatedAt()->format('d/m/Y H:i'),
+                'totalAmount' => (float) $sale->getTotal()->getAmount(),
+                'currency' => $sale->getCurrency(),
+                'receiptUrl' => $receiptUrl,
+            ],
+            function (\Illuminate\Mail\Message $message) use ($customer, $shopName, $sale): void {
+                $message->to($customer->email, $customer->full_name ?? null)
+                    ->subject('Votre reçu #' . $sale->getId() . ' - ' . $shopName);
+            }
+        );
+
+        return response()->json([
+            'message' => 'Facture envoyée à ' . $customer->email,
+        ]);
     }
 }

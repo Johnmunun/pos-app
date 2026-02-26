@@ -19,14 +19,14 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/currency';
 
-export default function SalesShow({ auth, sale, lines = [], customer }) {
+export default function SalesShow({ auth, sale, lines = [], customer, routePrefix = 'pharmacy' }) {
     const { shop } = usePage().props;
     const currency = sale.currency || shop?.currency || 'CDF';
     const isDraft = sale.status === 'DRAFT';
 
     const handleCancel = () => {
         if (!confirm('Annuler cette vente (brouillon) ?')) return;
-        axios.post(route('pharmacy.sales.cancel', sale.id))
+        axios.post(route(`${routePrefix}.sales.cancel`, sale.id))
             .then(() => {
                 toast.success('Vente annulée');
                 window.location.reload();
@@ -71,7 +71,7 @@ export default function SalesShow({ auth, sale, lines = [], customer }) {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                     <div className="flex items-center gap-4">
                         <Button variant="outline" size="sm" asChild>
-                            <Link href={route('pharmacy.sales.index')}>
+                            <Link href={route(`${routePrefix}.sales.index`)}>
                                 <ArrowLeft className="h-4 w-4 mr-1" />
                                 Retour
                             </Link>

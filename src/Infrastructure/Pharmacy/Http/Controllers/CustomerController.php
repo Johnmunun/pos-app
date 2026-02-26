@@ -20,10 +20,16 @@ use Src\Infrastructure\Pharmacy\Models\CustomerModel;
 /**
  * Controller: CustomerController
  *
- * Gère les requêtes HTTP pour le module Clients Pharmacy.
+ * Gère les requêtes HTTP pour le module Clients (Pharmacy ou Hardware).
  */
 class CustomerController extends Controller
 {
+    private function getModule(): string
+    {
+        $prefix = request()->route()?->getPrefix();
+        return $prefix === 'hardware' ? 'Hardware' : 'Pharmacy';
+    }
+
     public function __construct(
         private readonly CreateCustomerUseCase $createCustomerUseCase,
         private readonly UpdateCustomerUseCase $updateCustomerUseCase,
@@ -93,7 +99,7 @@ class CustomerController extends Controller
                 'created_at' => $customer->created_at->format('d/m/Y'),
             ]);
 
-        return Inertia::render('Pharmacy/Customers/Index', [
+        return Inertia::render($this->getModule() . '/Customers/Index', [
             'customers' => $customers,
             'filters' => [
                 'search' => $search,
@@ -101,6 +107,7 @@ class CustomerController extends Controller
                 'customer_type' => $customerType,
                 'per_page' => $perPage,
             ],
+            'routePrefix' => $this->getModule() === 'Hardware' ? 'hardware' : 'pharmacy',
         ]);
     }
 
@@ -218,8 +225,9 @@ class CustomerController extends Controller
             'recent_sales' => $recentSales,
         ];
 
-        return Inertia::render('Pharmacy/Customers/Show', [
+        return Inertia::render($this->getModule() . '/Customers/Show', [
             'customer' => $customer,
+            'routePrefix' => $this->getModule() === 'Hardware' ? 'hardware' : 'pharmacy',
         ]);
     }
 

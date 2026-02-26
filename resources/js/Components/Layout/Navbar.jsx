@@ -40,7 +40,7 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
     const notificationCount = 3;
 
     return (
-        <nav className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
+        <nav className="sticky top-0 z-40 flex flex-wrap items-center gap-2 sm:gap-x-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 sm:px-4 lg:px-8 shadow-sm min-w-0">
             {/* Bouton menu mobile */}
             <button
                 type="button"
@@ -62,13 +62,13 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
             )}
 
             {/* Barre de recherche globale */}
-            <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
+            <div className="flex flex-1 min-w-0 gap-x-4 self-stretch lg:gap-x-6 mt-2 sm:mt-0">
                 <GlobalSearch isRoot={user?.type === 'ROOT'} />
             </div>
 
             {/* Indicateur d'impersonation */}
             {isImpersonating && (
-                <div className="flex items-center gap-2 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 rounded-lg text-sm font-medium">
+                <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 rounded-lg text-sm font-medium">
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
@@ -77,7 +77,7 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
             )}
 
             {/* Actions droite */}
-            <div className="flex items-center gap-x-4 lg:gap-x-6">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-x-4 lg:gap-x-6 justify-end min-w-0 ml-auto mt-2 sm:mt-0">
                 {/* Toggle Dark Mode */}
                 <button
                     type="button"

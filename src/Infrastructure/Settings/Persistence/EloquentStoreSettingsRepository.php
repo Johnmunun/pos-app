@@ -76,6 +76,7 @@ class EloquentStoreSettingsRepository implements StoreSettingsRepositoryInterfac
         $model->currency = $settings->getCurrency();
         $model->exchange_rate = $settings->getExchangeRate();
         $model->invoice_footer_text = $settings->getInvoiceFooterText();
+        $model->receipt_auto_print = $settings->isReceiptAutoPrintEnabled();
 
         Log::info('StoreSettingsModel data before save', [
             'shop_id' => $model->shop_id,
@@ -186,7 +187,8 @@ class EloquentStoreSettingsRepository implements StoreSettingsRepositoryInterfac
             $model->logo_path,
             $model->currency ?? 'XAF',
             $model->exchange_rate ? (float) $model->exchange_rate : null,
-            $model->invoice_footer_text
+            $model->invoice_footer_text,
+            (bool) ($model->receipt_auto_print ?? false)
         );
 
         // Utiliser les timestamps du modèle

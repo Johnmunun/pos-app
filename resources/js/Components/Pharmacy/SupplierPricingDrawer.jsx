@@ -24,7 +24,8 @@ export default function SupplierPricingDrawer({
     supplierName,
     existingPrice = null, 
     onSuccess = null,
-    canManage = false 
+    canManage = false,
+    routePrefix = 'pharmacy'
 }) {
     const { shop } = usePage().props;
     const currency = shop?.currency || 'CDF';
@@ -92,7 +93,7 @@ export default function SupplierPricingDrawer({
     const loadProducts = async () => {
         setLoadingProducts(true);
         try {
-            const response = await axios.get(route('pharmacy.products'), {
+            const response = await axios.get(route(`${routePrefix}.products`), {
                 params: { per_page: 1000 }
             });
             // Extract products from paginated response
@@ -145,7 +146,7 @@ export default function SupplierPricingDrawer({
                 effective_from: data.effective_from,
             };
 
-            const response = await axios.post(route('pharmacy.suppliers.prices.store'), payload);
+            const response = await axios.post(route(`${routePrefix}.suppliers.prices.store`), payload);
 
             if (response.data.success) {
                 toast.success(response.data.message);

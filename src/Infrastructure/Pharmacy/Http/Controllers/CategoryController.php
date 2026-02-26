@@ -19,6 +19,12 @@ use App\Models\User as UserModel;
 
 class CategoryController
 {
+    private function getModule(): string
+    {
+        $prefix = request()->route()?->getPrefix();
+        return $prefix === 'hardware' ? 'Hardware' : 'Pharmacy';
+    }
+
     public function __construct(
         private CategoryRepositoryInterface $categoryRepository,
         private CreateCategoryUseCase $createCategoryUseCase,
@@ -83,7 +89,8 @@ class CategoryController
             ];
         });
         
-        return Inertia::render('Pharmacy/Categories/Index', [
+        $permPrefix = $this->getModule() === 'Hardware' ? 'hardware' : 'pharmacy';
+        return Inertia::render($this->getModule() . '/Categories/Index', [
             'categories' => $categories,
             'pagination' => [
                 'current_page' => $categoriesPaginated->currentPage(),
@@ -94,11 +101,12 @@ class CategoryController
                 'to' => $categoriesPaginated->lastItem(),
             ],
             'filters' => $request->only(['search', 'per_page']),
+            'routePrefix' => $permPrefix,
             'permissions' => [
-                'view' => $user->hasPermission('pharmacy.category.view') || $user->isRoot(),
-                'create' => $user->hasPermission('pharmacy.category.create') || $user->isRoot(),
-                'update' => $user->hasPermission('pharmacy.category.update') || $user->isRoot(),
-                'delete' => $user->hasPermission('pharmacy.category.delete') || $user->isRoot(),
+                'view' => $user->hasPermission($permPrefix . '.category.view') || $user->isRoot(),
+                'create' => $user->hasPermission($permPrefix . '.category.create') || $user->isRoot(),
+                'update' => $user->hasPermission($permPrefix . '.category.update') || $user->isRoot(),
+                'delete' => $user->hasPermission($permPrefix . '.category.delete') || $user->isRoot(),
             ]
         ]);
     }

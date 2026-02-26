@@ -30,7 +30,7 @@ import SupplierDrawer from '@/Components/Pharmacy/SupplierDrawer';
 import SupplierPricingDrawer from '@/Components/Pharmacy/SupplierPricingDrawer';
 import { formatCurrency } from '@/lib/currency';
 
-export default function ShowSupplier({ supplier, supplierPrices = [], products = [] }) {
+export default function ShowSupplier({ supplier, supplierPrices = [], products = [], routePrefix = 'pharmacy' }) {
     const { shop } = usePage().props;
     const currency = shop?.currency || 'CDF';
     const { auth } = usePage().props;
@@ -50,7 +50,7 @@ export default function ShowSupplier({ supplier, supplierPrices = [], products =
         if (!confirm('Supprimer ce prix fournisseur ?')) return;
         
         try {
-            const response = await axios.delete(route('pharmacy.suppliers.prices.destroy', priceId));
+            const response = await axios.delete(route(`${routePrefix}.suppliers.prices.destroy`, priceId));
             if (response.data.success) {
                 toast.success('Prix supprimé avec succès');
                 router.reload();
@@ -75,8 +75,8 @@ export default function ShowSupplier({ supplier, supplierPrices = [], products =
     const handleToggleStatus = async () => {
         const action = supplier.status === 'active' ? 'deactivate' : 'activate';
         const permission = supplier.status === 'active' 
-            ? 'pharmacy.supplier.deactivate' 
-            : 'pharmacy.supplier.activate';
+            ? `${routePrefix}.supplier.deactivate` 
+            : `${routePrefix}.supplier.activate`;
 
         if (!hasPermission(permission)) {
             toast.error('Vous n\'avez pas la permission pour cette action.');
@@ -84,7 +84,7 @@ export default function ShowSupplier({ supplier, supplierPrices = [], products =
         }
 
         try {
-            const response = await axios.post(route(`pharmacy.suppliers.${action}`, supplier.id));
+            const response = await axios.post(route(`${routePrefix}.suppliers.${action}`, supplier.id));
             if (response.data.success) {
                 toast.success(response.data.message);
                 router.reload();
@@ -130,13 +130,13 @@ export default function ShowSupplier({ supplier, supplierPrices = [], products =
                     {/* Back button & Actions */}
                     <div className="flex justify-between items-center mb-6">
                         <Button variant="outline" asChild className="border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">
-                            <Link href={route('pharmacy.suppliers.index')} className="inline-flex items-center gap-2">
+                            <Link href={route(`${routePrefix}.suppliers.index`)} className="inline-flex items-center gap-2">
                                 <ArrowLeft className="h-4 w-4" />
                                 <span>Retour à la liste</span>
                             </Link>
                         </Button>
                         <div className="flex gap-2">
-                            {hasPermission('pharmacy.supplier.edit') && (
+                            {hasPermission(`${routePrefix}.supplier.edit`) && (
                                 <Button 
                                     onClick={() => setDrawerOpen(true)}
                                     className="bg-amber-500 hover:bg-amber-600 text-white inline-flex items-center gap-2"
@@ -145,7 +145,7 @@ export default function ShowSupplier({ supplier, supplierPrices = [], products =
                                     <span>Modifier</span>
                                 </Button>
                             )}
-                            {supplier.status === 'active' && hasPermission('pharmacy.supplier.deactivate') && (
+                            {supplier.status === 'active' && hasPermission(`${routePrefix}.supplier.deactivate`) && (
                                 <Button 
                                     variant="outline"
                                     onClick={handleToggleStatus}
@@ -155,7 +155,7 @@ export default function ShowSupplier({ supplier, supplierPrices = [], products =
                                     Désactiver
                                 </Button>
                             )}
-                            {supplier.status === 'inactive' && hasPermission('pharmacy.supplier.activate') && (
+                            {supplier.status === 'inactive' && hasPermission(`${routePrefix}.supplier.activate`) && (
                                 <Button 
                                     variant="outline"
                                     onClick={handleToggleStatus}
@@ -299,7 +299,7 @@ export default function ShowSupplier({ supplier, supplierPrices = [], products =
                                             <DollarSign className="h-5 w-5 mr-2 text-green-500" />
                                             Prix négociés ({supplierPrices.length})
                                         </span>
-                                        {hasPermission('pharmacy.supplier.pricing.manage') && (
+                                        {hasPermission(`${routePrefix}.supplier.pricing.manage`) && (
                                             <Button 
                                                 size="sm" 
                                                 onClick={openAddPricing}
@@ -318,7 +318,7 @@ export default function ShowSupplier({ supplier, supplierPrices = [], products =
                                             <p className="text-gray-500 dark:text-gray-400">
                                                 Aucun prix négocié avec ce fournisseur.
                                             </p>
-                                            {hasPermission('pharmacy.supplier.pricing.manage') && (
+                                            {hasPermission(`${routePrefix}.supplier.pricing.manage`) && (
                                                 <Button 
                                                     size="sm" 
                                                     variant="outline" 
@@ -372,7 +372,7 @@ export default function ShowSupplier({ supplier, supplierPrices = [], products =
                                                             </td>
                                                             <td className="px-4 py-3 text-center">
                                                                 <div className="flex items-center justify-center gap-1">
-                                                                    {hasPermission('pharmacy.supplier.pricing.manage') && (
+                                                                    {hasPermission(`${routePrefix}.supplier.pricing.manage`) && (
                                                                         <>
                                                                             <Button
                                                                                 variant="ghost"
@@ -452,7 +452,7 @@ export default function ShowSupplier({ supplier, supplierPrices = [], products =
                             </Card>
 
                             {/* Quick Actions */}
-                            {hasPermission('pharmacy.purchases.manage') && (
+                            {hasPermission(`${routePrefix}.purchases.manage`) && (
                                 <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
                                     <CardHeader>
                                         <CardTitle className="text-gray-900 dark:text-white text-base">
@@ -461,7 +461,7 @@ export default function ShowSupplier({ supplier, supplierPrices = [], products =
                                     </CardHeader>
                                     <CardContent>
                                         <Button asChild className="w-full bg-blue-500 hover:bg-blue-600 text-white">
-                                            <Link href={route('pharmacy.purchases.create')} className="inline-flex items-center justify-center gap-2">
+                                            <Link href={route(`${routePrefix}.purchases.create`)} className="inline-flex items-center justify-center gap-2">
                                                 <Package className="h-4 w-4" />
                                                 <span>Nouvelle commande</span>
                                             </Link>
@@ -481,7 +481,8 @@ export default function ShowSupplier({ supplier, supplierPrices = [], products =
                 supplier={supplier}
                 onSuccess={() => router.reload()}
                 canCreate={false}
-                canUpdate={hasPermission('pharmacy.supplier.edit')}
+                canUpdate={hasPermission(`${routePrefix}.supplier.edit`)}
+                routePrefix={routePrefix}
             />
 
             {/* Supplier Pricing Drawer */}
@@ -495,7 +496,8 @@ export default function ShowSupplier({ supplier, supplierPrices = [], products =
                 supplierName={supplier.name}
                 existingPrice={editingPrice}
                 onSuccess={() => router.reload()}
-                canManage={hasPermission('pharmacy.supplier.pricing.manage')}
+                canManage={hasPermission(`${routePrefix}.supplier.pricing.manage`)}
+                routePrefix={routePrefix}
             />
         </AppLayout>
     );

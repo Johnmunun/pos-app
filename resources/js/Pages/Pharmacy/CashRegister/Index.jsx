@@ -23,7 +23,7 @@ function Modal({ open, onClose, title, children }) {
     );
 }
 
-export default function CashRegisterIndex({ cashRegisters = [] }) {
+export default function CashRegisterIndex({ cashRegisters = [], routePrefix = 'pharmacy' }) {
     const [createOpen, setCreateOpen] = useState(false);
     const [openSessionOpen, setOpenSessionOpen] = useState(false);
     const [closeSessionOpen, setCloseSessionOpen] = useState(false);
@@ -38,7 +38,7 @@ export default function CashRegisterIndex({ cashRegisters = [] }) {
         e.preventDefault();
         setSubmitting(true);
         try {
-            await axios.post(route('pharmacy.cash-registers.store'), {
+            await axios.post(route(`${routePrefix}.cash-registers.store`), {
                 name: formCreate.name,
                 code: formCreate.code,
                 description: formCreate.description || null,
@@ -66,7 +66,7 @@ export default function CashRegisterIndex({ cashRegisters = [] }) {
         if (!selectedRegister) return;
         setSubmitting(true);
         try {
-            await axios.post(route('pharmacy.cash-registers.open', selectedRegister.id), {
+            await axios.post(route(`${routePrefix}.cash-registers.open`, selectedRegister.id), {
                 opening_balance: parseFloat(formOpen.opening_balance) || 0,
             });
             toast.success('Session ouverte');
@@ -99,7 +99,7 @@ export default function CashRegisterIndex({ cashRegisters = [] }) {
         }
         setSubmitting(true);
         try {
-            await axios.post(route('pharmacy.cash-registers.sessions.close', selectedSession.id), {
+            await axios.post(route(`${routePrefix}.cash-registers.sessions.close`, selectedSession.id), {
                 closing_balance: closing,
                 notes: formClose.notes || null,
             });
@@ -121,7 +121,7 @@ export default function CashRegisterIndex({ cashRegisters = [] }) {
             <div className="container mx-auto py-6 px-4">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                     <div className="flex items-center gap-3">
-                        <Link href={route('pharmacy.sales.index')} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                        <Link href={route(`${routePrefix}.sales.index`)} className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                             <ArrowLeft className="h-5 w-5" />
                         </Link>
                         <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-gray-100">

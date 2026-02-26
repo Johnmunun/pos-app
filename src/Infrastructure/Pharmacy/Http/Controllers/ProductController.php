@@ -65,6 +65,15 @@ class ProductController
     }
 
     /**
+     * Module produit selon le préfixe de route (pharmacy ou hardware) pour le rendu Inertia.
+     */
+    private function getProductsModule(): string
+    {
+        $prefix = request()->route()?->getPrefix();
+        return $prefix === 'hardware' ? 'Hardware' : 'Pharmacy';
+    }
+
+    /**
      * Shop ID selon le dépôt sélectionné en session (ou fallback user).
      */
     private function getShopId(Request $request): ?string
@@ -189,11 +198,11 @@ class ProductController
             ];
         })->toArray();
         
-        return Inertia::render('Pharmacy/Products/Index', [
+        return Inertia::render($this->getProductsModule() . '/Products/Index', [
             'products' => $products,
             'categories' => $categories,
             'filters' => $request->only(['search', 'category_id', 'status']),
-            'canImport' => $isRoot || $user->can('pharmacy.product.import'),
+            'canImport' => $isRoot || $user->can('pharmacy.product.import') || ($this->getProductsModule() === 'Hardware' && $user->can('hardware.product.manage')),
         ]);
     }
 
@@ -474,7 +483,7 @@ class ProductController
             abort(403, 'Veuillez sélectionner un dépôt en haut.');
         }
         $categories = $this->categoryRepository->findByShop($shopId, true);
-        return Inertia::render('Pharmacy/Products/Create', [
+        return Inertia::render($this->getProductsModule() . '/Products/Create', [
             'categories' => $categories
         ]);
     }
@@ -623,7 +632,7 @@ class ProductController
         // Get related batches
         $batches = []; // $this->batchRepository->findByProduct($id);
         
-        return Inertia::render('Pharmacy/Products/Show', [
+        return Inertia::render($this->getProductsModule() . '/Products/Show', [
             'product' => $product,
             'batches' => $batches
         ]);
@@ -759,7 +768,7 @@ class ProductController
         $categoriesShopId = $shopId ?? $product->getShopId();
         $categories = $this->categoryRepository->findByShop($categoriesShopId, true);
 
-        return Inertia::render('Pharmacy/Products/Edit', [
+        return Inertia::render($this->getProductsModule() . '/Products/Edit', [
             'product' => $product,
             'categories' => $categories
         ]);

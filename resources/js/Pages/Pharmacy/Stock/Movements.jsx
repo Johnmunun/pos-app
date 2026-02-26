@@ -7,7 +7,7 @@ import { Input } from '@/Components/ui/input';
 import { History, Filter, ArrowLeft } from 'lucide-react';
 import ExportButtons from '@/Components/Pharmacy/ExportButtons';
 
-export default function StockMovements({ auth, movements = [], filters = {}, pagination = {} }) {
+export default function StockMovements({ auth, movements = [], filters = {}, pagination = {}, routePrefix = 'pharmacy' }) {
     const [type, setType] = useState(filters.type || '');
     const [from, setFrom] = useState(filters.from || '');
     const [to, setTo] = useState(filters.to || '');
@@ -15,7 +15,7 @@ export default function StockMovements({ auth, movements = [], filters = {}, pag
 
     const handleFilter = (e) => {
         e.preventDefault();
-        router.get(route('pharmacy.stock.movements.index'), {
+        router.get(route(`${routePrefix}.stock.movements.index`), {
             type: type || undefined,
             from: from || undefined,
             to: to || undefined,
@@ -28,7 +28,7 @@ export default function StockMovements({ auth, movements = [], filters = {}, pag
             header={
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="sm" asChild className="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white">
-                        <Link href={route('pharmacy.stock.index')}><ArrowLeft className="h-4 w-4 mr-1" /> Stock</Link>
+                        <Link href={route(`${routePrefix}.stock.index`)}><ArrowLeft className="h-4 w-4 mr-1" /> Stock</Link>
                     </Button>
                     <h2 className="font-semibold text-xl text-gray-800 dark:text-white leading-tight">
                         Historique des mouvements de stock
@@ -46,8 +46,8 @@ export default function StockMovements({ auth, movements = [], filters = {}, pag
                                 Filtres
                             </CardTitle>
                             <ExportButtons
-                                pdfUrl={route('pharmacy.exports.movements.pdf', { from, to, type, reference })}
-                                excelUrl={route('pharmacy.exports.movements.excel', { from, to, type, reference })}
+                                pdfUrl={route(`${routePrefix}.exports.movements.pdf`, { from, to, type, reference })}
+                                excelUrl={route(`${routePrefix}.exports.movements.excel`, { from, to, type, reference })}
                                 disabled={!movements.length}
                             />
                         </CardHeader>
@@ -56,7 +56,7 @@ export default function StockMovements({ auth, movements = [], filters = {}, pag
                                 <div>
                                     <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Type</label>
                                     <select
-                                        className="w-full min-w-[140px] h-10 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 px-3 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                                        className="w-full sm:min-w-[140px] h-10 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 px-3 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                                         value={type}
                                         onChange={(e) => setType(e.target.value)}
                                     >
@@ -129,8 +129,8 @@ export default function StockMovements({ auth, movements = [], filters = {}, pag
                                 <div className="mt-4 flex justify-between items-center">
                                     <span className="text-sm text-gray-600 dark:text-gray-400">Page {pagination.current_page} / {pagination.last_page}</span>
                                     <div className="flex gap-2">
-                                        <Button variant="outline" size="sm" disabled={pagination.current_page <= 1} onClick={() => router.get(route('pharmacy.stock.movements.index'), { ...filters, page: pagination.current_page - 1 })} className="border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300">Précédent</Button>
-                                        <Button variant="outline" size="sm" disabled={pagination.current_page >= pagination.last_page} onClick={() => router.get(route('pharmacy.stock.movements.index'), { ...filters, page: pagination.current_page + 1 })} className="border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300">Suivant</Button>
+                                        <Button variant="outline" size="sm" disabled={pagination.current_page <= 1} onClick={() => router.get(route(`${routePrefix}.stock.movements.index`), { ...filters, page: pagination.current_page - 1 })} className="border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300">Précédent</Button>
+                                        <Button variant="outline" size="sm" disabled={pagination.current_page >= pagination.last_page} onClick={() => router.get(route(`${routePrefix}.stock.movements.index`), { ...filters, page: pagination.current_page + 1 })} className="border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300">Suivant</Button>
                                     </div>
                                 </div>
                             )}

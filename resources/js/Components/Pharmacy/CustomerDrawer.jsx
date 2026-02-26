@@ -9,7 +9,7 @@ import { Textarea } from '@/Components/ui/textarea';
 import { Button } from '@/Components/ui/button';
 import { User, Phone, Mail, MapPin, Building2, CreditCard, FileText, Save, Loader2 } from 'lucide-react';
 
-export default function CustomerDrawer({ isOpen, onClose, customer = null, onSuccess = null, canCreate = false, canUpdate = false }) {
+export default function CustomerDrawer({ isOpen, onClose, customer = null, onSuccess = null, canCreate = false, canUpdate = false, routePrefix = 'pharmacy' }) {
     const { shop } = usePage().props;
     const currency = shop?.currency || 'USD';
     const isEditing = !!customer;
@@ -82,9 +82,9 @@ export default function CustomerDrawer({ isOpen, onClose, customer = null, onSuc
 
             let response;
             if (isEditing) {
-                response = await axios.put(route('pharmacy.customers.update', customer.id), payload);
+                response = await axios.put(route(`${routePrefix}.customers.update`, customer.id), payload);
             } else {
-                response = await axios.post(route('pharmacy.customers.store'), payload);
+                response = await axios.post(route(`${routePrefix}.customers.store`), payload);
             }
 
             if (response.data.success) {

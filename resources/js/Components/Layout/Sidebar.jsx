@@ -35,6 +35,7 @@ import {
     DollarSign,
     Truck,
     Warehouse,
+    Wrench,
 } from 'lucide-react';
 
 /**
@@ -43,10 +44,10 @@ import {
  * Sidebar groupée avec visibilité basée sur les permissions
  * Mobile-first : drawer/off-canvas sur mobile, fixe sur desktop
  */
-export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, currentUrl }) {
+export default function Sidebar({ permissions: permissionsProp, tenantSector = null, isRoot = false, isOpen, onClose, currentUrl }) {
     const [expandedGroups, setExpandedGroups] = useState({});
-    
-    // Utiliser l'URL depuis usePage si currentUrl n'est pas fourni
+    const permissions = Array.isArray(permissionsProp) ? permissionsProp : [];
+
     const page = usePage();
     const url = currentUrl || page.url;
     
@@ -95,15 +96,23 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, 
     // Pour le groupe Pharmacy : afficher si l'utilisateur a une permission pharmacy.* ou module.pharmacy ou stock.* ou inventory.*
     const hasPharmacyAccess = () => {
         if (isRoot || permissions.includes('*')) return true;
-        if (!Array.isArray(permissions)) return false;
         return permissions.some(
             (p) =>
                 p === 'module.pharmacy' ||
-                p.startsWith('pharmacy.') ||
-                p.startsWith('stock.') ||
+                (typeof p === 'string' && p.startsWith('pharmacy.')) ||
+                (typeof p === 'string' && p.startsWith('stock.')) ||
                 p === 'inventory.view' ||
                 p === 'inventory.create' ||
                 p === 'inventory.edit'
+        );
+    };
+
+    // Pour le groupe Quincaillerie : module.hardware, hardware.* ou tenant secteur "hardware"
+    const hasHardwareAccess = () => {
+        if (isRoot || permissions.includes('*')) return true;
+        if (tenantSector === 'hardware') return true;
+        return permissions.some(
+            (p) => p === 'module.hardware' || (typeof p === 'string' && p.startsWith('hardware.'))
         );
     };
 
@@ -170,6 +179,25 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, 
                 { label: 'Vendeurs', href: '/pharmacy/sellers', permission: 'pharmacy.seller.view', icon: User },
                 { label: 'Dépôts', href: '/pharmacy/depots', permission: 'pharmacy.seller.view', icon: Warehouse },
                 { label: 'Rapports', href: '/pharmacy/reports', permission: 'pharmacy.sales.view|pharmacy.report.view', icon: FileText },
+            ]
+        },
+        {
+            key: 'hardware',
+            label: 'Quincaillerie',
+            icon: Wrench,
+            permissions: ['module.hardware', 'hardware.product.view', 'hardware.sales.view', 'hardware.stock.view', 'hardware.report.view'],
+            items: [
+                { label: 'Dashboard', href: '/hardware/dashboard', permission: 'module.hardware|hardware.sales.view|hardware.product.view|hardware.stock.view|hardware.report.view', icon: LayoutDashboard },
+                { label: 'Produits', href: '/hardware/products', permission: 'hardware.product.view|hardware.product.manage', icon: Package },
+                { label: 'Ventes', href: '/hardware/sales', permission: 'hardware.sales.view|hardware.sales.manage', icon: ShoppingCart },
+                { label: 'Caisse', href: '/hardware/sales/create', permission: 'hardware.sales.manage', icon: Plus },
+                { label: 'Fournisseurs', href: '/hardware/suppliers', permission: 'hardware.supplier.view', icon: Truck },
+                { label: 'Bons de commande', href: '/hardware/purchases', permission: 'hardware.purchases.view|hardware.purchases.manage', icon: FileText },
+                { label: 'Clients', href: '/hardware/customers', permission: 'hardware.customer.view', icon: Users },
+                { label: 'Stock', href: '/hardware/stock', permission: 'hardware.stock.view|hardware.stock.manage', icon: Warehouse },
+                { label: 'Mouvements', href: '/hardware/stock/movements', permission: 'hardware.stock.movement.view|hardware.stock.manage', icon: Scroll },
+                { label: 'Rapports', href: '/hardware/reports', permission: 'hardware.sales.view|hardware.report.view', icon: BarChart },
+                { label: 'Catégories', href: '/hardware/categories', permission: 'hardware.category.view', icon: Tag },
             ]
         },
         {
@@ -248,10 +276,11 @@ export default function Sidebar({ permissions, isRoot = false, isOpen, onClose, 
         },
     ];
 
-    // Filtrer les groupes visibles (Général toujours visible ; Pharmacy si hasPharmacyAccess)
+    // Filtrer les groupes visibles (Général toujours visible ; Pharmacy/Hardware via hasXxxAccess)
     const visibleGroups = navigationGroups.filter((group) => {
         if (group.key === 'general') return true;
         if (group.key === 'pharmacy') return hasPharmacyAccess();
+        if (group.key === 'hardware') return hasHardwareAccess();
         return hasVisibleItem(group.permissions);
     });
 

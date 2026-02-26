@@ -4,6 +4,7 @@ import Sidebar from '@/Components/Layout/Sidebar';
 import Navbar from '@/Components/Layout/Navbar';
 import DepotAlert from '@/Components/DepotAlert';
 import FlashMessages from '@/Components/FlashMessages';
+import PharmacyAssistant from '@/Components/Pharmacy/PharmacyAssistant';
 
 /**
  * Layout: AppLayout
@@ -12,10 +13,11 @@ import FlashMessages from '@/Components/FlashMessages';
  * Mobile-first avec support drawer/off-canvas
  * Support dark mode
  */
-export default function AppLayout({ children, header }) {
+export default function AppLayout({ children, header, fullWidth = false }) {
     const { auth, url } = usePage().props;
     const user = auth?.user;
-    const permissions = auth?.permissions ?? [];
+    const permissions = Array.isArray(auth?.permissions) ? auth.permissions : [];
+    const tenantSector = auth?.tenantSector ?? null;
     const isRoot = user?.type === 'ROOT';
     const isImpersonating = auth?.isImpersonating ?? false;
 
@@ -32,6 +34,7 @@ export default function AppLayout({ children, header }) {
             {/* Sidebar - Desktop (fixe) / Mobile (drawer) */}
             <Sidebar 
                 permissions={permissions}
+                tenantSector={tenantSector}
                 isRoot={isRoot}
                 isOpen={sidebarOpen}
                 onClose={() => setSidebarOpen(false)}
@@ -71,14 +74,21 @@ export default function AppLayout({ children, header }) {
                     </header>
                 )}
 
-                {/* Contenu principal */}
-                <main className="flex-1">
-                    {children}
+                {/* Contenu principal : container cohérent mobile-first (sauf fullWidth) */}
+                <main className="flex-1 min-w-0">
+                    {fullWidth ? children : (
+                        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            {children}
+                        </div>
+                    )}
                 </main>
             </div>
 
             {/* Flash Messages */}
             <FlashMessages />
+
+            {/* Assistant Intelligent Pharmacie (chatbot) */}
+            <PharmacyAssistant />
         </div>
     );
 }

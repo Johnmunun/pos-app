@@ -13,6 +13,12 @@ use Illuminate\Support\Facades\DB;
 
 class CashRegisterController
 {
+    private function getModule(): string
+    {
+        $prefix = request()->route()?->getPrefix();
+        return $prefix === 'hardware' ? 'Hardware' : 'Pharmacy';
+    }
+
     private function getShopId(Request $request): string
     {
         $user = $request->user();
@@ -69,8 +75,9 @@ class CashRegisterController
                 ];
             });
 
-        return Inertia::render('Pharmacy/CashRegister/Index', [
+        return Inertia::render($this->getModule() . '/CashRegister/Index', [
             'cashRegisters' => $registers,
+            'routePrefix' => $this->getModule() === 'Hardware' ? 'hardware' : 'pharmacy',
         ]);
     }
 

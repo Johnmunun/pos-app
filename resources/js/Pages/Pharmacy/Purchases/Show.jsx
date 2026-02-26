@@ -26,7 +26,8 @@ export default function PurchasesShow({
     purchase_order, 
     lines = [],
     suppliers = [],
-    products = []
+    products = [],
+    routePrefix = 'pharmacy'
 }) {
     const { shop } = usePage().props;
     const currency = purchase_order.currency || shop?.currency || 'CDF';
@@ -40,7 +41,7 @@ export default function PurchasesShow({
     const canEdit = purchase_order.status === 'DRAFT';
 
     const handleConfirm = () => {
-        axios.post(route('pharmacy.purchases.confirm', purchase_order.id))
+        axios.post(route(`${routePrefix}.purchases.confirm`, purchase_order.id))
             .then(() => { 
                 toast.success('Bon de commande confirmé'); 
                 router.reload(); 
@@ -60,7 +61,7 @@ export default function PurchasesShow({
 
     const handleCancel = () => {
         if (!confirm('Annuler ce bon de commande ?')) return;
-        axios.post(route('pharmacy.purchases.cancel', purchase_order.id))
+        axios.post(route(`${routePrefix}.purchases.cancel`, purchase_order.id))
             .then(() => { 
                 toast.success('Bon de commande annulé'); 
                 router.reload(); 
@@ -134,7 +135,7 @@ export default function PurchasesShow({
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                     <div className="flex items-center gap-4">
                         <Button variant="outline" size="sm" asChild>
-                            <Link href={route('pharmacy.purchases.index')}>
+                            <Link href={route(`${routePrefix}.purchases.index`)}>
                                 <ArrowLeft className="h-4 w-4 mr-1" />
                                 Retour
                             </Link>
@@ -386,6 +387,7 @@ export default function PurchasesShow({
                 products={products}
                 currency={currency}
                 onSuccess={handleDrawerSuccess}
+                routePrefix={routePrefix}
             />
 
             {/* Receive Drawer */}
@@ -396,6 +398,7 @@ export default function PurchasesShow({
                 lines={lines}
                 currency={currency}
                 onSuccess={handleReceiveSuccess}
+                routePrefix={routePrefix}
             />
         </AppLayout>
     );

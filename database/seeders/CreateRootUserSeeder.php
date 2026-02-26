@@ -44,6 +44,7 @@ class CreateRootUserSeeder extends Seeder
         } else {
             $this->command->info('ROOT user already exists. Updating permissions.');
         }
+        
 
         // Synchroniser les permissions depuis le fichier source
         $syncService = app(PermissionSyncService::class);

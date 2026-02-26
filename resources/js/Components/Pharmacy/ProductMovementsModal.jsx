@@ -34,7 +34,8 @@ export default function ProductMovementsModal({
     isOpen, 
     onClose, 
     product = null,
-    initialFilters = {}
+    initialFilters = {},
+    routePrefix = 'pharmacy'
 }) {
     const { auth, shop } = usePage().props;
     const permissions = auth?.permissions || [];
@@ -88,7 +89,7 @@ export default function ProductMovementsModal({
             if (filters.from) params.append('from', filters.from);
             if (filters.to) params.append('to', filters.to);
 
-            const url = `${route('pharmacy.api.product-movements.index')}?${params.toString()}`;
+            const url = `${route(`${routePrefix}.api.product-movements.index`)}?${params.toString()}`;
             const response = await axios.get(url);
             setMovements(response.data.movements || []);
             setStats(response.data.stats || {});
@@ -175,7 +176,7 @@ export default function ProductMovementsModal({
 
         setExportingSingle(movementId);
         try {
-            const response = await axios.get(route('pharmacy.api.product-movements.pdf.single', { id: movementId }), {
+            const response = await axios.get(route(`${routePrefix}.api.product-movements.pdf.single`, { id: movementId }), {
                 responseType: 'blob'
             });
 
@@ -316,33 +317,33 @@ export default function ProductMovementsModal({
                 </div>
 
                 {/* Filtres */}
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50">
-                    <div className="flex flex-wrap items-end gap-4">
+                <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50">
+                    <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-3 sm:gap-4">
                         {!product && (
                             <>
-                                <div className="flex-1 min-w-[180px]">
+                                <div className="w-full sm:flex-1 sm:min-w-[140px]">
                                     <Label className="text-xs mb-1 block">Nom produit</Label>
                                     <Input
                                         type="text"
                                         placeholder="Rechercher..."
                                         value={filters.product_name}
                                         onChange={(e) => setFilters(prev => ({ ...prev, product_name: e.target.value }))}
-                                        className="h-9"
+                                        className="h-9 w-full"
                                     />
                                 </div>
-                                <div className="w-[140px]">
+                                <div className="w-full sm:w-36">
                                     <Label className="text-xs mb-1 block">Code produit</Label>
                                     <Input
                                         type="text"
                                         placeholder="Code..."
                                         value={filters.product_code}
                                         onChange={(e) => setFilters(prev => ({ ...prev, product_code: e.target.value }))}
-                                        className="h-9"
+                                        className="h-9 w-full"
                                     />
                                 </div>
                             </>
                         )}
-                        <div className="w-[130px]">
+                        <div className="w-full sm:w-32">
                             <Label className="text-xs mb-1 block">Type</Label>
                             <select
                                 value={filters.type}
@@ -355,22 +356,22 @@ export default function ProductMovementsModal({
                                 <option value="ADJUSTMENT">Ajustement</option>
                             </select>
                         </div>
-                        <div className="w-[140px]">
+                        <div className="w-full sm:w-36">
                             <Label className="text-xs mb-1 block">Date début</Label>
                             <Input
                                 type="date"
                                 value={filters.from}
                                 onChange={(e) => setFilters(prev => ({ ...prev, from: e.target.value }))}
-                                className="h-9"
+                                className="h-9 w-full"
                             />
                         </div>
-                        <div className="w-[140px]">
+                        <div className="w-full sm:w-36">
                             <Label className="text-xs mb-1 block">Date fin</Label>
                             <Input
                                 type="date"
                                 value={filters.to}
                                 onChange={(e) => setFilters(prev => ({ ...prev, to: e.target.value }))}
-                                className="h-9"
+                                className="h-9 w-full"
                             />
                         </div>
                         <div className="flex gap-2">

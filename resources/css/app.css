@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Layout global : empêcher tout débordement horizontal */
+html,
+body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+#app {
+    max-width: 100%;
+}
+
 /* ============================================
    SCROLLBAR GLOBAL - Style unifié et moderne
    ============================================

@@ -24,6 +24,7 @@ class UpdateStoreSettingsDTO
         public readonly ?string $logoPath = null,
         public readonly string $currency = 'XAF',
         public readonly ?float $exchangeRate = null,
-        public readonly ?string $invoiceFooterText = null
+        public readonly ?string $invoiceFooterText = null,
+        public readonly bool $receiptAutoPrint = false
     ) {}
 }

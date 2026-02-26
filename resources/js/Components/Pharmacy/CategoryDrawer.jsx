@@ -17,7 +17,7 @@ import axios from 'axios';
 import offlineStorage from '@/lib/offlineStorage';
 import syncService from '@/lib/syncService';
 
-export default function CategoryDrawer({ isOpen, onClose, category = null, categories = [], canCreate = false, canUpdate = false }) {
+export default function CategoryDrawer({ isOpen, onClose, category = null, categories = [], canCreate = false, canUpdate = false, routePrefix = 'pharmacy' }) {
     const isEditing = !!category;
     
     const { data, setData, post, put, processing, errors, reset } = useForm({
@@ -116,7 +116,7 @@ export default function CategoryDrawer({ isOpen, onClose, category = null, categ
         // Si online, soumettre normalement
         try {
             if (isEditing) {
-                await put(route('pharmacy.categories.update', category.id), {
+                await put(route(`${routePrefix}.categories.update`, category.id), {
                     preserveScroll: true,
                     onSuccess: () => {
                         // Le toast sera affiché par FlashMessages depuis le backend
@@ -131,7 +131,7 @@ export default function CategoryDrawer({ isOpen, onClose, category = null, categ
                     }
                 });
             } else {
-                await post(route('pharmacy.categories.store'), {
+                await post(route(`${routePrefix}.categories.store`), {
                     preserveScroll: true,
                     onSuccess: () => {
                         // Le toast sera affiché par FlashMessages depuis le backend

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Middleware;
 use Symfony\Component\HttpFoundation\Response;
+use Src\Application\Settings\UseCases\GetStoreSettingsUseCase;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -37,6 +38,7 @@ class HandleInertiaRequests extends Middleware
         $permissions = [];
         $shopCurrency = 'CDF'; // Devise par défaut (Franc Congolais)
         $shopCurrencies = []; // Liste des devises configurées
+        $receiptAutoPrint = false;
         
         $tenantSector = null;
         $currentDepot = null;
@@ -115,7 +117,7 @@ class HandleInertiaRequests extends Middleware
                         ->orderBy('code')
                         ->get(['id', 'code', 'name', 'symbol', 'is_default']);
                     
-                    $shopCurrencies = $currencies->map(fn($c) => [
+                    $shopCurrencies = $currencies->map(fn ($c) => [
                         'id' => $c->id,
                         'code' => $c->code,
                         'name' => $c->name,
@@ -127,6 +129,17 @@ class HandleInertiaRequests extends Middleware
                     $defaultCurrency = $currencies->firstWhere('is_default', true);
                     if ($defaultCurrency) {
                         $shopCurrency = $defaultCurrency->code;
+                    }
+
+                    try {
+                        /** @var GetStoreSettingsUseCase $getSettings */
+                        $getSettings = app(GetStoreSettingsUseCase::class);
+                        $settings = $getSettings->execute((string) $shopId);
+                        if ($settings) {
+                            $receiptAutoPrint = $settings->isReceiptAutoPrintEnabled();
+                        }
+                    } catch (\Throwable $e) {
+                        Log::warning('Error getting store settings for Inertia', ['error' => $e->getMessage()]);
                     }
                 }
             } catch (\Exception $e) {
@@ -148,6 +161,7 @@ class HandleInertiaRequests extends Middleware
             'shop' => [
                 'currency' => $shopCurrency,
                 'currencies' => $shopCurrencies,
+                'receipt_auto_print' => $receiptAutoPrint,
             ],
             'flash' => [
                 'success' => $request->session()->get('success'),

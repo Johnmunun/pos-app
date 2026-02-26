@@ -50,9 +50,5 @@ Route::get('/pending', [OnboardingController::class, 'showPending'])
     ->name('pending')
     ->middleware(['auth']);
 
-// Protection du dashboard
-Route::middleware(['auth', 'ensure.user.is.active'])->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia\Inertia::render('Dashboard');
-    })->name('dashboard');
-});
+// Le dashboard principal est géré dans routes/web.php
+// (redirection vers le dashboard du module : pharmacie, finance, etc.).

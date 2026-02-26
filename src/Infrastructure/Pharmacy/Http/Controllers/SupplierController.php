@@ -23,9 +23,16 @@ use Src\Infrastructure\Pharmacy\Models\ProductModel;
  * Controller: SupplierController
  *
  * Gère les requêtes HTTP pour le module Fournisseurs.
+ * Utilisable depuis Pharmacy ou Hardware selon le préfixe de route.
  */
 class SupplierController extends Controller
 {
+    private function getModule(): string
+    {
+        $prefix = request()->route()?->getPrefix();
+        return $prefix === 'hardware' ? 'Hardware' : 'Pharmacy';
+    }
+
     public function __construct(
         private readonly CreateSupplierUseCase $createSupplierUseCase,
         private readonly UpdateSupplierUseCase $updateSupplierUseCase,
@@ -88,7 +95,7 @@ class SupplierController extends Controller
                 'created_at' => $supplier->created_at->format('d/m/Y'),
             ]);
 
-        return Inertia::render('Pharmacy/Suppliers/Index', [
+        return Inertia::render($this->getModule() . '/Suppliers/Index', [
             'suppliers' => $suppliers,
             'filters' => [
                 'search' => $search,
@@ -254,7 +261,7 @@ class SupplierController extends Controller
             ])
             ->toArray();
 
-        return Inertia::render('Pharmacy/Suppliers/Show', [
+        return Inertia::render($this->getModule() . '/Suppliers/Show', [
             'supplier' => $supplier,
             'supplierPrices' => $supplierPrices,
             'products' => $products,

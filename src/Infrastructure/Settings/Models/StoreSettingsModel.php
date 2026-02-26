@@ -31,10 +31,12 @@ class StoreSettingsModel extends Model
         'currency',
         'exchange_rate',
         'invoice_footer_text',
+        'receipt_auto_print',
     ];
 
     protected $casts = [
         'exchange_rate' => 'decimal:4',
+        'receipt_auto_print' => 'boolean',
     ];
 
     // Relations

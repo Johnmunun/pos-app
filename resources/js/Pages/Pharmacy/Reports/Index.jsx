@@ -34,7 +34,7 @@ function getDefaultFromTo() {
     return { from, to };
 }
 
-export default function ReportsIndex({ report, filters }) {
+export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy' }) {
     const { shop } = usePage().props;
     const currency = shop?.currency || 'CDF';
     const fmt = (amount) => formatCurrency(amount, currency);
@@ -47,7 +47,7 @@ export default function ReportsIndex({ report, filters }) {
 
     const handleApply = (e) => {
         e.preventDefault();
-        router.get(route('pharmacy.reports.index'), { from: dateFrom, to: dateTo }, { preserveState: true });
+        router.get(route(`${routePrefix}.reports.index`), { from: dateFrom, to: dateTo }, { preserveState: true });
     };
 
     const sales = report?.sales || {};
@@ -93,8 +93,7 @@ export default function ReportsIndex({ report, filters }) {
         >
             <Head title="Rapport d'activité - Pharmacy" />
 
-            <div className="py-6">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+            <div className="py-6 space-y-6">
                     {/* Filtres */}
                     <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 shadow-sm">
                         <CardHeader className="pb-4">
@@ -104,28 +103,28 @@ export default function ReportsIndex({ report, filters }) {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <form onSubmit={handleApply} className="flex flex-wrap items-end gap-4">
-                                <div className="space-y-2">
+                            <form onSubmit={handleApply} className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-4">
+                                <div className="space-y-2 w-full sm:w-auto sm:min-w-[160px]">
                                     <Label htmlFor="date_from" className="text-gray-700 dark:text-gray-300">Date début</Label>
                                     <Input
                                         id="date_from"
                                         type="date"
                                         value={dateFrom}
                                         onChange={(e) => setDateFrom(e.target.value)}
-                                        className="h-10 w-full min-w-[160px]"
+                                        className="h-10 w-full"
                                     />
                                 </div>
-                                <div className="space-y-2">
+                                <div className="space-y-2 w-full sm:w-auto sm:min-w-[160px]">
                                     <Label htmlFor="date_to" className="text-gray-700 dark:text-gray-300">Date fin</Label>
                                     <Input
                                         id="date_to"
                                         type="date"
                                         value={dateTo}
                                         onChange={(e) => setDateTo(e.target.value)}
-                                        className="h-10 w-full min-w-[160px]"
+                                        className="h-10 w-full"
                                     />
                                 </div>
-                                <Button type="submit" size="sm" className="bg-amber-500 hover:bg-amber-600 text-white h-10 px-4">
+                                <Button type="submit" size="sm" className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-white h-10 px-4">
                                     <RefreshCw className="h-4 w-4 mr-2" />
                                     Générer le rapport
                                 </Button>
@@ -161,7 +160,7 @@ export default function ReportsIndex({ report, filters }) {
                                     asChild
                                 >
                                     <a
-                                        href={route('pharmacy.exports.reports.pdf', { from: dateFrom, to: dateTo })}
+                                        href={route(`${routePrefix}.exports.reports.pdf`, { from: dateFrom, to: dateTo })}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                     >
@@ -177,7 +176,7 @@ export default function ReportsIndex({ report, filters }) {
                                     asChild
                                 >
                                     <a
-                                        href={route('pharmacy.exports.reports.excel', { from: dateFrom, to: dateTo })}
+                                        href={route(`${routePrefix}.exports.reports.excel`, { from: dateFrom, to: dateTo })}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                     >
@@ -443,7 +442,6 @@ export default function ReportsIndex({ report, filters }) {
                             )}
                         </CardContent>
                     </Card>
-                </div>
             </div>
         </AppLayout>
     );

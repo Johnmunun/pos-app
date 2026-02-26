@@ -23,6 +23,7 @@ class StoreSettings
     private string $currency;
     private ?float $exchangeRate;
     private ?string $invoiceFooterText;
+    private bool $receiptAutoPrint;
     private DateTimeImmutable $createdAt;
     private DateTimeImmutable $updatedAt;
 
@@ -36,7 +37,8 @@ class StoreSettings
         ?string $logoPath = null,
         string $currency = 'XAF',
         ?float $exchangeRate = null,
-        ?string $invoiceFooterText = null
+        ?string $invoiceFooterText = null,
+        bool $receiptAutoPrint = false
     ) {
         $this->id = $id;
         $this->shopId = $shopId;
@@ -48,6 +50,7 @@ class StoreSettings
         $this->currency = $currency;
         $this->exchangeRate = $exchangeRate;
         $this->invoiceFooterText = $invoiceFooterText;
+        $this->receiptAutoPrint = $receiptAutoPrint;
         $this->createdAt = new DateTimeImmutable();
         $this->updatedAt = new DateTimeImmutable();
     }
@@ -101,6 +104,11 @@ class StoreSettings
     public function getInvoiceFooterText(): ?string
     {
         return $this->invoiceFooterText;
+    }
+
+    public function isReceiptAutoPrintEnabled(): bool
+    {
+        return $this->receiptAutoPrint;
     }
 
     public function getCreatedAt(): DateTimeImmutable
@@ -171,6 +179,12 @@ class StoreSettings
         $this->updatedAt = new DateTimeImmutable();
     }
 
+    public function updateReceiptAutoPrint(bool $enabled): void
+    {
+        $this->receiptAutoPrint = $enabled;
+        $this->updatedAt = new DateTimeImmutable();
+    }
+
     public function isComplete(): bool
     {
         return !empty($this->companyIdentity->getName())
@@ -189,7 +203,8 @@ class StoreSettings
         ?string $logoPath = null,
         string $currency = 'XAF',
         ?float $exchangeRate = null,
-        ?string $invoiceFooterText = null
+        ?string $invoiceFooterText = null,
+        bool $receiptAutoPrint = false
     ): self {
         return new self(
             \Ramsey\Uuid\Uuid::uuid4()->toString(),
@@ -201,7 +216,8 @@ class StoreSettings
             $logoPath,
             $currency,
             $exchangeRate,
-            $invoiceFooterText
+            $invoiceFooterText,
+            $receiptAutoPrint
         );
     }
 }

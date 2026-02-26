@@ -8,7 +8,7 @@ import { Package, Plus, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import { useToast } from '@/Components/ui/use-toast';
 
-export default function PurchasesCreate({ auth, products = [], suppliers = [] }) {
+export default function PurchasesCreate({ auth, products = [], suppliers = [], routePrefix = 'pharmacy' }) {
     const { toast } = useToast();
     const { shop } = usePage().props;
     const defaultCurrency = shop?.currency || 'CDF';
@@ -52,14 +52,14 @@ export default function PurchasesCreate({ auth, products = [], suppliers = [] })
         }
         setSubmitting(true);
         try {
-            await axios.post(route('pharmacy.purchases.store'), {
+            await axios.post(route(`${routePrefix}.purchases.store`), {
                 supplier_id: supplierId,
                 currency,
                 expected_at: expectedAt || null,
                 lines: validLines.map(l => ({ product_id: l.product_id, ordered_quantity: Number(l.ordered_quantity), unit_cost: Number(l.unit_cost) })),
             });
             toast({ title: 'Bon de commande créé' });
-            router.visit(route('pharmacy.purchases.index'));
+            router.visit(route(`${routePrefix}.purchases.index`));
         } catch (err) {
             toast({ title: 'Erreur', description: err.response?.data?.message || 'Erreur', variant: 'destructive' });
         } finally {
@@ -73,7 +73,7 @@ export default function PurchasesCreate({ auth, products = [], suppliers = [] })
                 <div className="flex items-center justify-between">
                     <h2 className="font-semibold text-xl text-gray-800 dark:text-white leading-tight">Nouveau bon de commande</h2>
                     <Button variant="outline" asChild>
-                        <Link href={route('pharmacy.purchases.index')}>Retour</Link>
+                        <Link href={route(`${routePrefix}.purchases.index`)}>Retour</Link>
                     </Button>
                 </div>
             }
@@ -175,7 +175,7 @@ export default function PurchasesCreate({ auth, products = [], suppliers = [] })
 
                         <div className="flex justify-end gap-2">
                             <Button type="button" variant="outline" asChild>
-                                <Link href={route('pharmacy.purchases.index')}>Annuler</Link>
+                                <Link href={route(`${routePrefix}.purchases.index`)}>Annuler</Link>
                             </Button>
                             <Button type="submit" disabled={submitting}>Enregistrer le bon de commande</Button>
                         </div>

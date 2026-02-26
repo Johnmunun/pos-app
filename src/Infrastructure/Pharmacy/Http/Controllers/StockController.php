@@ -13,6 +13,12 @@ use Src\Infrastructure\Pharmacy\Models\StockMovementModel;
 
 class StockController
 {
+    private function getModule(): string
+    {
+        $prefix = request()->route()?->getPrefix();
+        return $prefix === 'hardware' ? 'Hardware' : 'Pharmacy';
+    }
+
     private function getShopId(Request $request): string
     {
         $user = $request->user();
@@ -165,13 +171,14 @@ class StockController
             ];
         })->toArray();
 
-        return Inertia::render('Pharmacy/Stock/Index', [
+        return Inertia::render($this->getModule() . '/Stock/Index', [
             'products' => $products,
             'lowStock' => $lowStock,
             'expiringSoon' => $expiringSoon,
             'categories' => $categories,
             'filters' => $request->only(['search', 'category_id', 'stock_status', 'per_page']),
             'pagination' => $pagination,
+            'routePrefix' => $this->getModule() === 'Hardware' ? 'hardware' : 'pharmacy',
         ]);
     }
 
@@ -251,9 +258,10 @@ class StockController
             ];
         })->toArray();
 
-        return Inertia::render('Pharmacy/Stock/Movements', [
+        return Inertia::render($this->getModule() . '/Stock/Movements', [
             'movements' => $movements,
             'filters' => $request->only(['type', 'from', 'to', 'reference', 'per_page']),
+            'routePrefix' => $this->getModule() === 'Hardware' ? 'hardware' : 'pharmacy',
             'pagination' => [
                 'current_page' => $paginator->currentPage(),
                 'last_page' => $paginator->lastPage(),

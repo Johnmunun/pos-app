@@ -10,6 +10,10 @@ use Inertia\Inertia;
  * DDD Pharmacy Module Routes
  */
 require __DIR__.'/pharmacy.php';
+// DDD Hardware (Quincaillerie) Module Routes
+if (file_exists(__DIR__.'/hardware.php')) {
+    require __DIR__.'/hardware.php';
+}
 
 /**
  * Public Routes - Landing Page
@@ -40,7 +44,15 @@ Route::get('/dashboard', function (\Illuminate\Http\Request $request) {
         return redirect()->route('login');
     }
     if (method_exists($user, 'hasPermission')) {
-        if ($user->hasPermission('module.pharmacy') || $user->isRoot()) {
+        $hasPharmacy = $user->hasPermission('module.pharmacy');
+        $hasHardware = $user->hasPermission('module.hardware');
+        if ($user->isRoot()) {
+            return redirect()->route('pharmacy.dashboard', $request->only(['period']));
+        }
+        if ($hasHardware && !$hasPharmacy) {
+            return redirect()->route('hardware.dashboard');
+        }
+        if ($hasPharmacy) {
             return redirect()->route('pharmacy.dashboard', $request->only(['period']));
         }
         if ($user->hasPermission('finance.dashboard.view') || $user->hasPermission('finance.report.view')) {
@@ -174,20 +186,38 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:module.pharmacy')
             ->name('dashboard');
 
+        // Assistant Intelligent (chatbot) – POST pour les questions ; GET redirige vers le dashboard
+        Route::get('/assistant/ask', fn () => redirect()->route('pharmacy.dashboard'))->middleware('permission:module.pharmacy');
+        Route::post('/assistant/ask', [\Src\Infrastructure\Pharmacy\Http\Controllers\PharmacyAssistantController::class, 'ask'])
+            ->middleware('permission:module.pharmacy')
+            ->name('assistant.ask');
+
+        // API vocale (STT + TTS) – transcription Whisper, synthèse vocale, paramètres
+        Route::prefix('api/voice')->name('api.voice.')->group(function () {
+            Route::post('/transcribe', [\Src\Infrastructure\Pharmacy\Http\Controllers\PharmacyVoiceController::class, 'transcribe'])
+                ->name('transcribe');
+            Route::post('/speak', [\Src\Infrastructure\Pharmacy\Http\Controllers\PharmacyVoiceController::class, 'speak'])
+                ->name('speak');
+            Route::get('/settings', [\Src\Infrastructure\Pharmacy\Http\Controllers\PharmacyVoiceController::class, 'settings'])
+                ->name('settings');
+            Route::put('/settings', [\Src\Infrastructure\Pharmacy\Http\Controllers\PharmacyVoiceController::class, 'updateSettings'])
+                ->name('settings.update');
+        });
+
         // Rapports
         Route::get('/reports', [\Src\Infrastructure\Pharmacy\Http\Controllers\PharmacyReportController::class, 'index'])
             ->middleware('permission:pharmacy.sales.view|pharmacy.report.view')
             ->name('reports.index');
 
         // Products
-        // Support multiple permission formats for compatibility
+        // Support multiple permission formats for compatibility (view = liste seule)
         Route::get('/products', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'index'])
-            ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage')
+            ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage|pharmacy.product.view')
             ->name('products');
 
-        // Génération automatique de code produit
+        // Génération automatique de code produit (manage ou create suffit)
         Route::get('/products/generate-code', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'generateCode'])
-            ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage')
+            ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage|pharmacy.product.create')
             ->name('products.generate-code');
 
         // Exports Produits
@@ -295,6 +325,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/sales/{id}/receipt', [\Src\Infrastructure\Pharmacy\Http\Controllers\SaleController::class, 'receipt'])
             ->middleware('permission:pharmacy.sales.view|pharmacy.sales.manage')
             ->name('sales.receipt');
+        Route::post('/sales/{id}/email-receipt', [\Src\Infrastructure\Pharmacy\Http\Controllers\SaleController::class, 'emailReceipt'])
+            ->middleware('permission:pharmacy.sales.view|pharmacy.sales.manage')
+            ->name('sales.email-receipt');
 
         // Caisse (cash registers & sessions)
         Route::get('/cash-registers', [\Src\Infrastructure\Pharmacy\Http\Controllers\CashRegisterController::class, 'index'])
@@ -431,7 +464,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Categories - Permissions granulaires strictes
         Route::get('/categories', [\Src\Infrastructure\Pharmacy\Http\Controllers\CategoryController::class, 'index'])
-            ->middleware('permission:pharmacy.category.view')
+            ->middleware('permission:pharmacy.category.view|pharmacy.category.create|pharmacy.category.update|pharmacy.category.delete')
             ->name('categories.index');
         
         Route::post('/categories', [\Src\Infrastructure\Pharmacy\Http\Controllers\CategoryController::class, 'store'])
@@ -447,7 +480,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('categories.destroy');
         
         Route::get('/categories/export/pdf', [\Src\Infrastructure\Pharmacy\Http\Controllers\CategoryController::class, 'exportPdf'])
-            ->middleware('permission:pharmacy.category.view')
+            ->middleware('permission:pharmacy.category.view|pharmacy.category.create|pharmacy.category.update|pharmacy.category.delete')
             ->name('categories.export.pdf');
 
         // Batches & Expirations (Lots et Dates d'expiration)

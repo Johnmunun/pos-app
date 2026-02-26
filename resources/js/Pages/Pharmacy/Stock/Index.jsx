@@ -22,7 +22,7 @@ import toast from 'react-hot-toast';
 import Modal from '@/Components/Modal';
 import ExportButtons from '@/Components/Pharmacy/ExportButtons';
 
-export default function StockManagement({ products, lowStock, expiringSoon, categories = [], filters = {}, pagination }) {
+export default function StockManagement({ products, lowStock, expiringSoon, categories = [], filters = {}, pagination, routePrefix = 'pharmacy' }) {
     const { data, setData, post, processing, errors } = useForm({
         product_id: '',
         type: 'adjust',
@@ -49,7 +49,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
         if (!selectedProduct) return;
         setStockSubmitting(true);
         try {
-            await axios.post(route('pharmacy.products.stock.update', selectedProduct.id), {
+            await axios.post(route(`${routePrefix}.products.stock.update`, selectedProduct.id), {
                 type: data.type,
                 quantity: data.quantity,
                 batch_number: data.batch_number || null,
@@ -102,7 +102,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
 
     const handleFilterSubmit = (e) => {
         e.preventDefault();
-        router.get(route('pharmacy.stock.index'), {
+        router.get(route(`${routePrefix}.stock.index`), {
             search: searchTerm || undefined,
             category_id: selectedCategory || undefined,
             stock_status: stockStatus || undefined,
@@ -114,7 +114,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
     };
 
     const handlePageChange = (page) => {
-        router.get(route('pharmacy.stock.index'), {
+        router.get(route(`${routePrefix}.stock.index`), {
             search: filters.search,
             category_id: filters.category_id,
             stock_status: filters.stock_status,
@@ -128,7 +128,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
 
     const openMovementsModal = async (product) => {
         try {
-            const res = await axios.get(route('pharmacy.stock.movements', product.id));
+            const res = await axios.get(route(`${routePrefix}.stock.movements`, product.id));
             setMovements(res.data.movements || []);
             setMovementsProduct(product);
             setMovementsModalOpen(true);
@@ -178,6 +178,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
                             </CardContent>
                         </Card>
 
+                        {routePrefix === 'pharmacy' && (
                         <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">Expirations Proches</CardTitle>
@@ -197,6 +198,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
                                 </Link>
                             </CardContent>
                         </Card>
+                        )}
 
                         <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -205,7 +207,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
                             </CardHeader>
                             <CardContent>
                                 <Link 
-                                    href={route('pharmacy.stock.movements.index')}
+                                    href={route(`${routePrefix}.stock.movements.index`)}
                                     className="flex items-center justify-center gap-2 w-full px-3 py-2 text-sm font-medium rounded-md bg-purple-500 hover:bg-purple-600 text-white transition-colors"
                                 >
                                     <History className="h-4 w-4" />
@@ -223,8 +225,8 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
                                 Filtres
                             </CardTitle>
                             <ExportButtons
-                                pdfUrl={route('pharmacy.exports.stock.pdf')}
-                                excelUrl={route('pharmacy.exports.stock.excel')}
+                                pdfUrl={route(`${routePrefix}.exports.stock.pdf`)}
+                                excelUrl={route(`${routePrefix}.exports.stock.excel`)}
                                 disabled={!products.length}
                             />
                         </CardHeader>

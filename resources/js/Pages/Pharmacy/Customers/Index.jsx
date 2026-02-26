@@ -26,7 +26,7 @@ import {
     ChevronRight,
 } from 'lucide-react';
 
-export default function CustomersIndex({ customers, filters = {} }) {
+export default function CustomersIndex({ customers, filters = {}, routePrefix = 'pharmacy' }) {
     const { auth, shop } = usePage().props;
     const currency = shop?.currency || 'CDF';
     const permissions = auth?.permissions || [];
@@ -36,11 +36,11 @@ export default function CustomersIndex({ customers, filters = {} }) {
         return permissions.includes(permission);
     };
 
-    const canCreate = hasPermission('pharmacy.customer.create');
-    const canEdit = hasPermission('pharmacy.customer.edit');
-    const canView = hasPermission('pharmacy.customer.view');
-    const canActivate = hasPermission('pharmacy.customer.activate');
-    const canDeactivate = hasPermission('pharmacy.customer.deactivate');
+    const canCreate = hasPermission(`${routePrefix}.customer.create`);
+    const canEdit = hasPermission(`${routePrefix}.customer.edit`);
+    const canView = hasPermission(`${routePrefix}.customer.view`);
+    const canActivate = hasPermission(`${routePrefix}.customer.activate`);
+    const canDeactivate = hasPermission(`${routePrefix}.customer.deactivate`);
 
     const [search, setSearch] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
@@ -50,7 +50,7 @@ export default function CustomersIndex({ customers, filters = {} }) {
     const [processing, setProcessing] = useState({});
 
     const handleSearch = () => {
-        router.get(route('pharmacy.customers.index'), {
+        router.get(route(`${routePrefix}.customers.index`), {
             search,
             status: statusFilter,
             customer_type: typeFilter,
@@ -101,7 +101,7 @@ export default function CustomersIndex({ customers, filters = {} }) {
         setProcessing(prev => ({ ...prev, [customer.id]: true }));
 
         try {
-            const response = await axios.post(route(`pharmacy.customers.${action}`, customer.id));
+            const response = await axios.post(route(`${routePrefix}.customers.${action}`, customer.id));
             if (response.data.success) {
                 toast.success(response.data.message);
                 router.reload({ only: ['customers'] });
@@ -175,8 +175,8 @@ export default function CustomersIndex({ customers, filters = {} }) {
                     </div>
                     <div className="flex items-center gap-2">
                         <ExportButtons
-                            pdfUrl={route('pharmacy.exports.customers.pdf')}
-                            excelUrl={route('pharmacy.exports.customers.excel')}
+                            pdfUrl={route(`${routePrefix}.exports.customers.pdf`)}
+                            excelUrl={route(`${routePrefix}.exports.customers.excel`)}
                             disabled={!customers?.data?.length}
                         />
                         {canCreate && (
@@ -321,7 +321,7 @@ export default function CustomersIndex({ customers, filters = {} }) {
                                                             className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                                                             asChild
                                                         >
-                                                            <Link href={route('pharmacy.customers.show', customer.id)}>
+                                                            <Link href={route(`${routePrefix}.customers.show`, customer.id)}>
                                                                 <Eye className="h-4 w-4" />
                                                             </Link>
                                                         </Button>
@@ -406,6 +406,7 @@ export default function CustomersIndex({ customers, filters = {} }) {
                 onSuccess={handleDrawerSuccess}
                 canCreate={canCreate}
                 canUpdate={canEdit}
+                routePrefix={routePrefix}
             />
         </AppLayout>
     );

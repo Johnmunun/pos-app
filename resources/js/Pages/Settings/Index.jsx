@@ -256,6 +256,14 @@ export default function SettingsIndex({ auth, settings, permissions }) {
                                             {settings.invoice_footer_text || '-'}
                                         </p>
                                     </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                            Impression automatique du reçu
+                                        </label>
+                                        <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                                            {settings.receipt_auto_print ? 'Activée' : 'Désactivée'}
+                                        </p>
+                                    </div>
                                 </CardContent>
                             </Card>
                         </div>

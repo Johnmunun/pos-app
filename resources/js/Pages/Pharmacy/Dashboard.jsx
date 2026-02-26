@@ -213,8 +213,7 @@ export default function Dashboard({
     >
       <Head title="Tableau de bord Pharmacie" />
 
-      <div className="py-6">
-        <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
+      <div className="py-6 space-y-6 sm:space-y-8">
           {/* Filtres */}
           <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
             <CardHeader className="pb-2">
@@ -223,7 +222,7 @@ export default function Dashboard({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap items-center gap-4">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Période rapide :
                 </span>
@@ -259,7 +258,7 @@ export default function Dashboard({
                 <Button
                   type="button"
                   onClick={handleDateRangeApply}
-                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                  className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white"
                 >
                   Appliquer
                 </Button>
@@ -267,9 +266,9 @@ export default function Dashboard({
             </CardContent>
           </Card>
 
-          {/* Actions rapides (selon permissions) */}
+          {/* Actions rapides (selon permissions) – cachées sur mobile */}
           {visibleActions.length > 0 && (
-            <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+            <Card className="hidden md:block bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-white">
                   <Zap className="h-5 w-5 text-amber-500" />
@@ -513,7 +512,6 @@ export default function Dashboard({
               </div>
             </div>
           )}
-        </div>
       </div>
     </AppLayout>
   );

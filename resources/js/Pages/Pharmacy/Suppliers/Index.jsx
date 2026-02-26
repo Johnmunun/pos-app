@@ -24,7 +24,7 @@ import toast from 'react-hot-toast';
 import SupplierDrawer from '@/Components/Pharmacy/SupplierDrawer';
 import ExportButtons from '@/Components/Pharmacy/ExportButtons';
 
-export default function SuppliersIndex({ suppliers, filters = {} }) {
+export default function SuppliersIndex({ suppliers, filters = {}, routePrefix = 'pharmacy' }) {
     const { auth } = usePage().props;
     const permissions = auth?.permissions || [];
     
@@ -42,13 +42,13 @@ export default function SuppliersIndex({ suppliers, filters = {} }) {
         return perm.split('|').some(p => permissions.includes(p));
     };
 
-    const canCreate = hasPermission('pharmacy.supplier.create');
-    const canEdit = hasPermission('pharmacy.supplier.edit');
-    const canView = hasPermission('pharmacy.supplier.view');
+    const canCreate = hasPermission(`${routePrefix}.supplier.create`);
+    const canEdit = hasPermission(`${routePrefix}.supplier.edit`);
+    const canView = hasPermission(`${routePrefix}.supplier.view`);
 
     const handleFilter = (e) => {
         e.preventDefault();
-        router.get(route('pharmacy.suppliers.index'), {
+        router.get(route(`${routePrefix}.suppliers.index`), {
             search: search || undefined,
             status: status || undefined,
             per_page: perPage || undefined,
@@ -77,8 +77,8 @@ export default function SuppliersIndex({ suppliers, filters = {} }) {
     const handleToggleStatus = async (supplier) => {
         const action = supplier.status === 'active' ? 'deactivate' : 'activate';
         const permission = supplier.status === 'active' 
-            ? 'pharmacy.supplier.deactivate' 
-            : 'pharmacy.supplier.activate';
+            ? `${routePrefix}.supplier.deactivate` 
+            : `${routePrefix}.supplier.activate`;
 
         if (!hasPermission(permission)) {
             toast.error('Vous n\'avez pas la permission pour cette action.');
@@ -88,7 +88,7 @@ export default function SuppliersIndex({ suppliers, filters = {} }) {
         setLoading(prev => ({ ...prev, [supplier.id]: true }));
 
         try {
-            const response = await axios.post(route(`pharmacy.suppliers.${action}`, supplier.id));
+            const response = await axios.post(route(`${routePrefix}.suppliers.${action}`, supplier.id));
             if (response.data.success) {
                 toast.success(response.data.message);
                 router.reload({ only: ['suppliers'] });
@@ -192,8 +192,8 @@ export default function SuppliersIndex({ suppliers, filters = {} }) {
                                 Filtres
                             </CardTitle>
                             <ExportButtons
-                                pdfUrl={route('pharmacy.exports.suppliers.pdf')}
-                                excelUrl={route('pharmacy.exports.suppliers.excel')}
+                                pdfUrl={route(`${routePrefix}.exports.suppliers.pdf`)}
+                                excelUrl={route(`${routePrefix}.exports.suppliers.excel`)}
                                 disabled={!suppliers.data?.length}
                             />
                         </CardHeader>
@@ -326,7 +326,7 @@ export default function SuppliersIndex({ suppliers, filters = {} }) {
                                                         <td className="px-6 py-4 whitespace-nowrap text-right space-x-2">
                                                             {canView && (
                                                                 <Button variant="outline" size="sm" asChild className="border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">
-                                                                    <Link href={route('pharmacy.suppliers.show', supplier.id)}>
+                                                                    <Link href={route(`${routePrefix}.suppliers.show`, supplier.id)}>
                                                                         <Eye className="h-4 w-4" />
                                                                     </Link>
                                                                 </Button>
@@ -341,7 +341,7 @@ export default function SuppliersIndex({ suppliers, filters = {} }) {
                                                                     <Edit className="h-4 w-4" />
                                                                 </Button>
                                                             )}
-                                                            {supplier.status === 'active' && hasPermission('pharmacy.supplier.deactivate') && (
+                                                            {supplier.status === 'active' && hasPermission(`${routePrefix}.supplier.deactivate`) && (
                                                                 <Button 
                                                                     variant="outline" 
                                                                     size="sm" 
@@ -352,7 +352,7 @@ export default function SuppliersIndex({ suppliers, filters = {} }) {
                                                                     <XCircle className="h-4 w-4" />
                                                                 </Button>
                                                             )}
-                                                            {supplier.status === 'inactive' && hasPermission('pharmacy.supplier.activate') && (
+                                                            {supplier.status === 'inactive' && hasPermission(`${routePrefix}.supplier.activate`) && (
                                                                 <Button 
                                                                     variant="outline" 
                                                                     size="sm" 
@@ -409,6 +409,7 @@ export default function SuppliersIndex({ suppliers, filters = {} }) {
                 onSuccess={handleDrawerSuccess}
                 canCreate={canCreate}
                 canUpdate={canEdit}
+                routePrefix={routePrefix}
             />
         </AppLayout>
     );

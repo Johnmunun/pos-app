@@ -28,9 +28,10 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { formatCurrency, getCurrencySymbol } from '@/lib/currency';
 
-function QuickAddCustomerModal({ onClose, onCreated }) {
+function QuickAddCustomerModal({ onClose, onCreated, routePrefix = 'pharmacy' }) {
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
+    const [email, setEmail] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
 
@@ -41,11 +42,16 @@ function QuickAddCustomerModal({ onClose, onCreated }) {
             setError('Nom requis');
             return;
         }
+        if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+            setError('Email invalide');
+            return;
+        }
         setSubmitting(true);
         try {
-            const res = await axios.post(route('pharmacy.sales.quick-customer'), {
+            const res = await axios.post(route(`${routePrefix}.sales.quick-customer`), {
                 name: name.trim(),
                 phone: phone.trim() || null,
+                email: email.trim() || null,
             });
             if (res.data?.success && res.data?.customer) {
                 toast.success('Client créé');
@@ -94,6 +100,16 @@ function QuickAddCustomerModal({ onClose, onCreated }) {
                             className="w-full text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 bg-white dark:bg-slate-800"
                         />
                     </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                        <Input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="Optionnel"
+                            className="w-full text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 bg-white dark:bg-slate-800"
+                        />
+                    </div>
                     {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
                     <div className="flex gap-2 pt-2">
                         <Button type="button" variant="outline" onClick={onClose} className="flex-1">Annuler</Button>
@@ -105,7 +121,7 @@ function QuickAddCustomerModal({ onClose, onCreated }) {
     );
 }
 
-export default function POSCreate({ products = [], categories = [], customers = [], canUseWholesale = false, cashRegisters = [], currency: pageCurrency, currencies: pageCurrencies = [], exchangeRates: pageExchangeRates = {} }) {
+export default function POSCreate({ products = [], categories = [], customers = [], canUseWholesale = false, cashRegisters = [], currency: pageCurrency, currencies: pageCurrencies = [], exchangeRates: pageExchangeRates = {}, routePrefix = 'pharmacy' }) {
     const { shop } = usePage().props;
     // Devise par défaut (celle des prix produits) — normalisée en majuscules pour les taux
     const defaultCurrency = (pageCurrency ?? shop?.currency ?? 'CDF').toString().toUpperCase();
@@ -422,7 +438,7 @@ export default function POSCreate({ products = [], categories = [], customers = 
         
         setSubmitting(true);
         try {
-            const storeRes = await axios.post(route('pharmacy.sales.store'), {
+            const storeRes = await axios.post(route(`${routePrefix}.sales.store`), {
                 customer_id: customerId || null,
                 currency,
                 sale_mode: saleMode,
@@ -437,7 +453,7 @@ export default function POSCreate({ products = [], categories = [], customers = 
             
             const saleId = storeRes.data.sale.id;
             
-            await axios.post(route('pharmacy.sales.finalize', saleId), {
+            await axios.post(route(`${routePrefix}.sales.finalize`, saleId), {
                 paid_amount: paidAmount || total
             });
             
@@ -450,7 +466,7 @@ export default function POSCreate({ products = [], categories = [], customers = 
             setTimeout(() => setShowSuccessBanner(null), 2500);
             
             if (shop?.receipt_auto_print) {
-                window.open(route('pharmacy.sales.receipt', saleId), '_blank', 'noopener,noreferrer');
+                window.open(route(`${routePrefix}.sales.receipt`, saleId), '_blank', 'noopener,noreferrer');
             }
         } catch (err) {
             toast.error(err.response?.data?.message || 'Erreur lors de la vente');
@@ -467,7 +483,7 @@ export default function POSCreate({ products = [], categories = [], customers = 
         
         setSubmitting(true);
         try {
-            const res = await axios.post(route('pharmacy.sales.store'), {
+            const res = await axios.post(route(`${routePrefix}.sales.store`), {
                 customer_id: customerId || null,
                 currency,
                 sale_mode: saleMode,
@@ -481,7 +497,7 @@ export default function POSCreate({ products = [], categories = [], customers = 
             });
 
             toast.success('Brouillon enregistré');
-            router.visit(route('pharmacy.sales.show', res.data.sale.id));
+            router.visit(route(`${routePrefix}.sales.show`, res.data.sale.id));
         } catch (err) {
             toast.error(err.response?.data?.message || 'Erreur');
         } finally {
@@ -490,10 +506,10 @@ export default function POSCreate({ products = [], categories = [], customers = 
     };
 
     return (
-        <AppLayout>
+        <AppLayout fullWidth>
             <Head title="Point de Vente" />
             
-            <div className="h-[calc(100vh-64px)] flex relative">
+            <div className="min-h-[calc(100vh-64px)] flex flex-col lg:flex-row relative">
                 {/* Bandeau succès après validation */}
                 {showSuccessBanner && (
                     <div className="absolute top-0 left-0 right-0 z-40 bg-green-600 dark:bg-green-700 text-white py-3 px-4 text-center shadow-lg animate-in fade-in duration-300">
@@ -502,17 +518,17 @@ export default function POSCreate({ products = [], categories = [], customers = 
                     </div>
                 )}
                 {/* Left Panel - Products */}
-                <div className="flex-1 flex flex-col bg-gray-50 dark:bg-slate-950">
+                <div className="w-full lg:flex-1 flex flex-col bg-gray-50 dark:bg-slate-950 min-w-0">
                     {/* Header with Search and View Toggle */}
-                    <div className="p-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
-                        <div className="flex items-center gap-4">
+                    <div className="p-3 sm:p-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                             <Button 
                                 variant="ghost" 
                                 size="sm" 
                                 asChild
                                 className="text-gray-600 dark:text-gray-300"
                             >
-                                <Link href={route('pharmacy.sales.index')} className="inline-flex items-center gap-1.5">
+                                <Link href={route(`${routePrefix}.sales.index`)} className="inline-flex items-center gap-1.5">
                                     <ArrowLeft className="h-4 w-4 shrink-0" />
                                     Retour
                                 </Link>
@@ -522,7 +538,7 @@ export default function POSCreate({ products = [], categories = [], customers = 
                                 <select
                                     value={currency}
                                     onChange={(e) => setSelectedCurrency(e.target.value)}
-                                    className="h-9 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 text-sm font-medium px-3 min-w-[100px]"
+                                    className="h-9 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 text-sm font-medium px-3 w-full sm:w-auto min-w-0 sm:min-w-[100px]"
                                     title="Devise d'affichage (conversion selon le taux configuré)"
                                 >
                                     {availableCurrencies.map((c) => (
@@ -584,8 +600,8 @@ export default function POSCreate({ products = [], categories = [], customers = 
                                 </button>
                             </div>
                             
-                            <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap hidden sm:inline">Raccourcis: <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">1</kbd> ventes · <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">2</kbd> ici · <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">P</kbd> paiement</span>
-                            <div className="flex-1 relative">
+                            <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline shrink-0">Raccourcis: <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">1</kbd> ventes · <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">2</kbd> ici · <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">P</kbd> paiement</span>
+                            <div className="w-full sm:flex-1 min-w-0 relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                                 <Input 
                                     ref={searchInputRef}
@@ -679,7 +695,7 @@ export default function POSCreate({ products = [], categories = [], customers = 
                                                     <Package className="h-4 w-4 text-gray-400" />
                                                 </div>
                                             )}
-                                            <span className="text-sm font-medium text-gray-900 dark:text-white max-w-[100px] truncate">{product.name}</span>
+                                            <span className="text-sm font-medium text-gray-900 dark:text-white max-w-full sm:max-w-[100px] truncate">{product.name}</span>
                                             <span className="text-xs text-amber-600 dark:text-amber-400 font-semibold">{fmt(convertToSelected(getProductPrice(product), product.price_currency ?? defaultCurrency))}</span>
                                         </button>
                                     );
@@ -691,7 +707,7 @@ export default function POSCreate({ products = [], categories = [], customers = 
                     {/* Products Grid/List */}
                     <div className="flex-1 overflow-y-auto p-4">
                         {viewMode === 'thumbnails' ? (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
                                 {filteredProducts.map(product => (
                                     <button
                                         key={product.id}
@@ -789,7 +805,7 @@ export default function POSCreate({ products = [], categories = [], customers = 
                 </div>
 
                 {/* Right Panel - Cart */}
-                <div className="w-96 bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-700 flex flex-col">
+                <div className="w-full lg:w-96 lg:min-w-[22rem] lg:max-w-md bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-slate-700 flex flex-col flex-shrink-0 lg:flex-shrink-0">
                     {/* Cart Header */}
                     <div className="p-4 border-b border-gray-200 dark:border-slate-700">
                         <div className="flex items-center gap-2 mb-2">
@@ -1208,6 +1224,7 @@ export default function POSCreate({ products = [], categories = [], customers = 
             {/* Modal création rapide client */}
             {showAddCustomerModal && (
                 <QuickAddCustomerModal
+                    routePrefix={routePrefix}
                     onClose={() => setShowAddCustomerModal(false)}
                     onCreated={(newCustomer) => {
                         setCustomersList(prev => [...prev, newCustomer]);

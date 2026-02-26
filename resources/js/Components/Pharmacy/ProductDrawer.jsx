@@ -27,7 +27,7 @@ import offlineStorage from '@/lib/offlineStorage';
 import imageCache from '@/lib/imageCache';
 import syncService from '@/lib/syncService';
 
-export default function ProductDrawer({ isOpen, onClose, product = null, categories = [] }) {
+export default function ProductDrawer({ isOpen, onClose, product = null, categories = [], routePrefix = 'pharmacy' }) {
     const isEditing = !!product;
     const { shop } = usePage().props;
     const defaultCurrency = shop?.currency || 'CDF';
@@ -68,7 +68,7 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
         const fetchSuppliers = async () => {
             setLoadingSuppliers(true);
             try {
-                const response = await axios.get(route('pharmacy.suppliers.active'));
+                const response = await axios.get(route(`${routePrefix}.suppliers.active`));
                 if (response.data.success) {
                     setSuppliers(response.data.suppliers || []);
                 }
@@ -179,7 +179,7 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
 
         try {
             setIsGeneratingCode(true);
-            const response = await axios.get(route('pharmacy.products.generate-code'), {
+            const response = await axios.get(route(`${routePrefix}.products.generate-code`), {
                 params: { name: data.name },
             });
 
@@ -253,14 +253,14 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
                     // Utiliser POST avec _method=PUT pour le method spoofing Laravel
                     // car PHP ne lit pas les fichiers multipart dans les requêtes PUT
                     formData.append('_method', 'PUT');
-                    await axios.post(route('pharmacy.products.update', product.id), formData, {
+                    await axios.post(route(`${routePrefix}.products.update`, product.id), formData, {
                         headers: {
                             'Content-Type': 'multipart/form-data',
                         },
                     });
                     toast.success('Produit mis à jour avec succès');
                 } else {
-                    await axios.post(route('pharmacy.products.store'), formData, {
+                    await axios.post(route(`${routePrefix}.products.store`), formData, {
                         headers: {
                             'Content-Type': 'multipart/form-data',
                         },

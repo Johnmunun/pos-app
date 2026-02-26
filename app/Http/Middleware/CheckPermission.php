@@ -46,36 +46,42 @@ class CheckPermission
         }
 
         // Support multiple permissions separated by pipe (OR logic)
-        $permissions = explode('|', $permissionCode);
-        
-        // Check if user has at least one of the required permissions
+        $permissions = array_map('trim', explode('|', $permissionCode));
+        $permissions = array_filter($permissions);
+
         $hasPermission = false;
         $userPermissions = $user->permissionCodes();
-        
+
         Log::debug('CheckPermission - Permission check', [
             'user_id' => $user->id,
             'user_email' => $user->email,
             'user_type' => $user->type,
             'required_permissions' => $permissions,
-            'user_permissions' => $userPermissions,
             'user_permissions_count' => count($userPermissions),
         ]);
-        
+
         foreach ($permissions as $perm) {
-            $perm = trim($perm);
-            $hasThisPermission = $user->hasPermission($perm);
-            Log::debug('CheckPermission - Checking permission', [
-                'user_id' => $user->id,
-                'permission' => $perm,
-                'has_permission' => $hasThisPermission,
-            ]);
-            if ($hasThisPermission) {
+            if ($user->hasPermission($perm)) {
                 $hasPermission = true;
-                Log::debug('CheckPermission - Permission granted', [
-                    'user_id' => $user->id,
-                    'permission' => $perm,
-                ]);
                 break;
+            }
+            // Accès module Quincaillerie : si on exige "module.hardware", accepter aussi tout utilisateur ayant une permission hardware.*
+            if ($perm === 'module.hardware' && !empty($userPermissions)) {
+                foreach ($userPermissions as $userPerm) {
+                    if (is_string($userPerm) && str_starts_with($userPerm, 'hardware.')) {
+                        $hasPermission = true;
+                        break 2;
+                    }
+                }
+            }
+            // Idem pour module Pharmacy
+            if ($perm === 'module.pharmacy' && !empty($userPermissions)) {
+                foreach ($userPermissions as $userPerm) {
+                    if (is_string($userPerm) && str_starts_with($userPerm, 'pharmacy.')) {
+                        $hasPermission = true;
+                        break 2;
+                    }
+                }
             }
         }
 

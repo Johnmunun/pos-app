@@ -4,6 +4,8 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Badge } from '@/Components/ui/badge';
+import axios from 'axios';
+import toast from 'react-hot-toast';
 import {
     ShoppingCart,
     Plus,
@@ -16,28 +18,37 @@ import {
     FileText,
     TrendingUp,
     Printer,
-    Wallet as CashRegister
+    Wallet as CashRegister,
+    Mail
 } from 'lucide-react';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/currency';
 import ExportButtons from '@/Components/Pharmacy/ExportButtons';
 
-export default function SalesIndex({ sales = [], filters = {}, canViewAllSales = true }) {
+export default function SalesIndex({ sales = [], filters = {}, canViewAllSales = true, routePrefix = 'pharmacy' }) {
     const { shop } = usePage().props;
     const currency = shop?.currency || 'CDF';
     const [from, setFrom] = useState(filters.from || '');
     const [to, setTo] = useState(filters.to || '');
     const [status, setStatus] = useState(filters.status || '');
+    const [saleType, setSaleType] = useState(filters.sale_type || '');
+    const [emailingSaleId, setEmailingSaleId] = useState(null);
 
     // Resynchroniser les champs avec l’URL quand on charge la page avec ?from=&to= ou après navigation
     useEffect(() => {
         setFrom(filters.from ?? '');
         setTo(filters.to ?? '');
         setStatus(filters.status ?? '');
-    }, [filters.from, filters.to, filters.status]);
+        setSaleType(filters.sale_type ?? '');
+    }, [filters.from, filters.to, filters.status, filters.sale_type]);
 
     const handleFilter = (e) => {
         e.preventDefault();
-        router.get(route('pharmacy.sales.index'), { from: from || undefined, to: to || undefined, status: status || undefined }, { preserveState: true });
+        router.get(route(`${routePrefix}.sales.index`), {
+            from: from || undefined,
+            to: to || undefined,
+            status: status || undefined,
+            sale_type: saleType || undefined,
+        }, { preserveState: true });
     };
 
     const getStatusBadge = (s) => {
@@ -73,16 +84,30 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
     const formatCurrency = (amount) => formatCurrencyUtil(amount, currency);
 
     const openReceipt = (saleId) => {
-        window.open(route('pharmacy.sales.receipt', saleId), '_blank', 'noopener,noreferrer');
+        window.open(route(`${routePrefix}.sales.receipt`, saleId), '_blank', 'noopener,noreferrer');
+    };
+
+    const sendReceiptByEmail = async (saleId) => {
+        if (!saleId || emailingSaleId) return;
+        setEmailingSaleId(saleId);
+        try {
+            const { data } = await axios.post(route(`${routePrefix}.sales.email-receipt`, saleId));
+            toast.success(data.message || 'Facture envoyée par email.');
+        } catch (err) {
+            const message = err.response?.data?.message || 'Erreur lors de l\'envoi de la facture.';
+            toast.error(message);
+        } finally {
+            setEmailingSaleId(null);
+        }
     };
 
     return (
         <AppLayout>
             <Head title="Ventes" />
             
-            <div className="container mx-auto py-6 px-4">
+            <div className="py-6 space-y-6">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-gray-100">
                             <ShoppingCart className="h-6 w-6" />
@@ -110,18 +135,18 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                             <span className="whitespace-nowrap">Print thermique</span>
                         </Button>
                         <ExportButtons
-                            pdfUrl={route('pharmacy.exports.sales.pdf', { from, to, status })}
-                            excelUrl={route('pharmacy.exports.sales.excel', { from, to, status })}
+                            pdfUrl={route(`${routePrefix}.exports.sales.pdf`, { from, to, status })}
+                            excelUrl={route(`${routePrefix}.exports.sales.excel`, { from, to, status })}
                             disabled={!sales.length}
                         />
                         <Button variant="outline" size="sm" asChild>
-                            <Link href={route('pharmacy.cash-registers.index')} className="inline-flex items-center gap-2">
+                            <Link href={route(`${routePrefix}.cash-registers.index`)} className="inline-flex items-center gap-2">
                                 <CashRegister className="h-4 w-4" />
                                 Caisses
                             </Link>
                         </Button>
                         <Button asChild>
-                            <Link href={route('pharmacy.sales.create')} className="inline-flex items-center gap-2">
+                            <Link href={route(`${routePrefix}.sales.create`)} className="inline-flex items-center gap-2">
                                 <Plus className="h-4 w-4" />
                                 Nouvelle vente
                             </Link>
@@ -229,6 +254,18 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                                     <option value="CANCELLED">Annulée</option>
                                 </select>
                             </div>
+                            <div className="flex-1 min-w-[150px]">
+                                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Type de vente</label>
+                                <select
+                                    className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    value={saleType}
+                                    onChange={(e) => setSaleType(e.target.value)}
+                                >
+                                    <option value="">Tous</option>
+                                    <option value="retail">Détail</option>
+                                    <option value="wholesale">Gros</option>
+                                </select>
+                            </div>
                             <Button type="submit" className="inline-flex items-center gap-2">
                                 <Search className="h-4 w-4" />
                                 Filtrer
@@ -256,7 +293,7 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                                 Créez une nouvelle vente pour commencer
                             </p>
                             <Button asChild>
-                                <Link href={route('pharmacy.sales.create')} className="inline-flex items-center gap-2">
+                                <Link href={route(`${routePrefix}.sales.create`)} className="inline-flex items-center gap-2">
                                     <Plus className="h-4 w-4" />
                                     Nouvelle vente
                                 </Link>
@@ -316,8 +353,17 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                                                 )}
                                             </td>
                                             {canViewAllSales && (
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                                                    {sale.seller_name ?? '—'}
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                    <div className="flex flex-col">
+                                                        {sale.customer_short_name && (
+                                                            <span className="text-blue-600 dark:text-blue-400 font-medium mb-0.5">
+                                                                {sale.customer_short_name}
+                                                            </span>
+                                                        )}
+                                                        <span className="text-gray-600 dark:text-gray-400">
+                                                            {sale.seller_name ?? '—'}
+                                                        </span>
+                                                    </div>
                                                 </td>
                                             )}
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900 dark:text-gray-100">
@@ -342,13 +388,23 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                                                     >
                                                         <Printer className="h-4 w-4" />
                                                     </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => sendReceiptByEmail(sale.id)}
+                                                        disabled={!!emailingSaleId}
+                                                        className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                                                        title="Envoyer par email au client"
+                                                    >
+                                                        <Mail className="h-4 w-4" />
+                                                    </Button>
                                                     <Button 
                                                         variant="ghost" 
                                                         size="sm" 
                                                         asChild
                                                         className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                                                     >
-                                                        <Link href={route('pharmacy.sales.show', sale.id)} title="Voir">
+                                                        <Link href={route(`${routePrefix}.sales.show`, sale.id)} title="Voir">
                                                             <Eye className="h-4 w-4" />
                                                         </Link>
                                                     </Button>

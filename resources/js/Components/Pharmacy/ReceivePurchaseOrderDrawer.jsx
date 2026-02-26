@@ -24,7 +24,8 @@ export default function ReceivePurchaseOrderDrawer({
     purchaseOrder,
     lines = [],
     currency = 'USD',
-    onSuccess
+    onSuccess,
+    routePrefix = 'pharmacy'
 }) {
     const [receiving, setReceiving] = useState(false);
     const [lineData, setLineData] = useState([]);
@@ -110,7 +111,7 @@ export default function ReceivePurchaseOrderDrawer({
                 }))
             };
 
-            await axios.post(route('pharmacy.purchases.receive', purchaseOrder.id), payload);
+            await axios.post(route(`${routePrefix}.purchases.receive`, purchaseOrder.id), payload);
             toast.success('Réception enregistrée avec succès');
             onSuccess?.();
             onClose();

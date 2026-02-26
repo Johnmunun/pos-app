@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/Components/ui/use-toast';
 
-export default function ProductCreate({ auth, categories }) {
+export default function ProductCreate({ auth, categories, routePrefix = 'pharmacy' }) {
     const { toast } = useToast();
     const { shop } = usePage().props;
     const defaultCurrency = shop?.currency || 'CDF';
@@ -49,13 +49,13 @@ export default function ProductCreate({ auth, categories }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        post(route('pharmacy.products.store'), {
+        post(route(`${routePrefix}.products.store`), {
             onSuccess: () => {
                 toast({
                     title: "Success",
                     description: "Product created successfully",
                 });
-                router.visit(route('pharmacy.products'));
+                router.visit(route(`${routePrefix}.products`));
             },
             onError: (errors) => {
                 toast({
@@ -72,7 +72,7 @@ export default function ProductCreate({ auth, categories }) {
             header={
                 <div className="flex items-center">
                     <Button variant="ghost" asChild className="mr-4">
-                        <Link href={route('pharmacy.products')}>
+                        <Link href={route(`${routePrefix}.products`)}>
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Retour
                         </Link>
@@ -388,7 +388,7 @@ export default function ProductCreate({ auth, categories }) {
                                         asChild
                                         disabled={processing}
                                     >
-                                        <Link href={route('pharmacy.products')}>
+                                        <Link href={route(`${routePrefix}.products`)}>
                                             Cancel
                                         </Link>
                                     </Button>

@@ -81,6 +81,7 @@ class SettingsController
                 'exchange_rate' => $settings->getExchangeRate(),
                 'invoice_footer_text' => $settings->getInvoiceFooterText(),
                 'is_complete' => $settings->isComplete(),
+                'receipt_auto_print' => $settings->isReceiptAutoPrintEnabled(),
             ];
         }
 
@@ -136,6 +137,7 @@ class SettingsController
             'currency' => 'required|string|size:3',
             'exchange_rate' => 'nullable|numeric|min:0',
             'invoice_footer_text' => 'nullable|string|max:1000',
+            'receipt_auto_print' => 'nullable|boolean',
         ]);
 
         try {
@@ -178,7 +180,8 @@ class SettingsController
                 $logoPath,
                 $validated['currency'],
                 $validated['exchange_rate'] ?? null,
-                $validated['invoice_footer_text'] ?? null
+                $validated['invoice_footer_text'] ?? null,
+                $request->boolean('receipt_auto_print', $existingSettings ? $existingSettings->isReceiptAutoPrintEnabled() : false)
             );
 
             // Exécuter le Use Case

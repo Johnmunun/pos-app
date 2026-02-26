@@ -54,6 +54,7 @@ class UpdateStoreSettingsUseCase
             $existingSettings->updateCurrency($dto->currency);
             $existingSettings->updateExchangeRate($dto->exchangeRate);
             $existingSettings->updateInvoiceFooterText($dto->invoiceFooterText);
+            $existingSettings->updateReceiptAutoPrint($dto->receiptAutoPrint);
 
             $this->repository->save($existingSettings);
             return $existingSettings;
@@ -68,7 +69,8 @@ class UpdateStoreSettingsUseCase
                 $dto->logoPath,
                 $dto->currency,
                 $dto->exchangeRate,
-                $dto->invoiceFooterText
+                $dto->invoiceFooterText,
+                $dto->receiptAutoPrint
             );
 
             $this->repository->save($settings);

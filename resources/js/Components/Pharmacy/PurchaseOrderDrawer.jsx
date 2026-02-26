@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Fragment } from 'react';
+import { Transition } from '@headlessui/react';
 import { X, Plus, Trash2, Package, Truck, Search } from 'lucide-react';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -12,7 +13,8 @@ export default function PurchaseOrderDrawer({
     suppliers = [], 
     products = [],
     currency = 'USD',
-    onSuccess 
+    onSuccess,
+    routePrefix = 'pharmacy'
 }) {
     const isEditing = !!purchaseOrder;
     
@@ -133,10 +135,10 @@ export default function PurchaseOrderDrawer({
             };
 
             if (isEditing) {
-                await axios.put(route('pharmacy.purchases.update', purchaseOrder.id), payload);
+                await axios.put(route(`${routePrefix}.purchases.update`, purchaseOrder.id), payload);
                 toast.success('Bon de commande modifié avec succès');
             } else {
-                await axios.post(route('pharmacy.purchases.store'), payload);
+                await axios.post(route(`${routePrefix}.purchases.store`), payload);
                 toast.success('Bon de commande créé avec succès');
             }
             
@@ -153,20 +155,37 @@ export default function PurchaseOrderDrawer({
         }
     };
 
-    if (!isOpen) return null;
-
     const selectedSupplier = suppliers.find(s => s.id === formData.supplier_id);
 
     return (
-        <>
-            {/* Backdrop */}
-            <div 
-                className="fixed inset-0 bg-black/50 z-40 transition-opacity"
-                onClick={onClose}
-            />
-            
-            {/* Drawer */}
-            <div className="fixed inset-y-0 right-0 z-50 w-full max-w-2xl bg-white dark:bg-gray-800 shadow-xl transform transition-transform">
+        <Transition show={isOpen} as={Fragment}>
+            {/* Backdrop avec fondu */}
+            <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0"
+                enterTo="opacity-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100"
+                leaveTo="opacity-0"
+            >
+                <div
+                    className="fixed inset-0 bg-black/50 z-40"
+                    onClick={onClose}
+                />
+            </Transition.Child>
+
+            {/* Panneau drawer : glisse de la droite */}
+            <Transition.Child
+                as={Fragment}
+                enter="transform transition ease-out duration-300"
+                enterFrom="translate-x-full"
+                enterTo="translate-x-0"
+                leave="transform transition ease-in duration-200"
+                leaveFrom="translate-x-0"
+                leaveTo="translate-x-full"
+            >
+                <div className="fixed inset-y-0 right-0 z-50 w-full max-w-2xl bg-white dark:bg-gray-800 shadow-xl">
                 <div className="h-full flex flex-col">
                     {/* Header */}
                     <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-900">
@@ -401,6 +420,7 @@ export default function PurchaseOrderDrawer({
                     </div>
                 </div>
             </div>
-        </>
+            </Transition.Child>
+        </Transition>
     );
 }

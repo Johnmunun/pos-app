@@ -23,7 +23,7 @@ import {
     Receipt,
 } from 'lucide-react';
 
-export default function ShowCustomer({ customer }) {
+export default function ShowCustomer({ customer, routePrefix = 'pharmacy' }) {
     const { auth, shop } = usePage().props;
     const currency = shop?.currency || 'CDF';
     const permissions = auth?.permissions || [];
@@ -33,9 +33,9 @@ export default function ShowCustomer({ customer }) {
         return permissions.includes(permission);
     };
 
-    const canEdit = hasPermission('pharmacy.customer.edit');
-    const canActivate = hasPermission('pharmacy.customer.activate');
-    const canDeactivate = hasPermission('pharmacy.customer.deactivate');
+    const canEdit = hasPermission(`${routePrefix}.customer.edit`);
+    const canActivate = hasPermission(`${routePrefix}.customer.activate`);
+    const canDeactivate = hasPermission(`${routePrefix}.customer.deactivate`);
 
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [processing, setProcessing] = useState(false);
@@ -56,7 +56,7 @@ export default function ShowCustomer({ customer }) {
         setProcessing(true);
 
         try {
-            const response = await axios.post(route(`pharmacy.customers.${action}`, customer.id));
+            const response = await axios.post(route(`${routePrefix}.customers.${action}`, customer.id));
             if (response.data.success) {
                 toast.success(response.data.message);
                 router.reload();
@@ -104,7 +104,7 @@ export default function ShowCustomer({ customer }) {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                     <div className="flex items-center gap-4">
                         <Button variant="outline" size="icon" asChild className="border-gray-300 dark:border-gray-600">
-                            <Link href={route('pharmacy.customers.index')}>
+                            <Link href={route(`${routePrefix}.customers.index`)}>
                                 <ArrowLeft className="h-4 w-4" />
                             </Link>
                         </Button>
@@ -303,6 +303,7 @@ export default function ShowCustomer({ customer }) {
                 customer={customer}
                 onSuccess={() => router.reload()}
                 canCreate={false}
+                routePrefix={routePrefix}
                 canUpdate={canEdit}
             />
         </AppLayout>

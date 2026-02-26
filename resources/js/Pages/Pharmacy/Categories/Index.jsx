@@ -19,7 +19,7 @@ import {
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
 
-export default function CategoriesIndex({ auth, categories, pagination, filters, permissions }) {
+export default function CategoriesIndex({ auth, categories, pagination, filters, permissions, routePrefix = 'pharmacy' }) {
     const { url } = usePage();
     const [searchTerm, setSearchTerm] = useState(filters?.search || '');
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -56,7 +56,7 @@ export default function CategoriesIndex({ auth, categories, pagination, filters,
 
     const handleSearch = (e) => {
         e.preventDefault();
-        router.get(route('pharmacy.categories.index'), {
+        router.get(route(`${routePrefix}.categories.index`), {
             search: searchTerm
         });
     };
@@ -106,7 +106,7 @@ export default function CategoriesIndex({ auth, categories, pagination, filters,
                             onClick={async () => {
                                 toast.dismiss(t.id);
                                 try {
-                                    router.delete(route('pharmacy.categories.destroy', category.id), {
+                                    router.delete(route(`${routePrefix}.categories.destroy`, category.id), {
                                         preserveScroll: true,
                                         onSuccess: () => {
                                             // Le toast sera affiché par FlashMessages depuis le backend
@@ -148,7 +148,7 @@ export default function CategoriesIndex({ auth, categories, pagination, filters,
         if (searchTerm) {
             params.append('search', searchTerm);
         }
-        const url = route('pharmacy.categories.export.pdf') + (params.toString() ? '?' + params.toString() : '');
+        const url = route(`${routePrefix}.categories.export.pdf`) + (params.toString() ? '?' + params.toString() : '');
         window.open(url, '_blank');
     };
 
@@ -344,6 +344,7 @@ export default function CategoriesIndex({ auth, categories, pagination, filters,
                 categories={categories}
                 canCreate={canCreate}
                 canUpdate={canUpdate}
+                routePrefix={routePrefix}
             />
         </AppLayout>
     );
