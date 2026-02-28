@@ -15,8 +15,17 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string|null $code
  * @property string $name
  * @property string|null $description
+ * @property string|null $image_path
+ * @property string|null $image_type
  * @property float $price_amount
  * @property string $price_currency
+ * @property float|null $price_normal
+ * @property float|null $price_reduced
+ * @property float|null $price_reduction_percent
+ * @property float|null $price_non_negotiable
+ * @property float|null $price_wholesale_normal
+ * @property float|null $price_wholesale_reduced
+ * @property float|null $price_non_negotiable_wholesale
  * @property float $stock
  * @property string $type_unite
  * @property int $quantite_par_unite
@@ -24,6 +33,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property float $minimum_stock
  * @property string $category_id
  * @property bool $is_active
+ * @property-read CategoryModel|null $category
  */
 class ProductModel extends Model
 {
@@ -41,8 +51,17 @@ class ProductModel extends Model
         'code',
         'name',
         'description',
+        'image_path',
+        'image_type',
         'price_amount',
         'price_currency',
+        'price_normal',
+        'price_reduced',
+        'price_reduction_percent',
+        'price_non_negotiable',
+        'price_wholesale_normal',
+        'price_wholesale_reduced',
+        'price_non_negotiable_wholesale',
         'stock',
         'type_unite',
         'quantite_par_unite',
@@ -57,6 +76,13 @@ class ProductModel extends Model
         'est_divisible' => 'boolean',
         'quantite_par_unite' => 'integer',
         'price_amount' => 'decimal:2',
+        'price_normal' => 'decimal:2',
+        'price_reduced' => 'decimal:2',
+        'price_reduction_percent' => 'decimal:2',
+        'price_non_negotiable' => 'decimal:2',
+        'price_wholesale_normal' => 'decimal:2',
+        'price_wholesale_reduced' => 'decimal:2',
+        'price_non_negotiable_wholesale' => 'decimal:2',
         'stock' => 'float',
         'minimum_stock' => 'float',
         'depot_id' => 'integer',

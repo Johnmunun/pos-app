@@ -17,6 +17,16 @@ class UpdateProductDTO
         public readonly string $typeUnite,
         public readonly int $quantiteParUnite,
         public readonly bool $estDivisible,
-        public readonly ?int $minimumStock = null
+        public readonly ?int $minimumStock = null,
+        // Nouveaux champs image et prix
+        public readonly ?string $imagePath = null,
+        public readonly ?string $imageType = null,
+        public readonly ?float $priceNormal = null,
+        public readonly ?float $priceReduced = null,
+        public readonly ?float $priceReductionPercent = null,
+        public readonly ?float $priceNonNegotiable = null,
+        public readonly ?float $priceWholesaleNormal = null,
+        public readonly ?float $priceWholesaleReduced = null,
+        public readonly ?float $priceNonNegotiableWholesale = null
     ) {}
 }

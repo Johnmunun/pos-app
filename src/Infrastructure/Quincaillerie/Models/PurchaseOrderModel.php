@@ -1,0 +1,61 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Src\Infrastructure\Quincaillerie\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * @property string $id
+ * @property string $shop_id
+ * @property int|null $depot_id
+ * @property string $supplier_id
+ * @property string $status
+ * @property float|string $total_amount
+ * @property string $currency
+ * @property \Carbon\Carbon|\DateTimeInterface|null $ordered_at
+ * @property \Carbon\Carbon|\DateTimeInterface|null $expected_at
+ * @property \Carbon\Carbon|\DateTimeInterface|null $received_at
+ * @property int|null $created_by
+ * @property \Carbon\Carbon $created_at
+ */
+class PurchaseOrderModel extends Model
+{
+    protected $table = 'quincaillerie_purchase_orders';
+
+    protected $keyType = 'string';
+    public $incrementing = false;
+
+    protected $fillable = [
+        'id',
+        'shop_id',
+        'depot_id',
+        'supplier_id',
+        'status',
+        'total_amount',
+        'currency',
+        'ordered_at',
+        'expected_at',
+        'received_at',
+        'created_by',
+    ];
+
+    protected $casts = [
+        'total_amount' => 'decimal:2',
+        'ordered_at' => 'datetime',
+        'expected_at' => 'datetime',
+        'received_at' => 'datetime',
+        'depot_id' => 'integer',
+    ];
+
+    public function lines()
+    {
+        return $this->hasMany(PurchaseOrderLineModel::class, 'purchase_order_id');
+    }
+
+    public function supplier()
+    {
+        return $this->belongsTo(SupplierModel::class, 'supplier_id');
+    }
+}

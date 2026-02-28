@@ -57,7 +57,7 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
             <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 lg:hidden" />
 
             {/* Sélecteur de dépôt (affiché dès qu'il y a des dépôts) */}
-            {depots.length > 0 && (
+            {depots && depots.length > 0 && (
                 <DepotSelector depots={depots} currentDepot={currentDepot} />
             )}
 

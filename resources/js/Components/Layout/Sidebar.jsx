@@ -189,15 +189,16 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
             items: [
                 { label: 'Dashboard', href: '/hardware/dashboard', permission: 'module.hardware|hardware.sales.view|hardware.product.view|hardware.stock.view|hardware.report.view', icon: LayoutDashboard },
                 { label: 'Produits', href: '/hardware/products', permission: 'hardware.product.view|hardware.product.manage', icon: Package },
-                { label: 'Ventes', href: '/hardware/sales', permission: 'hardware.sales.view|hardware.sales.manage', icon: ShoppingCart },
-                { label: 'Caisse', href: '/hardware/sales/create', permission: 'hardware.sales.manage', icon: Plus },
-                { label: 'Fournisseurs', href: '/hardware/suppliers', permission: 'hardware.supplier.view', icon: Truck },
-                { label: 'Bons de commande', href: '/hardware/purchases', permission: 'hardware.purchases.view|hardware.purchases.manage', icon: FileText },
-                { label: 'Clients', href: '/hardware/customers', permission: 'hardware.customer.view', icon: Users },
+                { label: 'Catégories', href: '/hardware/categories', permission: 'hardware.category.view', icon: Tag },
                 { label: 'Stock', href: '/hardware/stock', permission: 'hardware.stock.view|hardware.stock.manage', icon: Warehouse },
                 { label: 'Mouvements', href: '/hardware/stock/movements', permission: 'hardware.stock.movement.view|hardware.stock.manage', icon: Scroll },
+                { label: 'Ventes', href: '/hardware/sales', permission: 'hardware.sales.view|hardware.sales.manage', icon: ShoppingCart },
+                { label: 'Caisse', href: '/hardware/sales/create', permission: 'hardware.sales.manage', icon: Plus },
+                { label: 'Clients', href: '/hardware/customers', permission: 'hardware.customer.view', icon: Users },
+                { label: 'Fournisseurs', href: '/hardware/suppliers', permission: 'hardware.supplier.view', icon: Truck },
+                { label: 'Bons de commande', href: '/hardware/purchases', permission: 'hardware.purchases.view|hardware.purchases.manage', icon: FileText },
+                { label: 'Dépôts', href: '/hardware/depots', permission: 'hardware.warehouse.view_all|hardware.warehouse.view', icon: Warehouse },
                 { label: 'Rapports', href: '/hardware/reports', permission: 'hardware.sales.view|hardware.report.view', icon: BarChart },
-                { label: 'Catégories', href: '/hardware/categories', permission: 'hardware.category.view', icon: Tag },
             ]
         },
         {
@@ -304,9 +305,17 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                         <ul role="list" className="flex flex-1 flex-col gap-y-7">
                             {visibleGroups.map((group) => {
                                 const isExpanded = expandedGroups[group.key] ?? true;
+                                // Pour Pharmacy et Hardware : si l'utilisateur a accès au module, afficher tous les items
+                                // Les permissions individuelles seront vérifiées au niveau des routes
+                                const hasModuleAccess = (group.key === 'pharmacy' && hasPharmacyAccess()) || 
+                                                       (group.key === 'hardware' && hasHardwareAccess());
+                                
                                 const visibleItems = group.items.filter((item) => {
-                                    if (!hasItemPermission(item.permission)) return false;
                                     if (item.rootOnly && !isRoot) return false;
+                                    // Si l'utilisateur a accès au module, afficher tous les items
+                                    if (hasModuleAccess) return true;
+                                    // Sinon, vérifier les permissions individuelles
+                                    if (!hasItemPermission(item.permission)) return false;
                                     return true;
                                 });
 
@@ -384,9 +393,16 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                     <nav className="flex flex-1 flex-col">
                         <ul role="list" className="flex flex-1 flex-col gap-y-7">
                             {visibleGroups.map((group) => {
+                                // Pour Pharmacy et Hardware : si l'utilisateur a accès au module, afficher tous les items
+                                const hasModuleAccess = (group.key === 'pharmacy' && hasPharmacyAccess()) || 
+                                                       (group.key === 'hardware' && hasHardwareAccess());
+                                
                                 const visibleItems = group.items.filter((item) => {
-                                    if (!hasItemPermission(item.permission)) return false;
                                     if (item.rootOnly && !isRoot) return false;
+                                    // Si l'utilisateur a accès au module, afficher tous les items
+                                    if (hasModuleAccess) return true;
+                                    // Sinon, vérifier les permissions individuelles
+                                    if (!hasItemPermission(item.permission)) return false;
                                     return true;
                                 });
 

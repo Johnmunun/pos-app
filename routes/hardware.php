@@ -5,20 +5,20 @@ use Src\Infrastructure\Hardware\Http\Controllers\HardwareDashboardController;
 use Src\Infrastructure\Quincaillerie\Http\Controllers\ProductController as QuincaillerieProductController;
 use Src\Infrastructure\Quincaillerie\Http\Controllers\CategoryController as QuincaillerieCategoryController;
 use Src\Infrastructure\Pharmacy\Http\Controllers\ProductMovementController;
-use Src\Infrastructure\Pharmacy\Http\Controllers\SupplierController;
+use Src\Infrastructure\Quincaillerie\Http\Controllers\SupplierController as QuincaillerieSupplierController;
 use Src\Infrastructure\Pharmacy\Http\Controllers\SupplierPricingController;
 use Src\Infrastructure\Pharmacy\Http\Controllers\PurchaseController;
 use Src\Infrastructure\Pharmacy\Http\Controllers\SaleController;
 use Src\Infrastructure\Pharmacy\Http\Controllers\CashRegisterController;
-use Src\Infrastructure\Pharmacy\Http\Controllers\CustomerController;
+use Src\Infrastructure\Quincaillerie\Http\Controllers\CustomerController as QuincaillerieCustomerController;
 use Src\Infrastructure\Pharmacy\Http\Controllers\StockController;
 use Src\Infrastructure\Pharmacy\Http\Controllers\PharmacyReportController;
 use Src\Infrastructure\Pharmacy\Http\Controllers\ExportController;
 
 /**
  * DDD Hardware (Quincaillerie) Module Routes
- * Produits et catégories : contrôleurs Quincaillerie (module isolé).
- * Autres ressources (fournisseurs, ventes, achats, etc.) : temporairement Pharmacy (à migrer vers Quincaillerie).
+ * Produits, catégories, fournisseurs et clients : contrôleurs Quincaillerie (module isolé).
+ * Autres ressources (ventes, achats, etc.) : temporairement Pharmacy (à migrer vers Quincaillerie).
  */
 Route::prefix('hardware')
     ->as('hardware.')
@@ -52,6 +52,9 @@ Route::prefix('hardware')
         Route::delete('/products/{id}', [QuincaillerieProductController::class, 'destroy'])
             ->middleware('permission:hardware.product.manage')
             ->name('products.destroy');
+        Route::post('/products/{id}/duplicate-to-depot', [QuincaillerieProductController::class, 'duplicateToDepot'])
+            ->middleware('permission:hardware.product.manage')
+            ->name('products.duplicate-to-depot');
 
         // API mouvements de stock (historique produits)
         Route::prefix('api')->name('api.')->group(function () {
@@ -66,26 +69,26 @@ Route::prefix('hardware')
                 ->name('product-movements.pdf.single');
         });
 
-        // Fournisseurs (drawer création/édition comme Pharmacie)
-        Route::get('/suppliers', [SupplierController::class, 'index'])
+        // Fournisseurs — Module Quincaillerie (contrôleur et données dédiés)
+        Route::get('/suppliers', [QuincaillerieSupplierController::class, 'index'])
             ->middleware('permission:hardware.supplier.view')
             ->name('suppliers.index');
-        Route::post('/suppliers', [SupplierController::class, 'store'])
+        Route::post('/suppliers', [QuincaillerieSupplierController::class, 'store'])
             ->middleware('permission:hardware.supplier.create')
             ->name('suppliers.store');
-        Route::get('/suppliers/active', [SupplierController::class, 'listActive'])
+        Route::get('/suppliers/active', [QuincaillerieSupplierController::class, 'listActive'])
             ->middleware('permission:hardware.supplier.view|hardware.purchases.manage')
             ->name('suppliers.active');
-        Route::get('/suppliers/{id}', [SupplierController::class, 'show'])
+        Route::get('/suppliers/{id}', [QuincaillerieSupplierController::class, 'show'])
             ->middleware('permission:hardware.supplier.view')
             ->name('suppliers.show');
-        Route::put('/suppliers/{id}', [SupplierController::class, 'update'])
+        Route::put('/suppliers/{id}', [QuincaillerieSupplierController::class, 'update'])
             ->middleware('permission:hardware.supplier.edit')
             ->name('suppliers.update');
-        Route::post('/suppliers/{id}/activate', [SupplierController::class, 'activate'])
+        Route::post('/suppliers/{id}/activate', [QuincaillerieSupplierController::class, 'activate'])
             ->middleware('permission:hardware.supplier.activate')
             ->name('suppliers.activate');
-        Route::post('/suppliers/{id}/deactivate', [SupplierController::class, 'deactivate'])
+        Route::post('/suppliers/{id}/deactivate', [QuincaillerieSupplierController::class, 'deactivate'])
             ->middleware('permission:hardware.supplier.deactivate')
             ->name('suppliers.deactivate');
 
@@ -175,26 +178,26 @@ Route::prefix('hardware')
             ->middleware('permission:hardware.sales.manage')
             ->name('cash-registers.sessions.close');
 
-        // Clients (Customers)
-        Route::get('/customers', [CustomerController::class, 'index'])
+        // Clients — Module Quincaillerie (contrôleur et données dédiés)
+        Route::get('/customers', [QuincaillerieCustomerController::class, 'index'])
             ->middleware('permission:hardware.customer.view')
             ->name('customers.index');
-        Route::post('/customers', [CustomerController::class, 'store'])
+        Route::post('/customers', [QuincaillerieCustomerController::class, 'store'])
             ->middleware('permission:hardware.customer.create')
             ->name('customers.store');
-        Route::get('/customers/active', [CustomerController::class, 'listActive'])
+        Route::get('/customers/active', [QuincaillerieCustomerController::class, 'listActive'])
             ->middleware('permission:hardware.customer.view|hardware.sales.manage')
             ->name('customers.active');
-        Route::get('/customers/{id}', [CustomerController::class, 'show'])
+        Route::get('/customers/{id}', [QuincaillerieCustomerController::class, 'show'])
             ->middleware('permission:hardware.customer.view')
             ->name('customers.show');
-        Route::put('/customers/{id}', [CustomerController::class, 'update'])
+        Route::put('/customers/{id}', [QuincaillerieCustomerController::class, 'update'])
             ->middleware('permission:hardware.customer.edit')
             ->name('customers.update');
-        Route::post('/customers/{id}/activate', [CustomerController::class, 'activate'])
+        Route::post('/customers/{id}/activate', [QuincaillerieCustomerController::class, 'activate'])
             ->middleware('permission:hardware.customer.activate')
             ->name('customers.activate');
-        Route::post('/customers/{id}/deactivate', [CustomerController::class, 'deactivate'])
+        Route::post('/customers/{id}/deactivate', [QuincaillerieCustomerController::class, 'deactivate'])
             ->middleware('permission:hardware.customer.deactivate')
             ->name('customers.deactivate');
 
@@ -227,6 +230,23 @@ Route::prefix('hardware')
         Route::delete('/categories/{id}', [QuincaillerieCategoryController::class, 'destroy'])
             ->middleware('permission:hardware.category.delete')
             ->name('categories.destroy');
+
+        // Dépôts - Gestion complète
+        Route::get('/depots', [\App\Http\Controllers\DepotController::class, 'index'])
+            ->middleware('permission:hardware.warehouse.view_all|hardware.warehouse.view')
+            ->name('depots.index');
+        Route::post('/depots', [\App\Http\Controllers\DepotController::class, 'store'])
+            ->middleware('permission:hardware.warehouse.create')
+            ->name('depots.store');
+        Route::put('/depots/{id}', [\App\Http\Controllers\DepotController::class, 'update'])
+            ->middleware('permission:hardware.warehouse.update')
+            ->name('depots.update');
+        Route::post('/depots/{id}/activate', [\App\Http\Controllers\DepotController::class, 'activate'])
+            ->middleware('permission:hardware.warehouse.activate')
+            ->name('depots.activate');
+        Route::post('/depots/{id}/deactivate', [\App\Http\Controllers\DepotController::class, 'deactivate'])
+            ->middleware('permission:hardware.warehouse.deactivate')
+            ->name('depots.deactivate');
 
         // Exports (fournisseurs + bons de commande + ventes)
         Route::prefix('exports')->name('exports.')->group(function () {

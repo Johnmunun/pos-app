@@ -8,7 +8,6 @@ use Src\Application\Quincaillerie\DTO\UpdateProductDTO;
 use Src\Domain\Quincaillerie\ValueObjects\TypeUnite;
 use Src\Shared\ValueObjects\Money;
 use Src\Shared\ValueObjects\Quantity;
-use Src\Shared\ValueObjects\Quantity;
 
 /**
  * Cas d'usage mise à jour produit - Module Quincaillerie.

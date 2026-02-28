@@ -85,6 +85,7 @@ export default function HardwareCategoryDrawer({ isOpen, onClose, category = nul
                             value={data.name}
                             onChange={(e) => setData('name', e.target.value)}
                             className="mt-1"
+                            placeholder="Ex: Outils électriques"
                             required
                             disabled={processing}
                         />
@@ -97,6 +98,7 @@ export default function HardwareCategoryDrawer({ isOpen, onClose, category = nul
                             value={data.description}
                             onChange={(e) => setData('description', e.target.value)}
                             className="mt-1"
+                            placeholder="Description de la catégorie (optionnel)"
                             rows={3}
                             disabled={processing}
                         />
@@ -126,6 +128,7 @@ export default function HardwareCategoryDrawer({ isOpen, onClose, category = nul
                             value={data.sort_order}
                             onChange={(e) => setData('sort_order', parseInt(e.target.value) || 0)}
                             className="mt-1"
+                            placeholder="0"
                             min={0}
                             disabled={processing}
                         />

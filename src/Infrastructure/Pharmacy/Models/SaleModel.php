@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  * @property int|null $cash_register_id
  * @property int|null $cash_register_session_id
  * @property string|null $sale_type
+ * @property int|null $depot_id
  */
 class SaleModel extends Model
 {

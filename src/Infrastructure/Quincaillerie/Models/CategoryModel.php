@@ -17,6 +17,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string|null $parent_id
  * @property int $sort_order
  * @property bool $is_active
+ * @property-read self|null $parent
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, self> $children
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, ProductModel> $products
  */
 class CategoryModel extends Model
 {

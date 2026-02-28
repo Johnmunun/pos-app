@@ -10,9 +10,14 @@ use Src\Infrastructure\Pharmacy\Models\ProductModel;
 use Src\Infrastructure\Pharmacy\Models\CategoryModel;
 use Src\Infrastructure\Pharmacy\Models\BatchModel;
 use Src\Infrastructure\Pharmacy\Models\StockMovementModel;
+use Src\Application\Quincaillerie\Services\DepotFilterService;
 
 class StockController
 {
+    public function __construct(
+        private ?DepotFilterService $depotFilterService = null
+    ) {}
+
     private function getModule(): string
     {
         $prefix = request()->route()?->getPrefix();
@@ -59,10 +64,17 @@ class StockController
         }
 
         // Base query produits
-        $query = ProductModel::with('category')->orderBy('name');
+        $query = ProductModel::with('category');
         if (!($isRoot && !$shopId)) {
             $query->where('shop_id', $shopId);
         }
+        
+        // Appliquer le filtrage par dépôt pour Hardware uniquement
+        if ($this->getModule() === 'Hardware' && $this->depotFilterService) {
+            $query = $this->depotFilterService->applyDepotFilter($query, $request, 'depot_id');
+        }
+        
+        $query->orderBy('name');
 
         // Filtres
         if ($request->filled('search')) {
@@ -117,11 +129,17 @@ class StockController
         ];
 
         // Low stock (alert) – non filtré par recherche
-        $lowStockQuery = ProductModel::with('category')->orderBy('name');
+        $lowStockQuery = ProductModel::with('category');
         if (!($isRoot && !$shopId)) {
             $lowStockQuery->where('shop_id', $shopId);
         }
-        $lowStockModels = $lowStockQuery
+        
+        // Appliquer le filtrage par dépôt pour Hardware uniquement
+        if ($this->getModule() === 'Hardware' && $this->depotFilterService) {
+            $lowStockQuery = $this->depotFilterService->applyDepotFilter($lowStockQuery, $request, 'depot_id');
+        }
+        
+        $lowStockModels = $lowStockQuery->orderBy('name')
             ->where('is_active', true)
             ->where('stock', '>', 0)
             ->whereColumn('stock', '<=', 'minimum_stock')
@@ -224,10 +242,17 @@ class StockController
         $userModel = UserModel::find($user->id);
         $isRoot = $userModel ? $userModel->isRoot() : false;
 
-        $query = StockMovementModel::with('product:id,name,code')->orderBy('created_at', 'desc');
+        $query = StockMovementModel::with('product:id,name,code');
         if (!($isRoot && !$shopId)) {
             $query->where('shop_id', $shopId);
         }
+        
+        // Appliquer le filtrage par dépôt pour Hardware uniquement
+        if ($this->getModule() === 'Hardware' && $this->depotFilterService) {
+            $query = $this->depotFilterService->applyDepotFilter($query, $request, 'depot_id');
+        }
+        
+        $query->orderBy('created_at', 'desc');
         if ($request->filled('type') && in_array($request->input('type'), ['IN', 'OUT', 'ADJUSTMENT'], true)) {
             $query->where('type', $request->input('type'));
         }

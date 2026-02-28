@@ -6,6 +6,7 @@ import { Warehouse } from 'lucide-react';
  * Obligatoire avant d'accéder aux produits/stock.
  */
 export default function DepotSelector({ depots = [], currentDepot }) {
+    // Afficher le sélecteur même s'il n'y a qu'un seul dépôt (pour permettre de le voir et de le changer)
     if (!depots || depots.length === 0) return null;
 
     const handleSwitch = (depotId) => {

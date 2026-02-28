@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 use Src\Infrastructure\Quincaillerie\Models\CategoryModel;
+use Src\Application\Quincaillerie\Services\DepotFilterService;
 
 /**
  * Contrôleur Catégories - Module Quincaillerie.
@@ -35,7 +36,8 @@ class CategoryController
         private CategoryRepositoryInterface $categoryRepository,
         private CreateCategoryUseCase $createCategoryUseCase,
         private UpdateCategoryUseCase $updateCategoryUseCase,
-        private DeleteCategoryUseCase $deleteCategoryUseCase
+        private DeleteCategoryUseCase $deleteCategoryUseCase,
+        private DepotFilterService $depotFilterService
     ) {}
 
     public function index(Request $request): Response
@@ -53,6 +55,10 @@ class CategoryController
         } elseif (!$user->isRoot()) {
             abort(403, 'Shop ID not found.');
         }
+        
+        // Appliquer le filtrage par dépôt selon les permissions
+        $query = $this->depotFilterService->applyDepotFilter($query, $request, 'depot_id');
+        
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
@@ -61,9 +67,11 @@ class CategoryController
         }
 
         $perPage = $request->input('per_page', 15);
+        /** @var \Illuminate\Pagination\LengthAwarePaginator<\Src\Infrastructure\Quincaillerie\Models\CategoryModel> $categoriesPaginated */
         $categoriesPaginated = $query->orderBy('sort_order')->orderBy('name')->paginate($perPage)->withQueryString();
 
         $categories = $categoriesPaginated->map(function ($model) {
+            /** @var \Src\Infrastructure\Quincaillerie\Models\CategoryModel $model */
             return [
                 'id' => $model->id,
                 'name' => $model->name,
@@ -128,7 +136,16 @@ class CategoryController
                 (int) ($request->input('sort_order', 0))
             );
 
-            $this->createCategoryUseCase->execute($dto);
+            $category = $this->createCategoryUseCase->execute($dto);
+            
+            // Assigner le dépôt selon les permissions
+            $effectiveDepotId = $this->depotFilterService->getEffectiveDepotId($request);
+            if ($effectiveDepotId !== null) {
+                $categoryModel = CategoryModel::find($category->getId());
+                if ($categoryModel) {
+                    $categoryModel->update(['depot_id' => $effectiveDepotId]);
+                }
+            }
 
             return redirect()->route('hardware.categories.index')->with('success', 'Catégorie créée avec succès.');
         } catch (\InvalidArgumentException $e) {
@@ -196,6 +213,14 @@ class CategoryController
             if ($shopId && $categoryModel->shop_id != $shopId) {
                 return redirect()->back()->withErrors(['message' => 'Catégorie non trouvée.']);
             }
+            
+            // Vérifier l'accès au dépôt de la catégorie
+            $query = CategoryModel::where('id', $id);
+            $query = $this->depotFilterService->applyDepotFilter($query, $request, 'depot_id');
+            if (!$query->exists()) {
+                return redirect()->back()->withErrors(['message' => 'Catégorie non trouvée ou accès non autorisé à ce dépôt.']);
+            }
+            
             $this->deleteCategoryUseCase->execute($id);
             return redirect()->route('hardware.categories.index')->with('success', 'Catégorie supprimée avec succès.');
         } catch (\InvalidArgumentException $e) {

@@ -27,6 +27,7 @@ use App\Models\Shop;
 use App\Services\CurrencyConversionService;
 use Src\Application\Settings\UseCases\GetStoreSettingsUseCase;
 use Src\Infrastructure\Settings\Services\StoreLogoService;
+use Src\Application\Quincaillerie\Services\DepotFilterService;
 
 class SaleController
 {
@@ -48,7 +49,8 @@ class SaleController
         private GetStoreSettingsUseCase $getStoreSettingsUseCase,
         private StoreLogoService $storeLogoService,
         private CreateInvoiceFromSaleUseCase $createInvoiceFromSaleUseCase,
-        private CreateDebtUseCase $createDebtUseCase
+        private CreateDebtUseCase $createDebtUseCase,
+        private ?DepotFilterService $depotFilterService = null
     ) {}
 
     private function getEffectiveShopCurrency(string $shopId, $authUser): string
@@ -107,6 +109,55 @@ class SaleController
         $saleType = $request->input('sale_type');
 
         $sales = $this->saleRepository->findByShop($shopId, $from, $to);
+        
+        // Filtrer par dépôt pour Hardware uniquement
+        if ($this->getModule() === 'Hardware' && $this->depotFilterService) {
+            $currentDepotId = $request->session()->get('current_depot_id');
+            $user = $request->user();
+            $permissions = $user ? $user->permissionCodes() : [];
+            $canViewAll = in_array('hardware.warehouse.view_all', $permissions, true) || in_array('*', $permissions, true);
+            
+            // Optimisation : récupérer tous les depot_id en une seule requête
+            $saleIds = array_map(fn ($sale) => $sale->getId(), $sales);
+            $saleDepotMap = [];
+            if (!empty($saleIds)) {
+                /** @var \Illuminate\Database\Eloquent\Collection<int, \Src\Infrastructure\Pharmacy\Models\SaleModel> $saleModels */
+                $saleModels = \Src\Infrastructure\Pharmacy\Models\SaleModel::whereIn('id', $saleIds)
+                    ->get(['id', 'depot_id'])
+                    ->keyBy('id');
+                foreach ($saleModels as $model) {
+                    /** @var \Src\Infrastructure\Pharmacy\Models\SaleModel $model */
+                    $saleDepotMap[$model->id] = $model->depot_id;
+                }
+            }
+            
+            if (!$canViewAll) {
+                $userDepotIds = $this->depotFilterService->getUserDepotIds($user);
+                $sales = array_values(array_filter($sales, function ($sale) use ($currentDepotId, $userDepotIds, $saleDepotMap) {
+                    $saleDepotId = $saleDepotMap[$sale->getId()] ?? null;
+                    
+                    // Dépôt central (null) toujours visible
+                    if ($saleDepotId === null) {
+                        return true;
+                    }
+                    
+                    // Si un dépôt est sélectionné, voir uniquement ce dépôt + dépôt central
+                    if ($currentDepotId) {
+                        return (int) $saleDepotId === (int) $currentDepotId;
+                    }
+                    
+                    // Voir tous les dépôts assignés + dépôt central
+                    return in_array((int) $saleDepotId, $userDepotIds, true);
+                }));
+            } elseif ($currentDepotId) {
+                // Si view_all_warehouse et dépôt sélectionné, filtrer par ce dépôt + dépôt central
+                $sales = array_values(array_filter($sales, function ($sale) use ($currentDepotId, $saleDepotMap) {
+                    $saleDepotId = $saleDepotMap[$sale->getId()] ?? null;
+                    return $saleDepotId === null || (int) $saleDepotId === (int) $currentDepotId;
+                }));
+            }
+        }
+        
         if (!$canViewAllSales && $authUser) {
             $sales = array_values(array_filter($sales, fn ($s) => (int) $s->getCreatedBy() === (int) $authUser->id));
         }
@@ -167,38 +218,45 @@ class SaleController
         // Products with images - conversion vers devise boutique si nécessaire
         $tenantId = $authUser !== null ? ($authUser->tenant_id ?? $shopId) : $shopId;
         $imageService = app(\Src\Infrastructure\Pharmacy\Services\ProductImageService::class);
-        $products = ProductModel::where('shop_id', $shopId)
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get()
-            ->map(function ($p) use ($shopCurrency, $tenantId, $imageService) {
-                $productCurrency = $p->price_currency ?? $shopCurrency;
-                $priceAmount = (float) ($p->price_amount ?? 0);
-                $wholesaleAmount = $p->wholesale_price_amount !== null ? (float) $p->wholesale_price_amount : null;
+        $productsQuery = ProductModel::where('shop_id', $shopId)
+            ->where('is_active', true);
+        
+        // Appliquer le filtrage par dépôt pour Hardware uniquement
+        if ($this->getModule() === 'Hardware' && $this->depotFilterService) {
+            $productsQuery = $this->depotFilterService->applyDepotFilter($productsQuery, $request, 'depot_id');
+        }
+        
+        /** @var \Illuminate\Database\Eloquent\Collection<int, \Src\Infrastructure\Pharmacy\Models\ProductModel> $productsCollection */
+        $productsCollection = $productsQuery->orderBy('name')->get();
+        $products = $productsCollection->map(function ($p) use ($shopCurrency, $tenantId, $imageService) {
+            /** @var \Src\Infrastructure\Pharmacy\Models\ProductModel $p */
+            $productCurrency = $p->price_currency ?? $shopCurrency;
+            $priceAmount = (float) ($p->price_amount ?? 0);
+            $wholesaleAmount = $p->wholesale_price_amount !== null ? (float) $p->wholesale_price_amount : null;
 
-                if ($productCurrency !== $shopCurrency) {
-                    $priceAmount = $this->currencyConversion->convertOrKeep($priceAmount, $productCurrency, $shopCurrency, $tenantId);
-                    if ($wholesaleAmount !== null) {
-                        $wholesaleAmount = $this->currencyConversion->convertOrKeep($wholesaleAmount, $productCurrency, $shopCurrency, $tenantId);
-                    }
+            if ($productCurrency !== $shopCurrency) {
+                $priceAmount = $this->currencyConversion->convertOrKeep($priceAmount, $productCurrency, $shopCurrency, $tenantId);
+                if ($wholesaleAmount !== null) {
+                    $wholesaleAmount = $this->currencyConversion->convertOrKeep($wholesaleAmount, $productCurrency, $shopCurrency, $tenantId);
                 }
+            }
 
-                return [
-                    'id' => $p->id,
-                    'name' => $p->name,
-                    'code' => $p->code ?? '',
-                    'price_amount' => $priceAmount,
-                    'wholesale_price_amount' => $wholesaleAmount,
-                    'wholesale_min_quantity' => $p->wholesale_min_quantity !== null ? (int) $p->wholesale_min_quantity : null,
-                    'price_currency' => $shopCurrency,
-                    'stock' => (float) ($p->stock ?? 0),
-                    'category_id' => $p->category_id,
-                    'image_url' => $imageService->getUrlFromPath($p->image_path, $p->image_type ?? 'upload'),
-                    'type_unite' => $p->type_unite ?? 'UNITE',
-                    'quantite_par_unite' => (int) ($p->quantite_par_unite ?? 1),
-                    'est_divisible' => (bool) ($p->est_divisible ?? true),
-                ];
-            })->toArray();
+            return [
+                'id' => $p->id,
+                'name' => $p->name,
+                'code' => $p->code ?? '',
+                'price_amount' => $priceAmount,
+                'wholesale_price_amount' => $wholesaleAmount,
+                'wholesale_min_quantity' => $p->wholesale_min_quantity !== null ? (int) $p->wholesale_min_quantity : null,
+                'price_currency' => $shopCurrency,
+                'stock' => (float) ($p->stock ?? 0),
+                'category_id' => $p->category_id,
+                'image_url' => $imageService->getUrlFromPath($p->image_path, $p->image_type ?? 'upload'),
+                'type_unite' => $p->type_unite ?? 'UNITE',
+                'quantite_par_unite' => (int) ($p->quantite_par_unite ?? 1),
+                'est_divisible' => (bool) ($p->est_divisible ?? true),
+            ];
+        })->toArray();
 
         $canUseWholesale = $authUser !== null && ($authUser->isRoot() || $authUser->hasPermission('pharmacy.sales.wholesale'));
 
@@ -224,22 +282,25 @@ class SaleController
                 'email' => $c->email,
             ])->toArray();
 
-        $cashRegisters = CashRegister::where('shop_id', $shopId)
+        /** @var \Illuminate\Database\Eloquent\Collection<int, \App\Models\CashRegister> $cashRegistersCollection */
+        $cashRegistersCollection = CashRegister::where('shop_id', $shopId)
             ->where('is_active', true)
             ->orderBy('name')
-            ->get()
-            ->map(function ($reg) {
-                $openSession = $reg->sessions()->where('status', 'open')->first();
-                return [
-                    'id' => $reg->id,
-                    'name' => $reg->name,
-                    'code' => $reg->code,
-                    'open_session' => $openSession ? [
-                        'id' => $openSession->id,
-                        'opening_balance' => (float) $openSession->opening_balance,
-                    ] : null,
-                ];
-            })->toArray();
+            ->get();
+        $cashRegisters = $cashRegistersCollection->map(function ($reg) {
+            /** @var \App\Models\CashRegister $reg */
+            /** @var \App\Models\CashRegisterSession|null $openSession */
+            $openSession = $reg->sessions()->where('status', 'open')->first();
+            return [
+                'id' => $reg->id,
+                'name' => $reg->name,
+                'code' => $reg->code,
+                'open_session' => $openSession ? [
+                    'id' => $openSession->id,
+                    'opening_balance' => (float) $openSession->opening_balance,
+                ] : null,
+            ];
+        })->toArray();
 
         // Devises et taux pour la conversion (dollar ↔ franc, etc.)
         $currenciesList = Currency::where('tenant_id', $tenantId)
@@ -677,7 +738,7 @@ class SaleController
         }
 
         $shop = Shop::find($shopId);
-        $shopName = $shop?->name ?? config('app.name', 'Boutique');
+        $shopName = $shop && $shop->name ? $shop->name : config('app.name', 'Boutique');
         $receiptUrl = route('pharmacy.sales.receipt', ['id' => $sale->getId()]);
 
         Mail::send(

@@ -15,7 +15,7 @@ class EloquentCategoryRepository implements CategoryRepositoryInterface
 {
     public function save(Category $category): void
     {
-        $depotId = request()?->session()->get('current_depot_id');
+        $depotId = request()->session()->get('current_depot_id');
         CategoryModel::updateOrCreate(
             ['id' => $category->getId()],
             [

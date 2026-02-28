@@ -19,10 +19,39 @@ class EloquentProductRepository implements ProductRepositoryInterface
 {
     public function save(Product $product): void
     {
-        $depotId = request()?->session()->get('current_depot_id');
+        // Le depot_id sera géré par le contrôleur via DepotFilterService
+        // On préserve le depot_id existant si le produit existe déjà
+        $depotId = null;
+        $existingModel = ProductModel::find($product->getId());
+        if ($existingModel) {
+            $depotId = $existingModel->depot_id;
+        } else {
+            // Pour les nouveaux produits, utiliser le dépôt de la session si disponible
+            $depotId = request()->session()->get('current_depot_id');
+        }
+        
+        // Récupérer les données supplémentaires depuis le modèle si elles existent (pour préserver)
+        $model = ProductModel::find($product->getId());
+        $additionalData = [];
+        
+        if ($model) {
+            // Préserver les données supplémentaires existantes si elles ne sont pas écrasées
+            $additionalData = [
+                'image_path' => $model->image_path,
+                'image_type' => $model->image_type,
+                'price_normal' => $model->price_normal,
+                'price_reduced' => $model->price_reduced,
+                'price_reduction_percent' => $model->price_reduction_percent,
+                'price_non_negotiable' => $model->price_non_negotiable,
+                'price_wholesale_normal' => $model->price_wholesale_normal,
+                'price_wholesale_reduced' => $model->price_wholesale_reduced,
+                'price_non_negotiable_wholesale' => $model->price_non_negotiable_wholesale,
+            ];
+        }
+        
         ProductModel::updateOrCreate(
             ['id' => $product->getId()],
-            [
+            array_merge([
                 'shop_id' => $product->getShopId(),
                 'depot_id' => $depotId ? (int) $depotId : null,
                 'code' => $product->getCode()->getValue(),
@@ -37,8 +66,44 @@ class EloquentProductRepository implements ProductRepositoryInterface
                 'minimum_stock' => $product->getMinimumStock()->getValue(),
                 'category_id' => $product->getCategoryId(),
                 'is_active' => $product->isActive(),
-            ]
+            ], $additionalData)
         );
+    }
+    
+    /**
+     * Sauvegarder les données supplémentaires (image et prix multiples)
+     */
+    public function saveAdditionalData(string $productId, array $data): void
+    {
+        $model = ProductModel::find($productId);
+        if (!$model) {
+            return;
+        }
+        
+        // Pour image_path et image_type, permettre null (pour suppression d'image)
+        // Pour les autres champs, filtrer les valeurs null
+        $updateData = array_filter($data, function($value, $key) {
+            // Toujours inclure image_path et image_type même si null (pour permettre la suppression)
+            if ($key === 'image_path' || $key === 'image_type') {
+                return true;
+            }
+            return $value !== null;
+        }, ARRAY_FILTER_USE_BOTH);
+        
+        \Illuminate\Support\Facades\Log::info('EloquentProductRepository::saveAdditionalData', [
+            'product_id' => $productId,
+            'update_data' => $updateData
+        ]);
+        
+        $model->update($updateData);
+        
+        // Vérifier que l'image a bien été sauvegardée
+        $model->refresh();
+        \Illuminate\Support\Facades\Log::info('Product model after update', [
+            'product_id' => $productId,
+            'image_path' => $model->image_path,
+            'image_type' => $model->image_type
+        ]);
     }
 
     public function findById(string $id): ?Product

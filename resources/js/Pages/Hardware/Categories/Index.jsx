@@ -134,7 +134,7 @@ export default function HardwareCategoriesIndex({ categories = [], pagination, f
             <Head title="Catégories - Quincaillerie" />
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                    <Card className="mb-6 bg-white dark:bg-gray-800">
+                    <Card className="mb-6 bg-white dark:bg-gray-800 shadow-md dark:shadow-lg dark:shadow-gray-900/50">
                         <CardHeader>
                             <CardTitle className="flex items-center text-gray-900 dark:text-white">
                                 <Search className="h-5 w-5 mr-2" /> Rechercher
@@ -155,7 +155,7 @@ export default function HardwareCategoriesIndex({ categories = [], pagination, f
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-white dark:bg-gray-800">
+                    <Card className="bg-white dark:bg-gray-800 shadow-md dark:shadow-lg dark:shadow-gray-900/50">
                         <CardHeader>
                             <CardTitle className="text-gray-900 dark:text-white">
                                 Catégories {pagination ? `(${pagination.total})` : `(${categories.length})`}
