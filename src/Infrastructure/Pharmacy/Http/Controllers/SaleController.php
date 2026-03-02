@@ -18,7 +18,7 @@ use Src\Application\Finance\UseCases\Debt\CreateDebtUseCase;
 use Src\Domain\Pharmacy\Repositories\SaleRepositoryInterface;
 use Src\Domain\Pharmacy\Repositories\SaleLineRepositoryInterface;
 use Src\Application\Pharmacy\DTO\SaleLineDTO;
-use Src\Infrastructure\Pharmacy\Models\ProductModel;
+use Src\Infrastructure\Pharmacy\Models\ProductModel as PharmacyProductModel;
 use Src\Infrastructure\Pharmacy\Models\SaleModel;
 use App\Models\CashRegister;
 use App\Models\Currency;
@@ -28,13 +28,28 @@ use App\Services\CurrencyConversionService;
 use Src\Application\Settings\UseCases\GetStoreSettingsUseCase;
 use Src\Infrastructure\Settings\Services\StoreLogoService;
 use Src\Application\Quincaillerie\Services\DepotFilterService;
+use Src\Infrastructure\Pharmacy\Adapters\QuincaillerieProductRepositoryAdapter;
+use Src\Domain\Quincaillerie\Repositories\ProductRepositoryInterface as QuincaillerieProductRepositoryInterface;
+use Src\Domain\Pharmacy\Repositories\ProductRepositoryInterface;
 
 class SaleController
 {
     private function getModule(): string
     {
+        // Vérifier d'abord l'URL pour être sûr
+        $url = request()->url();
+        $path = request()->path();
+        
+        // Si l'URL contient /hardware/, c'est le module Hardware
+        if (str_contains($path, 'hardware/') || str_contains($url, '/hardware/')) {
+            return 'Hardware';
+        }
+        
+        // Sinon, vérifier le préfixe de la route
         $prefix = request()->route()?->getPrefix();
-        return $prefix === 'hardware' ? 'Hardware' : 'Pharmacy';
+        $normalizedPrefix = $prefix ? trim($prefix, '/') : '';
+        
+        return $normalizedPrefix === 'hardware' ? 'Hardware' : 'Pharmacy';
     }
 
     public function __construct(
@@ -50,8 +65,29 @@ class SaleController
         private StoreLogoService $storeLogoService,
         private CreateInvoiceFromSaleUseCase $createInvoiceFromSaleUseCase,
         private CreateDebtUseCase $createDebtUseCase,
-        private ?DepotFilterService $depotFilterService = null
+        private ?DepotFilterService $depotFilterService = null,
+        private ?QuincaillerieProductRepositoryInterface $hardwareProductRepository = null,
+        private ?ProductRepositoryInterface $pharmacyProductRepository = null
     ) {}
+
+    /**
+     * Retourne le ProductRepository adapté au module courant.
+     * - Pharmacy : repository pharmacie
+     * - Hardware : adapter vers Quincaillerie
+     */
+    private function getProductRepository(): ProductRepositoryInterface
+    {
+        if ($this->getModule() === 'Hardware' && $this->hardwareProductRepository !== null) {
+            return new QuincaillerieProductRepositoryAdapter($this->hardwareProductRepository);
+        }
+
+        if ($this->pharmacyProductRepository !== null) {
+            return $this->pharmacyProductRepository;
+        }
+
+        // Fallback : résolution via le conteneur
+        return app(ProductRepositoryInterface::class);
+    }
 
     private function getEffectiveShopCurrency(string $shopId, $authUser): string
     {
@@ -215,61 +251,125 @@ class SaleController
         $authUser = $request->user();
         $shopCurrency = $this->getEffectiveShopCurrency($shopId, $authUser);
 
+        $module = $this->getModule();
+        $isHardware = $module === 'Hardware';
+
         // Products with images - conversion vers devise boutique si nécessaire
         $tenantId = $authUser !== null ? ($authUser->tenant_id ?? $shopId) : $shopId;
-        $imageService = app(\Src\Infrastructure\Pharmacy\Services\ProductImageService::class);
-        $productsQuery = ProductModel::where('shop_id', $shopId)
-            ->where('is_active', true);
-        
-        // Appliquer le filtrage par dépôt pour Hardware uniquement
-        if ($this->getModule() === 'Hardware' && $this->depotFilterService) {
-            $productsQuery = $this->depotFilterService->applyDepotFilter($productsQuery, $request, 'depot_id');
-        }
-        
-        /** @var \Illuminate\Database\Eloquent\Collection<int, \Src\Infrastructure\Pharmacy\Models\ProductModel> $productsCollection */
-        $productsCollection = $productsQuery->orderBy('name')->get();
-        $products = $productsCollection->map(function ($p) use ($shopCurrency, $tenantId, $imageService) {
-            /** @var \Src\Infrastructure\Pharmacy\Models\ProductModel $p */
-            $productCurrency = $p->price_currency ?? $shopCurrency;
-            $priceAmount = (float) ($p->price_amount ?? 0);
-            $wholesaleAmount = $p->wholesale_price_amount !== null ? (float) $p->wholesale_price_amount : null;
 
-            if ($productCurrency !== $shopCurrency) {
-                $priceAmount = $this->currencyConversion->convertOrKeep($priceAmount, $productCurrency, $shopCurrency, $tenantId);
-                if ($wholesaleAmount !== null) {
-                    $wholesaleAmount = $this->currencyConversion->convertOrKeep($wholesaleAmount, $productCurrency, $shopCurrency, $tenantId);
-                }
+        if ($isHardware) {
+            // Module Hardware : utiliser les produits Quincaillerie
+            $imageService = app(\Src\Infrastructure\Quincaillerie\Services\ProductImageService::class);
+            $productsQuery = \Src\Infrastructure\Quincaillerie\Models\ProductModel::where('shop_id', $shopId)
+                ->where('is_active', true);
+
+            // Filtre dépôt pour Hardware
+            if ($this->depotFilterService) {
+                $productsQuery = $this->depotFilterService->applyDepotFilter($productsQuery, $request, 'depot_id');
             }
 
-            return [
-                'id' => $p->id,
-                'name' => $p->name,
-                'code' => $p->code ?? '',
-                'price_amount' => $priceAmount,
-                'wholesale_price_amount' => $wholesaleAmount,
-                'wholesale_min_quantity' => $p->wholesale_min_quantity !== null ? (int) $p->wholesale_min_quantity : null,
-                'price_currency' => $shopCurrency,
-                'stock' => (float) ($p->stock ?? 0),
-                'category_id' => $p->category_id,
-                'image_url' => $imageService->getUrlFromPath($p->image_path, $p->image_type ?? 'upload'),
-                'type_unite' => $p->type_unite ?? 'UNITE',
-                'quantite_par_unite' => (int) ($p->quantite_par_unite ?? 1),
-                'est_divisible' => (bool) ($p->est_divisible ?? true),
-            ];
-        })->toArray();
+            /** @var \Illuminate\Database\Eloquent\Collection<int, \Src\Infrastructure\Quincaillerie\Models\ProductModel> $productsCollection */
+            $productsCollection = $productsQuery->orderBy('name')->get();
+            $products = $productsCollection->map(function ($p) use ($shopCurrency, $tenantId, $imageService) {
+                /** @var \Src\Infrastructure\Quincaillerie\Models\ProductModel $p */
+                $productCurrency = $p->price_currency ?? $shopCurrency;
+                $priceAmount = (float) ($p->price_amount ?? 0);
+                $wholesaleAmount = $p->price_wholesale_normal !== null ? (float) $p->price_wholesale_normal : null;
 
-        $canUseWholesale = $authUser !== null && ($authUser->isRoot() || $authUser->hasPermission('pharmacy.sales.wholesale'));
+                if ($productCurrency !== $shopCurrency) {
+                    $priceAmount = $this->currencyConversion->convertOrKeep($priceAmount, $productCurrency, $shopCurrency, $tenantId);
+                    if ($wholesaleAmount !== null) {
+                        $wholesaleAmount = $this->currencyConversion->convertOrKeep($wholesaleAmount, $productCurrency, $shopCurrency, $tenantId);
+                    }
+                }
 
-        // Categories
-        $categories = \Src\Infrastructure\Pharmacy\Models\CategoryModel::where('shop_id', $shopId)
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get()
-            ->map(fn ($c) => [
-                'id' => $c->id,
-                'name' => $c->name,
-            ])->toArray();
+                return [
+                    'id' => $p->id,
+                    'name' => $p->name,
+                    'code' => $p->code ?? '',
+                    'barcode' => $p->barcode ?? null,
+                    'price_amount' => $priceAmount,
+                    'wholesale_price_amount' => $wholesaleAmount,
+                    'wholesale_min_quantity' => null,
+                    'price_currency' => $shopCurrency,
+                    'stock' => (float) ($p->stock ?? 0),
+                    'category_id' => $p->category_id,
+                    'image_url' => $p->image_path
+                        ? $imageService->getUrl($p->image_path, $p->image_type ?: 'upload')
+                        : null,
+                    'type_unite' => $p->type_unite ?? 'UNITE',
+                    'quantite_par_unite' => (int) ($p->quantite_par_unite ?? 1),
+                    'est_divisible' => (bool) ($p->est_divisible ?? true),
+                ];
+            })->toArray();
+
+            $canUseWholesale = $authUser !== null
+                && ($authUser->isRoot()
+                    || $authUser->hasPermission('hardware.sales.wholesale')
+                    || $authUser->hasPermission('pharmacy.sales.wholesale'));
+
+            // Categories Hardware (Quincaillerie)
+            $categories = \Src\Infrastructure\Quincaillerie\Models\CategoryModel::where('shop_id', $shopId)
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get()
+                ->map(fn ($c) => [
+                    'id' => $c->id,
+                    'name' => $c->name,
+                ])->toArray();
+        } else {
+            // Module Pharmacy existant
+            $imageService = app(\Src\Infrastructure\Pharmacy\Services\ProductImageService::class);
+            $productsQuery = PharmacyProductModel::where('shop_id', $shopId)
+                ->where('is_active', true);
+
+            /** @var \Illuminate\Database\Eloquent\Collection<int, \Src\Infrastructure\Pharmacy\Models\ProductModel> $productsCollection */
+            $productsCollection = $productsQuery->orderBy('name')->get();
+            $products = $productsCollection->map(function ($p) use ($shopCurrency, $tenantId, $imageService) {
+                /** @var \Src\Infrastructure\Pharmacy\Models\ProductModel $p */
+                $productCurrency = $p->price_currency ?? $shopCurrency;
+                $priceAmount = (float) ($p->price_amount ?? 0);
+                $wholesaleAmount = $p->wholesale_price_amount !== null ? (float) $p->wholesale_price_amount : null;
+
+                if ($productCurrency !== $shopCurrency) {
+                    $priceAmount = $this->currencyConversion->convertOrKeep($priceAmount, $productCurrency, $shopCurrency, $tenantId);
+                    if ($wholesaleAmount !== null) {
+                        $wholesaleAmount = $this->currencyConversion->convertOrKeep($wholesaleAmount, $productCurrency, $shopCurrency, $tenantId);
+                    }
+                }
+
+                return [
+                    'id' => $p->id,
+                    'name' => $p->name,
+                    'code' => $p->code ?? '',
+                    'barcode' => $p->barcode ?? null,
+                    'price_amount' => $priceAmount,
+                    'wholesale_price_amount' => $wholesaleAmount,
+                    'wholesale_min_quantity' => $p->wholesale_min_quantity !== null ? (int) $p->wholesale_min_quantity : null,
+                    'price_currency' => $shopCurrency,
+                    'stock' => (float) ($p->stock ?? 0),
+                    'category_id' => $p->category_id,
+                    'image_url' => $imageService->getUrlFromPath($p->image_path, $p->image_type ?? 'upload'),
+                    'type_unite' => $p->type_unite ?? 'UNITE',
+                    'quantite_par_unite' => (int) ($p->quantite_par_unite ?? 1),
+                    'est_divisible' => (bool) ($p->est_divisible ?? true),
+                ];
+            })->toArray();
+
+            $canUseWholesale = $authUser !== null
+                && ($authUser->isRoot() || $authUser->hasPermission('pharmacy.sales.wholesale'));
+
+            // Categories Pharmacy
+            $categories = \Src\Infrastructure\Pharmacy\Models\CategoryModel::where('shop_id', $shopId)
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get()
+                ->map(fn ($c) => [
+                    'id' => $c->id,
+                    'name' => $c->name,
+                ])->toArray();
+        }
 
         $customers = \App\Models\Customer::where('tenant_id', $tenantId)
             ->where('is_active', true)
@@ -418,6 +518,8 @@ class SaleController
         if (count($lines) > 0) {
             try {
                 $this->updateSaleLinesUseCase->execute($sale->getId(), $lines);
+                // Recharger la vente pour récupérer les totaux mis à jour
+                $sale = $this->saleRepository->findById($sale->getId()) ?? $sale;
             } catch (\InvalidArgumentException $e) {
                 return response()->json(['message' => $e->getMessage()], 422);
             }
@@ -425,7 +527,7 @@ class SaleController
 
         if ($customerId) {
             $this->attachCustomerToSaleUseCase->execute($sale->getId(), $customerId);
-            $sale = $this->saleRepository->findById($sale->getId());
+            $sale = $this->saleRepository->findById($sale->getId()) ?? $sale;
         }
 
         return response()->json([
@@ -494,8 +596,11 @@ class SaleController
 
         $lines = $this->saleLineRepository->findBySale($id);
         $linesData = [];
+        $isHardware = $this->getModule() === 'Hardware';
         foreach ($lines as $line) {
-            $product = ProductModel::find($line->getProductId());
+            $product = $isHardware
+                ? \Src\Infrastructure\Quincaillerie\Models\ProductModel::find($line->getProductId())
+                : PharmacyProductModel::find($line->getProductId());
             $linesData[] = [
                 'id' => $line->getId(),
                 'product_id' => $line->getProductId(),
@@ -550,12 +655,15 @@ class SaleController
         }
 
         $lines = $this->saleLineRepository->findBySale($id);
+        $isHardware = $this->getModule() === 'Hardware';
         $shop = Shop::find($shopId);
         $displayCurrency = $this->getEffectiveShopCurrency($shopId, $authUser) ?: 'CDF';
 
         $linesData = [];
         foreach ($lines as $line) {
-            $product = ProductModel::find($line->getProductId());
+            $product = $isHardware
+                ? \Src\Infrastructure\Quincaillerie\Models\ProductModel::find($line->getProductId())
+                : PharmacyProductModel::find($line->getProductId());
             $linesData[] = [
                 'product_name' => $product ? $product->name : '—',
                 'quantity' => $line->getQuantity()->getValue(),

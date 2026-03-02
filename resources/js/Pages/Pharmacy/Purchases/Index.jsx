@@ -29,6 +29,15 @@ export default function PurchasesIndex({
     products = [],
     routePrefix = 'pharmacy'
 }) {
+    // Debug: Log des données reçues
+    console.log('🔍 PurchasesIndex - Données reçues:', {
+        purchase_orders_count: purchase_orders?.length || 0,
+        suppliers_count: suppliers?.length || 0,
+        products_count: products?.length || 0,
+        filters,
+        routePrefix,
+    });
+    
     const { shop } = usePage().props;
     const currency = shop?.currency || 'CDF';
     const [from, setFrom] = useState(filters.from || '');

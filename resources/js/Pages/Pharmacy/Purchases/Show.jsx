@@ -13,7 +13,8 @@ import {
     XCircle,
     FileText,
     Clock,
-    Edit
+    Edit,
+    Download
 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -133,10 +134,10 @@ export default function PurchasesShow({
             <div className="container mx-auto py-6 px-4">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                    <div className="flex items-center gap-4">
-                        <Button variant="outline" size="sm" asChild>
-                            <Link href={route(`${routePrefix}.purchases.index`)}>
-                                <ArrowLeft className="h-4 w-4 mr-1" />
+                    <div className="flex items-center gap-4 flex-wrap">
+                        <Button variant="outline" size="sm" asChild className="flex items-center">
+                            <Link href={route(`${routePrefix}.purchases.index`)} className="flex items-center">
+                                <ArrowLeft className="h-4 w-4 mr-1.5" />
                                 Retour
                             </Link>
                         </Button>
@@ -149,32 +150,55 @@ export default function PurchasesShow({
                         {getStatusBadge(purchase_order.status)}
                     </div>
                     
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex gap-2 flex-wrap items-center">
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            asChild
+                            className="flex items-center"
+                        >
+                            <a href={route(`${routePrefix}.purchases.pdf`, purchase_order.id)} target="_blank" className="flex items-center">
+                                <Download className="h-4 w-4 mr-1.5" />
+                                PDF
+                            </a>
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            asChild
+                            className="flex items-center"
+                        >
+                            <a href={route(`${routePrefix}.purchases.thermal`, purchase_order.id)} target="_blank" className="flex items-center">
+                                <FileText className="h-4 w-4 mr-1.5" />
+                                Thermique
+                            </a>
+                        </Button>
                         {canEdit && (
                             <Button 
                                 variant="outline" 
                                 size="sm" 
                                 onClick={() => setIsDrawerOpen(true)}
+                                className="flex items-center"
                             >
-                                <Edit className="h-4 w-4 mr-1" />
+                                <Edit className="h-4 w-4 mr-1.5" />
                                 Modifier
                             </Button>
                         )}
                         {canConfirm && (
-                            <Button size="sm" onClick={handleConfirm}>
-                                <CheckCircle className="h-4 w-4 mr-1" />
+                            <Button size="sm" onClick={handleConfirm} className="flex items-center">
+                                <CheckCircle className="h-4 w-4 mr-1.5" />
                                 Confirmer
                             </Button>
                         )}
                         {canReceive && (
-                            <Button size="sm" variant="secondary" onClick={handleReceive}>
-                                <Truck className="h-4 w-4 mr-1" />
+                            <Button size="sm" variant="secondary" onClick={handleReceive} className="flex items-center">
+                                <Truck className="h-4 w-4 mr-1.5" />
                                 Réceptionner
                             </Button>
                         )}
                         {canCancel && (
-                            <Button size="sm" variant="destructive" onClick={handleCancel}>
-                                <XCircle className="h-4 w-4 mr-1" />
+                            <Button size="sm" variant="destructive" onClick={handleCancel} className="flex items-center">
+                                <XCircle className="h-4 w-4 mr-1.5" />
                                 Annuler
                             </Button>
                         )}

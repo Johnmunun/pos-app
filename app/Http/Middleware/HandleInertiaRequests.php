@@ -59,6 +59,16 @@ class HandleInertiaRequests extends Middleware
                     $tenant = \App\Models\Tenant::find($user->tenant_id);
                     $tenantSector = $tenant?->sector;
 
+                    // Si le secteur du tenant n'est pas encore défini,
+                    // on essaie de le déduire à partir des permissions de module
+                    if (!$tenantSector && !empty($permissions)) {
+                        if (in_array('module.hardware', $permissions, true)) {
+                            $tenantSector = 'hardware';
+                        } elseif (in_array('module.pharmacy', $permissions, true)) {
+                            $tenantSector = 'pharmacy';
+                        }
+                    }
+
                     if (\Illuminate\Support\Facades\Schema::hasTable('depots')) {
                         $depotsQuery = \App\Models\Depot::where('tenant_id', $user->tenant_id)
                             ->where('is_active', true)

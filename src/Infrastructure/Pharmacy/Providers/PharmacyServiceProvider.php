@@ -23,6 +23,7 @@ use Src\Domain\Pharmacy\Services\InventoryService as DomainInventoryService;
 use Src\Domain\Pharmacy\Services\ExpiryAlertService;
 use Src\Application\Pharmacy\Services\InventoryService;
 use Src\Infrastructure\Pharmacy\Persistence\EloquentProductRepository;
+use Src\Infrastructure\Pharmacy\Persistence\HybridProductRepository;
 use Src\Infrastructure\Pharmacy\Persistence\EloquentCategoryRepository;
 use Src\Infrastructure\Pharmacy\Persistence\EloquentBatchRepository;
 use Src\Infrastructure\Pharmacy\Persistence\EloquentStockMovementRepository;
@@ -115,9 +116,23 @@ class PharmacyServiceProvider extends ServiceProvider
         });
 
         // Repositories
+        // Repository hybride : utilise Pharmacy par défaut, et sait aussi retrouver
+        // les produits Hardware (Quincaillerie) pour les use cases qui ont juste
+        // besoin de vérifier l'existence d'un produit (ex: ventes Hardware).
         $this->app->bind(
             ProductRepositoryInterface::class,
-            EloquentProductRepository::class
+            function ($app) {
+                $pharmacyRepo = $app->make(EloquentProductRepository::class);
+
+                // Le repository Quincaillerie peut ne pas être disponible si le module
+                // n'est pas chargé, donc on le résout de façon optionnelle.
+                $hardwareRepo = null;
+                if ($app->bound(\Src\Domain\Quincaillerie\Repositories\ProductRepositoryInterface::class)) {
+                    $hardwareRepo = $app->make(\Src\Domain\Quincaillerie\Repositories\ProductRepositoryInterface::class);
+                }
+
+                return new HybridProductRepository($pharmacyRepo, $hardwareRepo);
+            }
         );
         
         $this->app->bind(

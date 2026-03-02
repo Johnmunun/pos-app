@@ -26,6 +26,7 @@ import axios from 'axios';
 import offlineStorage from '@/lib/offlineStorage';
 import imageCache from '@/lib/imageCache';
 import syncService from '@/lib/syncService';
+import BarcodeScanner from '@/Components/BarcodeScanner';
 
 export default function ProductDrawer({ isOpen, onClose, product = null, categories = [], routePrefix = 'pharmacy' }) {
     const isEditing = !!product;
@@ -54,7 +55,8 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
         remove_image: false,
         type_unite: product?.type_unite || 'UNITE',
         quantite_par_unite: product?.quantite_par_unite ?? 1,
-        est_divisible: product?.est_divisible !== false
+        est_divisible: product?.est_divisible !== false,
+        barcode: product?.barcode || ''
     });
 
     const [isMedicine, setIsMedicine] = useState(!!product?.medicine_type);
@@ -109,7 +111,8 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
                 remove_image: false,
                 type_unite: product.type_unite || 'UNITE',
                 quantite_par_unite: product.quantite_par_unite ?? 1,
-                est_divisible: product.est_divisible !== false
+                est_divisible: product.est_divisible !== false,
+                barcode: product.barcode || ''
             });
             setIsMedicine(!!product.medicine_type);
             
@@ -366,6 +369,16 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
                                 </Button>
                             </div>
                             {errors.product_code && <p className="text-sm text-red-600 dark:text-red-400">{errors.product_code}</p>}
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="barcode">Code-barres</Label>
+                            <BarcodeScanner
+                                id="barcode"
+                                value={data.barcode}
+                                onChange={(value) => setData('barcode', value)}
+                                placeholder="Scanner ou saisir le code-barres"
+                            />
+                            {errors.barcode && <p className="text-sm text-red-600 dark:text-red-400">{errors.barcode}</p>}
                         </div>
                     </div>
 

@@ -4,6 +4,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Badge } from '@/Components/ui/badge';
+import BarcodeScanner from '@/Components/BarcodeScanner';
 import { 
     ShoppingCart, 
     Plus, 
@@ -197,7 +198,8 @@ export default function POSCreate({ products = [], categories = [], customers = 
             const s = search.toLowerCase();
             result = result.filter(p => 
                 (p.name || '').toLowerCase().includes(s) || 
-                (p.code || '').toLowerCase().includes(s)
+                (p.code || '').toLowerCase().includes(s) ||
+                (p.barcode || '').toLowerCase().includes(s)
             );
         }
         
@@ -241,6 +243,23 @@ export default function POSCreate({ products = [], categories = [], customers = 
             });
         } catch (_) {}
     }, []);
+
+    // Fonction pour trouver un produit par code-barres et l'ajouter au panier
+    const handleBarcodeScan = useCallback((barcode) => {
+        if (!barcode || !barcode.trim()) return;
+        
+        const scannedBarcode = barcode.trim();
+        const product = products.find(p => 
+            p.barcode && p.barcode.toLowerCase() === scannedBarcode.toLowerCase()
+        );
+        
+        if (product) {
+            addToCart(product);
+            setSearch(''); // Réinitialiser la recherche après ajout
+        } else {
+            toast.error('Produit introuvable pour ce code-barres');
+        }
+    }, [products, addToCart]);
 
     const addToCart = (product) => {
         const stock = Number(product.stock) ?? 0;
@@ -601,37 +620,56 @@ export default function POSCreate({ products = [], categories = [], customers = 
                             </div>
                             
                             <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline shrink-0">Raccourcis: <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">1</kbd> ventes · <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">2</kbd> ici · <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">P</kbd> paiement</span>
-                            <div className="w-full sm:flex-1 min-w-0 relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                <Input 
-                                    ref={searchInputRef}
-                                    type="text"
-                                    placeholder="Recherche ou scan code-barres"
-                                    value={search}
-                                    onChange={(e) => {
-                                        const v = e.target.value;
-                                        setSearch(v);
-                                        if (v.length >= 6) {
-                                            const code = v.trim();
-                                            const byCode = products.find(p => (p.code || '').toLowerCase() === code.toLowerCase());
-                                            if (byCode) {
-                                                addToCart(byCode);
-                                                setSearch('');
+                            <div className="w-full sm:flex-1 min-w-0 relative flex items-center gap-2">
+                                <div className="flex-1 relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                    <Input 
+                                        ref={searchInputRef}
+                                        type="text"
+                                        placeholder="Recherche ou scan code-barres"
+                                        value={search}
+                                        onChange={(e) => {
+                                            const v = e.target.value;
+                                            setSearch(v);
+                                            // Recherche automatique par code ou code-barres (minimum 6 caractères)
+                                            if (v.length >= 6) {
+                                                const code = v.trim();
+                                                const byCode = products.find(p => 
+                                                    (p.code || '').toLowerCase() === code.toLowerCase() ||
+                                                    (p.barcode || '').toLowerCase() === code.toLowerCase()
+                                                );
+                                                if (byCode) {
+                                                    addToCart(byCode);
+                                                    setSearch('');
+                                                }
                                             }
-                                        }
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && search.trim().length >= 6) {
-                                            const byCode = products.find(p => (p.code || '').toLowerCase() === search.trim().toLowerCase());
-                                            if (byCode) {
-                                                addToCart(byCode);
-                                                setSearch('');
-                                                e.preventDefault();
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && search.trim().length >= 6) {
+                                                const code = search.trim();
+                                                const byCode = products.find(p => 
+                                                    (p.code || '').toLowerCase() === code.toLowerCase() ||
+                                                    (p.barcode || '').toLowerCase() === code.toLowerCase()
+                                                );
+                                                if (byCode) {
+                                                    addToCart(byCode);
+                                                    setSearch('');
+                                                    e.preventDefault();
+                                                }
                                             }
-                                        }
-                                    }}
-                                    className="pl-10 bg-gray-100 dark:bg-slate-800 border-0 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
-                                />
+                                        }}
+                                        className="pl-10 bg-gray-100 dark:bg-slate-800 border-0 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                                    />
+                                </div>
+                                <div className="flex-shrink-0">
+                                    <BarcodeScanner
+                                        id="sales-barcode-scanner"
+                                        value=""
+                                        onChange={handleBarcodeScan}
+                                        placeholder=""
+                                        buttonOnly={true}
+                                    />
+                                </div>
                             </div>
                             
                             <Button 

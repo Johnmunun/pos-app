@@ -249,7 +249,7 @@ export default function PurchaseOrderDrawer({
                                             type="date"
                                             value={formData.expected_at}
                                             onChange={(e) => setFormData({ ...formData, expected_at: e.target.value })}
-                                            className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                                            className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                                         />
                                     </div>
                                     <div>
@@ -348,7 +348,7 @@ export default function PurchaseOrderDrawer({
                                                         min={1}
                                                         value={line.ordered_quantity}
                                                         onChange={(e) => updateLine(index, 'ordered_quantity', parseInt(e.target.value, 10) || 1)}
-                                                        className="text-sm"
+                                                        className="text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
                                                     />
                                                 </div>
                                                 <div className="w-28">
@@ -361,7 +361,7 @@ export default function PurchaseOrderDrawer({
                                                         min={0}
                                                         value={line.unit_cost}
                                                         onChange={(e) => updateLine(index, 'unit_cost', parseFloat(e.target.value) || 0)}
-                                                        className="text-sm"
+                                                        className="text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
                                                     />
                                                 </div>
                                                 <div className="w-24 text-right">

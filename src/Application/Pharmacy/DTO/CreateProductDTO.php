@@ -22,6 +22,7 @@ class CreateProductDTO
         public readonly ?string $supplierId = null,
         public readonly string $typeUnite = 'UNITE',
         public readonly int $quantiteParUnite = 1,
-        public readonly bool $estDivisible = true
+        public readonly bool $estDivisible = true,
+        public readonly ?string $barcode = null
     ) {}
 }

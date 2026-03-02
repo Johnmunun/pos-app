@@ -8,6 +8,7 @@ import { Button } from '@/Components/ui/button';
 import { Save, Package, Hash, X, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
+import BarcodeScanner from '@/Components/BarcodeScanner';
 
 const TYPE_UNITE_OPTIONS = ['PIECE', 'LOT', 'METRE', 'KG', 'LITRE', 'BOITE', 'CARTON', 'UNITE'];
 
@@ -44,6 +45,7 @@ export default function HardwareProductDrawer({ isOpen, onClose, product = null,
         price_wholesale_normal: product?.price_wholesale_normal ?? '',
         price_wholesale_reduced: product?.price_wholesale_reduced ?? '',
         price_non_negotiable_wholesale: product?.price_non_negotiable_wholesale ?? '',
+        barcode: product?.barcode || '',
     });
 
     const [isGeneratingCode, setIsGeneratingCode] = useState(false);
@@ -71,6 +73,7 @@ export default function HardwareProductDrawer({ isOpen, onClose, product = null,
                 price_wholesale_normal: product.price_wholesale_normal ?? '',
                 price_wholesale_reduced: product.price_wholesale_reduced ?? '',
                 price_non_negotiable_wholesale: product.price_non_negotiable_wholesale ?? '',
+                barcode: product.barcode || '',
             });
             setImagePreview(product.image_url || null);
         } else {
@@ -215,6 +218,16 @@ export default function HardwareProductDrawer({ isOpen, onClose, product = null,
                                 </Button>
                             </div>
                             {errors.product_code && <p className="text-sm text-red-600 dark:text-red-400">{errors.product_code}</p>}
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="barcode">Code-barres</Label>
+                            <BarcodeScanner
+                                id="barcode"
+                                value={data.barcode}
+                                onChange={(value) => setData('barcode', value)}
+                                placeholder="Scanner ou saisir le code-barres"
+                            />
+                            {errors.barcode && <p className="text-sm text-red-600 dark:text-red-400">{errors.barcode}</p>}
                         </div>
                     </div>
                     <div className="space-y-2">

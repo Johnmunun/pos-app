@@ -193,7 +193,11 @@ class CurrencyController
             abort(403, 'Accès non autorisé');
         }
 
-        ExchangeRate::create($validated);
+        // Forcer le tenant_id sur le taux de change créé
+        ExchangeRate::create([
+            'tenant_id' => $tenantId,
+            ...$validated,
+        ]);
 
         return redirect()->route('settings.currencies')
             ->with('success', 'Taux de change créé avec succès');
@@ -224,7 +228,11 @@ class CurrencyController
             abort(403, 'Accès non autorisé');
         }
 
-        $exchangeRate->update($validated);
+        // Mettre à jour les champs + s'assurer que tenant_id est bien positionné
+        $exchangeRate->update([
+            'tenant_id' => $tenantId,
+            ...$validated,
+        ]);
 
         return redirect()->route('settings.currencies')
             ->with('success', 'Taux de change mis à jour avec succès');

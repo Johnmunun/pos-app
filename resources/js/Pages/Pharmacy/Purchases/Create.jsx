@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
-import { Package, Plus, Trash2 } from 'lucide-react';
+import { Package, Plus, Trash2, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import { useToast } from '@/Components/ui/use-toast';
 
@@ -13,11 +13,43 @@ export default function PurchasesCreate({ auth, products = [], suppliers = [], r
     const { shop } = usePage().props;
     const defaultCurrency = shop?.currency || 'CDF';
     
+    // Debug: Log des données reçues
+    console.log('🔍 PurchasesCreate - Debug:', {
+        suppliers_count: suppliers?.length || 0,
+        suppliers: suppliers,
+        products_count: products?.length || 0,
+        routePrefix,
+    });
+    
     const [supplierId, setSupplierId] = useState('');
     const [expectedAt, setExpectedAt] = useState('');
     const [currency, setCurrency] = useState(defaultCurrency);
     const [lines, setLines] = useState([{ product_id: '', product_name: '', ordered_quantity: 1, unit_cost: 0 }]);
     const [submitting, setSubmitting] = useState(false);
+    const [reloadingSuppliers, setReloadingSuppliers] = useState(false);
+    const [currentSuppliers, setCurrentSuppliers] = useState(suppliers);
+
+    // Mettre à jour la liste des fournisseurs quand elle change
+    useEffect(() => {
+        console.log('🔍 useEffect - suppliers changed:', {
+            suppliers_count: suppliers?.length || 0,
+            suppliers: suppliers,
+        });
+        setCurrentSuppliers(suppliers);
+    }, [suppliers]);
+
+    // Recharger la liste des fournisseurs
+    const handleReloadSuppliers = async () => {
+        setReloadingSuppliers(true);
+        try {
+            await router.reload({ only: ['suppliers'], preserveState: true });
+            toast({ title: 'Liste des fournisseurs mise à jour' });
+        } catch (error) {
+            toast({ title: 'Erreur', description: 'Impossible de recharger la liste', variant: 'destructive' });
+        } finally {
+            setReloadingSuppliers(false);
+        }
+    };
 
     const addLine = () => {
         setLines([...lines, { product_id: '', product_name: '', ordered_quantity: 1, unit_cost: 0 }]);
@@ -88,17 +120,34 @@ export default function PurchasesCreate({ auth, products = [], suppliers = [], r
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">Fournisseur *</label>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label className="block text-sm font-medium">Fournisseur *</label>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={handleReloadSuppliers}
+                                            disabled={reloadingSuppliers}
+                                            className="h-7 px-2 text-xs"
+                                        >
+                                            <RefreshCw className={`h-3 w-3 mr-1 ${reloadingSuppliers ? 'animate-spin' : ''}`} />
+                                            Actualiser
+                                        </Button>
+                                    </div>
                                     <select
                                         className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                         value={supplierId}
                                         onChange={(e) => setSupplierId(e.target.value)}
                                         required
                                     >
-                                        <option value="">Choisir...</option>
-                                        {suppliers.map((s) => (
-                                            <option key={s.id} value={s.id}>{s.name}</option>
-                                        ))}
+                                        <option value="">Choisir... ({currentSuppliers?.length || 0} fournisseurs disponibles)</option>
+                                        {currentSuppliers && currentSuppliers.length > 0 ? (
+                                            currentSuppliers.map((s) => (
+                                                <option key={s.id} value={s.id}>{s.name}</option>
+                                            ))
+                                        ) : (
+                                            <option value="" disabled>Aucun fournisseur disponible</option>
+                                        )}
                                     </select>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">

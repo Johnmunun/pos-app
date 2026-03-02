@@ -31,8 +31,26 @@ export default function Login({ status, canResetPassword }) {
         <GuestLayout>
             <Head title="Connexion" />
 
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-amber-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8 transition-colors duration-200">
-                <div className="w-full max-w-md">
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-amber-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8 transition-colors duration-200 relative overflow-hidden">
+                {/* Animated Background Elements */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    {/* Floating circles */}
+                    <div className="absolute top-20 left-10 w-72 h-72 bg-amber-200/30 dark:bg-amber-900/20 rounded-full blur-3xl animate-pulse"></div>
+                    <div className="absolute top-40 right-20 w-96 h-96 bg-orange-200/30 dark:bg-orange-900/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s', animationDuration: '4s' }}></div>
+                    <div className="absolute bottom-20 left-1/4 w-80 h-80 bg-amber-300/20 dark:bg-amber-800/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s', animationDuration: '5s' }}></div>
+                    
+                    {/* Floating shapes */}
+                    <div className="absolute top-1/4 right-1/4 w-32 h-32 bg-gradient-to-br from-amber-400/20 to-orange-400/20 dark:from-amber-600/10 dark:to-orange-600/10 rounded-2xl rotate-45 animate-float"></div>
+                    <div className="absolute bottom-1/3 left-1/3 w-24 h-24 bg-gradient-to-br from-orange-400/20 to-amber-400/20 dark:from-orange-600/10 dark:to-amber-600/10 rounded-full animate-float-slow"></div>
+                    <div className="absolute top-1/2 right-1/3 w-20 h-20 bg-gradient-to-br from-amber-300/20 to-orange-300/20 dark:from-amber-500/10 dark:to-orange-500/10 rounded-lg rotate-12 animate-float" style={{ animationDelay: '2.5s' }}></div>
+                    <div className="absolute bottom-1/4 left-1/2 w-16 h-16 bg-gradient-to-br from-orange-300/15 to-amber-300/15 dark:from-orange-500/8 dark:to-amber-500/8 rounded-full animate-float-slow" style={{ animationDelay: '3s' }}></div>
+                    
+                    {/* Grid pattern */}
+                    <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] opacity-40 dark:opacity-20"></div>
+                </div>
+
+                {/* Content */}
+                <div className="w-full max-w-md relative z-10">
                     {/* Logo et branding */}
                     <div className="flex flex-col items-center mb-10">
                         <Link 

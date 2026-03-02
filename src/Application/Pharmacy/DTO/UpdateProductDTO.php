@@ -23,6 +23,7 @@ class UpdateProductDTO
         public readonly ?bool $isActive = null,
         public readonly ?string $typeUnite = null,
         public readonly ?int $quantiteParUnite = null,
-        public readonly ?bool $estDivisible = null
+        public readonly ?bool $estDivisible = null,
+        public readonly ?string $barcode = null
     ) {}
 }

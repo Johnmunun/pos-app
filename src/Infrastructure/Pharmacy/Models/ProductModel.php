@@ -47,6 +47,7 @@ class ProductModel extends Model
         'shop_id',
         'depot_id',
         'code',
+        'barcode',
         'name',
         'description',
         'type',

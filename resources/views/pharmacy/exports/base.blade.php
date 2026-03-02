@@ -256,7 +256,9 @@
     {{-- En-tête entreprise --}}
     <div class="doc-header">
         <div class="doc-header-left">
-            @if(!empty($header['logo_url']))
+            @if(!empty($header['logo_base64']))
+                <img src="{{ $header['logo_base64'] }}" alt="Logo" class="logo">
+            @elseif(!empty($header['logo_url']))
                 <img src="{{ $header['logo_url'] }}" alt="Logo" class="logo">
             @endif
         </div>

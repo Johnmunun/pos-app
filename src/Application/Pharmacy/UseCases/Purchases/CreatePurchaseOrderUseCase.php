@@ -61,7 +61,9 @@ class CreatePurchaseOrderUseCase
             foreach ($lines as $lineDto) {
                 $product = $this->productRepository->findById($lineDto->productId);
                 if (!$product) {
-                    throw new \InvalidArgumentException('Product not found for purchase order line');
+                    throw new \InvalidArgumentException(
+                        sprintf('Product not found for purchase order line (ID: %s)', $lineDto->productId)
+                    );
                 }
 
                 $orderedQty = new Quantity($lineDto->orderedQuantity);

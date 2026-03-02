@@ -8,6 +8,7 @@ use App\Models\User as UserModel;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
@@ -96,7 +97,7 @@ class PharmacyExportService
         return [
             'shop_id' => $shopId,
             'is_root' => $isRoot,
-            'company_name' => $settings ? $settings->getCompanyIdentity()->getName() : ($shop?->name ?? 'Pharmacie'),
+            'company_name' => $settings ? $settings->getCompanyIdentity()->getName() : ($shop !== null ? $shop->name : 'Pharmacie'),
             'id_nat' => $settings ? $settings->getCompanyIdentity()->getIdNat() : null,
             'rccm' => $settings ? $settings->getCompanyIdentity()->getRccm() : null,
             'tax_number' => $settings ? $settings->getCompanyIdentity()->getTaxNumber() : null,
@@ -108,6 +109,9 @@ class PharmacyExportService
             'email' => $settings ? $settings->getEmail() : null,
             'logo_url' => $settings && $settings->getLogoPath()
                 ? $this->storeLogoService->getUrl($settings->getLogoPath())
+                : null,
+            'logo_base64' => $settings && $settings->getLogoPath()
+                ? $this->getLogoBase64($settings->getLogoPath())
                 : null,
             'currency' => $currency,
             'exported_at' => now(),
@@ -125,23 +129,42 @@ class PharmacyExportService
      */
     public function enrichHeaderWithShop(array $header, string $shopId): array
     {
+        // Mettre à jour le shop_id dans le header
+        $header['shop_id'] = $shopId;
+        
         $settings = $this->getStoreSettingsUseCase->execute($shopId);
-        if ($settings === null) {
-            return $header;
+        $shop = \App\Models\Shop::find($shopId);
+        
+        if ($settings !== null) {
+            // Utiliser les settings si disponibles
+            $header['company_name'] = $settings->getCompanyIdentity()->getName();
+            $header['id_nat'] = $settings->getCompanyIdentity()->getIdNat();
+            $header['rccm'] = $settings->getCompanyIdentity()->getRccm();
+            $header['tax_number'] = $settings->getCompanyIdentity()->getTaxNumber();
+            $header['street'] = $settings->getAddress()->getStreet();
+            $header['city'] = $settings->getAddress()->getCity();
+            $header['postal_code'] = $settings->getAddress()->getPostalCode();
+            $header['country'] = $settings->getAddress()->getCountry();
+            $header['phone'] = $settings->getPhone();
+            $header['email'] = $settings->getEmail();
+            $header['logo_url'] = $settings->getLogoPath()
+                ? $this->storeLogoService->getUrl($settings->getLogoPath())
+                : null;
+            $header['logo_base64'] = $settings->getLogoPath()
+                ? $this->getLogoBase64($settings->getLogoPath())
+                : null;
+            // Mettre à jour la devise si disponible dans les settings
+            if ($shop && isset($shop->currency)) {
+                $header['currency'] = $shop->currency;
+            }
+        } elseif ($shop !== null) {
+            // Fallback sur les informations de base du shop si les settings ne sont pas disponibles
+            $header['company_name'] = $shop->name ?? $header['company_name'] ?? 'Pharmacie';
+            if (isset($shop->currency)) {
+                $header['currency'] = $shop->currency;
+            }
         }
-        $header['company_name'] = $settings->getCompanyIdentity()->getName();
-        $header['id_nat'] = $settings->getCompanyIdentity()->getIdNat();
-        $header['rccm'] = $settings->getCompanyIdentity()->getRccm();
-        $header['tax_number'] = $settings->getCompanyIdentity()->getTaxNumber();
-        $header['street'] = $settings->getAddress()->getStreet();
-        $header['city'] = $settings->getAddress()->getCity();
-        $header['postal_code'] = $settings->getAddress()->getPostalCode();
-        $header['country'] = $settings->getAddress()->getCountry();
-        $header['phone'] = $settings->getPhone();
-        $header['email'] = $settings->getEmail();
-        $header['logo_url'] = $settings->getLogoPath()
-            ? $this->storeLogoService->getUrl($settings->getLogoPath())
-            : null;
+        
         return $header;
     }
 
@@ -161,6 +184,60 @@ class PharmacyExportService
 
         $fullFilename = $filename . '_' . now()->format('Ymd_His') . '.pdf';
         return $pdf->download($fullFilename);
+    }
+
+    /**
+     * Génère un export PDF en format thermique (80mm).
+     * 
+     * @param string $view Le nom de la vue Blade
+     * @param array<string, mixed> $data Les données pour la vue
+     * @param string $filename Le nom du fichier (sans extension)
+     * @return Response
+     */
+    public function exportThermalPdf(string $view, array $data, string $filename): Response
+    {
+        $pdf = Pdf::loadView($view, $data);
+        // Format thermique 80mm (largeur fixe, hauteur variable)
+        $pdf->setPaper([0, 0, 226.77, 1000], 'portrait'); // 80mm = 226.77 points
+
+        $fullFilename = $filename . '_thermal_' . now()->format('Ymd_His') . '.pdf';
+        return $pdf->download($fullFilename);
+    }
+
+    /**
+     * Convertit le logo en base64 pour l'inclure dans les PDF.
+     * 
+     * @param string|null $logoPath
+     * @return string|null
+     */
+    private function getLogoBase64(?string $logoPath): ?string
+    {
+        if (!$logoPath) {
+            return null;
+        }
+
+        $fullPath = 'settings/logos/' . $logoPath;
+        
+        if (!Storage::disk('public')->exists($fullPath)) {
+            return null;
+        }
+
+        try {
+            $fileContent = Storage::disk('public')->get($fullPath);
+            $mimeType = Storage::disk('public')->mimeType($fullPath);
+            
+            if (!$fileContent || !$mimeType) {
+                return null;
+            }
+
+            return 'data:' . $mimeType . ';base64,' . base64_encode($fileContent);
+        } catch (\Exception $e) {
+            Log::warning('Failed to convert logo to base64', [
+                'logo_path' => $logoPath,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
     }
 
     /**

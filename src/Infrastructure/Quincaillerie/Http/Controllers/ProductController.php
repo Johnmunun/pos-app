@@ -115,6 +115,7 @@ class ProductController
                 'id' => $model->id,
                 'name' => $model->name,
                 'product_code' => $model->code ?? '',
+                'barcode' => $model->barcode ?? null,
                 'description' => $model->description ?? '',
                 'category_id' => $model->category_id,
                 'price_amount' => (float) ($model->price_amount ?? 0),
@@ -186,6 +187,7 @@ class ProductController
             $request->validate([
                 'name' => 'required|string|max:255',
                 'product_code' => 'required|string|max:50',
+                'barcode' => 'nullable|string|max:255',
                 'description' => 'nullable|string',
                 'category_id' => 'required|exists:quincaillerie_categories,id',
                 'price' => 'required|numeric|min:0',
@@ -233,7 +235,8 @@ class ProductController
                 $request->filled('price_non_negotiable') ? (float) $request->input('price_non_negotiable') : null,
                 $request->filled('price_wholesale_normal') ? (float) $request->input('price_wholesale_normal') : null,
                 $request->filled('price_wholesale_reduced') ? (float) $request->input('price_wholesale_reduced') : null,
-                $request->filled('price_non_negotiable_wholesale') ? (float) $request->input('price_non_negotiable_wholesale') : null
+                $request->filled('price_non_negotiable_wholesale') ? (float) $request->input('price_non_negotiable_wholesale') : null,
+                $request->input('barcode') ?: null
             );
 
             $product = $this->createProductUseCase->execute($dto);
@@ -262,7 +265,7 @@ class ProductController
                 }
             }
 
-            // Sauvegarder les données supplémentaires (image, prix multiples, et depot_id)
+            // Sauvegarder les données supplémentaires (image, prix multiples, depot_id, et barcode)
             $additionalData = [
                 'depot_id' => $effectiveDepotId,
                 'image_path' => $imagePath,
@@ -274,6 +277,7 @@ class ProductController
                 'price_wholesale_normal' => $dto->priceWholesaleNormal,
                 'price_wholesale_reduced' => $dto->priceWholesaleReduced,
                 'price_non_negotiable_wholesale' => $dto->priceNonNegotiableWholesale,
+                'barcode' => $dto->barcode,
             ];
             
             // Filtrer seulement les valeurs null pour les prix, mais toujours inclure image_path et image_type même si null
@@ -327,6 +331,7 @@ class ProductController
             'id' => $product->getId(),
             'name' => $product->getName(),
             'product_code' => $product->getCode()->getValue(),
+            'barcode' => $model->barcode ?? null,
             'description' => $product->getDescription(),
             'category_id' => $product->getCategoryId(),
             'price_amount' => $product->getPrice()->getAmount(),
@@ -386,6 +391,7 @@ class ProductController
             'id' => $product->getId(),
             'name' => $product->getName(),
             'product_code' => $product->getCode()->getValue(),
+            'barcode' => $model->barcode ?? null,
             'description' => $product->getDescription(),
             'category_id' => $product->getCategoryId(),
             'price_amount' => $product->getPrice()->getAmount(),
@@ -440,6 +446,7 @@ class ProductController
                 'price_wholesale_normal' => 'nullable|numeric|min:0',
                 'price_wholesale_reduced' => 'nullable|numeric|min:0',
                 'price_non_negotiable_wholesale' => 'nullable|numeric|min:0',
+                'barcode' => 'nullable|string|max:255',
             ]);
 
             // Utiliser price_normal comme prix principal si fourni, sinon utiliser price
@@ -466,7 +473,8 @@ class ProductController
                 $request->filled('price_non_negotiable') ? (float) $request->input('price_non_negotiable') : null,
                 $request->filled('price_wholesale_normal') ? (float) $request->input('price_wholesale_normal') : null,
                 $request->filled('price_wholesale_reduced') ? (float) $request->input('price_wholesale_reduced') : null,
-                $request->filled('price_non_negotiable_wholesale') ? (float) $request->input('price_non_negotiable_wholesale') : null
+                $request->filled('price_non_negotiable_wholesale') ? (float) $request->input('price_non_negotiable_wholesale') : null,
+                $request->input('barcode') ?: null
             );
 
             $this->updateProductUseCase->execute($dto);
@@ -513,7 +521,7 @@ class ProductController
                 }
             }
 
-            // Sauvegarder les données supplémentaires (image, prix multiples, et depot_id si modifié)
+            // Sauvegarder les données supplémentaires (image, prix multiples, depot_id si modifié, et barcode)
             $additionalData = [
                 'depot_id' => $effectiveDepotId,
                 'image_path' => $imagePath,
@@ -525,6 +533,7 @@ class ProductController
                 'price_wholesale_normal' => $dto->priceWholesaleNormal,
                 'price_wholesale_reduced' => $dto->priceWholesaleReduced,
                 'price_non_negotiable_wholesale' => $dto->priceNonNegotiableWholesale,
+                'barcode' => $dto->barcode,
             ];
             
             // Filtrer seulement les valeurs null pour les prix, mais toujours inclure image_path et image_type même si null (pour permettre la suppression)

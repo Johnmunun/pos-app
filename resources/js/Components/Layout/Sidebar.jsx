@@ -93,22 +93,23 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
         return groupPermissions.some(perm => permissions.includes(perm));
     };
 
-    // Pour le groupe Pharmacy : afficher si l'utilisateur a une permission pharmacy.* ou module.pharmacy ou stock.* ou inventory.*
+    // Pour le groupe Pharmacy : afficher si l'utilisateur a une permission pharmacy.* ou module.pharmacy
+    // Ne pas inclure stock.* ou inventory.* car ils sont partagés avec Hardware
+    // Si tenantSector est 'hardware', ne jamais montrer Pharmacy
     const hasPharmacyAccess = () => {
+        if (tenantSector === 'hardware') return false; // Si on est dans Hardware, ne pas montrer Pharmacy
         if (isRoot || permissions.includes('*')) return true;
         return permissions.some(
             (p) =>
                 p === 'module.pharmacy' ||
-                (typeof p === 'string' && p.startsWith('pharmacy.')) ||
-                (typeof p === 'string' && p.startsWith('stock.')) ||
-                p === 'inventory.view' ||
-                p === 'inventory.create' ||
-                p === 'inventory.edit'
+                (typeof p === 'string' && p.startsWith('pharmacy.'))
         );
     };
 
     // Pour le groupe Quincaillerie : module.hardware, hardware.* ou tenant secteur "hardware"
+    // Si tenantSector est 'pharmacy', ne jamais montrer Hardware
     const hasHardwareAccess = () => {
+        if (tenantSector === 'pharmacy') return false; // Si on est dans Pharmacy, ne pas montrer Hardware
         if (isRoot || permissions.includes('*')) return true;
         if (tenantSector === 'hardware') return true;
         return permissions.some(

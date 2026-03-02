@@ -27,6 +27,7 @@ class UpdateProductDTO
         public readonly ?float $priceNonNegotiable = null,
         public readonly ?float $priceWholesaleNormal = null,
         public readonly ?float $priceWholesaleReduced = null,
-        public readonly ?float $priceNonNegotiableWholesale = null
+        public readonly ?float $priceNonNegotiableWholesale = null,
+        public readonly ?string $barcode = null
     ) {}
 }

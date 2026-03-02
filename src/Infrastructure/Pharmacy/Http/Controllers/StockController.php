@@ -7,6 +7,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use App\Models\User as UserModel;
 use Src\Infrastructure\Pharmacy\Models\ProductModel;
+use Src\Infrastructure\Quincaillerie\Models\ProductModel as QuincaillerieProductModel;
 use Src\Infrastructure\Pharmacy\Models\CategoryModel;
 use Src\Infrastructure\Pharmacy\Models\BatchModel;
 use Src\Infrastructure\Pharmacy\Models\StockMovementModel;
@@ -20,8 +21,20 @@ class StockController
 
     private function getModule(): string
     {
+        // Vérifier d'abord l'URL pour être sûr
+        $url = request()->url();
+        $path = request()->path();
+        
+        // Si l'URL contient /hardware/, c'est le module Hardware
+        if (str_contains($path, 'hardware/') || str_contains($url, '/hardware/')) {
+            return 'Hardware';
+        }
+        
+        // Sinon, vérifier le préfixe de la route
         $prefix = request()->route()?->getPrefix();
-        return $prefix === 'hardware' ? 'Hardware' : 'Pharmacy';
+        $normalizedPrefix = $prefix ? trim($prefix, '/') : '';
+        
+        return $normalizedPrefix === 'hardware' ? 'Hardware' : 'Pharmacy';
     }
 
     private function getShopId(Request $request): string
@@ -63,18 +76,41 @@ class StockController
             abort(403, 'Shop ID not found. Please contact administrator.');
         }
 
-        // Base query produits
-        $query = ProductModel::with('category');
+        $isHardware = $this->getModule() === 'Hardware';
+        
+        // Base query produits - utiliser le bon modèle selon le module
+        if ($isHardware) {
+            /** @var \Illuminate\Database\Eloquent\Builder<QuincaillerieProductModel> $query */
+            /** @phpstan-ignore-next-line */
+            $query = QuincaillerieProductModel::with('category');
+        } else {
+            /** @var \Illuminate\Database\Eloquent\Builder<ProductModel> $query */
+            /** @phpstan-ignore-next-line */
+            $query = ProductModel::with('category');
+        }
+            
         if (!($isRoot && !$shopId)) {
             $query->where('shop_id', $shopId);
         }
         
-        // Appliquer le filtrage par dépôt pour Hardware uniquement
-        if ($this->getModule() === 'Hardware' && $this->depotFilterService) {
+        // Filtrer uniquement les produits actifs
+        $query->where('is_active', true);
+        
+        // Appliquer le filtrage par dépôt pour Hardware uniquement (après is_active pour éviter les conflits)
+        if ($isHardware && $this->depotFilterService) {
             $query = $this->depotFilterService->applyDepotFilter($query, $request, 'depot_id');
         }
         
         $query->orderBy('name');
+        
+        // Debug: compter les produits avant pagination
+        \Illuminate\Support\Facades\Log::debug('StockController::index - Query debug', [
+            'module' => $this->getModule(),
+            'shop_id' => $shopId,
+            'is_hardware' => $isHardware,
+            'total_before_pagination' => $query->count(),
+            'has_depot_filter' => $isHardware && $this->depotFilterService !== null,
+        ]);
 
         // Filtres
         if ($request->filled('search')) {
@@ -106,6 +142,7 @@ class StockController
         $paginator = $query->paginate($perPage)->appends($request->query());
 
         $products = $paginator->getCollection()->map(function ($model) {
+            /** @var ProductModel|QuincaillerieProductModel $model */
             return [
                 'id' => $model->id,
                 'name' => $model->name,
@@ -129,13 +166,22 @@ class StockController
         ];
 
         // Low stock (alert) – non filtré par recherche
-        $lowStockQuery = ProductModel::with('category');
+        if ($isHardware) {
+            /** @var \Illuminate\Database\Eloquent\Builder<QuincaillerieProductModel> $lowStockQuery */
+            /** @phpstan-ignore-next-line */
+            $lowStockQuery = QuincaillerieProductModel::with('category');
+        } else {
+            /** @var \Illuminate\Database\Eloquent\Builder<ProductModel> $lowStockQuery */
+            /** @phpstan-ignore-next-line */
+            $lowStockQuery = ProductModel::with('category');
+        }
+            
         if (!($isRoot && !$shopId)) {
             $lowStockQuery->where('shop_id', $shopId);
         }
         
         // Appliquer le filtrage par dépôt pour Hardware uniquement
-        if ($this->getModule() === 'Hardware' && $this->depotFilterService) {
+        if ($isHardware && $this->depotFilterService) {
             $lowStockQuery = $this->depotFilterService->applyDepotFilter($lowStockQuery, $request, 'depot_id');
         }
         
@@ -147,6 +193,7 @@ class StockController
             ->get();
 
         $lowStock = $lowStockModels->map(function ($model) {
+            /** @var ProductModel|QuincaillerieProductModel $model */
             return [
                 'id' => $model->id,
                 'name' => $model->name,
@@ -156,22 +203,32 @@ class StockController
             ];
         })->toArray();
 
-        // Batches qui expirent bientôt
-        $batchQuery = BatchModel::with('product')->orderBy('expiry_date');
-        if (!($isRoot && !$shopId)) {
-            $batchQuery->byShop((string) $shopId);
+        // Batches qui expirent bientôt (uniquement pour Pharmacy, Hardware n'utilise pas de batches)
+        $expiringSoon = [];
+        if (!$isHardware) {
+            /** @phpstan-ignore-next-line */
+            $batchQuery = BatchModel::with('product')->orderBy('expiry_date');
+            if (!($isRoot && !$shopId)) {
+                $batchQuery->byShop((string) $shopId);
+            }
+            $expiringSoonModels = $batchQuery->expiringSoon(30)->limit(20)->get();
+            
+            /** @phpstan-ignore-next-line */
+            $expiringSoon = $expiringSoonModels->map(function ($batch) {
+                /** @var BatchModel $batch */
+                return [
+                    'id' => $batch->id,
+                    /** @phpstan-ignore-next-line */
+                    'product_name' => $batch->product ? $batch->product->name : '',
+                    /** @phpstan-ignore-next-line */
+                    'batch_number' => $batch->batch_number,
+                    /** @phpstan-ignore-next-line */
+                    'expiry_date' => $batch->expiry_date ? $batch->expiry_date->format('Y-m-d') : null,
+                    'days_until_expiry' => $batch->days_until_expiry ?? null,
+                ];
+            })->toArray();
         }
-        $expiringSoonModels = $batchQuery->expiringSoon(30)->limit(20)->get();
 
-        $expiringSoon = $expiringSoonModels->map(function ($batch) {
-            return [
-                'id' => $batch->id,
-                'product_name' => $batch->product ? $batch->product->name : '',
-                'batch_number' => $batch->batch_number,
-                'expiry_date' => $batch->expiry_date ? $batch->expiry_date->format('Y-m-d') : null,
-                'days_until_expiry' => $batch->days_until_expiry ?? null,
-            ];
-        })->toArray();
 
         // Catégories pour filtres
         $categoryModels = CategoryModel::query()
@@ -269,6 +326,7 @@ class StockController
         $perPage = (int) $request->input('per_page', 20);
         $paginator = $query->paginate($perPage)->appends($request->query());
 
+        /** @phpstan-ignore-next-line */
         $movements = $paginator->getCollection()->map(function (StockMovementModel $model) {
             return [
                 'id' => $model->id,

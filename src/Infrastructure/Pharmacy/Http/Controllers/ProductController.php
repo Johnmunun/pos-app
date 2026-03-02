@@ -70,7 +70,9 @@ class ProductController
     private function getProductsModule(): string
     {
         $prefix = request()->route()?->getPrefix();
-        return $prefix === 'hardware' ? 'Hardware' : 'Pharmacy';
+        // Le prefix peut être '/hardware' ou 'hardware', donc on normalise
+        $normalizedPrefix = $prefix ? trim($prefix, '/') : '';
+        return $normalizedPrefix === 'hardware' ? 'Hardware' : 'Pharmacy';
     }
 
     /**
@@ -146,6 +148,7 @@ class ProductController
                 'id' => $model->id,
                 'name' => $model->name,
                 'product_code' => $model->code ?? $model->product_code ?? '',
+                'barcode' => $model->barcode ?? null,
                 'description' => $model->description ?? '',
                 'category_id' => $model->category_id,
                 'price_amount' => (float) ($model->price_amount ?? 0),
@@ -504,6 +507,7 @@ class ProductController
             $request->validate([
                 'name' => 'required|string|max:255',
                 'product_code' => 'required|string|max:50|unique:pharmacy_products,code',
+                'barcode' => 'nullable|string|max:255',
                 'description' => 'nullable|string',
                 'category_id' => 'required|exists:pharmacy_categories,id',
                 'price' => 'required|numeric|min:0',
@@ -543,7 +547,8 @@ class ProductController
                 $request->input('supplier_id') ?: null,
                 $request->input('type_unite', 'UNITE'),
                 (int) $request->input('quantite_par_unite', 1),
-                $request->boolean('est_divisible', true)
+                $request->boolean('est_divisible', true),
+                $request->input('barcode') ?: null
             );
 
             $product = $this->createProductUseCase->execute($dto);
@@ -569,11 +574,17 @@ class ProductController
                 $imageType = 'url';
             }
 
-            // Mettre à jour le produit avec les champs infra (unité, stock min, prix de revient, fabricant, image)
+            // Mettre à jour le produit avec les champs infra (unité, stock min, prix de revient, fabricant, image, barcode)
             $productUpdateData = [
                 'unit' => $request->input('unit'),
                 'minimum_stock' => (int) $request->input('minimum_stock'),
             ];
+
+            if ($request->filled('barcode')) {
+                $productUpdateData['barcode'] = $request->input('barcode');
+            } elseif ($request->has('barcode')) {
+                $productUpdateData['barcode'] = null;
+            }
 
             if ($request->filled('cost')) {
                 $productUpdateData['cost_amount'] = (float) $request->input('cost');
@@ -801,6 +812,7 @@ class ProductController
                 'type_unite' => 'sometimes|string|in:PLAQUETTE,BOITE,FLACON,TUBE,SACHET,UNITE',
                 'quantite_par_unite' => 'sometimes|integer|min:1',
                 'est_divisible' => 'nullable|boolean',
+                'barcode' => 'nullable|string|max:255',
             ]);
 
             $user = $request->user();
@@ -836,7 +848,8 @@ class ProductController
                 $request->input('is_active'),
                 $request->filled('type_unite') ? $request->input('type_unite') : null,
                 $request->has('quantite_par_unite') && $request->input('quantite_par_unite') !== null ? (int) $request->input('quantite_par_unite') : null,
-                $request->has('est_divisible') ? $request->boolean('est_divisible') : null
+                $request->has('est_divisible') ? $request->boolean('est_divisible') : null,
+                $request->input('barcode') ?: null
             );
 
             $product = $this->updateProductUseCase->execute($id, $dto);
@@ -860,6 +873,12 @@ class ProductController
 
                 if ($request->input('manufacturer') !== null) {
                     $productUpdateData['manufacturer'] = $request->input('manufacturer');
+                }
+
+                if ($request->filled('barcode')) {
+                    $productUpdateData['barcode'] = $request->input('barcode');
+                } elseif ($request->has('barcode')) {
+                    $productUpdateData['barcode'] = null;
                 }
 
                 if ($request->filled('wholesale_price')) {
@@ -994,7 +1013,18 @@ class ProductController
                     'message' => 'Veuillez sélectionner un dépôt en haut.'
                 ], 403);
             }
-            $product = $this->productRepository->findById($id);
+            
+            // Détecter le module et utiliser le bon repository et use case
+            $isHardware = $this->getProductsModule() === 'Hardware';
+            
+            // Utiliser le bon repository selon le module
+            $productRepository = $this->productRepository;
+            if ($isHardware) {
+                $quincaillerieProductRepository = app(\Src\Domain\Quincaillerie\Repositories\ProductRepositoryInterface::class);
+                $productRepository = new \Src\Infrastructure\Pharmacy\Adapters\QuincaillerieProductRepositoryAdapter($quincaillerieProductRepository);
+            }
+            
+            $product = $productRepository->findById($id);
             if (!$product) {
                 return response()->json([
                     'message' => 'Product not found'
@@ -1009,6 +1039,15 @@ class ProductController
                 ], 404);
             }
 
+            // Utiliser le bon use case selon le module
+            $updateStockUseCase = $this->updateStockUseCase;
+            if ($isHardware) {
+                $updateStockUseCase = new \Src\Infrastructure\Pharmacy\Adapters\HardwareUpdateStockUseCase(
+                    $productRepository,
+                    app(\Src\Domain\Pharmacy\Repositories\StockMovementRepositoryInterface::class)
+                );
+            }
+
             if ($request->input('type') === 'add') {
                 $dto = new UpdateStockDTO(
                     (string) $shopId,
@@ -1021,7 +1060,7 @@ class ProductController
                     (int) $authUser->id
                 );
                 
-                $batch = $this->updateStockUseCase->addStock($dto);
+                $batch = $updateStockUseCase->addStock($dto);
 
                 if ($request->header('X-Inertia')) {
                     return redirect()->back()->with('success', 'Stock ajouté avec succès');
@@ -1032,7 +1071,7 @@ class ProductController
                 ]);
 
             } elseif ($request->input('type') === 'remove') {
-                $this->updateStockUseCase->removeStock(
+                $updateStockUseCase->removeStock(
                     $id,
                     (int) $request->input('quantity'),
                     (string) $shopId,
@@ -1047,7 +1086,7 @@ class ProductController
                 ]);
 
             } else { // adjust
-                $this->updateStockUseCase->adjustStock(
+                $updateStockUseCase->adjustStock(
                     $id,
                     (int) $request->input('quantity'),
                     (string) $shopId,

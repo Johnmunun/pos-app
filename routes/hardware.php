@@ -14,6 +14,7 @@ use Src\Infrastructure\Quincaillerie\Http\Controllers\CustomerController as Quin
 use Src\Infrastructure\Pharmacy\Http\Controllers\StockController;
 use Src\Infrastructure\Pharmacy\Http\Controllers\PharmacyReportController;
 use Src\Infrastructure\Pharmacy\Http\Controllers\ExportController;
+use Src\Infrastructure\Quincaillerie\Http\Controllers\InventoryController as QuincaillerieInventoryController;
 
 /**
  * DDD Hardware (Quincaillerie) Module Routes
@@ -55,6 +56,9 @@ Route::prefix('hardware')
         Route::post('/products/{id}/duplicate-to-depot', [QuincaillerieProductController::class, 'duplicateToDepot'])
             ->middleware('permission:hardware.product.manage')
             ->name('products.duplicate-to-depot');
+        Route::post('/products/{id}/stock', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'updateStock'])
+            ->middleware('permission:hardware.stock.manage|hardware.product.manage')
+            ->name('products.stock.update');
 
         // API mouvements de stock (historique produits)
         Route::prefix('api')->name('api.')->group(function () {
@@ -131,6 +135,12 @@ Route::prefix('hardware')
         Route::post('/purchases/{id}/cancel', [PurchaseController::class, 'cancel'])
             ->middleware('permission:hardware.purchases.manage')
             ->name('purchases.cancel');
+        Route::get('/purchases/{id}/pdf', [PurchaseController::class, 'exportPdf'])
+            ->middleware('permission:hardware.purchases.view|hardware.purchases.manage')
+            ->name('purchases.pdf');
+        Route::get('/purchases/{id}/thermal', [PurchaseController::class, 'exportThermal'])
+            ->middleware('permission:hardware.purchases.view|hardware.purchases.manage')
+            ->name('purchases.thermal');
 
         // Ventes (Sales)
         Route::get('/sales', [SaleController::class, 'index'])
@@ -201,7 +211,7 @@ Route::prefix('hardware')
             ->middleware('permission:hardware.customer.deactivate')
             ->name('customers.deactivate');
 
-        // Stock (mouvements et liste : Pharmacy pour l’instant ; pas de updateStock Quincaillerie tant que stock dédié)
+        // Stock (mouvements et liste : Pharmacy pour l'instant ; pas de updateStock Quincaillerie tant que stock dédié)
         Route::get('/stock', [StockController::class, 'index'])
             ->middleware('permission:hardware.stock.view|hardware.stock.manage')
             ->name('stock.index');
@@ -211,6 +221,32 @@ Route::prefix('hardware')
         Route::get('/stock/{id}/movements', [StockController::class, 'movements'])
             ->middleware('permission:hardware.stock.movement.view|hardware.stock.manage')
             ->name('stock.movements');
+
+        // Inventaires — Module Quincaillerie
+        Route::get('/inventories', [QuincaillerieInventoryController::class, 'index'])
+            ->middleware('permission:inventory.view')
+            ->name('inventories.index');
+        Route::post('/inventories', [QuincaillerieInventoryController::class, 'store'])
+            ->middleware('permission:inventory.create')
+            ->name('inventories.store');
+        Route::get('/inventories/{id}', [QuincaillerieInventoryController::class, 'show'])
+            ->middleware('permission:inventory.view')
+            ->name('inventories.show');
+        Route::post('/inventories/{id}/start', [QuincaillerieInventoryController::class, 'start'])
+            ->middleware('permission:inventory.edit')
+            ->name('inventories.start');
+        Route::post('/inventories/{id}/counts', [QuincaillerieInventoryController::class, 'updateCounts'])
+            ->middleware('permission:inventory.edit')
+            ->name('inventories.counts');
+        Route::post('/inventories/{id}/counts/{productId}', [QuincaillerieInventoryController::class, 'updateSingleCount'])
+            ->middleware('permission:inventory.edit')
+            ->name('inventories.counts.single');
+        Route::post('/inventories/{id}/validate', [QuincaillerieInventoryController::class, 'validate'])
+            ->middleware('permission:inventory.validate')
+            ->name('inventories.validate');
+        Route::post('/inventories/{id}/cancel', [QuincaillerieInventoryController::class, 'cancel'])
+            ->middleware('permission:inventory.cancel')
+            ->name('inventories.cancel');
 
         // Rapports
         Route::get('/reports', [PharmacyReportController::class, 'index'])

@@ -266,38 +266,6 @@ export default function Dashboard({
             </CardContent>
           </Card>
 
-          {/* Actions rapides (selon permissions) – cachées sur mobile */}
-          {visibleActions.length > 0 && (
-            <Card className="hidden md:block bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-white">
-                  <Zap className="h-5 w-5 text-amber-500" />
-                  Actions rapides
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {visibleActions.map((action) => {
-                    const Icon = action.icon;
-                    const btnClass = COLOR_MAP[action.color] || 'bg-gray-500 hover:bg-gray-600';
-                    return (
-                      <Button
-                        key={action.route}
-                        className={`${btnClass} text-white text-sm`}
-                        asChild
-                      >
-                        <Link href={route(action.route)} className="inline-flex items-center gap-2">
-                          <Icon className="h-4 w-4" />
-                          {action.label}
-                        </Link>
-                      </Button>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
@@ -511,6 +479,38 @@ export default function Dashboard({
                 ))}
               </div>
             </div>
+          )}
+
+          {/* Actions rapides (selon permissions) – cachées sur mobile */}
+          {visibleActions.length > 0 && (
+            <Card className="hidden md:block bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-white">
+                  <Zap className="h-5 w-5 text-amber-500" />
+                  Actions rapides
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {visibleActions.map((action) => {
+                    const Icon = action.icon;
+                    const btnClass = COLOR_MAP[action.color] || 'bg-gray-500 hover:bg-gray-600';
+                    return (
+                      <Button
+                        key={action.route}
+                        className={`${btnClass} text-white text-sm`}
+                        asChild
+                      >
+                        <Link href={route(action.route)} className="inline-flex items-center gap-2">
+                          <Icon className="h-4 w-4" />
+                          {action.label}
+                        </Link>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
           )}
       </div>
     </AppLayout>

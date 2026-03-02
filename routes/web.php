@@ -365,6 +365,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/purchases/{id}/cancel', [\Src\Infrastructure\Pharmacy\Http\Controllers\PurchaseController::class, 'cancel'])
             ->middleware('permission:pharmacy.purchases.manage')
             ->name('purchases.cancel');
+        Route::get('/purchases/{id}/pdf', [\Src\Infrastructure\Pharmacy\Http\Controllers\PurchaseController::class, 'exportPdf'])
+            ->middleware('permission:pharmacy.purchases.view|pharmacy.purchases.manage')
+            ->name('purchases.pdf');
+        Route::get('/purchases/{id}/thermal', [\Src\Infrastructure\Pharmacy\Http\Controllers\PurchaseController::class, 'exportThermal'])
+            ->middleware('permission:pharmacy.purchases.view|pharmacy.purchases.manage')
+            ->name('purchases.thermal');
 
         // Suppliers (Fournisseurs) - utilise un drawer, pas de pages séparées create/edit
         Route::get('/suppliers', [\Src\Infrastructure\Pharmacy\Http\Controllers\SupplierController::class, 'index'])

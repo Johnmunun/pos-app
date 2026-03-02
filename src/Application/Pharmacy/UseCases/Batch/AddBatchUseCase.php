@@ -18,7 +18,7 @@ use Src\Shared\ValueObjects\Quantity;
 /**
  * Use case for adding a new batch or increasing quantity of existing batch.
  */
-final class AddBatchUseCase
+final class AddBatchUseCase implements AddBatchUseCaseInterface
 {
     public function __construct(
         private ProductBatchRepositoryInterface $batchRepository,

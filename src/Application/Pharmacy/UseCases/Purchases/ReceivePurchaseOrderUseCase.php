@@ -7,7 +7,7 @@ use Src\Application\Pharmacy\DTO\CreateBatchDTO;
 use Src\Application\Pharmacy\DTO\ReceiveLineDTO;
 use Src\Application\Pharmacy\DTO\ReceivePurchaseOrderDTO;
 use Src\Application\Pharmacy\DTO\UpdateStockDTO;
-use Src\Application\Pharmacy\UseCases\Batch\AddBatchUseCase;
+use Src\Application\Pharmacy\UseCases\Batch\AddBatchUseCaseInterface;
 use Src\Domain\Pharmacy\Entities\PurchaseOrder;
 use Src\Domain\Pharmacy\Repositories\PurchaseOrderLineRepositoryInterface;
 use Src\Domain\Pharmacy\Repositories\PurchaseOrderRepositoryInterface;
@@ -25,7 +25,7 @@ class ReceivePurchaseOrderUseCase
         private PurchaseOrderRepositoryInterface $purchaseOrderRepository,
         private PurchaseOrderLineRepositoryInterface $purchaseOrderLineRepository,
         private UpdateStockUseCase $updateStockUseCase,
-        private AddBatchUseCase $addBatchUseCase
+        private AddBatchUseCaseInterface $addBatchUseCase
     ) {}
 
     /**

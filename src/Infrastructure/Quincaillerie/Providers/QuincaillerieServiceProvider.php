@@ -27,6 +27,11 @@ use Src\Application\Quincaillerie\UseCases\Customer\ActivateCustomerUseCase;
 use Src\Application\Quincaillerie\UseCases\Customer\DeactivateCustomerUseCase;
 use Src\Application\Quincaillerie\Services\DashboardService;
 use Src\Application\Quincaillerie\Services\DepotFilterService;
+use Src\Application\Quincaillerie\Services\InventoryService;
+use Src\Domain\Quincaillerie\Repositories\InventoryRepositoryInterface;
+use Src\Domain\Quincaillerie\Repositories\InventoryItemRepositoryInterface;
+use Src\Infrastructure\Quincaillerie\Persistence\EloquentInventoryRepository;
+use Src\Infrastructure\Quincaillerie\Persistence\EloquentInventoryItemRepository;
 
 /**
  * Service Provider du module Quincaillerie (DDD).
@@ -212,6 +217,26 @@ class QuincaillerieServiceProvider extends ServiceProvider
             DepotFilterService::class,
             DepotFilterService::class
         );
+
+        // Inventory Repositories
+        $this->app->bind(
+            InventoryRepositoryInterface::class,
+            EloquentInventoryRepository::class
+        );
+
+        $this->app->bind(
+            InventoryItemRepositoryInterface::class,
+            EloquentInventoryItemRepository::class
+        );
+
+        // Inventory Service (Application Layer)
+        $this->app->bind(InventoryService::class, function ($app) {
+            return new InventoryService(
+                $app->make(InventoryRepositoryInterface::class),
+                $app->make(InventoryItemRepositoryInterface::class),
+                $app->make(ProductRepositoryInterface::class)
+            );
+        });
     }
 
     public function boot(): void
