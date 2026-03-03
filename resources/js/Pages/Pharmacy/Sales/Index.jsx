@@ -19,7 +19,8 @@ import {
     TrendingUp,
     Printer,
     Wallet as CashRegister,
-    Mail
+    Mail,
+    Share2,
 } from 'lucide-react';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/currency';
 import ExportButtons from '@/Components/Pharmacy/ExportButtons';
@@ -87,6 +88,34 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
         window.open(route(`${routePrefix}.sales.receipt`, saleId), '_blank', 'noopener,noreferrer');
     };
 
+    const shareReceipt = (sale) => {
+        if (!sale) return;
+        const url = route(`${routePrefix}.sales.receipt`, sale.id);
+        const text = `Facture ${sale.id.slice(0, 8)} - ${formatCurrency(Number(sale.total_amount))}`;
+
+        const openWhatsApp = () => {
+            const waUrl = `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`;
+            window.open(waUrl, '_blank', 'noopener,noreferrer');
+        };
+
+        if (navigator.share) {
+            navigator
+                .share({
+                    title: 'Facture',
+                    text,
+                    url,
+                })
+                .catch(() => {
+                    // Si le partage natif échoue (ou est annulé), on tente le fallback WhatsApp
+                    openWhatsApp();
+                });
+            return;
+        }
+
+        // Fallback simple : ouverture de WhatsApp Web avec le lien de la facture
+        openWhatsApp();
+    };
+
     const sendReceiptByEmail = async (saleId) => {
         if (!saleId || emailingSaleId) return;
         setEmailingSaleId(saleId);
@@ -121,36 +150,47 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                             <span className="text-xs text-gray-400 dark:text-gray-500">Raccourci: <kbd className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono">1</kbd> cette page · <kbd className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono">2</kbd> nouvelle vente</span>
                         </p>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            type="button"
-                            disabled={!lastCompletedSale}
-                            onClick={() => lastCompletedSale && openReceipt(lastCompletedSale.id)}
-                            className="inline-flex items-center gap-2 shrink-0"
-                            title={lastCompletedSale ? 'Ouvrir le reçu de la dernière vente terminée pour impression thermique' : 'Aucune vente terminée à imprimer'}
-                        >
-                            <Printer className="h-4 w-4 shrink-0" />
-                            <span className="whitespace-nowrap">Print thermique</span>
-                        </Button>
-                        <ExportButtons
-                            pdfUrl={route(`${routePrefix}.exports.sales.pdf`, { from, to, status })}
-                            excelUrl={route(`${routePrefix}.exports.sales.excel`, { from, to, status })}
-                            disabled={!sales.length}
-                        />
-                        <Button variant="outline" size="sm" asChild>
-                            <Link href={route(`${routePrefix}.cash-registers.index`)} className="inline-flex items-center gap-2">
-                                <CashRegister className="h-4 w-4" />
-                                Caisses
-                            </Link>
-                        </Button>
-                        <Button asChild>
-                            <Link href={route(`${routePrefix}.sales.create`)} className="inline-flex items-center gap-2">
-                                <Plus className="h-4 w-4" />
-                                Nouvelle vente
-                            </Link>
-                        </Button>
+                    <div className="flex flex-wrap lg:flex-nowrap items-center gap-2">
+                        {/* Groupe impression / exports */}
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                type="button"
+                                disabled={!lastCompletedSale}
+                                onClick={() => lastCompletedSale && openReceipt(lastCompletedSale.id)}
+                                className="inline-flex items-center gap-2 shrink-0"
+                                title={
+                                    lastCompletedSale
+                                        ? 'Ouvrir le reçu de la dernière vente terminée pour impression thermique'
+                                        : 'Aucune vente terminée à imprimer'
+                                }
+                            >
+                                <Printer className="h-4 w-4 shrink-0" />
+                                <span className="whitespace-nowrap">Print thermique</span>
+                            </Button>
+                            <ExportButtons
+                                pdfUrl={route(`${routePrefix}.exports.sales.pdf`, { from, to, status })}
+                                excelUrl={route(`${routePrefix}.exports.sales.excel`, { from, to, status })}
+                                disabled={!sales.length}
+                            />
+                        </div>
+                        {/* Groupe Caisses + Nouvelle vente (toujours côte à côte) */}
+                        {/* Pas de wrap ici pour garder Caisses + Nouvelle vente sur une seule ligne */}
+                        <div className="flex items-center gap-2 whitespace-nowrap">
+                            <Button variant="outline" size="sm" asChild>
+                                <Link href={route(`${routePrefix}.cash-registers.index`)} className="inline-flex items-center gap-2">
+                                    <CashRegister className="h-4 w-4" />
+                                    Caisses
+                                </Link>
+                            </Button>
+                            <Button asChild>
+                                <Link href={route(`${routePrefix}.sales.create`)} className="inline-flex items-center gap-2">
+                                    <Plus className="h-4 w-4" />
+                                    Nouvelle vente
+                                </Link>
+                            </Button>
+                        </div>
                     </div>
                 </div>
 
@@ -397,6 +437,15 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                                                         title="Envoyer par email au client"
                                                     >
                                                         <Mail className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => shareReceipt(sale)}
+                                                        className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                                                        title="Partager la facture (WhatsApp / partage système)"
+                                                    >
+                                                        <Share2 className="h-4 w-4" />
                                                     </Button>
                                                     <Button 
                                                         variant="ghost" 

@@ -17,7 +17,7 @@ class EloquentProductRepository implements ProductRepositoryInterface
 {
     public function save(Product $product): void
     {
-        $depotId = request()?->session()->get('current_depot_id');
+        $depotId = request()->session()->get('current_depot_id');
         ProductModel::updateOrCreate(
             ['id' => $product->getId()],
             [
@@ -199,7 +199,7 @@ class EloquentProductRepository implements ProductRepositoryInterface
 
         return new Product(
             $model->id,
-            $model->shop_id,
+            (string) $model->shop_id,
             $code,
             $model->name,
             $model->description ?? '',

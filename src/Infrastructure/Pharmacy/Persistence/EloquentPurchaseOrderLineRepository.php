@@ -44,7 +44,7 @@ class EloquentPurchaseOrderLineRepository implements PurchaseOrderLineRepository
                     new Quantity((int) $model->received_quantity),
                     new Money((float) $model->unit_cost_amount, $currency),
                     new Money((float) $model->line_total_amount, $currency),
-                    new \DateTimeImmutable($model->created_at)
+                    new \DateTimeImmutable($model->created_at->toDateTimeString())
                 );
             })
             ->toArray();

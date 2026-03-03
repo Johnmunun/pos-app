@@ -298,8 +298,13 @@ class StockController
         $shopId = $this->getShopId($request);
         $userModel = UserModel::find($user->id);
         $isRoot = $userModel ? $userModel->isRoot() : false;
+        $isHardware = $this->getModule() === 'Hardware';
 
-        $query = StockMovementModel::with('product:id,name,code');
+        // Pour Pharmacy on peut utiliser la relation Eloquent product,
+        // pour Hardware on fera le mapping manuellement vers QuincaillerieProductModel
+        $query = $isHardware
+            ? StockMovementModel::query()
+            : StockMovementModel::with('product:id,name,code');
         if (!($isRoot && !$shopId)) {
             $query->where('shop_id', $shopId);
         }
@@ -327,15 +332,25 @@ class StockController
         $paginator = $query->paginate($perPage)->appends($request->query());
 
         /** @phpstan-ignore-next-line */
-        $movements = $paginator->getCollection()->map(function (StockMovementModel $model) {
+        $movements = $paginator->getCollection()->map(function (StockMovementModel $model) use ($isHardware) {
+            if ($isHardware) {
+                /** @var QuincaillerieProductModel|null $hardwareProduct */
+                $hardwareProduct = QuincaillerieProductModel::find($model->product_id);
+                $productName = $hardwareProduct?->name;
+                $productCode = $hardwareProduct?->code ?? null;
+            } else {
+                $productName = $model->product ? $model->product->name : null;
+                $productCode = $model->product ? ($model->product->code ?? '') : null;
+            }
+
             return [
                 'id' => $model->id,
                 'type' => $model->type,
                 'quantity' => (int) $model->quantity,
                 'reference' => $model->reference,
                 'product_id' => $model->product_id,
-                'product_name' => $model->product ? $model->product->name : null,
-                'product_code' => $model->product ? ($model->product->code ?? '') : null,
+                'product_name' => $productName,
+                'product_code' => $productCode,
                 'created_at' => $model->created_at ? \Carbon\Carbon::parse($model->created_at)->format('Y-m-d H:i') : null,
                 'created_by' => $model->created_by,
             ];

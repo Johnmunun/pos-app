@@ -50,19 +50,19 @@ class CategoryModel extends Model
     ];
 
     // Relations
-    /** @return \Illuminate\Database\Eloquent\Relations\BelongsTo<self, self> */
+    /** @return \Illuminate\Database\Eloquent\Relations\BelongsTo */
     public function parent()
     {
         return $this->belongsTo(self::class, 'parent_id');
     }
 
-    /** @return \Illuminate\Database\Eloquent\Relations\HasMany<self, self> */
+    /** @return \Illuminate\Database\Eloquent\Relations\HasMany */
     public function children()
     {
         return $this->hasMany(self::class, 'parent_id');
     }
 
-    /** @return \Illuminate\Database\Eloquent\Relations\HasMany<self, ProductModel> */
+    /** @return \Illuminate\Database\Eloquent\Relations\HasMany */
     public function products()
     {
         return $this->hasMany(ProductModel::class, 'category_id');

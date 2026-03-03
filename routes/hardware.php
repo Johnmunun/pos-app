@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Src\Infrastructure\Hardware\Http\Controllers\HardwareDashboardController;
+use Src\Infrastructure\Hardware\Http\Controllers\HardwareAssistantController;
 use Src\Infrastructure\Quincaillerie\Http\Controllers\ProductController as QuincaillerieProductController;
 use Src\Infrastructure\Quincaillerie\Http\Controllers\CategoryController as QuincaillerieCategoryController;
 use Src\Infrastructure\Pharmacy\Http\Controllers\ProductMovementController;
@@ -27,6 +28,13 @@ Route::prefix('hardware')
     ->group(function () {
         Route::get('/dashboard', [HardwareDashboardController::class, 'index'])
             ->name('dashboard');
+
+        // Assistant Intelligent Quincaillerie (chatbot)
+        Route::get('/assistant/ask', fn () => redirect()->route('hardware.dashboard'))
+            ->middleware('permission:module.hardware');
+        Route::post('/assistant/ask', [HardwareAssistantController::class, 'ask'])
+            ->middleware('permission:module.hardware')
+            ->name('assistant.ask');
 
         // Produits — Module Quincaillerie (contrôleur et données dédiés)
         Route::get('/products', [QuincaillerieProductController::class, 'index'])

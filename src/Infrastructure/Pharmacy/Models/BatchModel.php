@@ -6,6 +6,18 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
+/**
+ * @property string $id
+ * @property string $shop_id
+ * @property int|null $depot_id
+ * @property string $product_id
+ * @property string $batch_number
+ * @property \Carbon\Carbon $expiry_date
+ * @property float $quantity
+ * @property float $initial_quantity
+ * @property string|null $supplier_id
+ * @property string|null $purchase_order_id
+ */
 class BatchModel extends Model
 {
     use SoftDeletes, HasFactory;
@@ -102,19 +114,19 @@ class BatchModel extends Model
 
     public function getDaysUntilExpiryAttribute(): int
     {
-        return now()->diffInDays($this->expiry_date, false);
+        return (int) now()->diffInDays($this->expiry_date, false);
     }
 
     public function getStockPercentageAttribute(): float
     {
-        if ($this->initial_quantity === 0) {
-            return 0;
+        if ($this->initial_quantity === 0.0) {
+            return 0.0;
         }
-        
-        return ($this->quantity / $this->initial_quantity) * 100;
+
+        return ($this->quantity / $this->initial_quantity) * 100.0;
     }
 
-    public function getConsumedQuantityAttribute(): int
+    public function getConsumedQuantityAttribute(): float
     {
         return $this->initial_quantity - $this->quantity;
     }

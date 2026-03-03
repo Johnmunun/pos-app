@@ -175,6 +175,30 @@ class ProductController
 
     public function store(Request $request)
     {
+        // Validation en dehors du try pour laisser Laravel/ Inertia gérer les erreurs champ par champ
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'product_code' => 'required|string|max:50',
+            'barcode' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+            'category_id' => 'required|exists:quincaillerie_categories,id',
+            'price' => 'required|numeric|min:0',
+            'currency' => 'required|string|size:3',
+            'minimum_stock' => 'required|integer|min:0',
+            'unit' => 'nullable|string|max:50',
+            'type_unite' => 'required|string|in:PIECE,LOT,METRE,KG,LITRE,BOITE,CARTON,UNITE',
+            'quantite_par_unite' => 'required|integer|min:1',
+            'est_divisible' => 'boolean',
+            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'price_normal' => 'nullable|numeric|min:0',
+            'price_reduced' => 'nullable|numeric|min:0',
+            'price_reduction_percent' => 'nullable|numeric|min:0|max:100',
+            'price_non_negotiable' => 'nullable|numeric|min:0',
+            'price_wholesale_normal' => 'nullable|numeric|min:0',
+            'price_wholesale_reduced' => 'nullable|numeric|min:0',
+            'price_non_negotiable_wholesale' => 'nullable|numeric|min:0',
+        ]);
+
         try {
             $user = $request->user();
             if ($user === null) {
@@ -184,28 +208,6 @@ class ProductController
             if (!$shopId) {
                 return redirect()->back()->withErrors(['message' => 'Veuillez sélectionner un dépôt en haut.']);
             }
-            $request->validate([
-                'name' => 'required|string|max:255',
-                'product_code' => 'required|string|max:50',
-                'barcode' => 'nullable|string|max:255',
-                'description' => 'nullable|string',
-                'category_id' => 'required|exists:quincaillerie_categories,id',
-                'price' => 'required|numeric|min:0',
-                'currency' => 'required|string|size:3',
-                'minimum_stock' => 'required|integer|min:0',
-                'unit' => 'nullable|string|max:50',
-                'type_unite' => 'required|string|in:PIECE,LOT,METRE,KG,LITRE,BOITE,CARTON,UNITE',
-                'quantite_par_unite' => 'required|integer|min:1',
-                'est_divisible' => 'boolean',
-                'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
-                'price_normal' => 'nullable|numeric|min:0',
-                'price_reduced' => 'nullable|numeric|min:0',
-                'price_reduction_percent' => 'nullable|numeric|min:0|max:100',
-                'price_non_negotiable' => 'nullable|numeric|min:0',
-                'price_wholesale_normal' => 'nullable|numeric|min:0',
-                'price_wholesale_reduced' => 'nullable|numeric|min:0',
-                'price_non_negotiable_wholesale' => 'nullable|numeric|min:0',
-            ]);
 
             // Utiliser price_normal comme prix principal si fourni, sinon utiliser price
             $mainPrice = $request->filled('price_normal') 
@@ -418,6 +420,29 @@ class ProductController
 
     public function update(Request $request, string $id)
     {
+        // Laisser la validation Laravel remonter les erreurs champ par champ à Inertia
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'category_id' => 'required|exists:quincaillerie_categories,id',
+            'price' => 'required|numeric|min:0',
+            'currency' => 'required|string|size:3',
+            'minimum_stock' => 'nullable|integer|min:0',
+            'type_unite' => 'required|string|in:PIECE,LOT,METRE,KG,LITRE,BOITE,CARTON,UNITE',
+            'quantite_par_unite' => 'required|integer|min:1',
+            'est_divisible' => 'boolean',
+            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'remove_image' => 'nullable|boolean',
+            'price_normal' => 'nullable|numeric|min:0',
+            'price_reduced' => 'nullable|numeric|min:0',
+            'price_reduction_percent' => 'nullable|numeric|min:0|max:100',
+            'price_non_negotiable' => 'nullable|numeric|min:0',
+            'price_wholesale_normal' => 'nullable|numeric|min:0',
+            'price_wholesale_reduced' => 'nullable|numeric|min:0',
+            'price_non_negotiable_wholesale' => 'nullable|numeric|min:0',
+            'barcode' => 'nullable|string|max:255',
+        ]);
+
         try {
             $user = $request->user();
             if ($user === null) {
@@ -427,27 +452,6 @@ class ProductController
             if (!$shopId) {
                 return redirect()->back()->withErrors(['message' => 'Veuillez sélectionner un dépôt en haut.']);
             }
-            $request->validate([
-                'name' => 'required|string|max:255',
-                'description' => 'nullable|string',
-                'category_id' => 'required|exists:quincaillerie_categories,id',
-                'price' => 'required|numeric|min:0',
-                'currency' => 'required|string|size:3',
-                'minimum_stock' => 'nullable|integer|min:0',
-                'type_unite' => 'required|string|in:PIECE,LOT,METRE,KG,LITRE,BOITE,CARTON,UNITE',
-                'quantite_par_unite' => 'required|integer|min:1',
-                'est_divisible' => 'boolean',
-                'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
-                'remove_image' => 'nullable|boolean',
-                'price_normal' => 'nullable|numeric|min:0',
-                'price_reduced' => 'nullable|numeric|min:0',
-                'price_reduction_percent' => 'nullable|numeric|min:0|max:100',
-                'price_non_negotiable' => 'nullable|numeric|min:0',
-                'price_wholesale_normal' => 'nullable|numeric|min:0',
-                'price_wholesale_reduced' => 'nullable|numeric|min:0',
-                'price_non_negotiable_wholesale' => 'nullable|numeric|min:0',
-                'barcode' => 'nullable|string|max:255',
-            ]);
 
             // Utiliser price_normal comme prix principal si fourni, sinon utiliser price
             $mainPrice = $request->filled('price_normal') 

@@ -4,6 +4,8 @@ namespace Src\Infrastructure\Finance\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Inertia\Inertia;
+use Inertia\Response;
 use Src\Application\Finance\UseCases\Debt\CreateDebtUseCase;
 use Src\Application\Finance\UseCases\Debt\SettleDebtUseCase;
 use Src\Domain\Finance\Repositories\DebtRepositoryInterface;
@@ -54,18 +56,21 @@ class DebtController
         return (string) $shopId;
     }
 
-    public function index(Request $request): JsonResponse
+    public function index(Request $request): Response
     {
         $tenantId = $this->getTenantId($request);
         $perPage = min((int) $request->input('per_page', 15), 100);
         $page = max(1, (int) $request->input('page', 1));
-        $filters = array_filter([
+
+        $filtersInput = [
             'type' => $request->input('type'),
             'status' => $request->input('status'),
             'party_id' => $request->input('party_id'),
             'from' => $request->input('from'),
             'to' => $request->input('to'),
-        ]);
+        ];
+        $filters = array_filter($filtersInput);
+
         $result = $this->debtRepository->findByTenantPaginated($tenantId, $perPage, $page, $filters);
         $items = array_map(fn ($d) => [
             'id' => $d->getId(),
@@ -81,7 +86,24 @@ class DebtController
             'reference_type' => $d->getReferenceType(),
             'reference_id' => $d->getReferenceId(),
         ], $result['items']);
-        return response()->json(['data' => $items, 'total' => $result['total']]);
+
+        $total = $result['total'];
+        $lastPage = $perPage > 0 ? (int) ceil($total / $perPage) : 1;
+        $from = $total === 0 ? 0 : (($page - 1) * $perPage + 1);
+        $to = min($total, $page * $perPage);
+
+        return Inertia::render('Finance/Debts/Index', [
+            'debts' => $items,
+            'filters' => $filtersInput,
+            'pagination' => [
+                'current_page' => $page,
+                'last_page' => $lastPage,
+                'per_page' => $perPage,
+                'total' => $total,
+                'from' => $from,
+                'to' => $to,
+            ],
+        ]);
     }
 
     public function show(Request $request, string $id): JsonResponse

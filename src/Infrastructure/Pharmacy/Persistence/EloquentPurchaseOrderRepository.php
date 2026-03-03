@@ -74,11 +74,11 @@ class EloquentPurchaseOrderRepository implements PurchaseOrderRepositoryInterfac
             $model->status,
             new Money((float) $model->total_amount, $currency),
             $currency,
-            $model->ordered_at ? new DateTimeImmutable($model->ordered_at) : null,
-            $model->expected_at ? new DateTimeImmutable($model->expected_at) : null,
-            $model->received_at ? new DateTimeImmutable($model->received_at) : null,
+            $model->ordered_at ? new DateTimeImmutable($model->ordered_at->toDateTimeString()) : null,
+            $model->expected_at ? new DateTimeImmutable($model->expected_at->toDateTimeString()) : null,
+            $model->received_at ? new DateTimeImmutable($model->received_at->toDateTimeString()) : null,
             (int) $model->created_by,
-            new DateTimeImmutable($model->created_at)
+            new DateTimeImmutable($model->created_at->toDateTimeString())
         );
     }
 }

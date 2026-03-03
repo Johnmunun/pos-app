@@ -5,6 +5,17 @@ namespace Src\Infrastructure\Pharmacy\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
+/**
+ * @property string $id
+ * @property string $purchase_order_id
+ * @property string $product_id
+ * @property int $ordered_quantity
+ * @property int $received_quantity
+ * @property float $unit_cost_amount
+ * @property string $currency
+ * @property float $line_total_amount
+ * @property \Carbon\Carbon $created_at
+ */
 class PurchaseOrderLineModel extends Model
 {
     use HasFactory;

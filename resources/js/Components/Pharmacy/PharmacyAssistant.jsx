@@ -96,6 +96,19 @@ export default function PharmacyAssistant() {
     }
   }, [open, hasPharmacy]);
 
+  const buildMessageWithHistory = (currentText) => {
+    const recent = messages.slice(-6);
+    if (recent.length === 0) return currentText;
+    const historyLines = recent
+      .filter((m) => typeof m.content === 'string' && m.content.trim() !== '')
+      .map((m) => `${m.role === 'user' ? 'Utilisateur' : 'Assistant'}: ${m.content.trim()}`);
+    if (historyLines.length === 0) return currentText;
+    return `Contexte de la conversation (historique récent):
+${historyLines.join('\n')}
+
+Question actuelle: ${currentText}`;
+  };
+
   const handleSend = async (textOverride = null) => {
     const text = (textOverride ?? input.trim()).trim();
     if (!text || loading) return;
@@ -106,7 +119,8 @@ export default function PharmacyAssistant() {
     setVoiceStatus(null);
 
     try {
-      const { data } = await axios.post(route('pharmacy.assistant.ask'), { message: text });
+      const messageForBackend = buildMessageWithHistory(text);
+      const { data } = await axios.post(route('pharmacy.assistant.ask'), { message: messageForBackend });
       if (data.navigation && data.navigation.type === 'navigation' && data.navigation.route) {
         setMessages((prev) => [...prev, { role: 'assistant', content: null, navigation: data.navigation }]);
       } else {

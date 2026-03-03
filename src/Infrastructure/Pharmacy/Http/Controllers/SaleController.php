@@ -31,6 +31,10 @@ use Src\Application\Quincaillerie\Services\DepotFilterService;
 use Src\Infrastructure\Pharmacy\Adapters\QuincaillerieProductRepositoryAdapter;
 use Src\Domain\Quincaillerie\Repositories\ProductRepositoryInterface as QuincaillerieProductRepositoryInterface;
 use Src\Domain\Pharmacy\Repositories\ProductRepositoryInterface;
+use Src\Domain\Pharmacy\Repositories\StockMovementRepositoryInterface;
+use Src\Infrastructure\Pharmacy\Adapters\HardwareUpdateStockUseCase;
+use Src\Shared\ValueObjects\Money;
+use Src\Domain\Pharmacy\Entities\Sale as SaleEntity;
 
 class SaleController
 {
@@ -766,7 +770,12 @@ class SaleController
             if ($authUser === null) {
                 abort(403, 'User not authenticated.');
             }
-            $this->finalizeSaleUseCase->execute($id, (float) $request->input('paid_amount'), (int) $authUser->id);
+            // Si module Hardware, utiliser un flux de finalisation adapté (sans lots Pharmacy)
+            if ($this->getModule() === 'Hardware') {
+                $this->finalizeHardwareSale($sale, (float) $request->input('paid_amount'), (int) $authUser->id);
+            } else {
+                $this->finalizeSaleUseCase->execute($id, (float) $request->input('paid_amount'), (int) $authUser->id);
+            }
 
             // Liaison Caisse → Finance : facture + dette client si paiement partiel
             $sale = $this->saleRepository->findById($id);
@@ -799,6 +808,58 @@ class SaleController
         } catch (\Throwable $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+    }
+
+    /**
+     * Finalisation d'une vente pour le module Hardware.
+     * Reprend la logique métier de FinalizeSaleUseCase mais avec HardwareUpdateStockUseCase
+     * qui ne dépend pas des lots Pharmacy (batches).
+     */
+    private function finalizeHardwareSale(SaleEntity $sale, float $paidAmount, int $userId): void
+    {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($sale, $paidAmount, $userId): void {
+            if ($sale->getStatus() !== SaleEntity::STATUS_DRAFT) {
+                throw new \LogicException('Only draft sales can be finalized');
+            }
+
+            $lines = $this->saleLineRepository->findBySale($sale->getId());
+            if (count($lines) === 0) {
+                throw new \LogicException('Cannot finalize empty sale');
+            }
+
+            $currency = $sale->getCurrency();
+            $total = new Money(0, $currency);
+
+            foreach ($lines as $line) {
+                $total = $total->add($line->getLineTotal());
+            }
+
+            $paid = new Money($paidAmount, $currency);
+            if ($paid->getAmount() < 0) {
+                throw new \InvalidArgumentException('Paid amount cannot be negative');
+            }
+
+            // Met à jour les totaux de la vente
+            $sale->updateTotals($total, $paid);
+
+            // Prépare un UpdateStockUseCase adapté Hardware (sans batches)
+            $productRepository = $this->getProductRepository(); // adapter vers Quincaillerie pour Hardware
+            $stockMovementRepository = app(StockMovementRepositoryInterface::class);
+            $updateStockUseCase = new HardwareUpdateStockUseCase($productRepository, $stockMovementRepository);
+
+            foreach ($lines as $line) {
+                $updateStockUseCase->removeStock(
+                    $line->getProductId(),
+                    $line->getQuantity()->getValue(),
+                    $sale->getShopId(),
+                    $userId,
+                    'SALE-' . $sale->getId()
+                );
+            }
+
+            $sale->markCompleted();
+            $this->saleRepository->save($sale);
+        });
     }
 
     public function cancel(Request $request, string $id): JsonResponse

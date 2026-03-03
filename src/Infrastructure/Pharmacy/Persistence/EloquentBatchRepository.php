@@ -14,7 +14,7 @@ class EloquentBatchRepository implements BatchRepositoryInterface
 {
     public function save(Batch $batch): void
     {
-        $depotId = request()?->session()->get('current_depot_id');
+        $depotId = request()->session()->get('current_depot_id');
         BatchModel::updateOrCreate(
             ['id' => $batch->getId()],
             [

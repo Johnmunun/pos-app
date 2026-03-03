@@ -16,46 +16,52 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
-            color: #fff;
+            background: linear-gradient(160deg, #1e293b 0%, #0f172a 50%, #020617 100%);
+            color: #e2e8f0;
             text-align: center;
             padding: 20px;
         }
         .container {
-            max-width: 500px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
+            max-width: 480px;
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(148, 163, 184, 0.12);
             border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 48px 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
         }
         .icon {
-            font-size: 80px;
-            margin-bottom: 20px;
+            font-size: 72px;
+            margin-bottom: 24px;
+            opacity: 0.9;
         }
         h1 {
-            font-size: 28px;
-            margin-bottom: 16px;
-            font-weight: 700;
+            font-size: 26px;
+            margin-bottom: 14px;
+            font-weight: 600;
+            color: #f8fafc;
         }
         p {
-            font-size: 16px;
-            line-height: 1.6;
-            opacity: 0.9;
-            margin-bottom: 24px;
+            font-size: 15px;
+            line-height: 1.65;
+            color: #94a3b8;
+            margin-bottom: 28px;
         }
         .button {
             display: inline-block;
-            padding: 12px 24px;
-            background: #fff;
-            color: #f59e0b;
+            padding: 12px 28px;
+            background: #334155;
+            color: #f1f5f9;
+            border: 1px solid rgba(148, 163, 184, 0.2);
             border-radius: 10px;
             text-decoration: none;
             font-weight: 600;
-            transition: transform 0.2s;
+            font-size: 15px;
+            transition: background 0.2s, transform 0.15s;
         }
         .button:hover {
-            transform: scale(1.05);
+            background: #475569;
+            transform: translateY(-1px);
         }
     </style>
 </head>
@@ -65,12 +71,9 @@
         <h1>Vous êtes hors ligne</h1>
         <p>
             Il semble que vous n'ayez pas de connexion Internet.
-            Veuillez vérifier votre connexion et réessayer.
+            Vérifiez votre connexion puis réessayez.
         </p>
         <a href="/" class="button">Réessayer</a>
     </div>
 </body>
 </html>
-
-
-

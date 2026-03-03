@@ -5,6 +5,7 @@ import Navbar from '@/Components/Layout/Navbar';
 import DepotAlert from '@/Components/DepotAlert';
 import FlashMessages from '@/Components/FlashMessages';
 import PharmacyAssistant from '@/Components/Pharmacy/PharmacyAssistant';
+import HardwareAssistant from '@/Components/Hardware/HardwareAssistant';
 
 /**
  * Layout: AppLayout
@@ -87,8 +88,9 @@ export default function AppLayout({ children, header, fullWidth = false }) {
             {/* Flash Messages */}
             <FlashMessages />
 
-            {/* Assistant Intelligent Pharmacie (chatbot) */}
+            {/* Assistants intelligents (Pharmacie + Quincaillerie) */}
             <PharmacyAssistant />
+            <HardwareAssistant />
         </div>
     );
 }

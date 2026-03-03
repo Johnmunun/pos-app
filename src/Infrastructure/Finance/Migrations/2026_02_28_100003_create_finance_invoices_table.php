@@ -12,7 +12,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->unsignedBigInteger('tenant_id')->index();
             $table->string('shop_id')->index();
-            $table->string('number', 64)->unique();
+            $table->string('number', 64);
             $table->string('source_type', 32)->index();
             $table->string('source_id')->index();
             $table->decimal('total_amount', 15, 2);
