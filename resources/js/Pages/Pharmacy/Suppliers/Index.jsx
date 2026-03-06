@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Badge } from '@/Components/ui/badge';
+import ImportModal from '@/Components/ImportModal';
 import { 
     Truck, 
     Plus, 
@@ -17,7 +18,8 @@ import {
     XCircle,
     Phone,
     Mail,
-    Building
+    Building,
+    Upload,
 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -45,6 +47,8 @@ export default function SuppliersIndex({ suppliers, filters = {}, routePrefix = 
     const canCreate = hasPermission(`${routePrefix}.supplier.create`);
     const canEdit = hasPermission(`${routePrefix}.supplier.edit`);
     const canView = hasPermission(`${routePrefix}.supplier.view`);
+
+    const canImport = hasPermission(`${routePrefix}.supplier.import`);
 
     const handleFilter = (e) => {
         e.preventDefault();
@@ -111,6 +115,66 @@ export default function SuppliersIndex({ suppliers, filters = {}, routePrefix = 
 
     const activeCount = suppliers.data?.filter(s => s.status === 'active').length || 0;
     const inactiveCount = suppliers.data?.filter(s => s.status === 'inactive').length || 0;
+
+    // Import
+    const [importOpen, setImportOpen] = useState(false);
+    const [importFile, setImportFile] = useState(null);
+    const [importPreview, setImportPreview] = useState(null);
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [confirmingImport, setConfirmingImport] = useState(false);
+
+    const handleGeneratePreview = async (e) => {
+        e.preventDefault();
+        if (!importFile) {
+            toast.error('Veuillez sélectionner un fichier.');
+            return;
+        }
+        setPreviewLoading(true);
+        setImportPreview(null);
+        try {
+            const formData = new FormData();
+            formData.append('file', importFile);
+            const res = await axios.post(route(`${routePrefix}.suppliers.import.preview`), formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            setImportPreview(res.data);
+        } catch (err) {
+            const msg = err.response?.data?.message || "Erreur lors de l'aperçu.";
+            toast.error(msg);
+        } finally {
+            setPreviewLoading(false);
+        }
+    };
+
+    const handleConfirmImport = async () => {
+        if (!importFile) {
+            toast.error('Veuillez sélectionner un fichier.');
+            return;
+        }
+        setConfirmingImport(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', importFile);
+            const res = await axios.post(route(`${routePrefix}.suppliers.import`), formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            if (res.data.success > 0) {
+                toast.success(`${res.data.success} fournisseur(s) importé(s) avec succès.`);
+                setImportOpen(false);
+                setImportFile(null);
+                setImportPreview(null);
+                router.reload({ only: ['suppliers'] });
+            }
+            if (res.data.failed > 0 && res.data.errors?.length) {
+                toast.error(`${res.data.failed} ligne(s) en erreur.`);
+            }
+        } catch (err) {
+            const msg = err.response?.data?.message || "Erreur lors de l'import.";
+            toast.error(msg);
+        } finally {
+            setConfirmingImport(false);
+        }
+    };
 
     return (
         <AppLayout
@@ -191,11 +255,28 @@ export default function SuppliersIndex({ suppliers, filters = {}, routePrefix = 
                                 <Filter className="h-5 w-5 mr-2 text-amber-500" />
                                 Filtres
                             </CardTitle>
-                            <ExportButtons
-                                pdfUrl={route(`${routePrefix}.exports.suppliers.pdf`)}
-                                excelUrl={route(`${routePrefix}.exports.suppliers.excel`)}
-                                disabled={!suppliers.data?.length}
-                            />
+                            <div className="flex items-center gap-2">
+                                <ExportButtons
+                                    pdfUrl={route(`${routePrefix}.exports.suppliers.pdf`)}
+                                    excelUrl={route(`${routePrefix}.exports.suppliers.excel`)}
+                                    disabled={!suppliers.data?.length}
+                                />
+                                {canImport && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            setImportOpen(true);
+                                            setImportFile(null);
+                                            setImportPreview(null);
+                                        }}
+                                    >
+                                        <Upload className="h-4 w-4 mr-2" />
+                                        Importer
+                                    </Button>
+                                )}
+                            </div>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={handleFilter} className="flex flex-wrap gap-4 items-end">
@@ -411,6 +492,37 @@ export default function SuppliersIndex({ suppliers, filters = {}, routePrefix = 
                 canUpdate={canEdit}
                 routePrefix={routePrefix}
             />
+            {/* Modal Import Fournisseurs */}
+            {canImport && (
+                <ImportModal
+                    show={importOpen}
+                    onClose={() => {
+                        setImportOpen(false);
+                        setImportFile(null);
+                        setImportPreview(null);
+                    }}
+                    title="Importer des fournisseurs"
+                    summaryItems={[
+                        'Importez vos fournisseurs via un fichier Excel (.xlsx) ou CSV.',
+                        'Colonne obligatoire : nom. Les autres colonnes sont optionnelles.',
+                        'Ne pas modifier la première ligne (en-têtes) ni renommer les colonnes du modèle.',
+                        'Ne pas ajouter de nouvelles colonnes ni fusionner de cellules, et éviter les formules Excel dans les champs importés.',
+                    ]}
+                    examples={[
+                        { values: { nom: 'Fournisseur ABC', email: 'contact@abc.cd', telephone: '+243 800 000 000' } },
+                        { values: { nom: 'Grossiste XYZ', email: 'info@xyz.cd', telephone: '+243 800 111 111' } },
+                    ]}
+                    templateUrl={route(`${routePrefix}.suppliers.import.template`)}
+                    accept=".xlsx,.csv,.txt"
+                    file={importFile}
+                    onFileChange={setImportFile}
+                    onGeneratePreview={handleGeneratePreview}
+                    previewLoading={previewLoading}
+                    preview={importPreview}
+                    onConfirmImport={handleConfirmImport}
+                    confirmingImport={confirmingImport}
+                />
+            )}
         </AppLayout>
     );
 }

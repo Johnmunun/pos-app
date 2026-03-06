@@ -150,7 +150,7 @@ export default function ExportButtons({
                 {loading === 'pdf' ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                    <FileText className="h-4 w-4 text-red-500" />
+                    <FileText className="h-4 w-4 shrink-0 text-red-500" />
                 )}
                 <span className="hidden sm:inline">PDF</span>
             </Button>
@@ -164,7 +164,7 @@ export default function ExportButtons({
                 {loading === 'excel' ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                    <FileSpreadsheet className="h-4 w-4 text-green-600" />
+                    <FileSpreadsheet className="h-4 w-4 shrink-0 text-green-600" />
                 )}
                 <span className="hidden sm:inline">Excel</span>
             </Button>

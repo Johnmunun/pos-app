@@ -94,7 +94,10 @@ export default function FinanceDashboardIndex({ dashboard, filters }) {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <form onSubmit={handleFilter} className="flex flex-col md:flex-row items-end gap-4">
+                            <form
+                                onSubmit={handleFilter}
+                                className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"
+                            >
                                 <div className="flex-1">
                                     <label htmlFor="from" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         Du
@@ -119,8 +122,11 @@ export default function FinanceDashboardIndex({ dashboard, filters }) {
                                         className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-gray-100"
                                     />
                                 </div>
-                                <div className="flex items-end">
-                                    <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                                <div className="flex items-end justify-start md:justify-end w-full">
+                                    <Button
+                                        type="submit"
+                                        className="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white"
+                                    >
                                         Filtrer
                                     </Button>
                                 </div>

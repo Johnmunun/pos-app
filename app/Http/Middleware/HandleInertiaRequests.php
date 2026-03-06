@@ -66,7 +66,13 @@ class HandleInertiaRequests extends Middleware
                             $tenantSector = 'hardware';
                         } elseif (in_array('module.pharmacy', $permissions, true)) {
                             $tenantSector = 'pharmacy';
+                        } elseif (in_array('module.commerce', $permissions, true)) {
+                            $tenantSector = 'commerce';
                         }
+                    }
+                    // Secteurs Kiosque, Supermarché, Boucherie, Autre = module Global Commerce
+                    if (in_array($tenantSector, ['kiosk', 'supermarket', 'butchery', 'other'], true)) {
+                        $tenantSector = 'commerce';
                     }
 
                     if (\Illuminate\Support\Facades\Schema::hasTable('depots')) {
@@ -76,7 +82,8 @@ class HandleInertiaRequests extends Middleware
 
                         try {
                             if (method_exists($user, 'isRoot') && !$user->isRoot() && method_exists($user, 'depots')) {
-                                $userDepotIds = $user->depots()->pluck('id')->toArray();
+                                // Qualifier la colonne pour éviter les ambiguïtés avec la table pivot user_depot
+                                $userDepotIds = $user->depots()->pluck('depots.id')->map(fn ($id) => (int) $id)->toArray();
                                 if (!empty($userDepotIds)) {
                                     $depotsQuery->whereIn('id', $userDepotIds);
                                 }
@@ -111,14 +118,28 @@ class HandleInertiaRequests extends Middleware
             
             // Récupérer la devise de la boutique
             try {
+                // Pour Commerce : prioriser la boutique liée au dépôt courant (cohérent avec GcReportController)
+                $currencyFromDepotShop = false;
+                if ($currentDepot && $tenantSector === 'commerce' && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
+                    $shopByDepot = \App\Models\Shop::where('depot_id', (int) $currentDepot['id'])
+                        ->where('tenant_id', $user->tenant_id)
+                        ->first();
+                    if ($shopByDepot && $shopByDepot->currency) {
+                        $shopCurrency = $shopByDepot->currency;
+                        $currencyFromDepotShop = true;
+                    }
+                }
+
                 $shopId = $user->shop_id ?? $user->tenant_id;
                 if ($shopId) {
-                    // Chercher la boutique
-                    $shop = \App\Models\Shop::find($shopId);
-                    if ($shop && $shop->currency) {
-                        $shopCurrency = $shop->currency;
+                    // Chercher la boutique (sauf si devise déjà obtenue depuis le dépôt Commerce)
+                    if (!$currencyFromDepotShop) {
+                        $shop = \App\Models\Shop::find($shopId);
+                        if ($shop && $shop->currency) {
+                            $shopCurrency = $shop->currency;
+                        }
                     }
-                    
+
                     // Récupérer les devises configurées pour le tenant
                     $tenantId = $user->tenant_id ?? $shopId;
                     $currencies = \App\Models\Currency::where('tenant_id', $tenantId)
@@ -126,7 +147,7 @@ class HandleInertiaRequests extends Middleware
                         ->orderByDesc('is_default')
                         ->orderBy('code')
                         ->get(['id', 'code', 'name', 'symbol', 'is_default']);
-                    
+
                     $shopCurrencies = $currencies->map(fn ($c) => [
                         'id' => $c->id,
                         'code' => $c->code,
@@ -134,11 +155,13 @@ class HandleInertiaRequests extends Middleware
                         'symbol' => $c->symbol,
                         'is_default' => $c->is_default,
                     ])->toArray();
-                    
-                    // Si devise par défaut trouvée dans les devises configurées
-                    $defaultCurrency = $currencies->firstWhere('is_default', true);
-                    if ($defaultCurrency) {
-                        $shopCurrency = $defaultCurrency->code;
+
+                    // Si devise par défaut trouvée dans les devises configurées (ne pas écraser si déjà définie par le dépôt Commerce)
+                    if (!$currencyFromDepotShop) {
+                        $defaultCurrency = $currencies->firstWhere('is_default', true);
+                        if ($defaultCurrency) {
+                            $shopCurrency = $defaultCurrency->code;
+                        }
                     }
 
                     try {
@@ -179,6 +202,52 @@ class HandleInertiaRequests extends Middleware
                 'message' => $request->session()->get('message'),
             ],
         ];
+    }
+
+    /**
+     * Retourne les dépôts et le dépôt courant pour une requête (pour les vues Inertia).
+     * Utilisable par les contrôleurs Hardware pour s'assurer que la navbar affiche le sélecteur.
+     *
+     * @return array{depots: array, currentDepot: array|null}
+     */
+    public static function getDepotsForRequest(Request $request): array
+    {
+        $user = $request->user();
+        $currentDepot = null;
+        $depots = [];
+        if (!$user || !$user->tenant_id || !\Illuminate\Support\Facades\Schema::hasTable('depots')) {
+            return ['depots' => [], 'currentDepot' => null];
+        }
+        try {
+            $depotsQuery = \App\Models\Depot::where('tenant_id', $user->tenant_id)
+                ->where('is_active', true)
+                ->orderBy('name');
+            if (method_exists($user, 'isRoot') && !$user->isRoot() && method_exists($user, 'depots')) {
+                // Qualifier la colonne pour éviter l'ambiguïté avec la table pivot user_depot
+                $userDepotIds = $user->depots()->pluck('depots.id')->map(fn ($id) => (int) $id)->toArray();
+                if (!empty($userDepotIds)) {
+                    $depotsQuery->whereIn('id', $userDepotIds);
+                }
+            }
+            $depots = $depotsQuery->get(['id', 'name', 'code'])
+                ->map(fn ($d) => ['id' => (int) $d->id, 'name' => $d->name, 'code' => $d->code ?? ''])
+                ->values()
+                ->toArray();
+            $depotId = $request->session()->get('current_depot_id');
+            $depotId = $depotId !== null ? (int) $depotId : null;
+            if ($depotId && count($depots) > 0) {
+                $depot = collect($depots)->firstWhere('id', $depotId);
+                if ($depot) {
+                    $currentDepot = $depot;
+                }
+            }
+            if (!$currentDepot && count($depots) === 1) {
+                $currentDepot = $depots[0];
+            }
+        } catch (\Throwable $e) {
+            Log::debug('getDepotsForRequest failed', ['error' => $e->getMessage()]);
+        }
+        return ['depots' => $depots, 'currentDepot' => $currentDepot];
     }
 
     /**

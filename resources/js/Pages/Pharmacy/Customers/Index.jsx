@@ -4,6 +4,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Badge } from '@/Components/ui/badge';
+import ImportModal from '@/Components/ImportModal';
 import CustomerDrawer from '@/Components/Pharmacy/CustomerDrawer';
 import ExportButtons from '@/Components/Pharmacy/ExportButtons';
 import { toast } from 'react-hot-toast';
@@ -24,6 +25,8 @@ import {
     CreditCard,
     ChevronLeft,
     ChevronRight,
+    Upload,
+    X,
 } from 'lucide-react';
 
 export default function CustomersIndex({ customers, filters = {}, routePrefix = 'pharmacy' }) {
@@ -48,6 +51,13 @@ export default function CustomersIndex({ customers, filters = {}, routePrefix = 
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [processing, setProcessing] = useState({});
+
+    // Import
+    const [importOpen, setImportOpen] = useState(false);
+    const [importFile, setImportFile] = useState(null);
+    const [importPreview, setImportPreview] = useState(null);
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [confirmingImport, setConfirmingImport] = useState(false);
 
     const handleSearch = () => {
         router.get(route(`${routePrefix}.customers.index`), {
@@ -157,6 +167,61 @@ export default function CustomersIndex({ customers, filters = {}, routePrefix = 
         }).format(amount);
     };
 
+    const canImport = hasPermission(`${routePrefix}.customer.import`);
+
+    const handleGeneratePreview = async (e) => {
+        e.preventDefault();
+        if (!importFile) {
+            toast.error('Veuillez sélectionner un fichier.');
+            return;
+        }
+        setPreviewLoading(true);
+        setImportPreview(null);
+        try {
+            const formData = new FormData();
+            formData.append('file', importFile);
+            const res = await axios.post(route(`${routePrefix}.customers.import.preview`), formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            setImportPreview(res.data);
+        } catch (err) {
+            const msg = err.response?.data?.message || "Erreur lors de l'aperçu.";
+            toast.error(msg);
+        } finally {
+            setPreviewLoading(false);
+        }
+    };
+
+    const handleConfirmImport = async () => {
+        if (!importFile) {
+            toast.error('Veuillez sélectionner un fichier.');
+            return;
+        }
+        setConfirmingImport(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', importFile);
+            const res = await axios.post(route(`${routePrefix}.customers.import`), formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            if (res.data.success > 0) {
+                toast.success(`${res.data.success} client(s) importé(s) avec succès.`);
+                setImportOpen(false);
+                setImportFile(null);
+                setImportPreview(null);
+                router.reload({ only: ['customers'] });
+            }
+            if (res.data.failed > 0 && res.data.errors?.length) {
+                toast.error(`${res.data.failed} ligne(s) en erreur.`);
+            }
+        } catch (err) {
+            const msg = err.response?.data?.message || "Erreur lors de l'import.";
+            toast.error(msg);
+        } finally {
+            setConfirmingImport(false);
+        }
+    };
+
     return (
         <AppLayout>
             <Head title="Clients" />
@@ -179,6 +244,19 @@ export default function CustomersIndex({ customers, filters = {}, routePrefix = 
                             excelUrl={route(`${routePrefix}.exports.customers.excel`)}
                             disabled={!customers?.data?.length}
                         />
+                        {canImport && (
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setImportOpen(true);
+                                    setImportFile(null);
+                                    setImportPreview(null);
+                                }}
+                            >
+                                <Upload className="h-4 w-4 mr-2" />
+                                Importer
+                            </Button>
+                        )}
                         {canCreate && (
                             <Button onClick={handleOpenCreate}>
                                 <Plus className="h-4 w-4 mr-2" />
@@ -408,6 +486,38 @@ export default function CustomersIndex({ customers, filters = {}, routePrefix = 
                 canUpdate={canEdit}
                 routePrefix={routePrefix}
             />
+
+            {/* Modal Import Clients */}
+            {canImport && (
+                <ImportModal
+                    show={importOpen}
+                    onClose={() => {
+                        setImportOpen(false);
+                        setImportFile(null);
+                        setImportPreview(null);
+                    }}
+                    title="Importer des clients"
+                    summaryItems={[
+                        'Importez vos clients via un fichier Excel (.xlsx) ou CSV.',
+                        'Colonne obligatoire : nom. Les autres colonnes sont optionnelles.',
+                        'Ne pas modifier la première ligne (en-têtes) ni renommer les colonnes du modèle.',
+                        'Ne pas ajouter de nouvelles colonnes ni fusionner de cellules, et éviter les formules Excel dans les champs importés.',
+                    ]}
+                    examples={[
+                        { values: { nom: 'Jean Dupont', email: 'jean@exemple.com', telephone: '+243 800 000 000' } },
+                        { values: { nom: 'Société ABC', email: 'contact@abc.cd', telephone: '+243 800 111 111' } },
+                    ]}
+                    templateUrl={route(`${routePrefix}.customers.import.template`)}
+                    accept=".xlsx,.csv,.txt"
+                    file={importFile}
+                    onFileChange={setImportFile}
+                    onGeneratePreview={handleGeneratePreview}
+                    previewLoading={previewLoading}
+                    preview={importPreview}
+                    onConfirmImport={handleConfirmImport}
+                    confirmingImport={confirmingImport}
+                />
+            )}
         </AppLayout>
     );
 }

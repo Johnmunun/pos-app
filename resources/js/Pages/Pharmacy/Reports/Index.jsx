@@ -163,8 +163,9 @@ export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy'
                                         href={route(`${routePrefix}.exports.reports.pdf`, { from: dateFrom, to: dateTo })}
                                         target="_blank"
                                         rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-2"
                                     >
-                                        <FileDown className="h-4 w-4 mr-1.5" />
+                                        <FileDown className="h-4 w-4 shrink-0" />
                                         Exporter PDF
                                     </a>
                                 </Button>
@@ -179,8 +180,9 @@ export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy'
                                         href={route(`${routePrefix}.exports.reports.excel`, { from: dateFrom, to: dateTo })}
                                         target="_blank"
                                         rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-2"
                                     >
-                                        <FileSpreadsheet className="h-4 w-4 mr-1.5" />
+                                        <FileSpreadsheet className="h-4 w-4 shrink-0" />
                                         Exporter Excel
                                     </a>
                                 </Button>

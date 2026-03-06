@@ -2,6 +2,7 @@
 
 namespace Src\Infrastructure\Hardware\Http\Controllers;
 
+use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -109,6 +110,7 @@ class HardwareDashboardController
             }
         }
 
+        $depotsData = HandleInertiaRequests::getDepotsForRequest($request);
         return Inertia::render('Hardware/Dashboard', [
             'stats' => $stats,
             'chartSalesLastDays' => $chartSalesLastDays,
@@ -118,6 +120,8 @@ class HardwareDashboardController
                 'from' => $dateFrom,
                 'to' => $dateTo,
             ],
+            'depots' => $depotsData['depots'],
+            'currentDepot' => $depotsData['currentDepot'],
         ]);
     }
 

@@ -433,6 +433,7 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
                                     </div>
                                     <input
                                         id="image"
+                                        name="image"
                                         type="file"
                                         accept="image/jpeg,image/jpg,image/png,image/webp"
                                         className="hidden"
@@ -451,6 +452,7 @@ export default function ProductDrawer({ isOpen, onClose, product = null, categor
                                     Remplacer l'image
                                     <input
                                         id="image"
+                                        name="image"
                                         type="file"
                                         accept="image/jpeg,image/jpg,image/png,image/webp"
                                         className="hidden"

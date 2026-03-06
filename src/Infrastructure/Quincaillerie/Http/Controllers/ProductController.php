@@ -11,6 +11,7 @@ use Src\Application\Quincaillerie\DTO\CreateProductDTO;
 use Src\Application\Quincaillerie\DTO\UpdateProductDTO;
 use Src\Domain\Quincaillerie\Repositories\ProductRepositoryInterface;
 use Src\Domain\Quincaillerie\Repositories\CategoryRepositoryInterface;
+use App\Http\Middleware\HandleInertiaRequests;
 use Inertia\Inertia;
 use Inertia\Response;
 use App\Models\User as UserModel;
@@ -22,6 +23,10 @@ use Src\Application\Quincaillerie\Services\DepotFilterService;
 use Illuminate\Support\Facades\Log;
 use App\Models\Depot;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Reader\Csv;
 
 /**
  * Contrôleur Produits - Module Quincaillerie.
@@ -78,6 +83,11 @@ class ProductController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
+        Log::info('Hardware ProductController@index called', [
+            'route' => $request->route()?->getName(),
+            'path' => $request->path(),
+            'method' => $request->method(),
+        ]);
         $shopId = $this->getShopId($request);
         $userModel = UserModel::query()->find($user->id);
         $isRoot = $userModel ? $userModel->isRoot() : false;
@@ -153,11 +163,18 @@ class ProductController
             'description' => $m->description,
         ])->toArray();
 
+        $depotsData = HandleInertiaRequests::getDepotsForRequest($request);
         return Inertia::render('Hardware/Products/Index', [
             'products' => $products,
             'categories' => $categories,
             'filters' => $request->only(['search', 'category_id', 'status']),
-            'canImport' => false,
+            'canImport' =>
+                $isRoot
+                || ($userModel && method_exists($userModel, 'hasPermission')
+                    && ($userModel->hasPermission('hardware.product.import') || $userModel->hasPermission('hardware.product.manage'))
+                ),
+            'depots' => $depotsData['depots'],
+            'currentDepot' => $depotsData['currentDepot'],
         ]);
     }
 
@@ -168,8 +185,11 @@ class ProductController
             abort(403, 'Veuillez sélectionner un dépôt en haut.');
         }
         $categories = $this->categoryRepository->findByShop($shopId, true);
+        $depotsData = HandleInertiaRequests::getDepotsForRequest($request);
         return Inertia::render('Hardware/Products/Create', [
             'categories' => $categories,
+            'depots' => $depotsData['depots'],
+            'currentDepot' => $depotsData['currentDepot'],
         ]);
     }
 
@@ -189,7 +209,8 @@ class ProductController
             'type_unite' => 'required|string|in:PIECE,LOT,METRE,KG,LITRE,BOITE,CARTON,UNITE',
             'quantite_par_unite' => 'required|integer|min:1',
             'est_divisible' => 'boolean',
-            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            // 8 Mo max pour supporter les photos récentes
+            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:8192',
             'price_normal' => 'nullable|numeric|min:0',
             'price_reduced' => 'nullable|numeric|min:0',
             'price_reduction_percent' => 'nullable|numeric|min:0|max:100',
@@ -200,6 +221,16 @@ class ProductController
         ]);
 
         try {
+            // Debug: vérifier la présence du fichier côté backend
+            Log::debug('Hardware ProductController@store - incoming files', [
+                'has_file_image' => $request->hasFile('image'),
+                'all_files_keys' => array_keys($request->allFiles()),
+                'image_is_instance' => $request->file('image') instanceof \Illuminate\Http\UploadedFile,
+                'image_error' => $request->file('image')?->getError(),
+                'image_original_name' => $request->file('image')?->getClientOriginalName(),
+                'content_type' => $request->header('Content-Type'),
+            ]);
+
             $user = $request->user();
             if ($user === null) {
                 abort(403, 'User not authenticated.');
@@ -245,6 +276,13 @@ class ProductController
 
             // Obtenir le depot_id effectif selon les permissions
             $effectiveDepotId = $this->depotFilterService->getEffectiveDepotId($request);
+            // Si le service ne renvoie rien, forcer le dépôt courant de la session
+            if ($effectiveDepotId === null) {
+                $sessionDepotId = $request->session()->get('current_depot_id');
+                if ($sessionDepotId) {
+                    $effectiveDepotId = (int) $sessionDepotId;
+                }
+            }
 
             // Gérer l'upload d'image si fourni
             $imagePath = null;
@@ -264,6 +302,7 @@ class ProductController
                         'error' => $e->getMessage(),
                         'trace' => $e->getTraceAsString()
                     ]);
+                    return redirect()->back()->withErrors(['image' => $e->getMessage()])->withInput();
                 }
             }
 
@@ -420,29 +459,6 @@ class ProductController
 
     public function update(Request $request, string $id)
     {
-        // Laisser la validation Laravel remonter les erreurs champ par champ à Inertia
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'category_id' => 'required|exists:quincaillerie_categories,id',
-            'price' => 'required|numeric|min:0',
-            'currency' => 'required|string|size:3',
-            'minimum_stock' => 'nullable|integer|min:0',
-            'type_unite' => 'required|string|in:PIECE,LOT,METRE,KG,LITRE,BOITE,CARTON,UNITE',
-            'quantite_par_unite' => 'required|integer|min:1',
-            'est_divisible' => 'boolean',
-            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
-            'remove_image' => 'nullable|boolean',
-            'price_normal' => 'nullable|numeric|min:0',
-            'price_reduced' => 'nullable|numeric|min:0',
-            'price_reduction_percent' => 'nullable|numeric|min:0|max:100',
-            'price_non_negotiable' => 'nullable|numeric|min:0',
-            'price_wholesale_normal' => 'nullable|numeric|min:0',
-            'price_wholesale_reduced' => 'nullable|numeric|min:0',
-            'price_non_negotiable_wholesale' => 'nullable|numeric|min:0',
-            'barcode' => 'nullable|string|max:255',
-        ]);
-
         try {
             $user = $request->user();
             if ($user === null) {
@@ -453,22 +469,102 @@ class ProductController
                 return redirect()->back()->withErrors(['message' => 'Veuillez sélectionner un dépôt en haut.']);
             }
 
+            // Debug: vérifier la présence du fichier côté backend lors de la mise à jour
+            Log::debug('Hardware ProductController@update - incoming files', [
+                'product_id' => $id,
+                'has_file_image' => $request->hasFile('image'),
+                'all_files_keys' => array_keys($request->allFiles()),
+                'image_is_instance' => $request->file('image') instanceof \Illuminate\Http\UploadedFile,
+                'image_error' => $request->file('image')?->getError(),
+                'image_original_name' => $request->file('image')?->getClientOriginalName(),
+                'content_type' => $request->header('Content-Type'),
+                'method' => $request->method(),
+            ]);
+
+            // Charger le produit existant pour pouvoir réutiliser ses valeurs par défaut
+            $existingProduct = $this->productRepository->findById($id);
+            if (!$existingProduct || $existingProduct->getShopId() !== $shopId) {
+                abort(404, 'Produit introuvable.');
+            }
+
+            // Validation souple : les champs de base sont optionnels ici, on retombe sur les valeurs existantes si absents
+            $request->validate([
+                'name' => 'nullable|string|max:255',
+                'description' => 'nullable|string',
+                'category_id' => 'nullable|exists:quincaillerie_categories,id',
+                'price' => 'nullable|numeric|min:0',
+                'currency' => 'nullable|string|size:3',
+                'minimum_stock' => 'nullable|integer|min:0',
+                'type_unite' => 'nullable|string|in:PIECE,LOT,METRE,KG,LITRE,BOITE,CARTON,UNITE',
+                'quantite_par_unite' => 'nullable|integer|min:1',
+                'est_divisible' => 'sometimes|boolean',
+                // 8 Mo max pour supporter les photos récentes
+                'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:8192',
+                'remove_image' => 'nullable|boolean',
+                'price_normal' => 'nullable|numeric|min:0',
+                'price_reduced' => 'nullable|numeric|min:0',
+                'price_reduction_percent' => 'nullable|numeric|min:0|max:100',
+                'price_non_negotiable' => 'nullable|numeric|min:0',
+                'price_wholesale_normal' => 'nullable|numeric|min:0',
+                'price_wholesale_reduced' => 'nullable|numeric|min:0',
+                'price_non_negotiable_wholesale' => 'nullable|numeric|min:0',
+                'barcode' => 'nullable|string|max:255',
+            ]);
+
+            // Valeurs de base : utiliser la requête si fournie, sinon garder la valeur existante
+            $name = $request->filled('name')
+                ? (string) $request->input('name')
+                : $existingProduct->getName();
+
+            $description = $request->filled('description')
+                ? (string) $request->input('description')
+                : $existingProduct->getDescription();
+
+            $categoryId = $request->filled('category_id')
+                ? (string) $request->input('category_id')
+                : $existingProduct->getCategoryId();
+
+            $currency = $request->filled('currency')
+                ? (string) $request->input('currency')
+                : $existingProduct->getPrice()->getCurrency();
+
+            $priceInput = $request->input('price');
+            $basePrice = ($priceInput !== null && $priceInput !== '')
+                ? (float) $priceInput
+                : $existingProduct->getPrice()->getAmount();
+
+            $typeUnite = $request->filled('type_unite')
+                ? (string) $request->input('type_unite')
+                : $existingProduct->getTypeUnite()->getValue();
+
+            $quantiteParUnite = $request->filled('quantite_par_unite')
+                ? (int) $request->input('quantite_par_unite')
+                : $existingProduct->getQuantiteParUnite();
+
+            $estDivisible = $request->has('est_divisible')
+                ? $request->boolean('est_divisible')
+                : $existingProduct->estDivisible();
+
+            $minimumStock = $request->filled('minimum_stock')
+                ? (int) $request->input('minimum_stock')
+                : $existingProduct->getMinimumStock()->getValue();
+
             // Utiliser price_normal comme prix principal si fourni, sinon utiliser price
-            $mainPrice = $request->filled('price_normal') 
-                ? (float) $request->input('price_normal') 
-                : (float) $request->input('price');
+            $mainPrice = $request->filled('price_normal')
+                ? (float) $request->input('price_normal')
+                : $basePrice;
             
             $dto = new UpdateProductDTO(
                 $id,
-                $request->input('name'),
-                $request->input('description'),
+                $name,
+                $description,
                 $mainPrice,
-                $request->input('currency'),
-                $request->input('category_id'),
-                $request->input('type_unite', 'UNITE'),
-                (int) $request->input('quantite_par_unite', 1),
-                $request->boolean('est_divisible', true),
-                $request->filled('minimum_stock') ? (int) $request->input('minimum_stock') : null,
+                $currency,
+                $categoryId,
+                $typeUnite ?: 'UNITE',
+                $quantiteParUnite > 0 ? $quantiteParUnite : 1,
+                $estDivisible,
+                $minimumStock,
                 null, // imagePath sera défini après upload
                 null, // imageType sera défini après upload
                 $request->filled('price_normal') ? (float) $request->input('price_normal') : $mainPrice,
@@ -483,18 +579,16 @@ class ProductController
 
             $this->updateProductUseCase->execute($dto);
 
-            // Obtenir le depot_id effectif selon les permissions (préserver si pas de changement)
+            // Obtenir le depot_id effectif
             $productModel = ProductModel::find($id);
-            $effectiveDepotId = $productModel?->depot_id; // Préserver le dépôt existant par défaut
-            
-            // Si l'utilisateur demande explicitement un changement de dépôt
-            if ($request->filled('depot_id')) {
-                $requestedDepotId = (int) $request->input('depot_id');
-                $effectiveDepotId = $this->depotFilterService->getEffectiveDepotId($request);
-                // Si l'utilisateur n'a pas accès au dépôt demandé, garder l'ancien
-                if ($effectiveDepotId === null) {
-                    $effectiveDepotId = $productModel?->depot_id;
-                }
+            // Par défaut, utiliser le dépôt courant de la session s'il existe
+            $effectiveDepotId = null;
+            $sessionDepotId = $request->session()->get('current_depot_id');
+            if ($sessionDepotId) {
+                $effectiveDepotId = (int) $sessionDepotId;
+            } else {
+                // Sinon, préserver le dépôt existant
+                $effectiveDepotId = $productModel?->depot_id;
             }
 
             // Gérer l'upload/suppression d'image
@@ -522,6 +616,7 @@ class ProductController
                         'product_id' => $id,
                         'error' => $e->getMessage()
                     ]);
+                    return redirect()->back()->withErrors(['image' => $e->getMessage()])->withInput();
                 }
             }
 
@@ -768,5 +863,566 @@ class ProductController
             ]);
             return redirect()->back()->withErrors(['message' => 'Erreur lors de la duplication : ' . $e->getMessage()]);
         }
+    }
+
+    /**
+     * Modèle Excel pour l'import de produits Hardware.
+     */
+    public function importTemplate(Request $request)
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Modèle Produits Hardware');
+
+        $headers = [
+            'nom',
+            'code',
+            'categorie_id',
+            'prix',
+            'unite',
+            'description',
+            'stock_minimum',
+            'type_unite',
+            'quantite_par_unite',
+            'est_divisible',
+            'prix_normal',
+            'prix_reduit',
+            'prix_reduction_pourcent',
+            'prix_non_negociable',
+            'prix_gros_normal',
+            'prix_gros_reduit',
+            'prix_gros_non_negociable',
+            'barcode',
+            'currency',
+        ];
+
+        $colIndex = 1;
+        foreach ($headers as $header) {
+            $columnLetter = chr(ord('A') + $colIndex - 1);
+            $sheet->setCellValue($columnLetter . '1', $header);
+            $colIndex++;
+        }
+
+        // Exemple de ligne
+        $sheet->setCellValue('A2', 'Marteau de charpentier');
+        $sheet->setCellValue('B2', 'MART-001');
+        $sheet->setCellValue('C2', 'OUTILS'); // ID ou nom de catégorie
+        $sheet->setCellValue('D2', 10_00); // 10.00
+        $sheet->setCellValue('E2', 'PIECE');
+        $sheet->setCellValue('F2', 'Marteau robuste pour travaux de charpente');
+        $sheet->setCellValue('G2', 5); // stock_minimum
+        $sheet->setCellValue('H2', 'PIECE');
+        $sheet->setCellValue('I2', 1);
+        $sheet->setCellValue('J2', 'oui');
+        $sheet->setCellValue('K2', 10_00);
+        $sheet->setCellValue('L2', 9_50);
+        $sheet->setCellValue('M2', 5);
+        $sheet->setCellValue('N2', 9_00);
+        $sheet->setCellValue('O2', 8_50);
+        $sheet->setCellValue('P2', 8_00);
+        $sheet->setCellValue('Q2', '1234567890123');
+        $sheet->setCellValue('R2', 'USD');
+
+        $filename = 'modele_import_produits_hardware_' . now()->format('Ymd_His') . '.xlsx';
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    /**
+     * Aperçu de l'import de produits Hardware (validation sans insertion).
+     */
+    public function importPreview(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,csv,txt|max:10240',
+        ], [
+            'file.required' => 'Veuillez sélectionner un fichier.',
+            'file.mimes' => 'Le fichier doit être au format .xlsx ou .csv.',
+            'file.max' => 'Le fichier ne doit pas dépasser 10 Mo.',
+        ]);
+
+        $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
+        $shopId = $this->getShopId($request);
+        if (!$shopId) {
+            return response()->json(['message' => 'Shop ID not found.'], 403);
+        }
+
+        $file = $request->file('file');
+        $path = $file->getRealPath();
+
+        try {
+            $ext = strtolower($file->getClientOriginalExtension());
+            if ($ext === 'csv' || $ext === 'txt') {
+                $reader = new Csv();
+                $line = fgets(fopen($path, 'r'));
+                $delimiter = strpos($line, ';') !== false ? ';' : ',';
+                $reader->setDelimiter($delimiter);
+                $reader->setInputEncoding('UTF-8');
+                $spreadsheet = $reader->load($path);
+            } else {
+                $spreadsheet = IOFactory::load($path);
+            }
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray();
+        } catch (\Throwable $e) {
+            Log::error('Hardware Product import preview: parse error', ['error' => $e->getMessage()]);
+            return response()->json([
+                'message' => 'Impossible de lire le fichier : ' . $e->getMessage(),
+            ], 422);
+        }
+
+        if (empty($rows)) {
+            return response()->json([
+                'total' => 0,
+                'valid' => 0,
+                'invalid' => 0,
+                'errors' => [
+                    ['line' => 1, 'field' => null, 'message' => 'Fichier vide.'],
+                ],
+                'sample' => [
+                    'header' => [],
+                    'rows' => [],
+                ],
+            ]);
+        }
+
+        $headerRow = array_map('trim', array_map('strtolower', (array) $rows[0]));
+        $dataRows = array_slice($rows, 1);
+
+        $required = ['nom', 'code', 'categorie_id', 'prix', 'unite'];
+        $missing = array_diff($required, $headerRow);
+        if (!empty($missing)) {
+            return response()->json([
+                'total' => count($dataRows),
+                'valid' => 0,
+                'invalid' => count($dataRows),
+                'errors' => [
+                    [
+                        'line' => 1,
+                        'field' => null,
+                        'message' => 'Colonnes obligatoires manquantes : ' . implode(', ', $missing),
+                    ],
+                ],
+                'sample' => [
+                    'header' => $rows[0] ?? [],
+                    'rows' => array_slice($dataRows, 0, 20),
+                ],
+            ]);
+        }
+
+        $existingProducts = ProductModel::query()
+            ->where('shop_id', $shopId)
+            ->pluck('code')
+            ->map(fn ($c) => mb_strtolower((string) $c))
+            ->all();
+        $existingCodes = array_fill_keys($existingProducts, true);
+
+        $categoryQuery = CategoryModel::query()->where('shop_id', $shopId);
+        $existingCategories = $categoryQuery->get(['id', 'name']);
+
+        $seenCodes = [];
+        $valid = 0;
+        $invalid = 0;
+        $errors = [];
+
+        foreach ($dataRows as $index => $row) {
+            $lineNum = $index + 2;
+            $rowAssoc = [];
+            foreach ($headerRow as $i => $key) {
+                $rowAssoc[$key] = isset($row[$i]) ? trim((string) $row[$i]) : '';
+            }
+
+            if (!array_filter($rowAssoc, fn ($v) => $v !== '' && $v !== null)) {
+                continue;
+            }
+
+            $lineErrors = [];
+
+            $name = $rowAssoc['nom'] ?? '';
+            if ($name === '') {
+                $lineErrors[] = 'Nom obligatoire.';
+            }
+
+            $code = $rowAssoc['code'] ?? '';
+            if ($code === '') {
+                $lineErrors[] = 'Code obligatoire.';
+            } else {
+                $lowerCode = mb_strtolower($code);
+                if (isset($existingCodes[$lowerCode])) {
+                    $lineErrors[] = "Code déjà existant : {$code}.";
+                }
+                if (isset($seenCodes[$lowerCode])) {
+                    $lineErrors[] = "Code en double dans le fichier : {$code}.";
+                }
+            }
+
+            $catRaw = $rowAssoc['categorie_id'] ?? '';
+            if ($catRaw === '') {
+                $lineErrors[] = 'Categorie_id obligatoire.';
+            } else {
+                $category = $existingCategories->firstWhere('id', $catRaw);
+                if (!$category) {
+                    $category = $existingCategories->firstWhere('name', $catRaw);
+                }
+                if (!$category) {
+                    $lineErrors[] = "Catégorie introuvable : {$catRaw}.";
+                }
+            }
+
+            $priceRaw = $rowAssoc['prix'] ?? '';
+            if ($priceRaw === '' || !is_numeric($priceRaw) || (float) $priceRaw < 0) {
+                $lineErrors[] = 'Prix invalide.';
+            }
+
+            $unit = $rowAssoc['unite'] ?? '';
+            if ($unit === '') {
+                $lineErrors[] = 'Unité obligatoire.';
+            }
+
+            $typeUnite = $rowAssoc['type_unite'] ?? '';
+            if ($typeUnite !== '') {
+                $allowedTypes = ['PIECE', 'LOT', 'METRE', 'KG', 'LITRE', 'BOITE', 'CARTON', 'UNITE'];
+                if (!in_array(strtoupper($typeUnite), $allowedTypes, true)) {
+                    $lineErrors[] = "Type d'unité invalide : {$typeUnite}.";
+                }
+            }
+
+            $qtyRaw = $rowAssoc['quantite_par_unite'] ?? '';
+            if ($qtyRaw !== '') {
+                if (!ctype_digit($qtyRaw) || (int) $qtyRaw < 1) {
+                    $lineErrors[] = 'Quantité par unité doit être un entier >= 1.';
+                }
+            }
+
+            $minStockRaw = $rowAssoc['stock_minimum'] ?? '';
+            if ($minStockRaw !== '') {
+                if (!ctype_digit((string) $minStockRaw) || (int) $minStockRaw < 0) {
+                    $lineErrors[] = 'Stock minimum doit être un entier >= 0.';
+                }
+            }
+
+            $estDivisibleRaw = $rowAssoc['est_divisible'] ?? '';
+            if ($estDivisibleRaw !== '') {
+                $val = mb_strtolower($estDivisibleRaw);
+                $allowed = ['oui', 'non', 'yes', 'no', '1', '0', 'true', 'false'];
+                if (!in_array($val, $allowed, true)) {
+                    $lineErrors[] = "Valeur 'est_divisible' invalide (utiliser oui/non) : {$estDivisibleRaw}.";
+                }
+            }
+
+            if (!empty($lineErrors)) {
+                $invalid++;
+                $errors[] = [
+                    'line' => $lineNum,
+                    'field' => null,
+                    'message' => implode(' | ', $lineErrors),
+                ];
+            } else {
+                $valid++;
+                if ($code !== '') {
+                    $seenCodes[mb_strtolower($code)] = true;
+                }
+            }
+        }
+
+        $total = $valid + $invalid;
+
+        return response()->json([
+            'total' => $total,
+            'valid' => $valid,
+            'invalid' => $invalid,
+            'errors' => $errors,
+            'sample' => [
+                'header' => $rows[0] ?? [],
+                'rows' => array_slice($dataRows, 0, 20),
+            ],
+        ]);
+    }
+
+    /**
+     * Import effectif des produits Hardware.
+     */
+    public function import(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,csv,txt|max:10240',
+        ], [
+            'file.required' => 'Veuillez sélectionner un fichier.',
+            'file.mimes' => 'Le fichier doit être au format .xlsx ou .csv.',
+            'file.max' => 'Le fichier ne doit pas dépasser 10 Mo.',
+        ]);
+
+        $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
+        $shopId = $this->getShopId($request);
+        if (!$shopId) {
+            return response()->json(['message' => 'Shop ID not found.'], 403);
+        }
+
+        $file = $request->file('file');
+        $path = $file->getRealPath();
+
+        try {
+            $ext = strtolower($file->getClientOriginalExtension());
+            if ($ext === 'csv' || $ext === 'txt') {
+                $reader = new Csv();
+                $line = fgets(fopen($path, 'r'));
+                $delimiter = strpos($line, ';') !== false ? ';' : ',';
+                $reader->setDelimiter($delimiter);
+                $reader->setInputEncoding('UTF-8');
+                $spreadsheet = $reader->load($path);
+            } else {
+                $spreadsheet = IOFactory::load($path);
+            }
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray();
+        } catch (\Throwable $e) {
+            Log::error('Hardware Product import: parse error', ['error' => $e->getMessage()]);
+            return response()->json([
+                'message' => 'Impossible de lire le fichier : ' . $e->getMessage(),
+            ], 422);
+        }
+
+        if (empty($rows)) {
+            return response()->json([
+                'message' => 'Fichier vide.',
+                'success' => 0,
+                'failed' => 0,
+                'total' => 0,
+                'errors' => [],
+            ]);
+        }
+
+        $headerRow = array_map('trim', array_map('strtolower', (array) $rows[0]));
+        $dataRows = array_slice($rows, 1);
+
+        $required = ['nom', 'code', 'categorie_id', 'prix', 'unite'];
+        $missing = array_diff($required, $headerRow);
+        if (!empty($missing)) {
+            $failed = count($dataRows);
+            return response()->json([
+                'message' => 'Colonnes obligatoires manquantes : ' . implode(', ', $missing),
+                'success' => 0,
+                'failed' => $failed,
+                'total' => $failed,
+                'errors' => ["Ligne 1: Colonnes obligatoires manquantes : " . implode(', ', $missing)],
+            ], 422);
+        }
+
+        $existingProducts = ProductModel::query()
+            ->where('shop_id', $shopId)
+            ->pluck('code')
+            ->map(fn ($c) => mb_strtolower((string) $c))
+            ->all();
+        $existingCodes = array_fill_keys($existingProducts, true);
+
+        $categoryQuery = CategoryModel::query()->where('shop_id', $shopId);
+        $existingCategories = $categoryQuery->get(['id', 'name']);
+
+        $seenCodes = [];
+        $success = 0;
+        $failed = 0;
+        $errors = [];
+
+        foreach ($dataRows as $index => $row) {
+            $lineNum = $index + 2;
+            $rowAssoc = [];
+            foreach ($headerRow as $i => $key) {
+                $rowAssoc[$key] = isset($row[$i]) ? trim((string) $row[$i]) : '';
+            }
+
+            if (!array_filter($rowAssoc, fn ($v) => $v !== '' && $v !== null)) {
+                continue;
+            }
+
+            $lineErrors = [];
+
+            $name = $rowAssoc['nom'] ?? '';
+            if ($name === '') {
+                $lineErrors[] = 'Nom obligatoire.';
+            }
+
+            $code = $rowAssoc['code'] ?? '';
+            if ($code === '') {
+                $lineErrors[] = 'Code obligatoire.';
+            } else {
+                $lowerCode = mb_strtolower($code);
+                if (isset($existingCodes[$lowerCode]) || isset($seenCodes[$lowerCode])) {
+                    $lineErrors[] = "Code déjà existant ou dupliqué : {$code}.";
+                }
+            }
+
+            $catRaw = $rowAssoc['categorie_id'] ?? '';
+            $categoryId = null;
+            if ($catRaw === '') {
+                $lineErrors[] = 'Categorie_id obligatoire.';
+            } else {
+                $category = $existingCategories->firstWhere('id', $catRaw);
+                if (!$category) {
+                    $category = $existingCategories->firstWhere('name', $catRaw);
+                }
+                if (!$category) {
+                    $lineErrors[] = "Catégorie introuvable : {$catRaw}.";
+                } else {
+                    $categoryId = $category->id;
+                }
+            }
+
+            $priceRaw = $rowAssoc['prix'] ?? '';
+            $price = null;
+            if ($priceRaw === '' || !is_numeric($priceRaw) || (float) $priceRaw < 0) {
+                $lineErrors[] = 'Prix invalide.';
+            } else {
+                $price = (float) $priceRaw;
+            }
+
+            $unit = $rowAssoc['unite'] ?? '';
+            if ($unit === '') {
+                $lineErrors[] = 'Unité obligatoire.';
+            }
+
+            $typeUnite = $rowAssoc['type_unite'] ?? 'UNITE';
+            $allowedTypes = ['PIECE', 'LOT', 'METRE', 'KG', 'LITRE', 'BOITE', 'CARTON', 'UNITE'];
+            $typeUniteUpper = strtoupper($typeUnite);
+            if (!in_array($typeUniteUpper, $allowedTypes, true)) {
+                $lineErrors[] = "Type d'unité invalide : {$typeUnite}.";
+            }
+
+            $qtyRaw = $rowAssoc['quantite_par_unite'] ?? '1';
+            $qty = 1;
+            if ($qtyRaw !== '') {
+                if (!ctype_digit((string) $qtyRaw) || (int) $qtyRaw < 1) {
+                    $lineErrors[] = 'Quantité par unité doit être un entier >= 1.';
+                } else {
+                    $qty = (int) $qtyRaw;
+                }
+            }
+
+            $minStockRaw = $rowAssoc['stock_minimum'] ?? '0';
+            $minStock = 0;
+            if ($minStockRaw !== '') {
+                if (!ctype_digit((string) $minStockRaw) || (int) $minStockRaw < 0) {
+                    $lineErrors[] = 'Stock minimum doit être un entier >= 0.';
+                } else {
+                    $minStock = (int) $minStockRaw;
+                }
+            }
+
+            $estDivisibleRaw = $rowAssoc['est_divisible'] ?? 'oui';
+            $estDivisible = true;
+            if ($estDivisibleRaw !== '') {
+                $val = mb_strtolower($estDivisibleRaw);
+                $trueVals = ['oui', 'yes', '1', 'true'];
+                $falseVals = ['non', 'no', '0', 'false'];
+                if (in_array($val, $trueVals, true)) {
+                    $estDivisible = true;
+                } elseif (in_array($val, $falseVals, true)) {
+                    $estDivisible = false;
+                } else {
+                    $lineErrors[] = "Valeur 'est_divisible' invalide (utiliser oui/non) : {$estDivisibleRaw}.";
+                }
+            }
+
+            if (!empty($lineErrors)) {
+                $failed++;
+                $errors[] = "Ligne {$lineNum}: " . implode(' | ', $lineErrors);
+                continue;
+            }
+
+            try {
+                $currency = $rowAssoc['currency'] !== '' ? strtoupper($rowAssoc['currency']) : 'USD';
+                $priceNormal = $rowAssoc['prix_normal'] !== '' ? (float) $rowAssoc['prix_normal'] : $price;
+                $priceReduced = $rowAssoc['prix_reduit'] !== '' ? (float) $rowAssoc['prix_reduit'] : null;
+                $priceReductionPercent = $rowAssoc['prix_reduction_pourcent'] !== '' ? (float) $rowAssoc['prix_reduction_pourcent'] : null;
+                $priceNonNegotiable = $rowAssoc['prix_non_negociable'] !== '' ? (float) $rowAssoc['prix_non_negociable'] : null;
+                $priceWholesaleNormal = $rowAssoc['prix_gros_normal'] !== '' ? (float) $rowAssoc['prix_gros_normal'] : null;
+                $priceWholesaleReduced = $rowAssoc['prix_gros_reduit'] !== '' ? (float) $rowAssoc['prix_gros_reduit'] : null;
+                $priceWholesaleNonNeg = $rowAssoc['prix_gros_non_negociable'] !== '' ? (float) $rowAssoc['prix_gros_non_negociable'] : null;
+
+                $dto = new CreateProductDTO(
+                    $shopId,
+                    $code,
+                    $name,
+                    $categoryId,
+                    $price,
+                    $currency,
+                    $minStock,
+                    $unit,
+                    $rowAssoc['description'] !== '' ? $rowAssoc['description'] : null,
+                    null,
+                    null,
+                    $typeUniteUpper,
+                    $qty,
+                    $estDivisible,
+                    null,
+                    null,
+                    $priceNormal,
+                    $priceReduced,
+                    $priceReductionPercent,
+                    $priceNonNegotiable,
+                    $priceWholesaleNormal,
+                    $priceWholesaleReduced,
+                    $priceWholesaleNonNeg,
+                    $rowAssoc['barcode'] !== '' ? $rowAssoc['barcode'] : null
+                );
+
+                $product = $this->createProductUseCase->execute($dto);
+
+                // Assigner depot_id
+                $effectiveDepotId = $this->depotFilterService->getEffectiveDepotId($request);
+                if ($this->productRepository instanceof EloquentProductRepository) {
+                    $additionalData = [
+                        'depot_id' => $effectiveDepotId,
+                        'price_normal' => $dto->priceNormal,
+                        'price_reduced' => $dto->priceReduced,
+                        'price_reduction_percent' => $dto->priceReductionPercent,
+                        'price_non_negociable' => $dto->priceNonNegotiable,
+                        'price_wholesale_normal' => $dto->priceWholesaleNormal,
+                        'price_wholesale_reduced' => $dto->priceWholesaleReduced,
+                        'price_non_negociable_wholesale' => $dto->priceNonNegotiableWholesale,
+                        'barcode' => $dto->barcode,
+                    ];
+                    $additionalData = array_filter($additionalData, function ($value, $key) {
+                        if ($key === 'depot_id') {
+                            return $value !== null;
+                        }
+                        return $value !== null;
+                    }, ARRAY_FILTER_USE_BOTH);
+
+                    if (!empty($additionalData)) {
+                        $this->productRepository->saveAdditionalData($product->getId(), $additionalData);
+                    }
+                }
+
+                if ($code !== '') {
+                    $seenCodes[mb_strtolower($code)] = true;
+                }
+
+                $success++;
+            } catch (\Throwable $e) {
+                $failed++;
+                $errors[] = "Ligne {$lineNum}: " . $e->getMessage();
+            }
+        }
+
+        $total = $success + $failed;
+
+        return response()->json([
+            'message' => 'Import produits Hardware terminé.',
+            'success' => $success,
+            'failed' => $failed,
+            'total' => $total,
+            'errors' => $errors,
+        ]);
     }
 }

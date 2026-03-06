@@ -149,14 +149,17 @@ class SaleController
         $saleType = $request->input('sale_type');
 
         $sales = $this->saleRepository->findByShop($shopId, $from, $to);
-        
-        // Filtrer par dépôt pour Hardware uniquement
-        if ($this->getModule() === 'Hardware' && $this->depotFilterService) {
+
+        // Filtrer par dépôt :
+        // - Hardware : logique avancée avec permissions (déjà en place)
+        // - Pharmacy : si un dépôt est sélectionné, ne voir que ce dépôt + dépôt central
+        $module = $this->getModule();
+        if ($module === 'Hardware' && $this->depotFilterService) {
             $currentDepotId = $request->session()->get('current_depot_id');
             $user = $request->user();
             $permissions = $user ? $user->permissionCodes() : [];
             $canViewAll = in_array('hardware.warehouse.view_all', $permissions, true) || in_array('*', $permissions, true);
-            
+
             // Optimisation : récupérer tous les depot_id en une seule requête
             $saleIds = array_map(fn ($sale) => $sale->getId(), $sales);
             $saleDepotMap = [];
@@ -170,27 +173,50 @@ class SaleController
                     $saleDepotMap[$model->id] = $model->depot_id;
                 }
             }
-            
+
             if (!$canViewAll) {
                 $userDepotIds = $this->depotFilterService->getUserDepotIds($user);
                 $sales = array_values(array_filter($sales, function ($sale) use ($currentDepotId, $userDepotIds, $saleDepotMap) {
                     $saleDepotId = $saleDepotMap[$sale->getId()] ?? null;
-                    
+
                     // Dépôt central (null) toujours visible
                     if ($saleDepotId === null) {
                         return true;
                     }
-                    
+
                     // Si un dépôt est sélectionné, voir uniquement ce dépôt + dépôt central
                     if ($currentDepotId) {
                         return (int) $saleDepotId === (int) $currentDepotId;
                     }
-                    
+
                     // Voir tous les dépôts assignés + dépôt central
                     return in_array((int) $saleDepotId, $userDepotIds, true);
                 }));
             } elseif ($currentDepotId) {
                 // Si view_all_warehouse et dépôt sélectionné, filtrer par ce dépôt + dépôt central
+                $sales = array_values(array_filter($sales, function ($sale) use ($currentDepotId, $saleDepotMap) {
+                    $saleDepotId = $saleDepotMap[$sale->getId()] ?? null;
+                    return $saleDepotId === null || (int) $saleDepotId === (int) $currentDepotId;
+                }));
+            }
+        } elseif ($module === 'Pharmacy') {
+            $currentDepotId = $request->session()->get('current_depot_id');
+            if ($currentDepotId) {
+                // Récupérer la map vente -> depot_id une seule fois
+                $saleIds = array_map(fn ($sale) => $sale->getId(), $sales);
+                $saleDepotMap = [];
+                if (!empty($saleIds)) {
+                    /** @var \Illuminate\Database\Eloquent\Collection<int, \Src\Infrastructure\Pharmacy\Models\SaleModel> $saleModels */
+                    $saleModels = \Src\Infrastructure\Pharmacy\Models\SaleModel::whereIn('id', $saleIds)
+                        ->get(['id', 'depot_id'])
+                        ->keyBy('id');
+                    foreach ($saleModels as $model) {
+                        /** @var \Src\Infrastructure\Pharmacy\Models\SaleModel $model */
+                        $saleDepotMap[$model->id] = $model->depot_id;
+                    }
+                }
+
+                // Pour Pharmacy : si un dépôt est sélectionné, ne voir que ce dépôt + dépôt central
                 $sales = array_values(array_filter($sales, function ($sale) use ($currentDepotId, $saleDepotMap) {
                     $saleDepotId = $saleDepotMap[$sale->getId()] ?? null;
                     return $saleDepotId === null || (int) $saleDepotId === (int) $currentDepotId;

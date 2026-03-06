@@ -478,7 +478,7 @@ class InventoryController
         $userModel = UserModel::query()->find($user->id);
         $isRoot = $userModel !== null && $userModel->isRoot();
         /** @var array<string> $codes */
-        $codes = $user->permissionCodes ?? [];
+        $codes = $userModel !== null ? $userModel->permissionCodes() : [];
 
         return [
             'view' => $isRoot || in_array('inventory.view', $codes, true),

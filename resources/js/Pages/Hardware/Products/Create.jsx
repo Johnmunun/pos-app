@@ -109,6 +109,10 @@ export default function HardwareProductCreate({ categories = [] }) {
         if (!data.price_normal && data.price) {
             setData('price_normal', data.price);
         }
+        console.log('Hardware Products Create submit', {
+            hasImage: !!data.image,
+            image: data.image,
+        });
         post(route('hardware.products.store'), {
             forceFormData: true,
             onSuccess: () => {
@@ -199,6 +203,7 @@ export default function HardwareProductCreate({ categories = [] }) {
                                             <input
                                                 type="file"
                                                 id="image"
+                                                name="image"
                                                 accept="image/jpeg,image/jpg,image/png,image/webp"
                                                 onChange={handleImageChange}
                                                 className="hidden"

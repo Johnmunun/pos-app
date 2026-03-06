@@ -18,7 +18,8 @@ class ProductImageService
 {
     private const STORAGE_DISK = 'public';
     private const STORAGE_PATH = 'hardware/products';
-    private const MAX_SIZE = 2 * 1024 * 1024; // 2 Mo
+    // Taille max du fichier (8 Mo pour supporter les photos récentes)
+    private const MAX_SIZE = 8 * 1024 * 1024; // 8 Mo
     private const MAX_WIDTH = 1200; // Largeur maximale en pixels
     private const MAX_HEIGHT = 1200; // Hauteur maximale en pixels
     private const JPEG_QUALITY = 85; // Qualité JPEG (0-100)
@@ -36,7 +37,7 @@ class ProductImageService
     public function upload(UploadedFile $file, string $productId): ?string
     {
         if ($file->getSize() !== false && $file->getSize() > self::MAX_SIZE) {
-            throw new \InvalidArgumentException('La taille du fichier ne doit pas dépasser 2 Mo.');
+            throw new \InvalidArgumentException('La taille du fichier ne doit pas dépasser 8 Mo.');
         }
         
         // Valider le type MIME
@@ -47,8 +48,12 @@ class ProductImageService
 
         // Générer un nom de fichier unique
         $extension = strtolower($file->getClientOriginalExtension());
+        // Certains navigateurs/OS utilisent l'extension JFIF pour des JPEG : on la normalise en JPG
+        if ($extension === 'jfif') {
+            $extension = 'jpg';
+        }
         if (!in_array($extension, ['jpg', 'jpeg', 'png', 'webp'])) {
-            throw new \InvalidArgumentException('Extension de fichier non supportée.');
+            throw new \InvalidArgumentException('Extension de fichier non supportée. Utilisez JPG, JPEG, PNG ou WebP.');
         }
         
         $filename = $productId . '_' . Str::random(10) . '.' . $extension;
@@ -61,8 +66,16 @@ class ProductImageService
             mkdir($directory, 0755, true);
         }
 
-        // Compresser et optimiser l'image
-        $this->compressAndResizeImage($file, $fullPath, $extension);
+        // Compresser et optimiser l'image (ou enregistrer telle quelle si échec)
+        try {
+            $this->compressAndResizeImage($file, $fullPath, $extension);
+        } catch (\Throwable $e) {
+            Log::warning('Product image compression failed, storing original', [
+                'product_id' => $productId,
+                'error' => $e->getMessage(),
+            ]);
+            $file->move($directory, $filename);
+        }
 
         // Vérifier que le fichier a bien été créé
         if (!file_exists($fullPath)) {

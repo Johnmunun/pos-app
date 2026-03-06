@@ -41,7 +41,11 @@ class DepotController extends Controller
             ]);
 
         $module = $this->getModule();
-        $viewPath = $module === 'Hardware' ? 'Hardware/Depots/Index' : 'Pharmacy/Depots/Index';
+        $viewPath = match ($module) {
+            'Commerce' => 'Commerce/Depots/Index',
+            'Hardware' => 'Hardware/Depots/Index',
+            default => 'Pharmacy/Depots/Index',
+        };
         
         return Inertia::render($viewPath, [
             'depots' => $depots,
@@ -49,25 +53,34 @@ class DepotController extends Controller
     }
 
     /**
-     * Détecte le module (Pharmacy ou Hardware) depuis la route
+     * Détecte le module (Pharmacy, Hardware ou Commerce) depuis la route
      */
     private function getModule(): string
     {
         $routeName = request()->route()?->getName();
         
         // Vérifier le nom de la route d'abord (le plus fiable)
+        if ($routeName && str_starts_with($routeName, 'commerce.')) {
+            return 'Commerce';
+        }
         if ($routeName && str_starts_with($routeName, 'hardware.')) {
             return 'Hardware';
         }
         
         // Vérifier l'URL en fallback
         $url = request()->url();
+        if (str_contains($url, '/commerce/')) {
+            return 'Commerce';
+        }
         if (str_contains($url, '/hardware/')) {
             return 'Hardware';
         }
         
         // Vérifier le préfixe de la route en dernier recours
         $prefix = request()->route()?->getPrefix();
+        if ($prefix === 'commerce') {
+            return 'Commerce';
+        }
         if ($prefix === 'hardware') {
             return 'Hardware';
         }
@@ -87,7 +100,11 @@ class DepotController extends Controller
         }
 
         $module = $this->getModule();
-        $permission = $module === 'Hardware' ? 'hardware.warehouse.create' : 'pharmacy.seller.create';
+        $permission = match ($module) {
+            'Commerce' => 'module.commerce',
+            'Hardware' => 'hardware.warehouse.create',
+            default => 'pharmacy.seller.create',
+        };
         if (!$user->hasPermission($permission) && $user->type !== 'ROOT') {
             abort(403, 'Permission refusée.');
         }
@@ -123,7 +140,11 @@ class DepotController extends Controller
             'is_active' => true,
         ]);
 
-        $routeName = $module === 'Hardware' ? 'hardware.depots.index' : 'pharmacy.depots.index';
+        $routeName = match ($module) {
+            'Commerce' => 'commerce.depots.index',
+            'Hardware' => 'hardware.depots.index',
+            default => 'pharmacy.depots.index',
+        };
         return redirect()->route($routeName)->with('success', 'Dépôt créé avec succès.');
     }
 
@@ -138,7 +159,11 @@ class DepotController extends Controller
         }
 
         $module = $this->getModule();
-        $permission = $module === 'Hardware' ? 'hardware.warehouse.update' : 'pharmacy.seller.edit';
+        $permission = match ($module) {
+            'Commerce' => 'module.commerce',
+            'Hardware' => 'hardware.warehouse.update',
+            default => 'pharmacy.seller.edit',
+        };
         if (!$user->hasPermission($permission) && $user->type !== 'ROOT') {
             abort(403, 'Permission refusée.');
         }
@@ -182,7 +207,11 @@ class DepotController extends Controller
             'email' => $validated['email'] ?? null,
         ]);
 
-        $routeName = $module === 'Hardware' ? 'hardware.depots.index' : 'pharmacy.depots.index';
+        $routeName = match ($module) {
+            'Commerce' => 'commerce.depots.index',
+            'Hardware' => 'hardware.depots.index',
+            default => 'pharmacy.depots.index',
+        };
         return redirect()->route($routeName)->with('success', 'Dépôt mis à jour avec succès.');
     }
 
@@ -197,7 +226,11 @@ class DepotController extends Controller
         }
 
         $module = $this->getModule();
-        $permission = $module === 'Hardware' ? 'hardware.warehouse.activate' : 'pharmacy.seller.edit';
+        $permission = match ($module) {
+            'Commerce' => 'module.commerce',
+            'Hardware' => 'hardware.warehouse.activate',
+            default => 'pharmacy.seller.edit',
+        };
         if (!$user->hasPermission($permission) && $user->type !== 'ROOT') {
             abort(403, 'Permission refusée.');
         }
@@ -212,7 +245,11 @@ class DepotController extends Controller
 
         $depot->update(['is_active' => true]);
 
-        $routeName = $module === 'Hardware' ? 'hardware.depots.index' : 'pharmacy.depots.index';
+        $routeName = match ($module) {
+            'Commerce' => 'commerce.depots.index',
+            'Hardware' => 'hardware.depots.index',
+            default => 'pharmacy.depots.index',
+        };
         return redirect()->route($routeName)->with('success', 'Dépôt activé avec succès.');
     }
 
@@ -227,7 +264,11 @@ class DepotController extends Controller
         }
 
         $module = $this->getModule();
-        $permission = $module === 'Hardware' ? 'hardware.warehouse.deactivate' : 'pharmacy.seller.edit';
+        $permission = match ($module) {
+            'Commerce' => 'module.commerce',
+            'Hardware' => 'hardware.warehouse.deactivate',
+            default => 'pharmacy.seller.edit',
+        };
         if (!$user->hasPermission($permission) && $user->type !== 'ROOT') {
             abort(403, 'Permission refusée.');
         }
@@ -242,7 +283,11 @@ class DepotController extends Controller
 
         $depot->update(['is_active' => false]);
 
-        $routeName = $module === 'Hardware' ? 'hardware.depots.index' : 'pharmacy.depots.index';
+        $routeName = match ($module) {
+            'Commerce' => 'commerce.depots.index',
+            'Hardware' => 'hardware.depots.index',
+            default => 'pharmacy.depots.index',
+        };
         return redirect()->route($routeName)->with('success', 'Dépôt désactivé avec succès.');
     }
 

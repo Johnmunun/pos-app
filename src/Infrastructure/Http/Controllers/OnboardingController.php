@@ -33,14 +33,14 @@ class OnboardingController extends Controller
     /**
      * Afficher l'étape 1 : Informations du compte
      */
-    public function showStep1(Request $request): Response
+    public function showStep1(Request $request): Response|RedirectResponse
     {
         // Vérifier si l'utilisateur est déjà connecté
         if (Auth::check()) {
             if (Auth::user()->status === 'pending') {
-                return Inertia::location(route('pending'));
+                return redirect()->route('pending');
             }
-            return Inertia::location(route('dashboard'));
+            return redirect()->route('dashboard');
         }
 
         // Créer ou récupérer la session
@@ -96,7 +96,7 @@ class OnboardingController extends Controller
 
     /**
      * Traiter l'étape 2
-     */
+     *a
     public function processStep2(Request $request)
     {
         $session = $this->getOrCreateSession($request);
@@ -223,7 +223,16 @@ class OnboardingController extends Controller
             // Associer le tenant à l'utilisateur
             $user->tenant_id = $tenant->id;
             $user->save();
-            
+
+            // Secteurs Kiosque, Supermarché, Boucherie, Autre = module Global Commerce : assigner le rôle Commerçant Commerce
+            $commerceSectors = ['kiosk', 'supermarket', 'butchery', 'other'];
+            if (in_array($tenant->sector, $commerceSectors, true)) {
+                $commerceRole = \App\Models\Role::where('name', 'Commerçant Commerce')->whereNull('tenant_id')->first();
+                if ($commerceRole) {
+                    $user->roles()->syncWithoutDetaching([$commerceRole->id]);
+                }
+            }
+
             // Sauvegarder la session comme complète
             $this->repository->save($session);
             

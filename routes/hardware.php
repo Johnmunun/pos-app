@@ -15,6 +15,7 @@ use Src\Infrastructure\Quincaillerie\Http\Controllers\CustomerController as Quin
 use Src\Infrastructure\Pharmacy\Http\Controllers\StockController;
 use Src\Infrastructure\Pharmacy\Http\Controllers\PharmacyReportController;
 use Src\Infrastructure\Pharmacy\Http\Controllers\ExportController;
+use Src\Infrastructure\Pharmacy\Http\Controllers\StockTransferController;
 use Src\Infrastructure\Quincaillerie\Http\Controllers\InventoryController as QuincaillerieInventoryController;
 
 /**
@@ -43,6 +44,16 @@ Route::prefix('hardware')
         Route::get('/products/generate-code', [QuincaillerieProductController::class, 'generateCode'])
             ->middleware('permission:hardware.product.manage|hardware.product.create')
             ->name('products.generate-code');
+        // Import produits Hardware (template, aperçu, import)
+        Route::get('/products/import/template', [QuincaillerieProductController::class, 'importTemplate'])
+            ->middleware('permission:hardware.product.import')
+            ->name('products.import.template');
+        Route::post('/products/import/preview', [QuincaillerieProductController::class, 'importPreview'])
+            ->middleware('permission:hardware.product.import')
+            ->name('products.import.preview');
+        Route::post('/products/import', [QuincaillerieProductController::class, 'import'])
+            ->middleware('permission:hardware.product.import')
+            ->name('products.import');
         Route::get('/products/create', [QuincaillerieProductController::class, 'create'])
             ->middleware('permission:hardware.product.manage')
             ->name('products.create');
@@ -85,6 +96,16 @@ Route::prefix('hardware')
         Route::get('/suppliers', [QuincaillerieSupplierController::class, 'index'])
             ->middleware('permission:hardware.supplier.view')
             ->name('suppliers.index');
+        // Import fournisseurs Hardware (template, aperçu, import)
+        Route::get('/suppliers/import/template', [QuincaillerieSupplierController::class, 'importTemplate'])
+            ->middleware('permission:hardware.supplier.import')
+            ->name('suppliers.import.template');
+        Route::post('/suppliers/import/preview', [QuincaillerieSupplierController::class, 'importPreview'])
+            ->middleware('permission:hardware.supplier.import')
+            ->name('suppliers.import.preview');
+        Route::post('/suppliers/import', [QuincaillerieSupplierController::class, 'import'])
+            ->middleware('permission:hardware.supplier.import')
+            ->name('suppliers.import');
         Route::post('/suppliers', [QuincaillerieSupplierController::class, 'store'])
             ->middleware('permission:hardware.supplier.create')
             ->name('suppliers.store');
@@ -200,6 +221,16 @@ Route::prefix('hardware')
         Route::get('/customers', [QuincaillerieCustomerController::class, 'index'])
             ->middleware('permission:hardware.customer.view')
             ->name('customers.index');
+        // Import clients Hardware (template, aperçu, import)
+        Route::get('/customers/import/template', [QuincaillerieCustomerController::class, 'importTemplate'])
+            ->middleware('permission:hardware.customer.import')
+            ->name('customers.import.template');
+        Route::post('/customers/import/preview', [QuincaillerieCustomerController::class, 'importPreview'])
+            ->middleware('permission:hardware.customer.import')
+            ->name('customers.import.preview');
+        Route::post('/customers/import', [QuincaillerieCustomerController::class, 'import'])
+            ->middleware('permission:hardware.customer.import')
+            ->name('customers.import');
         Route::post('/customers', [QuincaillerieCustomerController::class, 'store'])
             ->middleware('permission:hardware.customer.create')
             ->name('customers.store');
@@ -265,6 +296,16 @@ Route::prefix('hardware')
         Route::get('/categories', [QuincaillerieCategoryController::class, 'index'])
             ->middleware('permission:hardware.category.view|hardware.category.create|hardware.category.update|hardware.category.delete')
             ->name('categories.index');
+        // Import catégories Hardware (template, aperçu, import)
+        Route::get('/categories/import/template', [QuincaillerieCategoryController::class, 'importTemplate'])
+            ->middleware('permission:hardware.category.import')
+            ->name('categories.import.template');
+        Route::post('/categories/import/preview', [QuincaillerieCategoryController::class, 'importPreview'])
+            ->middleware('permission:hardware.category.import')
+            ->name('categories.import.preview');
+        Route::post('/categories/import', [QuincaillerieCategoryController::class, 'import'])
+            ->middleware('permission:hardware.category.import')
+            ->name('categories.import');
         Route::post('/categories', [QuincaillerieCategoryController::class, 'store'])
             ->middleware('permission:hardware.category.create')
             ->name('categories.store');
@@ -276,21 +317,27 @@ Route::prefix('hardware')
             ->name('categories.destroy');
 
         // Dépôts - Gestion complète
+        // On réutilise les permissions stock Hardware existantes pour éviter d'ajouter de nouveaux codes
         Route::get('/depots', [\App\Http\Controllers\DepotController::class, 'index'])
-            ->middleware('permission:hardware.warehouse.view_all|hardware.warehouse.view')
+            ->middleware('permission:hardware.stock.view|hardware.stock.manage')
             ->name('depots.index');
         Route::post('/depots', [\App\Http\Controllers\DepotController::class, 'store'])
-            ->middleware('permission:hardware.warehouse.create')
+            ->middleware('permission:hardware.stock.manage')
             ->name('depots.store');
         Route::put('/depots/{id}', [\App\Http\Controllers\DepotController::class, 'update'])
-            ->middleware('permission:hardware.warehouse.update')
+            ->middleware('permission:hardware.stock.manage')
             ->name('depots.update');
         Route::post('/depots/{id}/activate', [\App\Http\Controllers\DepotController::class, 'activate'])
-            ->middleware('permission:hardware.warehouse.activate')
+            ->middleware('permission:hardware.stock.manage')
             ->name('depots.activate');
         Route::post('/depots/{id}/deactivate', [\App\Http\Controllers\DepotController::class, 'deactivate'])
-            ->middleware('permission:hardware.warehouse.deactivate')
+            ->middleware('permission:hardware.stock.manage')
             ->name('depots.deactivate');
+
+        // Transferts inter-dépôts (alias Hardware vers le contrôleur Pharmacy)
+        Route::get('/transfers', [StockTransferController::class, 'index'])
+            ->middleware('permission:transfer.view')
+            ->name('transfers.index');
 
         // Exports (fournisseurs + bons de commande + ventes)
         Route::prefix('exports')->name('exports.')->group(function () {

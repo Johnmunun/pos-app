@@ -4,6 +4,7 @@ namespace Src\Infrastructure\Pharmacy\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -12,6 +13,8 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Reader\Csv;
 use Src\Application\Pharmacy\UseCases\Product\CreateProductUseCase;
 use Src\Application\Pharmacy\UseCases\Product\UpdateProductUseCase;
 use Src\Application\Pharmacy\UseCases\Inventory\UpdateStockUseCase;
@@ -141,6 +144,17 @@ class ProductController
             }
         }
 
+        // Filtrage par dépôt pour Pharmacy : si un dépôt est sélectionné, ne voir que ce dépôt + dépôt central
+        if ($this->getProductsModule() === 'Pharmacy') {
+            $currentDepotId = $request->session()->get('current_depot_id');
+            if ($currentDepotId) {
+                $query->where(function ($q) use ($currentDepotId) {
+                    $q->where('depot_id', (int) $currentDepotId)
+                      ->orWhereNull('depot_id');
+                });
+            }
+        }
+
         $productModels = $query->get();
         
         $products = $productModels->map(function ($model) {
@@ -201,11 +215,21 @@ class ProductController
             ];
         })->toArray();
         
-        return Inertia::render($this->getProductsModule() . '/Products/Index', [
+        $module = $this->getProductsModule();
+
+        return Inertia::render($module . '/Products/Index', [
             'products' => $products,
             'categories' => $categories,
             'filters' => $request->only(['search', 'category_id', 'status']),
-            'canImport' => $isRoot || $user->can('pharmacy.product.import') || ($this->getProductsModule() === 'Hardware' && $user->can('hardware.product.manage')),
+            'canImport' =>
+                $isRoot
+                // Import produits Pharmacy
+                || ($module === 'Pharmacy' && method_exists($user, 'hasPermission') && $user->hasPermission('pharmacy.product.import'))
+                // Import / gestion produits Hardware (fallback sur manage pour compatibilité)
+                || ($module === 'Hardware'
+                    && method_exists($user, 'hasPermission')
+                    && ($user->hasPermission('hardware.product.import') || $user->hasPermission('hardware.product.manage'))
+                ),
         ]);
     }
 
@@ -433,6 +457,148 @@ class ProductController
     }
 
     /**
+     * Modèle Excel pour l'import de produits.
+     */
+    public function importTemplate(Request $request)
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Modèle Produits');
+
+        // En-têtes (colonnes obligatoires + quelques optionnelles)
+        $headers = [
+            'nom',
+            'code',
+            'categorie_id',
+            'prix',
+            'unite',
+            'description',
+            'prix_revient',
+            'stock_minimum',
+            'fabricant',
+            'type_medicament',
+            'dosage',
+            'ordonnance',
+        ];
+
+        $colIndex = 1;
+        foreach ($headers as $header) {
+            // Colonnes A, B, C... à partir de l'index 1
+            $columnLetter = chr(ord('A') + $colIndex - 1);
+            $sheet->setCellValue($columnLetter . '1', $header);
+            $colIndex++;
+        }
+
+        // Exemple de ligne de données (ligne 2) pour guider l'utilisateur
+        $sheet->setCellValue('A2', 'Paracétamol 500mg');
+        $sheet->setCellValue('B2', 'PARA-500');
+        // categorie_id peut être l\'ID ou le nom de la catégorie
+        $sheet->setCellValue('C2', 'ANTALGIQUES');
+        $sheet->setCellValue('D2', 2_500); // prix (par ex. 2500 CDF)
+        $sheet->setCellValue('E2', 'BOITE');
+        $sheet->setCellValue('F2', 'Antalgique pour douleurs et fièvre');
+        $sheet->setCellValue('G2', 2_000); // prix_revient
+        $sheet->setCellValue('H2', 10); // stock_minimum
+        $sheet->setCellValue('I2', 'PharmaLabs');
+        $sheet->setCellValue('J2', 'ANTALGIQUE');
+        $sheet->setCellValue('K2', '500mg');
+        $sheet->setCellValue('L2', 'oui'); // ordonnance (oui/non)
+
+        $filename = 'modele_import_produits_' . now()->format('Ymd_His') . '.xlsx';
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    /**
+     * Aperçu de l'import (validation sans insertion en base).
+     */
+    public function importPreview(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,csv,txt|max:10240',
+        ], [
+            'file.required' => 'Veuillez sélectionner un fichier.',
+            'file.mimes' => 'Le fichier doit être au format .xlsx ou .csv.',
+            'file.max' => 'Le fichier ne doit pas dépasser 10 Mo.',
+        ]);
+
+        $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
+        $shopId = $this->getShopId($request);
+        if (!$shopId) {
+            return response()->json(['message' => 'Veuillez sélectionner un dépôt en haut.'], 403);
+        }
+
+        $file = $request->file('file');
+        $path = $file->getRealPath();
+
+        // 1) Construire un aperçu brut (quelques lignes) pour affichage tableau
+        $sampleHeader = [];
+        $sampleRows = [];
+        try {
+            $ext = strtolower($file->getClientOriginalExtension());
+            if ($ext === 'csv' || $ext === 'txt') {
+                $reader = new Csv();
+                // Détecter le délimiteur de manière simple
+                $line = fgets(fopen($path, 'r'));
+                $delimiter = strpos($line, ';') !== false ? ';' : ',';
+                $reader->setDelimiter($delimiter);
+                $reader->setInputEncoding('UTF-8');
+                $spreadsheet = $reader->load($path);
+            } else {
+                $spreadsheet = IOFactory::load($path);
+            }
+            $sheet = $spreadsheet->getActiveSheet();
+            $allRows = $sheet->toArray();
+            $sampleHeader = $allRows[0] ?? [];
+            $dataRows = array_slice($allRows, 1);
+            $sampleRows = array_slice($dataRows, 0, 20);
+        } catch (\Throwable $e) {
+            Log::warning('Product import preview: failed to build sample', ['error' => $e->getMessage()]);
+        }
+
+        // 2) Utiliser le use case existant pour valider, mais annuler via transaction
+        DB::beginTransaction();
+        try {
+            $result = $this->importProductsUseCase->execute($shopId, $path);
+            DB::rollBack();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Product import preview error', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'message' => 'Erreur lors de l\'aperçu : ' . $e->getMessage(),
+            ], 422);
+        }
+
+        $errorsDetailed = [];
+        foreach ($result['errors'] as $line => $msg) {
+            $errorsDetailed[] = [
+                'line' => $line,
+                'field' => null,
+                'message' => $msg,
+            ];
+        }
+
+        return response()->json([
+            'total' => $result['total'],
+            'valid' => $result['success'],
+            'invalid' => $result['failed'],
+            'errors' => $errorsDetailed,
+            'sample' => [
+                'header' => $sampleHeader,
+                'rows' => $sampleRows,
+            ],
+        ]);
+    }
+
+    /**
      * Import de produits depuis fichier XLSX ou CSV.
      * Permission requise : pharmacy.product.import
      */
@@ -520,7 +686,8 @@ class ProductController
                 'prescription_required' => 'boolean',
                 'manufacturer' => 'nullable|string|max:255',
                 'supplier_id' => 'nullable|exists:pharmacy_suppliers,id',
-                'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+                // 8 Mo max pour supporter les photos récentes
+                'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:8192',
                 'image_url' => 'nullable|url|max:500',
                 'wholesale_price' => 'nullable|numeric|min:0',
                 'wholesale_min_quantity' => 'nullable|integer|min:0',
@@ -804,7 +971,8 @@ class ProductController
                 'manufacturer' => 'nullable|string|max:255',
                 'supplier_id' => 'nullable|exists:pharmacy_suppliers,id',
                 'is_active' => 'boolean',
-                'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+                // 8 Mo max pour supporter les photos récentes
+                'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:8192',
                 'image_url' => 'nullable|url|max:500',
                 'remove_image' => 'nullable|boolean',
                 'wholesale_price' => 'nullable|numeric|min:0',

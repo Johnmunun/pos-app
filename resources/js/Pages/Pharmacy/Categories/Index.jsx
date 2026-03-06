@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Badge } from '@/Components/ui/badge';
+import ImportModal from '@/Components/ImportModal';
 import CategoryDrawer from '@/Components/Pharmacy/CategoryDrawer';
 import { Pagination } from '@/Components/ui/pagination';
 import { 
@@ -14,7 +15,11 @@ import {
   Trash2, 
   Tag,
   RefreshCw,
-  FileDown
+  FileDown,
+  Upload,
+  X,
+  XCircle,
+  CheckCircle,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
@@ -25,11 +30,19 @@ export default function CategoriesIndex({ auth, categories, pagination, filters,
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null);
 
+    // Import (Pharmacy uniquement)
+    const [importOpen, setImportOpen] = useState(false);
+    const [importFile, setImportFile] = useState(null);
+    const [importPreview, setImportPreview] = useState(null);
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [confirmingImport, setConfirmingImport] = useState(false);
+
     // Vérifier les permissions
     const canView = permissions?.view || false;
     const canCreate = permissions?.create || false;
     const canUpdate = permissions?.update || false;
     const canDelete = permissions?.delete || false;
+    const canImport = routePrefix === 'pharmacy' && (permissions?.import || false);
 
     // Si pas de permission view, rediriger
     if (!canView) {
@@ -143,6 +156,69 @@ export default function CategoriesIndex({ auth, categories, pagination, filters,
         router.reload();
     };
 
+    const handleOpenImport = () => {
+        if (!canImport) {
+            toast.error('Vous n\'avez pas la permission d\'importer des catégories.');
+            return;
+        }
+        setImportOpen(true);
+        setImportFile(null);
+        setImportPreview(null);
+    };
+
+    const handleGeneratePreview = async (e) => {
+        e.preventDefault();
+        if (!importFile) {
+            toast.error('Veuillez sélectionner un fichier.');
+            return;
+        }
+        setPreviewLoading(true);
+        setImportPreview(null);
+        try {
+            const formData = new FormData();
+            formData.append('file', importFile);
+            const res = await axios.post(route(`${routePrefix}.categories.import.preview`), formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            setImportPreview(res.data);
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Erreur lors de l\'aperçu.';
+            toast.error(msg);
+        } finally {
+            setPreviewLoading(false);
+        }
+    };
+
+    const handleConfirmImport = async () => {
+        if (!importFile) {
+            toast.error('Veuillez sélectionner un fichier.');
+            return;
+        }
+        setConfirmingImport(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', importFile);
+            const res = await axios.post(route(`${routePrefix}.categories.import`), formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            if (res.data.success > 0) {
+                toast.success(`${res.data.success} catégorie(s) importée(s) avec succès.`);
+                setImportOpen(false);
+                setImportFile(null);
+                setImportPreview(null);
+                router.reload();
+            }
+            if (res.data.failed > 0 && res.data.errors?.length) {
+                toast.error(`${res.data.failed} ligne(s) en erreur.`);
+            }
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Erreur lors de l\'import.';
+            toast.error(msg);
+        } finally {
+            setConfirmingImport(false);
+        }
+    };
+
     const handleExportPdf = () => {
         const params = new URLSearchParams();
         if (searchTerm) {
@@ -177,6 +253,16 @@ export default function CategoriesIndex({ auth, categories, pagination, filters,
                             <RefreshCw className="h-4 w-4 mr-2" />
                             <span className="hidden sm:inline">Actualiser</span>
                         </button>
+                        {canImport && (
+                            <button
+                                onClick={handleOpenImport}
+                                className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-600 dark:text-white dark:hover:bg-blue-700 px-4 py-2 h-10 shadow-sm hover:shadow-md"
+                            >
+                                <Upload className="h-4 w-4 mr-2" />
+                                <span className="hidden sm:inline">Importer</span>
+                                <span className="sm:hidden">Import</span>
+                            </button>
+                        )}
                         {canCreate && (
                             <button
                                 onClick={handleCreate}
@@ -346,6 +432,38 @@ export default function CategoriesIndex({ auth, categories, pagination, filters,
                 canUpdate={canUpdate}
                 routePrefix={routePrefix}
             />
+
+            {/* Modal Import Catégories */}
+            {canImport && (
+                <ImportModal
+                    show={importOpen}
+                    onClose={() => {
+                        setImportOpen(false);
+                        setImportFile(null);
+                        setImportPreview(null);
+                    }}
+                    title="Importer des catégories"
+                    summaryItems={[
+                        'Importez vos catégories via un fichier Excel (.xlsx) ou CSV.',
+                        'Colonne obligatoire : nom. Les autres colonnes sont optionnelles.',
+                        'Ne pas modifier la première ligne (en-têtes) ni renommer les colonnes du modèle.',
+                        'Ne pas ajouter de nouvelles colonnes ni fusionner de cellules, et éviter les formules Excel dans les champs importés.',
+                    ]}
+                    examples={[
+                        { values: { nom: 'Médicaments génériques' } },
+                        { values: { nom: 'Parapharmacie', description: 'Produits de soins' } },
+                    ]}
+                    templateUrl={route(`${routePrefix}.categories.import.template`)}
+                    accept=".xlsx,.csv,.txt"
+                    file={importFile}
+                    onFileChange={setImportFile}
+                    onGeneratePreview={handleGeneratePreview}
+                    previewLoading={previewLoading}
+                    preview={importPreview}
+                    onConfirmImport={handleConfirmImport}
+                    confirmingImport={confirmingImport}
+                />
+            )}
         </AppLayout>
     );
 }

@@ -104,13 +104,26 @@ export default function HardwareProductEdit({ product, categories = [] }) {
         if (!data.price_normal && data.price) {
             setData('price_normal', data.price);
         }
+        // Utiliser directement PUT Inertia avec FormData forcé
         put(route('hardware.products.update', product.id), {
             forceFormData: true,
             onSuccess: () => {
                 toast.success('Produit mis à jour');
                 router.visit(route('hardware.products.show', product.id));
             },
-            onError: (err) => toast.error(err?.message || 'Erreur'),
+            onError: (errors) => {
+                const firstError =
+                    errors?.image ||
+                    errors?.message ||
+                    (errors && typeof errors === 'object'
+                        ? Object.values(errors)[0]
+                        : null);
+                toast.error(
+                    typeof firstError === 'string'
+                        ? firstError
+                        : 'Erreur lors de la mise à jour du produit.'
+                );
+            },
         });
     };
 
@@ -195,6 +208,7 @@ export default function HardwareProductEdit({ product, categories = [] }) {
                                             <input
                                                 type="file"
                                                 id="image"
+                                                name="image"
                                                 accept="image/jpeg,image/jpg,image/png,image/webp"
                                                 onChange={handleImageChange}
                                                 className="hidden"

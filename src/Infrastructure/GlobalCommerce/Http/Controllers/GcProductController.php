@@ -1,0 +1,705 @@
+<?php
+
+namespace Src\Infrastructure\GlobalCommerce\Http\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Reader\Csv;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Src\Application\GlobalCommerce\Inventory\DTO\CreateProductDTO;
+use Src\Application\GlobalCommerce\Inventory\DTO\UpdateProductDTO;
+use Src\Application\GlobalCommerce\Inventory\UseCases\CreateProductUseCase;
+use Src\Application\GlobalCommerce\Inventory\UseCases\DeleteProductUseCase;
+use Src\Application\GlobalCommerce\Inventory\UseCases\UpdateProductUseCase;
+use Src\Domain\GlobalCommerce\Inventory\Repositories\CategoryRepositoryInterface;
+use Src\Domain\GlobalCommerce\Inventory\Repositories\ProductRepositoryInterface;
+use Src\Infrastructure\GlobalCommerce\Inventory\Models\CategoryModel;
+use Src\Infrastructure\GlobalCommerce\Inventory\Models\ProductModel;
+use Src\Infrastructure\GlobalCommerce\Services\ProductImageService;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+
+class GcProductController
+{
+    private function getShopId(Request $request): string
+    {
+        $user = $request->user();
+        if ($user === null) {
+            abort(403);
+        }
+
+        $depotId = $request->session()->get('current_depot_id');
+
+        if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
+            $shop = \App\Models\Shop::where('depot_id', (int) $depotId)
+                ->where('tenant_id', $user->tenant_id)
+                ->first();
+            if ($shop) {
+                return (string) $shop->id;
+            }
+        }
+
+        if ($user->shop_id !== null && $user->shop_id !== '') {
+            return (string) $user->shop_id;
+        }
+
+        if ($user->tenant_id) {
+            return (string) $user->tenant_id;
+        }
+
+        abort(403, 'Shop ID not found.');
+    }
+
+    public function __construct(
+        private ProductRepositoryInterface $productRepository,
+        private CategoryRepositoryInterface $categoryRepository,
+        private CreateProductUseCase $createProductUseCase,
+        private UpdateProductUseCase $updateProductUseCase,
+        private DeleteProductUseCase $deleteProductUseCase,
+        private ProductImageService $imageService
+    ) {}
+
+    public function index(Request $request): Response
+    {
+        $shopId = $this->getShopId($request);
+        $search = (string) $request->input('search', '');
+        $categoryId = $request->input('category_id');
+        $products = $this->productRepository->search($shopId, $search, array_filter([
+            'category_id' => $categoryId,
+            'is_active' => $request->boolean('active', true) ? true : null,
+        ]));
+
+        // L'écran Index ouvre un drawer d'édition. On doit donc inclure les champs nécessaires
+        // (prix d'achat/vente, description, etc.) et les champs avancés stockés sur gc_products.
+        $ids = array_map(fn ($p) => $p->getId(), $products);
+        $extraMap = [];
+        if (!empty($ids)) {
+            $cols = ['id', 'image_path', 'image_type', 'wholesale_price_amount', 'discount_percent', 'price_non_negotiable'];
+            if (Schema::hasColumn('gc_products', 'min_sale_price_amount')) {
+                $cols[] = 'min_sale_price_amount';
+            }
+            if (Schema::hasColumn('gc_products', 'min_wholesale_price_amount')) {
+                $cols[] = 'min_wholesale_price_amount';
+            }
+            foreach (['product_type', 'unit', 'weight', 'length', 'width', 'height', 'tax_rate', 'tax_type', 'status'] as $c) {
+                if (Schema::hasColumn('gc_products', $c)) {
+                    $cols[] = $c;
+                }
+            }
+
+            $models = ProductModel::whereIn('id', $ids)->get($cols);
+            foreach ($models as $m) {
+                /** @var ProductModel $m */
+                $extraMap[$m->id] = [
+                    'image_url' => $m->image_path
+                        ? $this->imageService->getUrl($m->image_path, $m->image_type ?? 'upload')
+                        : null,
+                    'wholesale_price_amount' => $m->wholesale_price_amount,
+                    'discount_percent' => $m->discount_percent,
+                    'price_non_negotiable' => (bool) ($m->price_non_negotiable ?? false),
+                    'min_sale_price_amount' => $m->min_sale_price_amount ?? null,
+                    'min_wholesale_price_amount' => $m->min_wholesale_price_amount ?? null,
+                    'product_type' => $m->product_type ?? null,
+                    'unit' => $m->unit ?? null,
+                    'weight' => $m->weight ?? null,
+                    'length' => $m->length ?? null,
+                    'width' => $m->width ?? null,
+                    'height' => $m->height ?? null,
+                    'tax_rate' => $m->tax_rate ?? null,
+                    'tax_type' => $m->tax_type ?? null,
+                    'status' => $m->status ?? 'active',
+                ];
+            }
+        }
+
+        $list = array_map(function ($p) use ($extraMap) {
+            $id = $p->getId();
+            $extra = $extraMap[$id] ?? [];
+            return [
+                'id' => $id,
+                'sku' => $p->getSku(),
+                'barcode' => $p->getBarcode(),
+                'name' => $p->getName(),
+                'description' => $p->getDescription(),
+                'category_id' => $p->getCategoryId(),
+                'purchase_price' => $p->getPurchasePrice()->getAmount(),
+                'purchase_price_currency' => $p->getPurchasePrice()->getCurrency(),
+                'sale_price_amount' => $p->getSalePrice()->getAmount(),
+                'sale_price_currency' => $p->getSalePrice()->getCurrency(),
+                'sale_price' => $p->getSalePrice()->getAmount(),
+                'currency' => $p->getSalePrice()->getCurrency(),
+                'stock' => $p->getStock()->getValue(),
+                'minimum_stock' => $p->getMinimumStock()->getValue(),
+                'is_weighted' => $p->isWeighted(),
+                'has_expiration' => $p->hasExpiration(),
+                'is_active' => $p->isActive(),
+                'image_url' => $extra['image_url'] ?? null,
+                'wholesale_price' => $extra['wholesale_price_amount'] ?? null,
+                'wholesale_price_amount' => $extra['wholesale_price_amount'] ?? null,
+                'discount_percent' => $extra['discount_percent'] ?? null,
+                'price_non_negotiable' => $extra['price_non_negotiable'] ?? false,
+                'min_sale_price_amount' => $extra['min_sale_price_amount'] ?? null,
+                'min_wholesale_price_amount' => $extra['min_wholesale_price_amount'] ?? null,
+                'product_type' => $extra['product_type'] ?? null,
+                'unit' => $extra['unit'] ?? null,
+                'weight' => $extra['weight'] ?? null,
+                'length' => $extra['length'] ?? null,
+                'width' => $extra['width'] ?? null,
+                'height' => $extra['height'] ?? null,
+                'tax_rate' => $extra['tax_rate'] ?? null,
+                'tax_type' => $extra['tax_type'] ?? null,
+                'status' => $extra['status'] ?? 'active',
+            ];
+        }, $products);
+        $categories = CategoryModel::where('shop_id', $shopId)->orderBy('name')->get(['id', 'name']);
+        return Inertia::render('Commerce/Products/Index', [
+            'products' => $list,
+            'categories' => $categories,
+            'filters' => ['search' => $search, 'category_id' => $categoryId],
+        ]);
+    }
+
+    public function create(Request $request): Response
+    {
+        $shopId = $this->getShopId($request);
+        $categories = CategoryModel::where('shop_id', $shopId)->orderBy('name')->get(['id', 'name']);
+        return Inertia::render('Commerce/Products/Create', [
+            'categories' => $categories,
+            'currency' => 'USD',
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $shopId = $this->getShopId($request);
+        $validated = $request->validate([
+            'sku' => 'required|string|max:100',
+            'barcode' => 'nullable|string|max:100',
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'category_id' => 'required|uuid|exists:gc_categories,id',
+            'purchase_price' => 'required|numeric|min:0',
+            'sale_price' => 'required|numeric|min:0',
+            'initial_stock' => 'numeric|min:0',
+            'minimum_stock' => 'numeric|min:0',
+            'currency' => 'string|in:USD,EUR,CDF',
+            'is_weighted' => 'boolean',
+            'has_expiration' => 'boolean',
+            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'wholesale_price' => 'nullable|numeric|min:0',
+            'min_sale_price' => 'nullable|numeric|min:0',
+            'min_wholesale_price' => 'nullable|numeric|min:0',
+            'discount_percent' => 'nullable|numeric|min:0|max:100',
+            'price_non_negotiable' => 'nullable|boolean',
+            'product_type' => 'nullable|string|in:simple,variable,service',
+            'unit' => 'nullable|string|max:50',
+            'weight' => 'nullable|numeric|min:0',
+            'length' => 'nullable|numeric|min:0',
+            'width' => 'nullable|numeric|min:0',
+            'height' => 'nullable|numeric|min:0',
+            'tax_rate' => 'nullable|numeric|min:0|max:100',
+            'tax_type' => 'nullable|string|in:included,excluded',
+            'status' => 'nullable|string|in:active,inactive,draft',
+        ]);
+        $dto = new CreateProductDTO(
+            $shopId,
+            $validated['sku'],
+            $validated['barcode'] ?? null,
+            $validated['name'],
+            $validated['description'] ?? null,
+            $validated['category_id'],
+            (float) $validated['purchase_price'],
+            (float) $validated['sale_price'],
+            (float) ($validated['initial_stock'] ?? 0),
+            (float) ($validated['minimum_stock'] ?? 0),
+            $validated['currency'] ?? 'USD',
+            (bool) ($validated['is_weighted'] ?? false),
+            (bool) ($validated['has_expiration'] ?? false)
+        );
+        $product = $this->createProductUseCase->execute($dto);
+
+        // Enregistrer les champs avancés (image, prix de gros, remise, non négociable)
+        /** @var ProductModel|null $model */
+        $model = ProductModel::find($product->getId());
+        if ($model) {
+            $extra = [];
+
+            if (isset($validated['wholesale_price']) && $validated['wholesale_price'] !== null) {
+                $extra['wholesale_price_amount'] = (float) $validated['wholesale_price'];
+            }
+            if (isset($validated['min_sale_price']) && $validated['min_sale_price'] !== null) {
+                $extra['min_sale_price_amount'] = (float) $validated['min_sale_price'];
+            }
+            if (isset($validated['min_wholesale_price']) && $validated['min_wholesale_price'] !== null) {
+                $extra['min_wholesale_price_amount'] = (float) $validated['min_wholesale_price'];
+            }
+            if (isset($validated['discount_percent']) && $validated['discount_percent'] !== null) {
+                $extra['discount_percent'] = (float) $validated['discount_percent'];
+            }
+            $extra['price_non_negotiable'] = (bool) ($validated['price_non_negotiable'] ?? false);
+            if (array_key_exists('product_type', $validated)) {
+                $extra['product_type'] = $validated['product_type'] ?: null;
+            }
+            if (array_key_exists('unit', $validated)) {
+                $extra['unit'] = $validated['unit'] ?: null;
+            }
+            if (array_key_exists('weight', $validated)) {
+                $extra['weight'] = $validated['weight'] !== null && $validated['weight'] !== '' ? (float) $validated['weight'] : null;
+            }
+            if (array_key_exists('length', $validated)) {
+                $extra['length'] = $validated['length'] !== null && $validated['length'] !== '' ? (float) $validated['length'] : null;
+            }
+            if (array_key_exists('width', $validated)) {
+                $extra['width'] = $validated['width'] !== null && $validated['width'] !== '' ? (float) $validated['width'] : null;
+            }
+            if (array_key_exists('height', $validated)) {
+                $extra['height'] = $validated['height'] !== null && $validated['height'] !== '' ? (float) $validated['height'] : null;
+            }
+            if (array_key_exists('tax_rate', $validated)) {
+                $extra['tax_rate'] = $validated['tax_rate'] !== null && $validated['tax_rate'] !== '' ? (float) $validated['tax_rate'] : null;
+            }
+            if (array_key_exists('tax_type', $validated)) {
+                $extra['tax_type'] = $validated['tax_type'] ?: null;
+            }
+            if (array_key_exists('status', $validated)) {
+                $extra['status'] = $validated['status'] ?? 'active';
+            }
+
+            if ($request->hasFile('image')) {
+                $file = $request->file('image');
+                $stored = $this->imageService->store($file);
+                $extra['image_path'] = $stored['image_path'];
+                $extra['image_type'] = $stored['image_type'];
+            }
+
+            if (!empty($extra)) {
+                $model->update($extra);
+            }
+        }
+        return redirect()->route('commerce.products.index')->with('success', 'Produit créé.');
+    }
+
+    public function edit(Request $request, string $id): Response|RedirectResponse
+    {
+        $shopId = $this->getShopId($request);
+        $product = $this->productRepository->findById($id);
+        if (!$product || $product->getShopId() !== $shopId) {
+            return redirect()->route('commerce.products.index')->with('error', 'Produit introuvable.');
+        }
+        $model = ProductModel::find($product->getId());
+        $categories = CategoryModel::where('shop_id', $shopId)->orderBy('name')->get(['id', 'name']);
+        return Inertia::render('Commerce/Products/Edit', [
+            'product' => [
+                'id' => $product->getId(),
+                'sku' => $product->getSku(),
+                'barcode' => $product->getBarcode(),
+                'name' => $product->getName(),
+                'description' => $product->getDescription(),
+                'category_id' => $product->getCategoryId(),
+                'purchase_price' => $product->getPurchasePrice()->getAmount(),
+                'sale_price' => $product->getSalePrice()->getAmount(),
+                'minimum_stock' => $product->getMinimumStock()->getValue(),
+                'currency' => $product->getSalePrice()->getCurrency(),
+                'is_weighted' => $product->isWeighted(),
+                'has_expiration' => $product->hasExpiration(),
+                'is_active' => $product->isActive(),
+                'wholesale_price' => $model?->wholesale_price_amount,
+                'discount_percent' => $model?->discount_percent,
+                'price_non_negotiable' => (bool) ($model?->price_non_negotiable ?? false),
+                'min_sale_price' => $model?->min_sale_price_amount,
+                'min_wholesale_price' => $model?->min_wholesale_price_amount,
+                'product_type' => $model?->product_type,
+                'unit' => $model?->unit,
+                'weight' => $model?->weight,
+                'length' => $model?->length,
+                'width' => $model?->width,
+                'height' => $model?->height,
+                'tax_rate' => $model?->tax_rate,
+                'tax_type' => $model?->tax_type,
+                'status' => $model?->status ?? 'active',
+                'image_url' => $model && $model->image_path
+                    ? app(\Src\Infrastructure\GlobalCommerce\Services\ProductImageService::class)
+                        ->getUrl($model->image_path, $model->image_type ?? 'upload')
+                    : null,
+            ],
+            'categories' => $categories,
+        ]);
+    }
+
+    public function update(Request $request, string $id): RedirectResponse
+    {
+        $shopId = $this->getShopId($request);
+        $validated = $request->validate([
+            'sku' => 'required|string|max:100',
+            'barcode' => 'nullable|string|max:100',
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'category_id' => 'required|uuid|exists:gc_categories,id',
+            'purchase_price' => 'required|numeric|min:0',
+            'sale_price' => 'required|numeric|min:0',
+            'minimum_stock' => 'numeric|min:0',
+            'currency' => 'string|in:USD,EUR,CDF',
+            'is_weighted' => 'boolean',
+            'has_expiration' => 'boolean',
+            'is_active' => 'boolean',
+            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'remove_image' => 'nullable|boolean',
+            'wholesale_price' => 'nullable|numeric|min:0',
+            'min_sale_price' => 'nullable|numeric|min:0',
+            'min_wholesale_price' => 'nullable|numeric|min:0',
+            'discount_percent' => 'nullable|numeric|min:0|max:100',
+            'price_non_negotiable' => 'nullable|boolean',
+            'product_type' => 'nullable|string|in:simple,variable,service',
+            'unit' => 'nullable|string|max:50',
+            'weight' => 'nullable|numeric|min:0',
+            'length' => 'nullable|numeric|min:0',
+            'width' => 'nullable|numeric|min:0',
+            'height' => 'nullable|numeric|min:0',
+            'tax_rate' => 'nullable|numeric|min:0|max:100',
+            'tax_type' => 'nullable|string|in:included,excluded',
+            'status' => 'nullable|string|in:active,inactive,draft',
+        ]);
+        $status = $validated['status'] ?? 'active';
+        $isActive = $status === 'active';
+        $dto = new UpdateProductDTO(
+            $id,
+            $shopId,
+            $validated['sku'],
+            $validated['barcode'] ?? null,
+            $validated['name'],
+            $validated['description'] ?? null,
+            $validated['category_id'],
+            (float) $validated['purchase_price'],
+            (float) $validated['sale_price'],
+            (float) ($validated['minimum_stock'] ?? 0),
+            $validated['currency'] ?? 'USD',
+            (bool) ($validated['is_weighted'] ?? false),
+            (bool) ($validated['has_expiration'] ?? false),
+            $isActive
+        );
+        $product = $this->updateProductUseCase->execute($dto);
+
+        /** @var ProductModel|null $model */
+        $model = ProductModel::find($product->getId());
+        if ($model) {
+            $extra = [];
+
+            if (isset($validated['wholesale_price']) && $validated['wholesale_price'] !== null) {
+                $extra['wholesale_price_amount'] = (float) $validated['wholesale_price'];
+            }
+            if (isset($validated['min_sale_price']) && $validated['min_sale_price'] !== null) {
+                $extra['min_sale_price_amount'] = (float) $validated['min_sale_price'];
+            }
+            if (isset($validated['min_wholesale_price']) && $validated['min_wholesale_price'] !== null) {
+                $extra['min_wholesale_price_amount'] = (float) $validated['min_wholesale_price'];
+            }
+            if (isset($validated['discount_percent']) && $validated['discount_percent'] !== null) {
+                $extra['discount_percent'] = (float) $validated['discount_percent'];
+            }
+            $extra['price_non_negotiable'] = (bool) ($validated['price_non_negotiable'] ?? $model->price_non_negotiable);
+            if (array_key_exists('product_type', $validated)) {
+                $extra['product_type'] = $validated['product_type'] ?: null;
+            }
+            if (array_key_exists('unit', $validated)) {
+                $extra['unit'] = $validated['unit'] ?: null;
+            }
+            if (array_key_exists('weight', $validated)) {
+                $extra['weight'] = $validated['weight'] !== null && $validated['weight'] !== '' ? (float) $validated['weight'] : null;
+            }
+            if (array_key_exists('length', $validated)) {
+                $extra['length'] = $validated['length'] !== null && $validated['length'] !== '' ? (float) $validated['length'] : null;
+            }
+            if (array_key_exists('width', $validated)) {
+                $extra['width'] = $validated['width'] !== null && $validated['width'] !== '' ? (float) $validated['width'] : null;
+            }
+            if (array_key_exists('height', $validated)) {
+                $extra['height'] = $validated['height'] !== null && $validated['height'] !== '' ? (float) $validated['height'] : null;
+            }
+            if (array_key_exists('tax_rate', $validated)) {
+                $extra['tax_rate'] = $validated['tax_rate'] !== null && $validated['tax_rate'] !== '' ? (float) $validated['tax_rate'] : null;
+            }
+            if (array_key_exists('tax_type', $validated)) {
+                $extra['tax_type'] = $validated['tax_type'] ?: null;
+            }
+            if (array_key_exists('status', $validated)) {
+                $extra['status'] = $validated['status'] ?? 'active';
+            }
+
+            if (!empty($validated['remove_image'])) {
+                $this->imageService->delete($model->image_path, $model->image_type ?? 'upload');
+                $extra['image_path'] = null;
+                $extra['image_type'] = null;
+            } elseif ($request->hasFile('image')) {
+                $file = $request->file('image');
+                $this->imageService->delete($model->image_path, $model->image_type ?? 'upload');
+                $stored = $this->imageService->store($file);
+                $extra['image_path'] = $stored['image_path'];
+                $extra['image_type'] = $stored['image_type'];
+            }
+
+            if (!empty($extra)) {
+                $model->update($extra);
+            }
+        }
+        return redirect()->route('commerce.products.index')->with('success', 'Produit mis à jour.');
+    }
+
+    public function destroy(Request $request, string $id): RedirectResponse
+    {
+        $shopId = $this->getShopId($request);
+        try {
+            $this->deleteProductUseCase->execute($shopId, $id);
+            return redirect()->route('commerce.products.index')->with('success', 'Produit supprimé.');
+        } catch (\InvalidArgumentException $e) {
+            return redirect()->route('commerce.products.index')->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Modèle Excel pour l'import de produits Global Commerce.
+     */
+    public function importTemplate(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Modèle Produits Commerce');
+
+        $headers = [
+            'sku',
+            'nom',
+            'categorie',
+            'prix_achat',
+            'prix_vente',
+            'stock',
+            'stock_minimum',
+            'devise',
+            'actif',
+        ];
+
+        $sheet->fromArray($headers, null, 'A1');
+
+        // Exemple
+        $sheet->fromArray(
+            [
+                'SKU-001',
+                'Produit démo',
+                'OUTILLAGE',
+                10000,
+                15000,
+                100,
+                5,
+                'USD',
+                'oui',
+            ],
+            null,
+            'A2'
+        );
+
+        $filename = 'modele_import_produits_commerce_' . now()->format('Ymd_His') . '.xlsx';
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    /**
+     * Import simple de produits Global Commerce.
+     */
+    public function import(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,csv,txt|max:10240',
+        ], [
+            'file.required' => 'Veuillez sélectionner un fichier.',
+            'file.mimes' => 'Le fichier doit être au format .xlsx ou .csv.',
+            'file.max' => 'Le fichier ne doit pas dépasser 10 Mo.',
+        ]);
+
+        $shopId = $this->getShopId($request);
+
+        $file = $request->file('file');
+        $path = $file->getRealPath();
+
+        try {
+            $ext = strtolower($file->getClientOriginalExtension());
+            if ($ext === 'csv' || $ext === 'txt') {
+                $reader = new Csv();
+                $handle = fopen($path, 'r');
+                $line = $handle ? fgets($handle) : null;
+                if ($handle) {
+                    fclose($handle);
+                }
+                $delimiter = $line !== null && strpos($line, ';') !== false ? ';' : ',';
+                $reader->setDelimiter($delimiter);
+                $reader->setInputEncoding('UTF-8');
+                $spreadsheet = $reader->load($path);
+            } else {
+                $spreadsheet = IOFactory::load($path);
+            }
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray();
+        } catch (\Throwable $e) {
+            Log::error('GcProduct import: parse error', ['error' => $e->getMessage()]);
+            return response()->json([
+                'message' => 'Impossible de lire le fichier : ' . $e->getMessage(),
+            ], 422);
+        }
+
+        if (empty($rows)) {
+            return response()->json([
+                'message' => 'Fichier vide.',
+                'total' => 0,
+                'success' => 0,
+                'failed' => 0,
+                'errors' => [],
+            ]);
+        }
+
+        $headerRow = array_map('trim', array_map('strtolower', (array) $rows[0]));
+        $dataRows = array_slice($rows, 1);
+
+        $required = ['sku', 'nom', 'categorie', 'prix_vente'];
+        foreach ($required as $col) {
+            if (!in_array($col, $headerRow, true)) {
+                return response()->json([
+                    'message' => "Colonne obligatoire manquante : '{$col}'.",
+                    'total' => count($dataRows),
+                    'success' => 0,
+                    'failed' => count($dataRows),
+                    'errors' => [],
+                ], 422);
+            }
+        }
+
+        // Précharger les catégories
+        $categories = CategoryModel::where('shop_id', $shopId)->get(['id', 'name']);
+        $categoriesByName = [];
+        foreach ($categories as $cat) {
+            $categoriesByName[mb_strtolower($cat->name)] = $cat->id;
+        }
+
+        $success = 0;
+        $failed = 0;
+        $errors = [];
+
+        foreach ($dataRows as $index => $row) {
+            $lineNum = $index + 2;
+            $rowAssoc = [];
+            foreach ($headerRow as $i => $key) {
+                $rowAssoc[$key] = isset($row[$i]) ? trim((string) $row[$i]) : '';
+            }
+
+            if (!array_filter($rowAssoc, fn ($v) => $v !== '' && $v !== null)) {
+                continue;
+            }
+
+            $lineErrors = [];
+
+            $sku = $rowAssoc['sku'] ?? '';
+            $name = $rowAssoc['nom'] ?? '';
+            $categoryRaw = $rowAssoc['categorie'] ?? '';
+
+            if ($sku === '') {
+                $lineErrors[] = 'SKU obligatoire.';
+            }
+            if ($name === '') {
+                $lineErrors[] = 'Nom obligatoire.';
+            }
+            if ($categoryRaw === '') {
+                $lineErrors[] = 'Catégorie obligatoire.';
+            }
+
+            $categoryId = null;
+            if ($categoryRaw !== '') {
+                $category = $categories->firstWhere('id', $categoryRaw);
+                if ($category) {
+                    $categoryId = $category->id;
+                } else {
+                    $lower = mb_strtolower($categoryRaw);
+                    if (isset($categoriesByName[$lower])) {
+                        $categoryId = $categoriesByName[$lower];
+                    }
+                }
+                if ($categoryId === null) {
+                    $lineErrors[] = "Catégorie introuvable : {$categoryRaw}.";
+                }
+            }
+
+            $purchasePrice = $rowAssoc['prix_achat'] !== ''
+                ? (float) str_replace(',', '.', (string) $rowAssoc['prix_achat'])
+                : 0.0;
+            $salePrice = $rowAssoc['prix_vente'] !== ''
+                ? (float) str_replace(',', '.', (string) $rowAssoc['prix_vente'])
+                : 0.0;
+            if ($salePrice < 0) {
+                $lineErrors[] = 'Prix de vente doit être positif.';
+            }
+
+            $stock = $rowAssoc['stock'] !== ''
+                ? (float) str_replace(',', '.', (string) $rowAssoc['stock'])
+                : 0.0;
+            $minStock = $rowAssoc['stock_minimum'] !== ''
+                ? (float) str_replace(',', '.', (string) $rowAssoc['stock_minimum'])
+                : 0.0;
+            $currency = $rowAssoc['devise'] !== ''
+                ? strtoupper((string) $rowAssoc['devise'])
+                : 'USD';
+            $activeRaw = mb_strtolower($rowAssoc['actif'] ?? '');
+            $isActive = !in_array($activeRaw, ['non', 'no', '0', 'false'], true);
+
+            if (!empty($lineErrors)) {
+                $failed++;
+                $errors[] = "Ligne {$lineNum}: " . implode(' | ', $lineErrors);
+                continue;
+            }
+
+            try {
+                $dto = new CreateProductDTO(
+                    $shopId,
+                    $sku,
+                    null,
+                    $name,
+                    null,
+                    $categoryId,
+                    $purchasePrice,
+                    $salePrice,
+                    $stock,
+                    $minStock,
+                    $currency,
+                    false,
+                    false
+                );
+                $product = $this->createProductUseCase->execute($dto);
+
+                /** @var ProductModel|null $model */
+                $model = ProductModel::find($product->getId());
+                if ($model) {
+                    $model->update(['is_active' => $isActive]);
+                }
+
+                $success++;
+            } catch (\Throwable $e) {
+                $failed++;
+                $errors[] = "Ligne {$lineNum}: " . $e->getMessage();
+            }
+        }
+
+        $total = $success + $failed;
+
+        return response()->json([
+            'message' => 'Import produits terminé.',
+            'total' => $total,
+            'success' => $success,
+            'failed' => $failed,
+            'errors' => $errors,
+        ]);
+    }
+}

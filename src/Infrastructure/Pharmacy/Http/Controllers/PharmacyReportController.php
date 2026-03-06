@@ -65,8 +65,8 @@ class PharmacyReportController
 
         $depotId = $request->session()->get('current_depot_id');
         $cacheKey = 'pharmacy.reports.' . $shopId . '.' . ($depotId ?? '') . '.' . $from . '.' . $to;
-        $report = Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($shopId, $from, $to) {
-            return $this->buildReport($shopId, $from, $to);
+        $report = Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($shopId, $from, $to, $depotId) {
+            return $this->buildReport($shopId, $from, $to, $depotId);
         });
 
         return Inertia::render($this->getModule() . '/Reports/Index', [
@@ -88,29 +88,44 @@ class PharmacyReportController
         $from = $request->input('from', now()->startOfMonth()->format('Y-m-d'));
         $to = $request->input('to', now()->format('Y-m-d'));
 
-        $cacheKey = 'pharmacy.reports.' . $shopId . '.' . $from . '.' . $to;
-        return Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($shopId, $from, $to) {
-            return $this->buildReport($shopId, $from, $to);
+        $depotId = $request->session()->get('current_depot_id');
+        $cacheKey = 'pharmacy.reports.' . $shopId . '.' . ($depotId ?? '') . '.' . $from . '.' . $to;
+        return Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($shopId, $from, $to, $depotId) {
+            return $this->buildReport($shopId, $from, $to, $depotId);
         });
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function buildReport(string $shopId, string $from, string $to): array
+    private function buildReport(string $shopId, string $from, string $to, ?int $depotId = null): array
     {
         $fromDate = $from . ' 00:00:00';
         $toDate = $to . ' 23:59:59';
 
-        $salesStats = SaleModel::where('shop_id', $shopId)
+        $salesQuery = SaleModel::where('shop_id', $shopId)
             ->where('status', 'COMPLETED')
-            ->whereBetween('completed_at', [$fromDate, $toDate])
+            ->whereBetween('completed_at', [$fromDate, $toDate]);
+        if ($depotId !== null) {
+            $salesQuery->where(function ($q) use ($depotId) {
+                $q->where('depot_id', $depotId)
+                  ->orWhereNull('depot_id');
+            });
+        }
+        $salesStats = $salesQuery
             ->selectRaw('COUNT(*) as count, COALESCE(SUM(total_amount), 0) as total')
             ->first();
 
-        $salesByDay = SaleModel::where('shop_id', $shopId)
+        $salesByDayQuery = SaleModel::where('shop_id', $shopId)
             ->where('status', 'COMPLETED')
-            ->whereBetween('completed_at', [$fromDate, $toDate])
+            ->whereBetween('completed_at', [$fromDate, $toDate]);
+        if ($depotId !== null) {
+            $salesByDayQuery->where(function ($q) use ($depotId) {
+                $q->where('depot_id', $depotId)
+                  ->orWhereNull('depot_id');
+            });
+        }
+        $salesByDay = $salesByDayQuery
             ->selectRaw('DATE(completed_at) as date, COUNT(*) as count, COALESCE(SUM(total_amount), 0) as total')
             ->groupBy(DB::raw('DATE(completed_at)'))
             ->orderBy('date')
@@ -122,31 +137,58 @@ class PharmacyReportController
             ])
             ->toArray();
 
-        $productStats = ProductModel::where('shop_id', $shopId)
-            ->where('is_active', true)
+        $productQuery = ProductModel::where('shop_id', $shopId)
+            ->where('is_active', true);
+        if ($depotId !== null && \Illuminate\Support\Facades\Schema::hasColumn('pharmacy_products', 'depot_id')) {
+            $productQuery->where(function ($q) use ($depotId) {
+                $q->where('depot_id', $depotId)
+                  ->orWhereNull('depot_id');
+            });
+        }
+        $productStats = $productQuery
             ->selectRaw('COUNT(*) as total, COALESCE(SUM(price_amount * stock), 0) as stock_value')
             ->first();
 
         $lowStockCount = 0;
         if (Schema::hasColumn('pharmacy_products', 'minimum_stock')) {
-            $lowStockCount = ProductModel::where('shop_id', $shopId)
+            $lowStockQuery = ProductModel::where('shop_id', $shopId)
                 ->where('is_active', true)
                 ->whereNotNull('minimum_stock')
-                ->whereColumn('stock', '<=', 'minimum_stock')
-                ->count();
+                ->whereColumn('stock', '<=', 'minimum_stock');
+            if ($depotId !== null && \Illuminate\Support\Facades\Schema::hasColumn('pharmacy_products', 'depot_id')) {
+                $lowStockQuery->where(function ($q) use ($depotId) {
+                    $q->where('depot_id', $depotId)
+                      ->orWhereNull('depot_id');
+                });
+            }
+            $lowStockCount = $lowStockQuery->count();
         }
 
-        $purchasesStats = PurchaseOrderModel::where('shop_id', $shopId)
+        $purchasesQuery = PurchaseOrderModel::where('shop_id', $shopId)
             ->whereIn('status', ['RECEIVED', 'PARTIALLY_RECEIVED'])
             ->whereNotNull('received_at')
-            ->whereBetween('received_at', [$fromDate, $toDate])
+            ->whereBetween('received_at', [$fromDate, $toDate]);
+        if ($depotId !== null && \Illuminate\Support\Facades\Schema::hasColumn('pharmacy_purchase_orders', 'depot_id')) {
+            $purchasesQuery->where(function ($q) use ($depotId) {
+                $q->where('depot_id', $depotId)
+                  ->orWhereNull('depot_id');
+            });
+        }
+        $purchasesStats = $purchasesQuery
             ->selectRaw('COUNT(*) as count, COALESCE(SUM(total_amount), 0) as total')
             ->first();
 
-        $purchasesByDay = PurchaseOrderModel::where('shop_id', $shopId)
+        $purchasesByDayQuery = PurchaseOrderModel::where('shop_id', $shopId)
             ->whereIn('status', ['RECEIVED', 'PARTIALLY_RECEIVED'])
             ->whereNotNull('received_at')
-            ->whereBetween('received_at', [$fromDate, $toDate])
+            ->whereBetween('received_at', [$fromDate, $toDate]);
+        if ($depotId !== null && \Illuminate\Support\Facades\Schema::hasColumn('pharmacy_purchase_orders', 'depot_id')) {
+            $purchasesByDayQuery->where(function ($q) use ($depotId) {
+                $q->where('depot_id', $depotId)
+                  ->orWhereNull('depot_id');
+            });
+        }
+        $purchasesByDay = $purchasesByDayQuery
             ->selectRaw('DATE(received_at) as date, COUNT(*) as count, COALESCE(SUM(total_amount), 0) as total')
             ->groupBy(DB::raw('DATE(received_at)'))
             ->orderBy('date')
@@ -158,8 +200,15 @@ class PharmacyReportController
             ])
             ->toArray();
 
-        $movementsStats = StockMovementModel::where('shop_id', $shopId)
-            ->whereBetween('created_at', [$fromDate, $toDate])
+        $movementsQuery = StockMovementModel::where('shop_id', $shopId)
+            ->whereBetween('created_at', [$fromDate, $toDate]);
+        if ($depotId !== null && \Illuminate\Support\Facades\Schema::hasColumn('pharmacy_stock_movements', 'depot_id')) {
+            $movementsQuery->where(function ($q) use ($depotId) {
+                $q->where('depot_id', $depotId)
+                  ->orWhereNull('depot_id');
+            });
+        }
+        $movementsStats = $movementsQuery
             ->selectRaw("
                 SUM(CASE WHEN type = 'IN' THEN quantity ELSE 0 END) as qty_in,
                 SUM(CASE WHEN type = 'OUT' THEN quantity ELSE 0 END) as qty_out,
@@ -180,6 +229,12 @@ class PharmacyReportController
                 SUM(pharmacy_sale_lines.quantity) as qty_sold,
                 COALESCE(SUM(pharmacy_sale_lines.line_total_amount), 0) as revenue
             ');
+        if ($depotId !== null && \Illuminate\Support\Facades\Schema::hasColumn('pharmacy_sales', 'depot_id')) {
+            $productSalesQuery->where(function ($q) use ($depotId) {
+                $q->where('pharmacy_sales.depot_id', $depotId)
+                  ->orWhereNull('pharmacy_sales.depot_id');
+            });
+        }
         $productSalesRows = $productSalesQuery->get();
         $productIds = $productSalesRows->pluck('product_id')->unique()->filter()->values()->all();
         $productsById = $productIds !== [] ? ProductModel::whereIn('id', $productIds)->get()->keyBy('id') : collect();

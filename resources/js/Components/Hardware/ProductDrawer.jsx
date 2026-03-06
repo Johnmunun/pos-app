@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm, usePage, router } from '@inertiajs/react';
 import Drawer from '@/Components/Drawer';
 import { Label } from '@/Components/ui/label';
@@ -23,6 +23,8 @@ export default function HardwareProductDrawer({ isOpen, onClose, product = null,
     const currencies = props.shop?.currencies || [];
     const defaultCurrency = props.shop?.currency || (currencies.find(c => c.is_default)?.code || currencies[0]?.code || 'USD');
     const [imagePreview, setImagePreview] = useState(product?.image_url || null);
+    const lastSyncedProductId = useRef(null);
+    const fileInputRef = useRef(null);
 
     const { data, setData, post, put, processing, errors, reset } = useForm({
         name: product?.name || '',
@@ -50,37 +52,43 @@ export default function HardwareProductDrawer({ isOpen, onClose, product = null,
 
     const [isGeneratingCode, setIsGeneratingCode] = useState(false);
 
+    // Ne synchroniser le formulaire avec product que lorsque l'id du produit change,
+    // pour ne pas écraser le fichier image sélectionné (évite les re-renders qui remettaient image: null).
     useEffect(() => {
-        if (product) {
-            setData({
-                name: product.name || '',
-                product_code: product.product_code || '',
-                description: product.description || '',
-                category_id: product.category_id || '',
-                price: product.price_amount ?? '',
-                currency: product.price_currency || defaultCurrency,
-                minimum_stock: product.minimum_stock ?? 0,
-                unit: product.type_unite || 'UNITE',
-                type_unite: product.type_unite || 'UNITE',
-                quantite_par_unite: product.quantite_par_unite ?? 1,
-                est_divisible: product.est_divisible !== false,
-                image: null,
-                remove_image: false,
-                price_normal: product.price_normal ?? product.price_amount ?? '',
-                price_reduced: product.price_reduced ?? '',
-                price_reduction_percent: product.price_reduction_percent ?? '',
-                price_non_negotiable: product.price_non_negotiable ?? '',
-                price_wholesale_normal: product.price_wholesale_normal ?? '',
-                price_wholesale_reduced: product.price_wholesale_reduced ?? '',
-                price_non_negotiable_wholesale: product.price_non_negotiable_wholesale ?? '',
-                barcode: product.barcode || '',
-            });
-            setImagePreview(product.image_url || null);
-        } else {
-            reset();
-            setImagePreview(null);
+        const productId = product?.id ?? null;
+        if (productId !== lastSyncedProductId.current) {
+            lastSyncedProductId.current = productId;
+            if (product) {
+                setData({
+                    name: product.name || '',
+                    product_code: product.product_code || '',
+                    description: product.description || '',
+                    category_id: product.category_id || '',
+                    price: product.price_amount ?? '',
+                    currency: product.price_currency || defaultCurrency,
+                    minimum_stock: product.minimum_stock ?? 0,
+                    unit: product.type_unite || 'UNITE',
+                    type_unite: product.type_unite || 'UNITE',
+                    quantite_par_unite: product.quantite_par_unite ?? 1,
+                    est_divisible: product.est_divisible !== false,
+                    image: null,
+                    remove_image: false,
+                    price_normal: product.price_normal ?? product.price_amount ?? '',
+                    price_reduced: product.price_reduced ?? '',
+                    price_reduction_percent: product.price_reduction_percent ?? '',
+                    price_non_negotiable: product.price_non_negotiable ?? '',
+                    price_wholesale_normal: product.price_wholesale_normal ?? '',
+                    price_wholesale_reduced: product.price_wholesale_reduced ?? '',
+                    price_non_negotiable_wholesale: product.price_non_negotiable_wholesale ?? '',
+                    barcode: product.barcode || '',
+                });
+                setImagePreview(product.image_url || null);
+            } else {
+                reset();
+                setImagePreview(null);
+            }
         }
-    }, [product]);
+    }, [product?.id, product]);
 
     const handleImageChange = (e) => {
         const file = e.target.files?.[0];
@@ -157,6 +165,7 @@ export default function HardwareProductDrawer({ isOpen, onClose, product = null,
             setData('price_normal', data.price);
         }
         if (isEditing) {
+            // Utiliser une requête PUT Inertia avec FormData forcé
             put(route('hardware.products.update', product.id), {
                 forceFormData: true,
                 preserveScroll: false,
@@ -168,9 +177,19 @@ export default function HardwareProductDrawer({ isOpen, onClose, product = null,
                     // Recharger la page pour afficher l'image mise à jour
                     router.reload({ only: ['products'] });
                 },
-                onError: (err) => {
-                    const errorMessage = err.message || (typeof err === 'string' ? err : 'Erreur lors de la mise à jour');
-                    toast.error(errorMessage);
+                onError: (errors) => {
+                    // Afficher d'abord les erreurs d'image si présentes, sinon le premier message d'erreur
+                    const firstError =
+                        errors?.image ||
+                        errors?.message ||
+                        (errors && typeof errors === 'object'
+                            ? Object.values(errors)[0]
+                            : null);
+                    toast.error(
+                        typeof firstError === 'string'
+                            ? firstError
+                            : 'Erreur lors de la mise à jour du produit.'
+                    );
                 },
             });
         } else {
@@ -185,9 +204,18 @@ export default function HardwareProductDrawer({ isOpen, onClose, product = null,
                     // Recharger la page pour afficher le nouveau produit avec son image
                     router.reload({ only: ['products'] });
                 },
-                onError: (err) => {
-                    const errorMessage = err.message || (typeof err === 'string' ? err : 'Erreur lors de la création');
-                    toast.error(errorMessage);
+                onError: (errors) => {
+                    const firstError =
+                        errors?.image ||
+                        errors?.message ||
+                        (errors && typeof errors === 'object'
+                            ? Object.values(errors)[0]
+                            : null);
+                    toast.error(
+                        typeof firstError === 'string'
+                            ? firstError
+                            : 'Erreur lors de la création du produit.'
+                    );
                 },
             });
         }
@@ -270,8 +298,10 @@ export default function HardwareProductDrawer({ isOpen, onClose, product = null,
                             )}
                             <div className="flex-1">
                                 <input
+                                    ref={fileInputRef}
                                     type="file"
                                     id="image"
+                                    name="image"
                                     accept="image/jpeg,image/jpg,image/png,image/webp"
                                     onChange={handleImageChange}
                                     className="hidden"

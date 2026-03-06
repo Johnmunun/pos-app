@@ -7,6 +7,7 @@ namespace Src\Infrastructure\Pharmacy\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 use Src\Application\Pharmacy\DTO\CreateSupplierDTO;
@@ -18,6 +19,10 @@ use Src\Application\Pharmacy\UseCases\Supplier\UpdateSupplierUseCase;
 use Src\Infrastructure\Pharmacy\Models\SupplierModel;
 use Src\Infrastructure\Pharmacy\Models\SupplierProductPriceModel;
 use Src\Infrastructure\Pharmacy\Models\ProductModel;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Reader\Csv;
 
 /**
  * Controller: SupplierController
@@ -397,6 +402,401 @@ class SupplierController extends Controller
         return response()->json([
             'success' => true,
             'suppliers' => $suppliers,
+        ]);
+    }
+
+    /**
+     * Modèle Excel pour l'import de fournisseurs.
+     */
+    public function importTemplate(Request $request)
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Modèle Fournisseurs');
+
+        $headers = [
+            'nom',
+            'personne_contact',
+            'telephone',
+            'email',
+            'adresse',
+        ];
+
+        $colIndex = 1;
+        foreach ($headers as $header) {
+            $columnLetter = chr(ord('A') + $colIndex - 1);
+            $sheet->setCellValue($columnLetter . '1', $header);
+            $colIndex++;
+        }
+
+        // Exemple de ligne
+        $sheet->setCellValue('A2', 'Fournisseur Démo');
+        $sheet->setCellValue('B2', 'Contact Démo');
+        $sheet->setCellValue('C2', '0990000000');
+        $sheet->setCellValue('D2', 'fournisseur@example.com');
+        $sheet->setCellValue('E2', 'Adresse du fournisseur');
+
+        $filename = 'modele_import_fournisseurs_' . now()->format('Ymd_His') . '.xlsx';
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    /**
+     * Aperçu de l'import de fournisseurs (validation sans insertion).
+     */
+    public function importPreview(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,csv,txt|max:10240',
+        ], [
+            'file.required' => 'Veuillez sélectionner un fichier.',
+            'file.mimes' => 'Le fichier doit être au format .xlsx ou .csv.',
+            'file.max' => 'Le fichier ne doit pas dépasser 10 Mo.',
+        ]);
+
+        $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
+        $shopId = $user->shop_id ?? $user->tenant_id;
+        if (!$shopId) {
+            return response()->json(['message' => 'Shop ID introuvable. Veuillez sélectionner un dépôt.'], 403);
+        }
+
+        $file = $request->file('file');
+        $path = $file->getRealPath();
+
+        try {
+            $ext = strtolower($file->getClientOriginalExtension());
+            if ($ext === 'csv' || $ext === 'txt') {
+                $reader = new Csv();
+                $line = fgets(fopen($path, 'r'));
+                $delimiter = strpos($line, ';') !== false ? ';' : ',';
+                $reader->setDelimiter($delimiter);
+                $reader->setInputEncoding('UTF-8');
+                $spreadsheet = $reader->load($path);
+            } else {
+                $spreadsheet = IOFactory::load($path);
+            }
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray();
+        } catch (\Throwable $e) {
+            Log::error('Supplier import preview: parse error', ['error' => $e->getMessage()]);
+            return response()->json([
+                'message' => 'Impossible de lire le fichier : ' . $e->getMessage(),
+            ], 422);
+        }
+
+        if (empty($rows)) {
+            return response()->json([
+                'total' => 0,
+                'valid' => 0,
+                'invalid' => 0,
+                'errors' => [
+                    ['line' => 1, 'field' => null, 'message' => 'Fichier vide.'],
+                ],
+                'sample' => [
+                    'header' => [],
+                    'rows' => [],
+                ],
+            ]);
+        }
+
+        $headerRow = array_map('trim', array_map('strtolower', (array) $rows[0]));
+        $dataRows = array_slice($rows, 1);
+
+        if (!in_array('nom', $headerRow, true)) {
+            return response()->json([
+                'total' => count($dataRows),
+                'valid' => 0,
+                'invalid' => count($dataRows),
+                'errors' => [
+                    [
+                        'line' => 1,
+                        'field' => 'nom',
+                        'message' => "Colonne obligatoire manquante : 'nom'.",
+                    ],
+                ],
+                'sample' => [
+                    'header' => $rows[0] ?? [],
+                    'rows' => array_slice($dataRows, 0, 20),
+                ],
+            ]);
+        }
+
+        $existing = SupplierModel::query()
+            ->where('shop_id', $shopId)
+            ->get(['name', 'phone', 'email']);
+
+        $existingKeyed = [];
+        foreach ($existing as $s) {
+            $key = mb_strtolower(trim($s->name)) . '|' . mb_strtolower(trim((string) $s->phone));
+            $existingKeyed[$key] = true;
+            if ($s->email) {
+                $existingKeyed['email|' . mb_strtolower(trim((string) $s->email))] = true;
+            }
+        }
+
+        $seenInFile = [];
+        $valid = 0;
+        $invalid = 0;
+        $errors = [];
+
+        foreach ($dataRows as $index => $row) {
+            $lineNum = $index + 2;
+            $rowAssoc = [];
+            foreach ($headerRow as $i => $key) {
+                $rowAssoc[$key] = isset($row[$i]) ? trim((string) $row[$i]) : '';
+            }
+
+            if (!array_filter($rowAssoc, fn ($v) => $v !== '' && $v !== null)) {
+                continue;
+            }
+
+            $lineErrors = [];
+
+            $name = $rowAssoc['nom'] ?? '';
+            if ($name === '') {
+                $lineErrors[] = 'Nom obligatoire.';
+            }
+
+            $phone = $rowAssoc['telephone'] ?? '';
+            $email = $rowAssoc['email'] ?? '';
+
+            if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $lineErrors[] = 'Email invalide.';
+            }
+
+            if ($name !== '') {
+                $key = mb_strtolower($name) . '|' . mb_strtolower($phone);
+                if (isset($existingKeyed[$key])) {
+                    $lineErrors[] = 'Fournisseur déjà existant (nom + téléphone).';
+                }
+                if (isset($seenInFile[$key])) {
+                    $lineErrors[] = 'Fournisseur en double dans le fichier (nom + téléphone).';
+                }
+            }
+            if ($email !== '') {
+                $ekey = 'email|' . mb_strtolower($email);
+                if (isset($existingKeyed[$ekey])) {
+                    $lineErrors[] = 'Email déjà utilisé par un autre fournisseur.';
+                }
+                if (isset($seenInFile[$ekey])) {
+                    $lineErrors[] = 'Email en double dans le fichier.';
+                }
+            }
+
+            if (!empty($lineErrors)) {
+                $invalid++;
+                $errors[] = [
+                    'line' => $lineNum,
+                    'field' => null,
+                    'message' => implode(' | ', $lineErrors),
+                ];
+            } else {
+                $valid++;
+                if ($name !== '') {
+                    $seenInFile[mb_strtolower($name) . '|' . mb_strtolower($phone)] = true;
+                }
+                if ($email !== '') {
+                    $seenInFile['email|' . mb_strtolower($email)] = true;
+                }
+            }
+        }
+
+        $total = $valid + $invalid;
+
+        return response()->json([
+            'total' => $total,
+            'valid' => $valid,
+            'invalid' => $invalid,
+            'errors' => $errors,
+            'sample' => [
+                'header' => $rows[0] ?? [],
+                'rows' => array_slice($dataRows, 0, 20),
+            ],
+        ]);
+    }
+
+    /**
+     * Import effectif des fournisseurs.
+     */
+    public function import(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,csv,txt|max:10240',
+        ], [
+            'file.required' => 'Veuillez sélectionner un fichier.',
+            'file.mimes' => 'Le fichier doit être au format .xlsx ou .csv.',
+            'file.max' => 'Le fichier ne doit pas dépasser 10 Mo.',
+        ]);
+
+        $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
+        $shopId = $user->shop_id ?? $user->tenant_id;
+        if (!$shopId) {
+            return response()->json(['message' => 'Shop ID introuvable. Veuillez sélectionner un dépôt.'], 403);
+        }
+
+        $file = $request->file('file');
+        $path = $file->getRealPath();
+
+        try {
+            $ext = strtolower($file->getClientOriginalExtension());
+            if ($ext === 'csv' || $ext === 'txt') {
+                $reader = new Csv();
+                $line = fgets(fopen($path, 'r'));
+                $delimiter = strpos($line, ';') !== false ? ';' : ',';
+                $reader->setDelimiter($delimiter);
+                $reader->setInputEncoding('UTF-8');
+                $spreadsheet = $reader->load($path);
+            } else {
+                $spreadsheet = IOFactory::load($path);
+            }
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray();
+        } catch (\Throwable $e) {
+            Log::error('Supplier import: parse error', ['error' => $e->getMessage()]);
+            return response()->json([
+                'message' => 'Impossible de lire le fichier : ' . $e->getMessage(),
+            ], 422);
+        }
+
+        if (empty($rows)) {
+            return response()->json([
+                'message' => 'Fichier vide.',
+                'success' => 0,
+                'failed' => 0,
+                'total' => 0,
+                'errors' => [],
+            ]);
+        }
+
+        $headerRow = array_map('trim', array_map('strtolower', (array) $rows[0]));
+        $dataRows = array_slice($rows, 1);
+
+        if (!in_array('nom', $headerRow, true)) {
+            $failed = count($dataRows);
+            return response()->json([
+                'message' => "Colonne obligatoire manquante : 'nom'.",
+                'success' => 0,
+                'failed' => $failed,
+                'total' => $failed,
+                'errors' => ["Ligne 1: Colonne obligatoire manquante : 'nom'."],
+            ], 422);
+        }
+
+        $existing = SupplierModel::query()
+            ->where('shop_id', $shopId)
+            ->get(['name', 'phone', 'email']);
+
+        $existingKeyed = [];
+        foreach ($existing as $s) {
+            $key = mb_strtolower(trim($s->name)) . '|' . mb_strtolower(trim((string) $s->phone));
+            $existingKeyed[$key] = true;
+            if ($s->email) {
+                $existingKeyed['email|' . mb_strtolower(trim((string) $s->email))] = true;
+            }
+        }
+
+        $seenInFile = [];
+        $success = 0;
+        $failed = 0;
+        $errors = [];
+
+        foreach ($dataRows as $index => $row) {
+            $lineNum = $index + 2;
+            $rowAssoc = [];
+            foreach ($headerRow as $i => $key) {
+                $rowAssoc[$key] = isset($row[$i]) ? trim((string) $row[$i]) : '';
+            }
+
+            if (!array_filter($rowAssoc, fn ($v) => $v !== '' && $v !== null)) {
+                continue;
+            }
+
+            $lineErrors = [];
+
+            $name = $rowAssoc['nom'] ?? '';
+            if ($name === '') {
+                $lineErrors[] = 'Nom obligatoire.';
+            }
+
+            $phone = $rowAssoc['telephone'] ?? '';
+            $email = $rowAssoc['email'] ?? '';
+            $contact = $rowAssoc['personne_contact'] ?? '';
+            $address = $rowAssoc['adresse'] ?? '';
+
+            if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $lineErrors[] = 'Email invalide.';
+            }
+
+            if ($name !== '') {
+                $key = mb_strtolower($name) . '|' . mb_strtolower($phone);
+                if (isset($existingKeyed[$key])) {
+                    $lineErrors[] = 'Fournisseur déjà existant (nom + téléphone).';
+                }
+                if (isset($seenInFile[$key])) {
+                    $lineErrors[] = 'Fournisseur en double dans le fichier (nom + téléphone).';
+                }
+            }
+            if ($email !== '') {
+                $ekey = 'email|' . mb_strtolower($email);
+                if (isset($existingKeyed[$ekey])) {
+                    $lineErrors[] = 'Email déjà utilisé par un autre fournisseur.';
+                }
+                if (isset($seenInFile[$ekey])) {
+                    $lineErrors[] = 'Email en double dans le fichier.';
+                }
+            }
+
+            if (!empty($lineErrors)) {
+                $failed++;
+                $errors[] = "Ligne {$lineNum}: " . implode(' | ', $lineErrors);
+                continue;
+            }
+
+            try {
+                $dto = new CreateSupplierDTO(
+                    shopId: (int) $shopId,
+                    name: $name,
+                    contactPerson: $contact !== '' ? $contact : null,
+                    phone: $phone !== '' ? $phone : null,
+                    email: $email !== '' ? $email : null,
+                    address: $address !== '' ? $address : null
+                );
+
+                $supplier = $this->createSupplierUseCase->execute($dto);
+
+                if ($name !== '') {
+                    $seenInFile[mb_strtolower($name) . '|' . mb_strtolower($phone)] = true;
+                }
+                if ($email !== '') {
+                    $seenInFile['email|' . mb_strtolower($email)] = true;
+                }
+
+                $success++;
+            } catch (\Throwable $e) {
+                $failed++;
+                $errors[] = "Ligne {$lineNum}: " . $e->getMessage();
+            }
+        }
+
+        $total = $success + $failed;
+
+        return response()->json([
+            'message' => 'Import fournisseurs terminé.',
+            'success' => $success,
+            'failed' => $failed,
+            'total' => $total,
+            'errors' => $errors,
         ]);
     }
 }

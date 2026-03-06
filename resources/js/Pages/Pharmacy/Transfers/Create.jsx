@@ -22,7 +22,7 @@ import {
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
-export default function TransferCreate({ shops, products, currentShopId }) {
+export default function TransferCreate({ depots = [], products, currentShopId }) {
     const { auth } = usePage().props;
 
     const [loading, setLoading] = useState(false);
@@ -146,34 +146,38 @@ export default function TransferCreate({ shops, products, currentShopId }) {
             <div className="py-6">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Sélection des magasins */}
+                        {/* Sélection des dépôts / magasins */}
                         <Card className="bg-white dark:bg-slate-800">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     <Building2 className="h-5 w-5 text-blue-600" />
-                                    Magasins
+                                    Dépôts
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="grid md:grid-cols-3 gap-6 items-end">
-                                    {/* Magasin source */}
+                                    {/* Dépôt / Magasin source */}
                                     <div>
                                         <Label className="text-red-600 flex items-center gap-2 mb-2">
                                             <Building2 className="h-4 w-4" />
-                                            Magasin Source (Expéditeur)
+                                            Dépôt source (expéditeur)
                                         </Label>
                                         <select
                                             value={fromShopId}
                                             onChange={(e) => setFromShopId(e.target.value)}
                                             className="w-full h-10 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white px-3"
                                             required
-                                        >
-                                            <option value="">Sélectionner...</option>
-                                            {shops.map(shop => (
-                                                <option key={shop.id} value={shop.id} disabled={shop.id.toString() === toShopId}>
-                                                    {shop.name} ({shop.code})
-                                                </option>
-                                            ))}
+                                            >
+                                                <option value="">Sélectionner...</option>
+                                                {depots.map((depot) => (
+                                                    <option
+                                                        key={depot.depot_id}
+                                                        value={depot.shop_id}
+                                                        disabled={depot.shop_id.toString() === toShopId}
+                                                    >
+                                                        {depot.depot_name} ({depot.depot_code})
+                                                    </option>
+                                                ))}
                                         </select>
                                     </div>
 
@@ -184,24 +188,28 @@ export default function TransferCreate({ shops, products, currentShopId }) {
                                         </div>
                                     </div>
 
-                                    {/* Magasin destination */}
+                                    {/* Dépôt / Magasin destination */}
                                     <div>
                                         <Label className="text-green-600 flex items-center gap-2 mb-2">
                                             <Building2 className="h-4 w-4" />
-                                            Magasin Destination (Récepteur)
+                                            Dépôt destination (récepteur)
                                         </Label>
                                         <select
                                             value={toShopId}
                                             onChange={(e) => setToShopId(e.target.value)}
                                             className="w-full h-10 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white px-3"
                                             required
-                                        >
-                                            <option value="">Sélectionner...</option>
-                                            {shops.map(shop => (
-                                                <option key={shop.id} value={shop.id} disabled={shop.id.toString() === fromShopId}>
-                                                    {shop.name} ({shop.code})
-                                                </option>
-                                            ))}
+                                            >
+                                                <option value="">Sélectionner...</option>
+                                                {depots.map((depot) => (
+                                                    <option
+                                                        key={depot.depot_id}
+                                                        value={depot.shop_id}
+                                                        disabled={depot.shop_id.toString() === fromShopId}
+                                                    >
+                                                        {depot.depot_name} ({depot.depot_code})
+                                                    </option>
+                                                ))}
                                         </select>
                                     </div>
                                 </div>

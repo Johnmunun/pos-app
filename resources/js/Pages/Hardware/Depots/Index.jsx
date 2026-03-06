@@ -22,10 +22,24 @@ export default function HardwareDepotsIndex({ depots = [] }) {
         return permissions.includes(p);
     };
     
-    const canCreate = hasPermission('hardware.warehouse.create');
-    const canUpdate = hasPermission('hardware.warehouse.update');
-    const canActivate = hasPermission('hardware.warehouse.activate');
-    const canDeactivate = hasPermission('hardware.warehouse.deactivate');
+    // On supporte à la fois les nouvelles permissions hardware.warehouse.*
+    // et les permissions existantes hardware.stock.* pour ne pas bloquer l'UI
+    const canCreate =
+        hasPermission('hardware.warehouse.create') ||
+        hasPermission('hardware.warehouse.manage') ||
+        hasPermission('hardware.stock.manage');
+    const canUpdate =
+        hasPermission('hardware.warehouse.update') ||
+        hasPermission('hardware.warehouse.manage') ||
+        hasPermission('hardware.stock.manage');
+    const canActivate =
+        hasPermission('hardware.warehouse.activate') ||
+        hasPermission('hardware.warehouse.manage') ||
+        hasPermission('hardware.stock.manage');
+    const canDeactivate =
+        hasPermission('hardware.warehouse.deactivate') ||
+        hasPermission('hardware.warehouse.manage') ||
+        hasPermission('hardware.stock.manage');
 
     const [modalOpen, setModalOpen] = useState(false);
     const [editingDepot, setEditingDepot] = useState(null);

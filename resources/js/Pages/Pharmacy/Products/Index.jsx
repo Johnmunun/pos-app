@@ -6,6 +6,7 @@ import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Badge } from '@/Components/ui/badge';
 import Modal from '@/Components/Modal';
+import ImportModal from '@/Components/ImportModal';
 import ProductDrawer from '@/Components/Pharmacy/ProductDrawer';
 import ProductMovementsModal from '@/Components/Pharmacy/ProductMovementsModal';
 import { 
@@ -48,8 +49,9 @@ export default function ProductsIndex({ auth, products, categories, filters, can
     const [detailProduct, setDetailProduct] = useState(null);
     const [importOpen, setImportOpen] = useState(false);
     const [importFile, setImportFile] = useState(null);
-    const [importing, setImporting] = useState(false);
-    const [importResult, setImportResult] = useState(null);
+    const [importPreview, setImportPreview] = useState(null);
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [confirmingImport, setConfirmingImport] = useState(false);
     const [movementsModalOpen, setMovementsModalOpen] = useState(false);
     const [movementsProduct, setMovementsProduct] = useState(null);
     const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
@@ -69,37 +71,71 @@ export default function ProductsIndex({ auth, products, categories, filters, can
     const handleImport = () => {
         setImportOpen(true);
         setImportFile(null);
-        setImportResult(null);
+        setImportPreview(null);
     };
 
-    const handleImportSubmit = async (e) => {
+    const handleGeneratePreview = async (e) => {
         e.preventDefault();
         if (!importFile) {
             toast.error('Veuillez sélectionner un fichier.');
             return;
         }
-        setImporting(true);
-        setImportResult(null);
+        setPreviewLoading(true);
+        setImportPreview(null);
+        try {
+            const formData = new FormData();
+            formData.append('file', importFile);
+            const res = await axios.post(route(`${routePrefix}.products.import.preview`), formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            setImportPreview(res.data);
+        } catch (err) {
+            const msg = err.response?.data?.message || "Erreur lors de l'aperçu.";
+            toast.error(msg);
+        } finally {
+            setPreviewLoading(false);
+        }
+    };
+
+    const handleConfirmImport = async () => {
+        if (!importFile) {
+            toast.error('Veuillez sélectionner un fichier.');
+            return;
+        }
+        setConfirmingImport(true);
         try {
             const formData = new FormData();
             formData.append('file', importFile);
             const res = await axios.post(route(`${routePrefix}.products.import`), formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
-            setImportResult(res.data);
             if (res.data.success > 0) {
                 toast.success(`${res.data.success} produit(s) importé(s) avec succès.`);
+                setImportOpen(false);
+                setImportFile(null);
+                setImportPreview(null);
                 router.reload();
             }
             if (res.data.failed > 0 && res.data.errors?.length) {
                 toast.error(`${res.data.failed} ligne(s) en erreur.`);
             }
+            setImportPreview((prev) => ({
+                ...(prev || {}),
+                total: res.data.total,
+                valid: res.data.success,
+                invalid: res.data.failed,
+                // On garde les erreurs détaillées de la preview si disponibles
+                errors: (prev && prev.errors) || (res.data.errors || []).map((msg) => ({
+                    line: null,
+                    field: null,
+                    message: msg,
+                })),
+            }));
         } catch (err) {
-            const msg = err.response?.data?.message || 'Erreur lors de l\'import.';
+            const msg = err.response?.data?.message || "Erreur lors de l'import.";
             toast.error(msg);
-            setImportResult({ success: 0, failed: 0, total: 0, errors: [msg] });
         } finally {
-            setImporting(false);
+            setConfirmingImport(false);
         }
     };
 
@@ -685,81 +721,36 @@ export default function ProductsIndex({ auth, products, categories, filters, can
             </Modal>
 
             {/* Modal Import */}
-            <Modal
-                show={importOpen}
-                onClose={() => {
-                    setImportOpen(false);
-                    setImportFile(null);
-                    setImportResult(null);
-                }}
-                maxWidth="lg"
-            >
-                <div className="p-6">
-                    <div className="flex justify-between items-start mb-6">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            Importer des produits
-                        </h3>
-                        <button
-                            type="button"
-                            onClick={() => setImportOpen(false)}
-                            className="rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                        >
-                            <X className="h-5 w-5" />
-                        </button>
-                    </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                        Fichiers acceptés : .xlsx ou .csv. Colonnes obligatoires : <strong>nom</strong>, <strong>code</strong>, <strong>categorie_id</strong> (ou nom de catégorie), <strong>prix</strong>, <strong>unite</strong>.
-                    </p>
-                    <form onSubmit={handleImportSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Fichier
-                            </label>
-                            <input
-                                type="file"
-                                accept=".xlsx,.csv,.txt"
-                                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/20 dark:file:text-blue-400"
-                            />
-                        </div>
-                        {importResult && (
-                            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-2">
-                                <div className="flex items-center gap-4">
-                                    <span className="flex items-center text-green-600 dark:text-green-400">
-                                        <CheckCircle className="h-5 w-5 mr-1" />
-                                        {importResult.success} importé(s)
-                                    </span>
-                                    {importResult.failed > 0 && (
-                                        <span className="flex items-center text-red-600 dark:text-red-400">
-                                            <XCircle className="h-5 w-5 mr-1" />
-                                            {importResult.failed} échoué(s)
-                                        </span>
-                                    )}
-                                </div>
-                                {importResult.errors?.length > 0 && (
-                                    <div className="mt-2 max-h-32 overflow-y-auto text-xs text-red-600 dark:text-red-400">
-                                        {importResult.errors.map((err, i) => (
-                                            <div key={i}>{err}</div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                        <div className="flex justify-end gap-2">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setImportOpen(false)}
-                            >
-                                Fermer
-                            </Button>
-                            <Button type="submit" disabled={!importFile || importing}>
-                                {importing ? 'Import en cours...' : 'Importer'}
-                            </Button>
-                        </div>
-                    </form>
-                </div>
-            </Modal>
+            {canImport && (
+                <ImportModal
+                    show={importOpen}
+                    onClose={() => {
+                        setImportOpen(false);
+                        setImportFile(null);
+                        setImportPreview(null);
+                    }}
+                    title="Importer des produits"
+                    summaryItems={[
+                        'Importez vos produits via un fichier Excel (.xlsx) ou CSV.',
+                        'Colonnes obligatoires : nom, code, categorie_id, prix, unite.',
+                        'Ne pas modifier la première ligne (en-têtes) ni renommer les colonnes du modèle.',
+                        'Ne pas ajouter de nouvelles colonnes ni fusionner de cellules, et éviter les formules Excel dans les champs importés.',
+                    ]}
+                    examples={[
+                        { values: { nom: 'Paracétamol 500mg', code: 'PARA500', categorie_id: '1', prix: '1500', unite: 'boîte' } },
+                        { values: { nom: 'Amoxicilline 250mg', code: 'AMOX250', categorie_id: '2', prix: '3200', unite: 'boîte' } },
+                    ]}
+                    templateUrl={route(`${routePrefix}.products.import.template`)}
+                    accept=".xlsx,.csv,.txt"
+                    file={importFile}
+                    onFileChange={setImportFile}
+                    onGeneratePreview={handleGeneratePreview}
+                    previewLoading={previewLoading}
+                    preview={importPreview}
+                    onConfirmImport={handleConfirmImport}
+                    confirmingImport={confirmingImport}
+                />
+            )}
 
             {/* Product Drawer */}
             <ProductDrawer

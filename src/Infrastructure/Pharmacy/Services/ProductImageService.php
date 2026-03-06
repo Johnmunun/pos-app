@@ -18,7 +18,8 @@ class ProductImageService
 {
     private const STORAGE_DISK = 'public';
     private const STORAGE_PATH = 'pharmacy/products';
-    private const MAX_SIZE = 2 * 1024 * 1024; // 2 Mo
+    // Taille max du fichier (8 Mo pour supporter les photos récentes)
+    private const MAX_SIZE = 8 * 1024 * 1024; // 8 Mo
     private const MAX_WIDTH = 1200; // Largeur maximale en pixels
     private const MAX_HEIGHT = 1200; // Hauteur maximale en pixels
     private const JPEG_QUALITY = 85; // Qualité JPEG (0-100)
@@ -38,11 +39,14 @@ class ProductImageService
         if ($file->getSize() !== false && $file->getSize() > self::MAX_SIZE) {
             throw new \InvalidArgumentException('La taille du fichier ne doit pas dépasser 2 Mo.');
         }
-        // Valider le fichier
+        // Valider le fichier (type MIME, etc.)
         ProductImage::validateFile($file);
 
-        // Générer un nom de fichier unique
+        // Générer un nom de fichier unique (normaliser certaines extensions comme JFIF -> JPG)
         $extension = strtolower($file->getClientOriginalExtension());
+        if ($extension === 'jfif') {
+            $extension = 'jpg';
+        }
         $filename = $productId . '_' . Str::random(10) . '.' . $extension;
         $path = self::STORAGE_PATH . '/' . $filename;
         $fullPath = Storage::disk(self::STORAGE_DISK)->path($path);

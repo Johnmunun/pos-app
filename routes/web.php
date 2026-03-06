@@ -14,6 +14,9 @@ require __DIR__.'/pharmacy.php';
 if (file_exists(__DIR__.'/hardware.php')) {
     require __DIR__.'/hardware.php';
 }
+if (file_exists(__DIR__.'/commerce.php')) {
+    require __DIR__.'/commerce.php';
+}
 
 /**
  * Public Routes - Landing Page
@@ -46,11 +49,15 @@ Route::get('/dashboard', function (\Illuminate\Http\Request $request) {
     if (method_exists($user, 'hasPermission')) {
         $hasPharmacy = $user->hasPermission('module.pharmacy');
         $hasHardware = $user->hasPermission('module.hardware');
+        $hasCommerce = $user->hasPermission('module.commerce');
         if ($user->isRoot()) {
             return redirect()->route('pharmacy.dashboard', $request->only(['period']));
         }
-        if ($hasHardware && !$hasPharmacy) {
+        if ($hasHardware && !$hasPharmacy && !$hasCommerce) {
             return redirect()->route('hardware.dashboard');
+        }
+        if ($hasCommerce && !$hasPharmacy && !$hasHardware) {
+            return redirect()->route('commerce.products.index');
         }
         if ($hasPharmacy) {
             return redirect()->route('pharmacy.dashboard', $request->only(['period']));
@@ -229,6 +236,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage')
             ->name('products.export.excel');
 
+        // Import produits (template, aperçu, confirmation)
+        Route::get('/products/import/template', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'importTemplate'])
+            ->middleware('permission:pharmacy.product.import')
+            ->name('products.import.template');
+        Route::post('/products/import/preview', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'importPreview'])
+            ->middleware('permission:pharmacy.product.import')
+            ->name('products.import.preview');
         Route::post('/products/import', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'import'])
             ->middleware('permission:pharmacy.product.import')
             ->name('products.import');
@@ -376,6 +390,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/suppliers', [\Src\Infrastructure\Pharmacy\Http\Controllers\SupplierController::class, 'index'])
             ->middleware('permission:pharmacy.supplier.view')
             ->name('suppliers.index');
+        // Import fournisseurs (template, aperçu, import)
+        Route::get('/suppliers/import/template', [\Src\Infrastructure\Pharmacy\Http\Controllers\SupplierController::class, 'importTemplate'])
+            ->middleware('permission:pharmacy.supplier.import')
+            ->name('suppliers.import.template');
+        Route::post('/suppliers/import/preview', [\Src\Infrastructure\Pharmacy\Http\Controllers\SupplierController::class, 'importPreview'])
+            ->middleware('permission:pharmacy.supplier.import')
+            ->name('suppliers.import.preview');
+        Route::post('/suppliers/import', [\Src\Infrastructure\Pharmacy\Http\Controllers\SupplierController::class, 'import'])
+            ->middleware('permission:pharmacy.supplier.import')
+            ->name('suppliers.import');
         Route::post('/suppliers', [\Src\Infrastructure\Pharmacy\Http\Controllers\SupplierController::class, 'store'])
             ->middleware('permission:pharmacy.supplier.create')
             ->name('suppliers.store');
@@ -416,6 +440,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/customers', [\Src\Infrastructure\Pharmacy\Http\Controllers\CustomerController::class, 'index'])
             ->middleware('permission:pharmacy.customer.view')
             ->name('customers.index');
+        // Import clients (template, aperçu, import)
+        Route::get('/customers/import/template', [\Src\Infrastructure\Pharmacy\Http\Controllers\CustomerController::class, 'importTemplate'])
+            ->middleware('permission:pharmacy.customer.import')
+            ->name('customers.import.template');
+        Route::post('/customers/import/preview', [\Src\Infrastructure\Pharmacy\Http\Controllers\CustomerController::class, 'importPreview'])
+            ->middleware('permission:pharmacy.customer.import')
+            ->name('customers.import.preview');
+        Route::post('/customers/import', [\Src\Infrastructure\Pharmacy\Http\Controllers\CustomerController::class, 'import'])
+            ->middleware('permission:pharmacy.customer.import')
+            ->name('customers.import');
         Route::post('/customers', [\Src\Infrastructure\Pharmacy\Http\Controllers\CustomerController::class, 'store'])
             ->middleware('permission:pharmacy.customer.create')
             ->name('customers.store');
@@ -488,6 +522,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/categories/export/pdf', [\Src\Infrastructure\Pharmacy\Http\Controllers\CategoryController::class, 'exportPdf'])
             ->middleware('permission:pharmacy.category.view|pharmacy.category.create|pharmacy.category.update|pharmacy.category.delete')
             ->name('categories.export.pdf');
+        // Import catégories (template, aperçu, import)
+        Route::get('/categories/import/template', [\Src\Infrastructure\Pharmacy\Http\Controllers\CategoryController::class, 'importTemplate'])
+            ->middleware('permission:pharmacy.category.import')
+            ->name('categories.import.template');
+        Route::post('/categories/import/preview', [\Src\Infrastructure\Pharmacy\Http\Controllers\CategoryController::class, 'importPreview'])
+            ->middleware('permission:pharmacy.category.import')
+            ->name('categories.import.preview');
+        Route::post('/categories/import', [\Src\Infrastructure\Pharmacy\Http\Controllers\CategoryController::class, 'import'])
+            ->middleware('permission:pharmacy.category.import')
+            ->name('categories.import');
 
         // Batches & Expirations (Lots et Dates d'expiration)
         Route::get('/expirations', [\Src\Infrastructure\Pharmacy\Http\Controllers\BatchController::class, 'index'])

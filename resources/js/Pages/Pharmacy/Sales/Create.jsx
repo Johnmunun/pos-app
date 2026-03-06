@@ -244,23 +244,6 @@ export default function POSCreate({ products = [], categories = [], customers = 
         } catch (_) {}
     }, []);
 
-    // Fonction pour trouver un produit par code-barres et l'ajouter au panier
-    const handleBarcodeScan = useCallback((barcode) => {
-        if (!barcode || !barcode.trim()) return;
-        
-        const scannedBarcode = barcode.trim();
-        const product = products.find(p => 
-            p.barcode && p.barcode.toLowerCase() === scannedBarcode.toLowerCase()
-        );
-        
-        if (product) {
-            addToCart(product);
-            setSearch(''); // Réinitialiser la recherche après ajout
-        } else {
-            toast.error('Produit introuvable pour ce code-barres');
-        }
-    }, [products, addToCart]);
-
     const addToCart = (product) => {
         const stock = Number(product.stock) ?? 0;
         const estDivisible = Boolean(product.est_divisible ?? true);
@@ -299,6 +282,23 @@ export default function POSCreate({ products = [], categories = [], customers = 
         }
         persistRecentProduct(product.id);
     };
+
+    // Fonction pour trouver un produit par code-barres et l'ajouter au panier
+    const handleBarcodeScan = useCallback((barcode) => {
+        if (!barcode || !barcode.trim()) return;
+        
+        const scannedBarcode = barcode.trim();
+        const product = products.find(p => 
+            p.barcode && p.barcode.toLowerCase() === scannedBarcode.toLowerCase()
+        );
+        
+        if (product) {
+            addToCart(product);
+            setSearch(''); // Réinitialiser la recherche après ajout
+        } else {
+            toast.error('Produit introuvable pour ce code-barres');
+        }
+    }, [products, addToCart]);
 
     const updateQuantity = (productId, newQuantity) => {
         const q = Number(newQuantity);

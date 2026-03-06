@@ -1,0 +1,296 @@
+# Fichier de permissions - POS Application
+# Format: groupe -> liste de permissions
+
+# Permissions générales
+general:
+  - dashboard.view
+  - notifications.view
+  - activity.view
+
+# Administration
+admin:
+  - admin.users.view
+  - admin.access.permissions.view
+  - users.assign_role
+  - users.delete
+  - users.impersonate
+  - users.reset_password
+
+# Gestion des accès
+access:
+  - access.permissions.view
+  - access.permissions.sync
+  - access.permissions.delete
+  - access.roles.view
+  - access.roles.create
+  - access.roles.update
+  - access.roles.delete
+
+# Produits (général)
+products:
+  - products.view
+  - products.create
+
+# Catégories (général)
+categories:
+  - categories.view
+  - categories.create
+  - categories.update
+  - categories.delete
+
+# Ventes (général)
+sales:
+  - sales.view
+  - sales.create
+
+# Clients
+customers:
+  - customers.view
+  - customers.create
+
+# Vendeurs
+sellers:
+  - sellers.view
+  - sellers.create
+
+# Inventaire
+inventory:
+  - inventory.view
+  - inventory.create
+  - inventory.edit
+  - inventory.validate
+  - inventory.cancel
+
+# Stock
+stock:
+  - stock.view
+  - stock.adjust
+  - stock.movement.view
+  - stock.movement.print
+
+# Paiements
+payments:
+  - payments.view
+  - payments.methods
+
+# Factures
+invoices:
+  - invoices.view
+
+# Rapports
+reports:
+  - reports.view
+  - reports.export
+
+# Analytics
+analytics:
+  - analytics.view
+
+# Finance (module ERP)
+finance:
+  - finance.reports
+  - finance.expense.view
+  - finance.expense.manage
+  - finance.debt.view
+  - finance.debt.settle
+  - finance.invoice.view
+  - finance.invoice.manage
+  - finance.report.view
+  - finance.dashboard.view
+
+# Logs
+logs:
+  - logs.system
+  - logs.actions
+  - logs.connections
+
+# Support
+support:
+  - support.admin
+  - support.faq
+  - support.tickets.view
+  - support.tickets.create
+
+# Paramètres
+settings:
+  - settings.view
+  - settings.update
+  - settings.currency.view
+  - settings.currency.create
+  - settings.currency.update
+  - settings.currency.delete
+
+# Module Pharmacy
+pharmacy:
+  - module.pharmacy
+  # Produits (pharmacy.pharmacy.* = alias legacy pour compatibilité routes)
+  - pharmacy.pharmacy.product.manage
+  - pharmacy.pharmacy.stock.manage
+  - pharmacy.product.view
+  - pharmacy.product.create
+  - pharmacy.product.update
+  - pharmacy.product.delete
+  - pharmacy.product.manage
+  - pharmacy.product.import
+  # Catégories
+  - pharmacy.category.view
+  - pharmacy.category.create
+  - pharmacy.category.update
+  - pharmacy.category.delete
+  - pharmacy.category.import
+  - pharmacy.sales.view
+  - pharmacy.sales.manage
+  - pharmacy.sales.wholesale
+  - pharmacy.report.view
+  - pharmacy.sales.cancel
+  - pharmacy.purchases.view
+  - pharmacy.purchases.manage
+  - pharmacy.purchases.receive
+  - pharmacy.supplier.view
+  - pharmacy.supplier.create
+  - pharmacy.supplier.edit
+  - pharmacy.supplier.activate
+  - pharmacy.supplier.deactivate
+  - pharmacy.supplier.pricing.view
+  - pharmacy.supplier.pricing.manage
+  - pharmacy.supplier.import
+  - pharmacy.customer.view
+  - pharmacy.customer.create
+  - pharmacy.customer.edit
+  - pharmacy.customer.activate
+  - pharmacy.customer.deactivate
+  - pharmacy.customer.import
+  - pharmacy.batch.view
+  - pharmacy.batch.manage
+  - pharmacy.expiration.view
+  - pharmacy.seller.view
+  - pharmacy.seller.create
+  - pharmacy.seller.edit
+  - pharmacy.seller.delete
+  - pharmacy.seller.manage
+  - pharmacy.seller.assign_role
+  - transfer.view
+  - transfer.create
+  - transfer.validate
+  - transfer.cancel
+  - transfer.print
+
+# Module Butchery
+butchery:
+  - butchery.meat_products.view
+  - butchery.batches.view
+  - butchery.cutting.view
+  - butchery.waste.view
+
+# Module Kiosk
+kiosk:
+  - kiosk.products.view
+  - kiosk.stock.view
+  - kiosk.quick_sale.view
+
+# Module Supermarket
+supermarket:
+  - supermarket.aisles.view
+  - supermarket.promotions.view
+  - supermarket.variants.view
+  - supermarket.loyalty.view
+
+# Module Global Commerce (Kiosque, Supermarché, Boucherie, Autre)
+# Utilisateurs avec secteur kiosk, supermarket, butchery ou other au register.
+commerce:
+  - module.commerce
+  - commerce.product.view
+  - commerce.product.create
+  - commerce.product.update
+  - commerce.product.delete
+  - commerce.product.manage
+  - commerce.category.view
+  - commerce.category.create
+  - commerce.category.update
+  - commerce.category.delete
+  - commerce.category.manage
+  - commerce.purchases.view
+  - commerce.purchases.manage
+  - commerce.purchases.receive
+  - commerce.supplier.view
+  - commerce.supplier.create
+  - commerce.customer.view
+  - commerce.customer.manage
+
+  # Stock & mouvements (Global Commerce)
+  - commerce.stock.view
+  - commerce.stock.manage
+  - commerce.stock.movement.view
+  - commerce.stock.movement.export
+
+# Module Hardware (Quincaillerie) — même granularité que Pharmacy où applicable
+hardware:
+  - module.hardware
+  # Assistant intelligent Quincaillerie
+  - hardware.assistant.use
+  - hardware.assistant.voice
+  # Produits
+  - hardware.product.view
+  - hardware.product.create
+  - hardware.product.update
+  - hardware.product.delete
+  - hardware.product.manage
+  - hardware.product.import
+  # Catégories
+  - hardware.category.view
+  - hardware.category.create
+  - hardware.category.update
+  - hardware.category.delete
+  - hardware.category.import
+  # Ventes
+  - hardware.sales.view
+  - hardware.sales.manage
+  - hardware.sales.wholesale
+  - hardware.sales.cancel
+  - hardware.report.view
+  # Achats / Bons de commande
+  - hardware.purchases.view
+  - hardware.purchases.manage
+  - hardware.purchases.receive
+  - hardware.purchases.cancel
+  # Fournisseurs
+  - hardware.supplier.view
+  - hardware.supplier.create
+  - hardware.supplier.edit
+  - hardware.supplier.activate
+  - hardware.supplier.deactivate
+  - hardware.supplier.pricing.view
+  - hardware.supplier.pricing.manage
+  - hardware.supplier.import
+  # Clients
+  - hardware.customer.view
+  - hardware.customer.create
+  - hardware.customer.edit
+  - hardware.customer.activate
+  - hardware.customer.deactivate
+  - hardware.customer.import
+  # Stock (complément aux permissions générales stock.*)
+  - hardware.stock.view
+  - hardware.stock.manage
+  - hardware.stock.adjust
+  - hardware.stock.movement.view
+  # Vendeurs (comme Pharmacy)
+  - hardware.seller.view
+  - hardware.seller.create
+  - hardware.seller.edit
+  - hardware.seller.delete
+  - hardware.seller.manage
+  - hardware.seller.assign_role
+  # Transferts entre dépôts (permissions générales transfer.*)
+  - transfer.view
+  - transfer.create
+  - transfer.validate
+  - transfer.cancel
+  - transfer.print
+  # Dépôts (warehouse) - permissions dédiées, en plus de hardware.stock.*
+  - hardware.warehouse.view
+  - hardware.warehouse.manage
+  - hardware.warehouse.create
+  - hardware.warehouse.update
+  - hardware.warehouse.activate
+  - hardware.warehouse.deactivate

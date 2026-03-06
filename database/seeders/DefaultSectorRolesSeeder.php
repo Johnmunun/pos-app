@@ -16,7 +16,8 @@ class DefaultSectorRolesSeeder extends Seeder
     public function run(): void
     {
         $this->createVendeurPharmacyRole();
-        // Possibilité d'ajouter : Vendeur Boucherie, Vendeur Kiosque, etc.
+        // Rôle "Commerçant Commerce" : créé par le ROOT via l'interface Admin > Gestion des accès > Rôles.
+        // Permissions à assigner : module.commerce, commerce.product.*, commerce.category.* (voir storage/app/permissions.yaml groupe commerce).
     }
 
     private function createVendeurPharmacyRole(): void

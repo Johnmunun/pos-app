@@ -17,9 +17,12 @@ import DepotSelector from '@/Components/DepotSelector';
  * - Mobile-first design
  */
 export default function Navbar({ user, permissions, onMenuClick, isImpersonating = false }) {
-    const { auth } = usePage().props;
-    const depots = auth?.depots ?? [];
-    const currentDepot = auth?.currentDepot ?? null;
+    const props = usePage().props;
+    const auth = props.auth;
+    // Dépôts : auth (partagé par HandleInertiaRequests) ou fallback sur les props de la page (module Hardware)
+    const depotsList = (auth?.depots?.length ? auth.depots : props.depots) ?? [];
+    const depots = Array.isArray(depotsList) ? depotsList : [];
+    const currentDepot = auth?.currentDepot ?? props.currentDepot ?? null;
 
     // Toggle dark mode
     const toggleDarkMode = () => {

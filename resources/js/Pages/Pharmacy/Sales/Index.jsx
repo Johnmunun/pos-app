@@ -34,6 +34,24 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
     const [saleType, setSaleType] = useState(filters.sale_type || '');
     const [emailingSaleId, setEmailingSaleId] = useState(null);
 
+    // route() est fourni globalement par Ziggy. Certaines pages réutilisent ce composant
+    // avec des préfixes différents ; on protège donc les liens/actions si la route n'existe pas.
+    const ziggyRoutes =
+        (typeof window !== 'undefined' && window.Ziggy?.routes) ||
+        (typeof Ziggy !== 'undefined' && Ziggy?.routes) ||
+        null;
+
+    const hasRoute = (name) =>
+        !!ziggyRoutes && Object.prototype.hasOwnProperty.call(ziggyRoutes, name);
+
+    const receiptRouteName = `${routePrefix}.sales.receipt`;
+    const emailReceiptRouteName = `${routePrefix}.sales.email-receipt`;
+    const cashRegistersRouteName = `${routePrefix}.cash-registers.index`;
+
+    const canReceipt = hasRoute(receiptRouteName);
+    const canEmailReceipt = hasRoute(emailReceiptRouteName);
+    const canCashRegisters = hasRoute(cashRegistersRouteName);
+
     // Resynchroniser les champs avec l’URL quand on charge la page avec ?from=&to= ou après navigation
     useEffect(() => {
         setFrom(filters.from ?? '');
@@ -52,8 +70,12 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
         }, { preserveState: true });
     };
 
+    const isCompleted = (s) => (s?.status ?? '').toUpperCase() === 'COMPLETED';
+    const isDraft = (s) => (s?.status ?? '').toUpperCase() === 'DRAFT';
+    const isCancelled = (s) => (s?.status ?? '').toUpperCase() === 'CANCELLED';
+
     const getStatusBadge = (s) => {
-        if (s === 'COMPLETED') {
+        if (isCompleted(s)) {
             return (
                 <Badge className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
                     <CheckCircle className="h-3 w-3 mr-1" />
@@ -61,7 +83,7 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                 </Badge>
             );
         }
-        if (s === 'CANCELLED') {
+        if (isCancelled(s)) {
             return (
                 <Badge className="bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300">
                     <XCircle className="h-3 w-3 mr-1" />
@@ -77,20 +99,28 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
         );
     };
 
-    const completedSales = sales.filter(s => s.status === 'COMPLETED').length;
-    const draftSales = sales.filter(s => s.status === 'DRAFT').length;
-    const totalRevenue = sales.filter(s => s.status === 'COMPLETED').reduce((acc, s) => acc + Number(s.total_amount), 0);
-    const lastCompletedSale = sales.find(s => s.status === 'COMPLETED') ?? null;
+    const completedSales = sales.filter(isCompleted).length;
+    const draftSales = sales.filter(isDraft).length;
+    const totalRevenue = sales.filter(isCompleted).reduce((acc, s) => acc + Number(s.total_amount), 0);
+    const lastCompletedSale = sales.find(isCompleted) ?? null;
 
     const formatCurrency = (amount) => formatCurrencyUtil(amount, currency);
 
     const openReceipt = (saleId) => {
-        window.open(route(`${routePrefix}.sales.receipt`, saleId), '_blank', 'noopener,noreferrer');
+        if (!canReceipt) {
+            toast.error('Impression indisponible pour ce module.');
+            return;
+        }
+        window.open(route(receiptRouteName, saleId), '_blank', 'noopener,noreferrer');
     };
 
     const shareReceipt = (sale) => {
         if (!sale) return;
-        const url = route(`${routePrefix}.sales.receipt`, sale.id);
+        if (!canReceipt) {
+            toast.error('Partage indisponible pour ce module.');
+            return;
+        }
+        const url = route(receiptRouteName, sale.id);
         const text = `Facture ${sale.id.slice(0, 8)} - ${formatCurrency(Number(sale.total_amount))}`;
 
         const openWhatsApp = () => {
@@ -118,9 +148,13 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
 
     const sendReceiptByEmail = async (saleId) => {
         if (!saleId || emailingSaleId) return;
+        if (!canEmailReceipt) {
+            toast.error('Envoi email indisponible pour ce module.');
+            return;
+        }
         setEmailingSaleId(saleId);
         try {
-            const { data } = await axios.post(route(`${routePrefix}.sales.email-receipt`, saleId));
+            const { data } = await axios.post(route(emailReceiptRouteName, saleId));
             toast.success(data.message || 'Facture envoyée par email.');
         } catch (err) {
             const message = err.response?.data?.message || 'Erreur lors de l\'envoi de la facture.';
@@ -178,12 +212,14 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                         {/* Groupe Caisses + Nouvelle vente (toujours côte à côte) */}
                         {/* Pas de wrap ici pour garder Caisses + Nouvelle vente sur une seule ligne */}
                         <div className="flex items-center gap-2 whitespace-nowrap">
-                            <Button variant="outline" size="sm" asChild>
-                                <Link href={route(`${routePrefix}.cash-registers.index`)} className="inline-flex items-center gap-2">
-                                    <CashRegister className="h-4 w-4" />
-                                    Caisses
-                                </Link>
-                            </Button>
+                            {canCashRegisters && (
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link href={route(cashRegistersRouteName)} className="inline-flex items-center gap-2">
+                                        <CashRegister className="h-4 w-4" />
+                                        Caisses
+                                    </Link>
+                                </Button>
+                            )}
                             <Button asChild>
                                 <Link href={route(`${routePrefix}.sales.create`)} className="inline-flex items-center gap-2">
                                     <Plus className="h-4 w-4" />
@@ -379,7 +415,7 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                                                 {sale.created_at}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                {getStatusBadge(sale.status)}
+                                                {getStatusBadge(sale)}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 {sale.sale_type === 'wholesale' ? (

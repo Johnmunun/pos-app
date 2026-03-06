@@ -15,6 +15,7 @@ use Src\Infrastructure\Pharmacy\Models\ProductModel;
 use Src\Infrastructure\Pharmacy\Models\StockTransferModel;
 use Src\Infrastructure\Pharmacy\Services\PharmacyExportService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Http\Middleware\HandleInertiaRequests;
 
 /**
  * Controller pour la gestion des transferts de stock inter-magasins
@@ -182,19 +183,34 @@ class StockTransferController
     {
         $shopId = $this->getShopId($request);
 
-        // Récupérer les magasins actifs
-        /** @var \Illuminate\Database\Eloquent\Collection<int, Shop> $shopsCollection */
-        $shopsCollection = Shop::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
+        $user = $request->user();
 
-        $shops = [];
-        foreach ($shopsCollection as $shop) {
-            $shops[] = [
-                'id' => $shop->id,
-                'name' => $shop->name,
-                'code' => $shop->code,
+        // Récupérer les dépôts visibles pour l'utilisateur (mêmes données que dans la navbar)
+        $depotsData = HandleInertiaRequests::getDepotsForRequest($request);
+        $availableDepots = $depotsData['depots'] ?? [];
+
+        // Mapper chaque dépôt vers son shop associé (shop.depot_id = depot.id)
+        $depots = [];
+        foreach ($availableDepots as $depot) {
+            $shop = Shop::query()
+                ->where('is_active', true)
+                ->when($user?->tenant_id, function ($query, $tenantId) {
+                    return $query->where('tenant_id', $tenantId);
+                })
+                ->where('depot_id', $depot['id'])
+                ->first();
+
+            if (!$shop) {
+                continue;
+            }
+
+            $depots[] = [
+                'depot_id' => $depot['id'],
+                'depot_name' => $depot['name'],
+                'depot_code' => $depot['code'],
+                'shop_id' => $shop->id,
+                'shop_name' => $shop->name,
+                'shop_code' => $shop->code,
             ];
         }
 
@@ -211,7 +227,7 @@ class StockTransferController
         }
 
         return Inertia::render('Pharmacy/Transfers/Create', [
-            'shops' => $shops,
+            'depots' => $depots,
             'products' => $productsData,
             'currentShopId' => $shopId,
         ]);
