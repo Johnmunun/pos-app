@@ -16,7 +16,8 @@ import {
     CheckCircle,
     XCircle,
     Clock,
-    RefreshCw
+    RefreshCw,
+    Eye
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -98,12 +99,16 @@ export default function ManageUsers({ users, roles }) {
             return;
         }
 
+        // Trouver l'utilisateur pour obtenir son tenant_id
+        const user = users.find(u => u.id === userId);
+        const tenantId = user?.tenant_id || null;
+
         setActionLoading({ ...actionLoading, [`role-${userId}`]: true });
 
         try {
             const response = await axios.post(route('admin.users.assign-role', userId), {
                 role_id: selectedRole,
-                tenant_id: null,
+                tenant_id: tenantId, // Passer le tenant_id de l'utilisateur
             });
 
             toast.success(response.data?.message || 'Rôle assigné avec succès. L\'utilisateur devra se reconnecter pour voir les nouvelles permissions.', {
@@ -416,6 +421,15 @@ export default function ManageUsers({ users, roles }) {
                                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                     {user.type !== 'ROOT' && (
                                                         <div className="flex items-center justify-end gap-2">
+                                                            {/* View Details */}
+                                                            <a
+                                                                href={route('admin.users.show', user.id)}
+                                                                className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition"
+                                                                title="Voir les détails"
+                                                            >
+                                                                <Eye className="h-4 w-4" />
+                                                            </a>
+
                                                             {/* Assign Role */}
                                                             {canAssignRole && (
                                                                 <button
@@ -523,9 +537,16 @@ export default function ManageUsers({ users, roles }) {
                             {roles?.map((role) => (
                                 <option key={role.id} value={role.id}>
                                     {role.name}
+                                    {role.tenant_id === null && ' (Rôle système)'}
+                                    {role.description && ` - ${role.description}`}
                                 </option>
                             ))}
                         </select>
+                        {roles && roles.length === 0 && (
+                            <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
+                                Aucun rôle disponible. Exécutez le seeder pour créer les rôles par défaut.
+                            </p>
+                        )}
                         <div className="flex gap-3 mt-6">
                             <button
                                 onClick={() => {

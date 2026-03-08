@@ -376,130 +376,245 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                             </Button>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
-                                    <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                            Date
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                            Statut
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                            Type
-                                        </th>
-                                        {canViewAllSales && (
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                                Vendeur
-                                            </th>
-                                        )}
-                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                            Total
-                                        </th>
-                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                            Payé
-                                        </th>
-                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                            Solde
-                                        </th>
-                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                            Actions
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                                    {sales.map((sale) => (
-                                        <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                                {sale.created_at}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                {getStatusBadge(sale)}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                {sale.sale_type === 'wholesale' ? (
-                                                    <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
-                                                        Gros
-                                                    </Badge>
-                                                ) : (
-                                                    <Badge className="bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
-                                                        Détail
-                                                    </Badge>
-                                                )}
-                                            </td>
-                                            {canViewAllSales && (
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                    <div className="flex flex-col">
-                                                        {sale.customer_short_name && (
-                                                            <span className="text-blue-600 dark:text-blue-400 font-medium mb-0.5">
-                                                                {sale.customer_short_name}
-                                                            </span>
+                        <>
+                            {/* Vue Mobile - Cartes */}
+                            <div className="md:hidden space-y-3">
+                                {sales.map((sale) => (
+                                    <div 
+                                        key={sale.id} 
+                                        className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 transition-colors"
+                                    >
+                                        <div className="p-4">
+                                            {/* En-tête avec date et statut */}
+                                            <div className="flex items-start justify-between gap-2 mb-3">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        {getStatusBadge(sale)}
+                                                        {sale.sale_type === 'wholesale' ? (
+                                                            <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 text-[10px] px-2 py-0.5">
+                                                                Gros
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge className="bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 text-[10px] px-2 py-0.5">
+                                                                Détail
+                                                            </Badge>
                                                         )}
-                                                        <span className="text-gray-600 dark:text-gray-400">
-                                                            {sale.seller_name ?? '—'}
+                                                    </div>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                        {sale.created_at}
+                                                    </p>
+                                                    {canViewAllSales && sale.seller_name && (
+                                                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                            Vendeur: {sale.seller_name}
+                                                        </p>
+                                                    )}
+                                                    {canViewAllSales && sale.customer_short_name && (
+                                                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mt-0.5">
+                                                            Client: {sale.customer_short_name}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    asChild
+                                                    className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex-shrink-0"
+                                                >
+                                                    <Link href={route(`${routePrefix}.sales.show`, sale.id)} title="Voir">
+                                                        <Eye className="h-4 w-4" />
+                                                    </Link>
+                                                </Button>
+                                            </div>
+                                            
+                                            {/* Montants */}
+                                            <div className="space-y-1.5 mb-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-xs text-gray-600 dark:text-gray-400">Total:</span>
+                                                    <span className="text-sm font-bold text-gray-900 dark:text-white">
+                                                        {formatCurrency(Number(sale.total_amount))}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-xs text-gray-600 dark:text-gray-400">Payé:</span>
+                                                    <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                                                        {formatCurrency(Number(sale.paid_amount))}
+                                                    </span>
+                                                </div>
+                                                {Number(sale.balance_amount) > 0 && (
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-xs text-gray-600 dark:text-gray-400">Solde:</span>
+                                                        <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                                                            {formatCurrency(Number(sale.balance_amount))}
                                                         </span>
                                                     </div>
-                                                </td>
+                                                )}
+                                            </div>
+                                            
+                                            {/* Actions */}
+                                            <div className="flex items-center gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => openReceipt(sale.id)}
+                                                    className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex-1"
+                                                    title="Imprimer"
+                                                >
+                                                    <Printer className="h-4 w-4 mr-1" />
+                                                    <span className="text-xs">Imprimer</span>
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => sendReceiptByEmail(sale.id)}
+                                                    disabled={!!emailingSaleId}
+                                                    className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex-1"
+                                                    title="Email"
+                                                >
+                                                    <Mail className="h-4 w-4 mr-1" />
+                                                    <span className="text-xs">Email</span>
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => shareReceipt(sale)}
+                                                    className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex-1"
+                                                    title="Partager"
+                                                >
+                                                    <Share2 className="h-4 w-4 mr-1" />
+                                                    <span className="text-xs">Partager</span>
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Vue Desktop - Tableau */}
+                            <div className="hidden md:block overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                                                Date
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                                                Statut
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                                                Type
+                                            </th>
+                                            {canViewAllSales && (
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                                                    Vendeur
+                                                </th>
                                             )}
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900 dark:text-gray-100">
-                                                {formatCurrency(Number(sale.total_amount))}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 dark:text-green-400 font-medium">
-                                                {formatCurrency(Number(sale.paid_amount))}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                                                <span className={Number(sale.balance_amount) > 0 ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-500 dark:text-gray-400'}>
-                                                    {formatCurrency(Number(sale.balance_amount))}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => openReceipt(sale.id)}
-                                                        className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                                                        title="Print thermique"
-                                                    >
-                                                        <Printer className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => sendReceiptByEmail(sale.id)}
-                                                        disabled={!!emailingSaleId}
-                                                        className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                                                        title="Envoyer par email au client"
-                                                    >
-                                                        <Mail className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => shareReceipt(sale)}
-                                                        className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                                                        title="Partager la facture (WhatsApp / partage système)"
-                                                    >
-                                                        <Share2 className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="sm" 
-                                                        asChild
-                                                        className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                                                    >
-                                                        <Link href={route(`${routePrefix}.sales.show`, sale.id)} title="Voir">
-                                                            <Eye className="h-4 w-4" />
-                                                        </Link>
-                                                    </Button>
-                                                </div>
-                                            </td>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                                                Total
+                                            </th>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                                                Payé
+                                            </th>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                                                Solde
+                                            </th>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                                                Actions
+                                            </th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                        {sales.map((sale) => (
+                                            <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                                    {sale.created_at}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    {getStatusBadge(sale)}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    {sale.sale_type === 'wholesale' ? (
+                                                        <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+                                                            Gros
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge className="bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                                                            Détail
+                                                        </Badge>
+                                                    )}
+                                                </td>
+                                                {canViewAllSales && (
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                        <div className="flex flex-col">
+                                                            {sale.customer_short_name && (
+                                                                <span className="text-blue-600 dark:text-blue-400 font-medium mb-0.5">
+                                                                    {sale.customer_short_name}
+                                                                </span>
+                                                            )}
+                                                            <span className="text-gray-600 dark:text-gray-400">
+                                                                {sale.seller_name ?? '—'}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                )}
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900 dark:text-gray-100">
+                                                    {formatCurrency(Number(sale.total_amount))}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 dark:text-green-400 font-medium">
+                                                    {formatCurrency(Number(sale.paid_amount))}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                                                    <span className={Number(sale.balance_amount) > 0 ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-500 dark:text-gray-400'}>
+                                                        {formatCurrency(Number(sale.balance_amount))}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => openReceipt(sale.id)}
+                                                            className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                                                            title="Print thermique"
+                                                        >
+                                                            <Printer className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => sendReceiptByEmail(sale.id)}
+                                                            disabled={!!emailingSaleId}
+                                                            className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                                                            title="Envoyer par email au client"
+                                                        >
+                                                            <Mail className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => shareReceipt(sale)}
+                                                            className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                                                            title="Partager la facture (WhatsApp / partage système)"
+                                                        >
+                                                            <Share2 className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="sm" 
+                                                            asChild
+                                                            className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                                                        >
+                                                            <Link href={route(`${routePrefix}.sales.show`, sale.id)} title="Voir">
+                                                                <Eye className="h-4 w-4" />
+                                                            </Link>
+                                                        </Button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
                     )}
                 </div>
             </div>

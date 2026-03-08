@@ -313,6 +313,18 @@ class SaleController
                     }
                 }
 
+                // Prix minimum (non négociable)
+                $minPriceRetail = $p->price_non_negotiable !== null ? (float) $p->price_non_negotiable : null;
+                $minPriceWholesale = $p->price_non_negotiable_wholesale !== null ? (float) $p->price_non_negotiable_wholesale : null;
+                
+                // Conversion des prix minimum en devise boutique si nécessaire
+                if ($minPriceRetail !== null && $productCurrency !== $shopCurrency) {
+                    $minPriceRetail = $this->currencyConversion->convertOrKeep($minPriceRetail, $productCurrency, $shopCurrency, $tenantId);
+                }
+                if ($minPriceWholesale !== null && $productCurrency !== $shopCurrency) {
+                    $minPriceWholesale = $this->currencyConversion->convertOrKeep($minPriceWholesale, $productCurrency, $shopCurrency, $tenantId);
+                }
+
                 return [
                     'id' => $p->id,
                     'name' => $p->name,
@@ -322,6 +334,8 @@ class SaleController
                     'wholesale_price_amount' => $wholesaleAmount,
                     'wholesale_min_quantity' => null,
                     'price_currency' => $shopCurrency,
+                    'price_non_negotiable' => $minPriceRetail,
+                    'price_non_negotiable_wholesale' => $minPriceWholesale,
                     'stock' => (float) ($p->stock ?? 0),
                     'category_id' => $p->category_id,
                     'image_url' => $p->image_path
@@ -535,6 +549,99 @@ class SaleController
 
         $sale = $this->createDraftSaleUseCase->execute($shopId, $customerId, $currency, $userId, $cashRegisterId, $cashRegisterSessionId, $saleType);
 
+        // Pour Hardware : valider que tous les produits sont accessibles depuis le dépôt actuel
+        $isHardware = $this->getModule() === 'Hardware';
+        if ($isHardware && $this->depotFilterService) {
+            $currentDepotId = $request->session()->get('current_depot_id');
+            $user = $request->user();
+            $permissions = $user ? $user->permissionCodes() : [];
+            $canViewAll = in_array('hardware.warehouse.view_all', $permissions, true) || in_array('*', $permissions, true);
+            
+            foreach ($linesInput as $row) {
+                $productId = $row['product_id'];
+                
+                // Récupérer le produit directement pour vérifier son depot_id
+                $productModel = \Src\Infrastructure\Quincaillerie\Models\ProductModel::where('id', $productId)
+                    ->where('shop_id', $shopId)
+                    ->where('is_active', true)
+                    ->first();
+                
+                if (!$productModel) {
+                    $productName = 'Inconnu';
+                    try {
+                        $tempProduct = \Src\Infrastructure\Quincaillerie\Models\ProductModel::find($productId);
+                        $productName = $tempProduct?->name ?? 'Inconnu';
+                    } catch (\Throwable $e) {
+                        // Ignorer
+                    }
+                    return response()->json([
+                        'message' => sprintf(
+                            'Le produit "%s" (ID: %s) n\'existe pas, a été supprimé ou est désactivé.',
+                            $productName,
+                            $productId
+                        )
+                    ], 422);
+                }
+                
+                // Vérifier l'accès au dépôt
+                $productDepotId = $productModel->depot_id;
+                
+                // Log pour diagnostic
+                \Illuminate\Support\Facades\Log::info('Hardware sale validation - Product depot check', [
+                    'product_id' => $productId,
+                    'product_name' => $productModel->name,
+                    'product_depot_id' => $productDepotId,
+                    'current_depot_id' => $currentDepotId,
+                    'can_view_all' => $canViewAll,
+                    'shop_id' => $shopId,
+                ]);
+                
+                // Si le produit est dans le dépôt central (depot_id = null), il est accessible par tous
+                if ($productDepotId === null) {
+                    continue; // Produit accessible
+                }
+                
+                // Si l'utilisateur peut voir tous les dépôts, il peut accéder à tous les produits
+                if ($canViewAll) {
+                    // Si un dépôt est sélectionné, vérifier que le produit est dans ce dépôt ou dépôt central
+                    if ($currentDepotId) {
+                        if ((int) $productDepotId === (int) $currentDepotId) {
+                            continue; // Produit accessible
+                        }
+                    } else {
+                        continue; // Pas de dépôt sélectionné, accessible
+                    }
+                } else {
+                    // Vérifier que l'utilisateur a accès au dépôt du produit
+                    $userDepotIds = $this->depotFilterService->getUserDepotIds($user);
+                    
+                    // Si un dépôt est sélectionné, vérifier qu'il correspond au dépôt du produit
+                    if ($currentDepotId) {
+                        if ((int) $productDepotId === (int) $currentDepotId && 
+                            (empty($userDepotIds) || in_array((int) $currentDepotId, $userDepotIds, true))) {
+                            continue; // Produit accessible
+                        }
+                    } else {
+                        // Pas de dépôt sélectionné : vérifier que l'utilisateur a accès au dépôt du produit
+                        if (empty($userDepotIds) || in_array((int) $productDepotId, $userDepotIds, true)) {
+                            continue; // Produit accessible
+                        }
+                    }
+                }
+                
+                // Produit non accessible
+                return response()->json([
+                    'message' => sprintf(
+                        'Le produit "%s" (ID: %s) n\'est pas accessible depuis le dépôt actuellement sélectionné (dépôt ID: %s, produit dans dépôt ID: %s). Veuillez changer de dépôt ou retirer ce produit du panier.',
+                        $productModel->name,
+                        $productId,
+                        $currentDepotId ?? 'aucun',
+                        $productDepotId ?? 'central'
+                    )
+                ], 422);
+            }
+        }
+
         $lines = [];
         foreach ($linesInput as $row) {
             $lines[] = new SaleLineDTO(
@@ -551,7 +658,18 @@ class SaleController
                 // Recharger la vente pour récupérer les totaux mis à jour
                 $sale = $this->saleRepository->findById($sale->getId()) ?? $sale;
             } catch (\InvalidArgumentException $e) {
-                return response()->json(['message' => $e->getMessage()], 422);
+                $errorMessage = $e->getMessage();
+                // Améliorer le message d'erreur pour Hardware
+                if ($isHardware && str_contains($errorMessage, 'Product not found')) {
+                    $currentDepotId = $request->session()->get('current_depot_id');
+                    if ($currentDepotId) {
+                        $errorMessage .= sprintf(
+                            ' Le produit n\'est peut-être pas accessible depuis le dépôt actuellement sélectionné (dépôt ID: %s).',
+                            $currentDepotId
+                        );
+                    }
+                }
+                return response()->json(['message' => $errorMessage], 422);
             }
         }
 
@@ -845,12 +963,19 @@ class SaleController
     {
         \Illuminate\Support\Facades\DB::transaction(function () use ($sale, $paidAmount, $userId): void {
             if ($sale->getStatus() !== SaleEntity::STATUS_DRAFT) {
-                throw new \LogicException('Only draft sales can be finalized');
+                \Illuminate\Support\Facades\Log::warning('Hardware sale finalization failed: sale is not in DRAFT status', [
+                    'sale_id' => $sale->getId(),
+                    'current_status' => $sale->getStatus(),
+                ]);
+                throw new \LogicException('Seules les ventes en brouillon peuvent être finalisées. Statut actuel: ' . $sale->getStatus());
             }
 
             $lines = $this->saleLineRepository->findBySale($sale->getId());
             if (count($lines) === 0) {
-                throw new \LogicException('Cannot finalize empty sale');
+                \Illuminate\Support\Facades\Log::warning('Hardware sale finalization failed: sale has no lines', [
+                    'sale_id' => $sale->getId(),
+                ]);
+                throw new \LogicException('Impossible de finaliser une vente vide');
             }
 
             $currency = $sale->getCurrency();
@@ -862,7 +987,7 @@ class SaleController
 
             $paid = new Money($paidAmount, $currency);
             if ($paid->getAmount() < 0) {
-                throw new \InvalidArgumentException('Paid amount cannot be negative');
+                throw new \InvalidArgumentException('Le montant payé ne peut pas être négatif');
             }
 
             // Met à jour les totaux de la vente
@@ -874,17 +999,33 @@ class SaleController
             $updateStockUseCase = new HardwareUpdateStockUseCase($productRepository, $stockMovementRepository);
 
             foreach ($lines as $line) {
-                $updateStockUseCase->removeStock(
-                    $line->getProductId(),
-                    $line->getQuantity()->getValue(),
-                    $sale->getShopId(),
-                    $userId,
-                    'SALE-' . $sale->getId()
-                );
+                try {
+                    $updateStockUseCase->removeStock(
+                        $line->getProductId(),
+                        $line->getQuantity()->getValue(),
+                        $sale->getShopId(),
+                        $userId,
+                        'SALE-' . $sale->getId()
+                    );
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::error('Hardware sale finalization failed during stock removal', [
+                        'sale_id' => $sale->getId(),
+                        'product_id' => $line->getProductId(),
+                        'quantity' => $line->getQuantity()->getValue(),
+                        'error' => $e->getMessage(),
+                    ]);
+                    throw new \RuntimeException('Erreur lors de la mise à jour du stock pour le produit: ' . $e->getMessage(), 0, $e);
+                }
             }
 
             $sale->markCompleted();
             $this->saleRepository->save($sale);
+            
+            \Illuminate\Support\Facades\Log::info('Hardware sale finalized successfully', [
+                'sale_id' => $sale->getId(),
+                'total' => $total->getAmount(),
+                'paid' => $paid->getAmount(),
+            ]);
         });
     }
 

@@ -38,6 +38,11 @@ import {
     Wrench,
     ArrowLeftRight,
     Store,
+    ShoppingBag,
+    Globe,
+    Truck as TruckIcon,
+    Gift,
+    Star,
 } from 'lucide-react';
 
 /**
@@ -120,12 +125,27 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
     };
 
     // Module Global Commerce (Kiosque, Supermarché, Boucherie, Autre)
+    // IMPORTANT: Ne pas confondre avec module.ecommerce (vente en ligne)
     const hasCommerceModuleAccess = () => {
-        if (tenantSector === 'pharmacy' || tenantSector === 'hardware') return false;
         if (isRoot || permissions.includes('*')) return true;
-        if (tenantSector === 'commerce') return true;
+        // Si le tenant est explicitement pharmacy, hardware ou ecommerce, ne pas montrer Commerce
+        if (tenantSector === 'pharmacy' || tenantSector === 'hardware' || tenantSector === 'ecommerce') return false;
+        // Si le tenant est commerce ou un secteur commerce (kiosk, supermarket, butchery, other)
+        if (tenantSector === 'commerce' || ['kiosk', 'supermarket', 'butchery', 'other'].includes(tenantSector)) return true;
+        // Vérifier les permissions - mais exclure ecommerce
+        if (permissions.includes('module.ecommerce')) return false; // E-commerce est un module séparé
+        // Sinon, vérifier les permissions commerce
         return permissions.some(
             (p) => p === 'module.commerce' || (typeof p === 'string' && p.startsWith('commerce.'))
+        );
+    };
+
+    // Module E-commerce (Vente en ligne) - séparé du module Commerce
+    const hasEcommerceModuleAccess = () => {
+        if (isRoot || permissions.includes('*')) return true;
+        if (tenantSector === 'ecommerce') return true;
+        return permissions.some(
+            (p) => p === 'module.ecommerce' || (typeof p === 'string' && p.startsWith('ecommerce.'))
         );
     };
 
@@ -137,7 +157,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
             icon: Home,
             permissions: ['dashboard.view', 'notifications.view', 'activity.view', '*'],
             items: [
-                { label: 'Dashboard', href: '/dashboard', permission: '*', icon: LayoutDashboard, rootOnly: true },
+                { label: 'Dashboard', href: '/dashboard', permission: '*', icon: LayoutDashboard, rootOnly: true, excludeSectors: ['ecommerce'] },
                 { label: 'Mon profil', href: '/profile', permission: '*', icon: User },
                 { label: 'Notifications', href: '#', permission: 'notifications.view', icon: Bell },
                 { label: 'Activité récente', href: '#', permission: 'activity.view', icon: ClipboardList },
@@ -199,20 +219,43 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
             key: 'global_commerce',
             label: 'Global Commerce',
             icon: Store,
-            permissions: ['module.commerce', 'commerce.product.view', 'commerce.category.view', 'commerce.purchases.view', 'commerce.supplier.view', 'commerce.customer.view'],
+            permissions: ['module.commerce', 'commerce.product.view', 'commerce.category.view', 'commerce.sales.view', 'commerce.purchases.view', 'commerce.supplier.view', 'commerce.customer.view', 'commerce.seller.view', 'commerce.stock.view', 'commerce.inventory.view', 'commerce.transfer.view', 'commerce.depot.view', 'commerce.report.view'],
             items: [
                 { label: 'Dashboard', href: '/commerce/dashboard', permission: 'module.commerce', icon: LayoutDashboard },
                 { label: 'Produits', href: '/commerce/products', permission: 'commerce.product.view|commerce.product.manage', icon: Package },
                 { label: 'Catégories', href: '/commerce/categories', permission: 'commerce.category.view|commerce.category.manage', icon: Tag },
-                { label: 'Stock', href: '/commerce/stock', permission: 'commerce.stock.view|module.commerce', icon: Warehouse },
-                { label: 'Inventaires', href: '/commerce/inventories', permission: 'module.commerce', icon: ClipboardList },
-                { label: 'Transferts', href: '/commerce/transfers', permission: 'module.commerce', icon: ArrowLeftRight },
-                { label: 'Ventes', href: '/commerce/sales', permission: 'module.commerce', icon: ShoppingCart },
+                { label: 'Stock', href: '/commerce/stock', permission: 'commerce.stock.view|commerce.stock.manage|module.commerce', icon: Warehouse },
+                { label: 'Inventaires', href: '/commerce/inventories', permission: 'commerce.inventory.view|commerce.inventory.manage|module.commerce', icon: ClipboardList },
+                { label: 'Transferts', href: '/commerce/transfers', permission: 'commerce.transfer.view|commerce.transfer.create|module.commerce', icon: ArrowLeftRight },
+                { label: 'Ventes', href: '/commerce/sales', permission: 'commerce.sales.view|commerce.sales.manage|module.commerce', icon: ShoppingCart },
                 { label: 'Achats', href: '/commerce/purchases', permission: 'commerce.purchases.view|commerce.purchases.manage', icon: Receipt },
-                { label: 'Fournisseurs', href: '/commerce/suppliers', permission: 'commerce.supplier.view|commerce.supplier.create', icon: Truck },
-                { label: 'Clients', href: '/commerce/customers', permission: 'commerce.customer.view|module.commerce', icon: Users },
-                { label: 'Dépôts', href: '/commerce/depots', permission: 'module.commerce', icon: Warehouse },
-                { label: 'Rapports', href: '/commerce/reports', permission: 'module.commerce', icon: BarChart },
+                { label: 'Fournisseurs', href: '/commerce/suppliers', permission: 'commerce.supplier.view|commerce.supplier.create|commerce.supplier.manage', icon: Truck },
+                { label: 'Clients', href: '/commerce/customers', permission: 'commerce.customer.view|commerce.customer.manage|module.commerce', icon: Users },
+                { label: 'Vendeurs', href: '/commerce/sellers', permission: 'commerce.seller.view|commerce.seller.manage|module.commerce', icon: User },
+                { label: 'Dépôts', href: '/commerce/depots', permission: 'commerce.depot.view|commerce.depot.manage|module.commerce', icon: Warehouse },
+                { label: 'Rapports', href: '/commerce/reports', permission: 'commerce.report.view|commerce.report.export|module.commerce', icon: BarChart },
+            ]
+        },
+        {
+            key: 'ecommerce',
+            label: 'E-commerce',
+            icon: ShoppingBag,
+            permissions: ['module.ecommerce', 'ecommerce.view', 'ecommerce.dashboard.view', 'ecommerce.product.view', 'ecommerce.order.view', 'ecommerce.customer.view', 'ecommerce.catalog.view'],
+            items: [
+                { label: 'Dashboard', href: '/ecommerce/dashboard', permission: 'ecommerce.dashboard.view|module.ecommerce', icon: LayoutDashboard },
+                { label: 'Catalogue', href: '/ecommerce/catalog', permission: 'ecommerce.catalog.view|ecommerce.product.view|module.ecommerce', icon: Package },
+                { label: 'Produits', href: '/ecommerce/products', permission: 'ecommerce.product.view|ecommerce.product.manage|module.ecommerce', icon: Package },
+                { label: 'Catégories', href: '/ecommerce/categories', permission: 'ecommerce.category.view|ecommerce.category.manage|module.ecommerce', icon: Tag },
+                { label: 'Commandes', href: '/ecommerce/orders', permission: 'ecommerce.order.view|ecommerce.order.manage|module.ecommerce', icon: ShoppingCart },
+                { label: 'Clients', href: '/ecommerce/customers', permission: 'ecommerce.customer.view|ecommerce.customer.manage|module.ecommerce', icon: Users },
+                { label: 'Paiements', href: '/ecommerce/payments', permission: 'ecommerce.payment.view|ecommerce.payment.manage|module.ecommerce', icon: CreditCard },
+                { label: 'Livraisons', href: '/ecommerce/shipping', permission: 'ecommerce.shipping.view|ecommerce.shipping.manage|module.ecommerce', icon: TruckIcon },
+                { label: 'Promotions', href: '/ecommerce/promotions', permission: 'ecommerce.promotion.view|ecommerce.promotion.manage|module.ecommerce', icon: Gift },
+                { label: 'Coupons', href: '/ecommerce/coupons', permission: 'ecommerce.coupon.view|ecommerce.coupon.manage|module.ecommerce', icon: Ticket },
+                { label: 'Avis', href: '/ecommerce/reviews', permission: 'ecommerce.review.view|ecommerce.review.manage|module.ecommerce', icon: Star },
+                { label: 'Stock', href: '/ecommerce/stock', permission: 'ecommerce.stock.view|ecommerce.stock.manage|module.ecommerce', icon: Warehouse },
+                { label: 'Rapports', href: '/ecommerce/reports', permission: 'ecommerce.report.view|ecommerce.analytics.view|module.ecommerce', icon: BarChart },
+                { label: 'Paramètres', href: '/ecommerce/settings', permission: 'ecommerce.settings.view|ecommerce.settings.update|module.ecommerce', icon: Settings },
             ]
         },
         {
@@ -312,12 +355,14 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
         },
     ];
 
-    // Filtrer les groupes visibles (Général toujours visible ; Pharmacy/Hardware/Commerce via hasXxxAccess)
+    // Filtrer les groupes visibles (Général toujours visible ; Pharmacy/Hardware/Commerce/Ecommerce via hasXxxAccess)
     const visibleGroups = navigationGroups.filter((group) => {
         if (group.key === 'general') return true;
         if (group.key === 'pharmacy') return hasPharmacyAccess();
         if (group.key === 'hardware') return hasHardwareAccess();
         if (group.key === 'global_commerce') return hasCommerceModuleAccess();
+        // E-commerce est géré séparément si un groupe existe
+        if (group.key === 'ecommerce') return hasEcommerceModuleAccess();
         return hasVisibleItem(group.permissions);
     });
 
@@ -341,13 +386,16 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                         <ul role="list" className="flex flex-1 flex-col gap-y-7">
                             {visibleGroups.map((group) => {
                                 const isExpanded = expandedGroups[group.key] ?? true;
-                                // Pour Pharmacy, Hardware et Global Commerce : si l'utilisateur a accès au module, afficher tous les items
+                                // Pour Pharmacy, Hardware, Global Commerce et E-commerce : si l'utilisateur a accès au module, afficher tous les items
                                 const hasModuleAccess = (group.key === 'pharmacy' && hasPharmacyAccess()) || 
                                                        (group.key === 'hardware' && hasHardwareAccess()) ||
-                                                       (group.key === 'global_commerce' && hasCommerceModuleAccess());
+                                                       (group.key === 'global_commerce' && hasCommerceModuleAccess()) ||
+                                                       (group.key === 'ecommerce' && hasEcommerceModuleAccess());
                                 
                                 const visibleItems = group.items.filter((item) => {
                                     if (item.rootOnly && !isRoot) return false;
+                                    // Exclure les items pour certains secteurs
+                                    if (item.excludeSectors && item.excludeSectors.includes(tenantSector)) return false;
                                     // Si l'utilisateur a accès au module, afficher tous les items
                                     if (hasModuleAccess) return true;
                                     // Sinon, vérifier les permissions individuelles
@@ -429,13 +477,16 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                     <nav className="flex flex-1 flex-col">
                         <ul role="list" className="flex flex-1 flex-col gap-y-7">
                             {visibleGroups.map((group) => {
-                                // Pour Pharmacy, Hardware et Global Commerce : si l'utilisateur a accès au module, afficher tous les items
+                                // Pour Pharmacy, Hardware, Global Commerce et E-commerce : si l'utilisateur a accès au module, afficher tous les items
                                 const hasModuleAccess = (group.key === 'pharmacy' && hasPharmacyAccess()) || 
                                                        (group.key === 'hardware' && hasHardwareAccess()) ||
-                                                       (group.key === 'global_commerce' && hasCommerceModuleAccess());
+                                                       (group.key === 'global_commerce' && hasCommerceModuleAccess()) ||
+                                                       (group.key === 'ecommerce' && hasEcommerceModuleAccess());
                                 
                                 const visibleItems = group.items.filter((item) => {
                                     if (item.rootOnly && !isRoot) return false;
+                                    // Exclure les items pour certains secteurs
+                                    if (item.excludeSectors && item.excludeSectors.includes(tenantSector)) return false;
                                     // Si l'utilisateur a accès au module, afficher tous les items
                                     if (hasModuleAccess) return true;
                                     // Sinon, vérifier les permissions individuelles

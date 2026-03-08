@@ -33,6 +33,7 @@ Route::prefix('commerce')
         Route::post('/products', [GcProductController::class, 'store'])->name('products.store');
         Route::get('/products/{id}/edit', [GcProductController::class, 'edit'])->name('products.edit');
         Route::put('/products/{id}', [GcProductController::class, 'update'])->name('products.update');
+        Route::post('/products/{id}/toggle-status', [GcProductController::class, 'toggleStatus'])->name('products.toggle-status');
         Route::delete('/products/{id}', [GcProductController::class, 'destroy'])->name('products.destroy');
 
         Route::get('/sales', [GcSaleController::class, 'index'])->name('sales.index');
@@ -100,6 +101,28 @@ Route::prefix('commerce')
         Route::get('/customers', [GcCustomerController::class, 'index'])->name('customers.index');
         Route::get('/customers/create', [GcCustomerController::class, 'create'])->name('customers.create');
         Route::post('/customers', [GcCustomerController::class, 'store'])->name('customers.store');
+        Route::put('/customers/{id}', [GcCustomerController::class, 'update'])->name('customers.update');
+
+        // Assistant Commerce (nommé 'code')
+        Route::post('/assistant/ask', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\CommerceAssistantController::class, 'ask'])
+            ->middleware('permission:commerce.assistant.use')
+            ->name('assistant.ask');
+
+        // API vocale (STT + TTS) – transcription Whisper, synthèse vocale, paramètres
+        Route::prefix('api/voice')->name('api.voice.')->group(function () {
+            Route::post('/transcribe', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\CommerceVoiceController::class, 'transcribe'])
+                ->middleware('permission:commerce.assistant.voice')
+                ->name('transcribe');
+            Route::post('/speak', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\CommerceVoiceController::class, 'speak'])
+                ->middleware('permission:commerce.assistant.voice')
+                ->name('speak');
+            Route::get('/settings', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\CommerceVoiceController::class, 'settings'])
+                ->middleware('permission:commerce.assistant.voice')
+                ->name('settings');
+            Route::put('/settings', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\CommerceVoiceController::class, 'updateSettings'])
+                ->middleware('permission:commerce.assistant.voice')
+                ->name('settings.update');
+        });
 
         // Dépôts (gestion multi-dépôts pour Commerce)
         Route::get('/depots', [\App\Http\Controllers\DepotController::class, 'index'])->name('depots.index');
@@ -107,6 +130,13 @@ Route::prefix('commerce')
         Route::put('/depots/{id}', [\App\Http\Controllers\DepotController::class, 'update'])->name('depots.update');
         Route::post('/depots/{id}/activate', [\App\Http\Controllers\DepotController::class, 'activate'])->name('depots.activate');
         Route::post('/depots/{id}/deactivate', [\App\Http\Controllers\DepotController::class, 'deactivate'])->name('depots.deactivate');
+
+        // Vendeurs (gestion des vendeurs pour Commerce)
+        Route::get('/sellers', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'index'])->name('sellers.index');
+        Route::post('/sellers', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'store'])->name('sellers.store');
+        Route::put('/sellers/{id}', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'update'])->name('sellers.update');
+        Route::delete('/sellers/{id}', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'destroy'])->name('sellers.destroy');
+        Route::post('/sellers/{id}/impersonate', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'impersonate'])->name('sellers.impersonate');
 
         // API - Mouvements de produits (GlobalCommerce)
         Route::prefix('api')->name('api.')->group(function () {
@@ -122,6 +152,7 @@ Route::prefix('commerce')
 
         // Imports (Produits, Catégories, Fournisseurs, Clients)
         Route::get('/products/import/template', [GcProductController::class, 'importTemplate'])->name('products.import.template');
+        Route::post('/products/import/preview', [GcProductController::class, 'importPreview'])->name('products.import.preview');
         Route::post('/products/import', [GcProductController::class, 'import'])->name('products.import');
 
         Route::get('/categories/import/template', [GcCategoryController::class, 'importTemplate'])->name('categories.import.template');

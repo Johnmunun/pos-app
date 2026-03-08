@@ -214,6 +214,65 @@ class GcSaleController
     public function store(Request $request): JsonResponse|RedirectResponse
     {
         $shopId = $this->getShopId($request);
+        
+        // Log pour déboguer
+        $linesInput = $request->input('lines', []);
+        \Log::debug('GcSaleController::store - Données reçues', [
+            'lines' => $linesInput,
+            'lines_count' => count($linesInput),
+            'first_line' => $linesInput[0] ?? null,
+            'first_line_keys' => $linesInput[0] ? array_keys($linesInput[0]) : [],
+            'first_line_quantity' => $linesInput[0]['quantity'] ?? 'MISSING',
+            'request_all' => $request->all(),
+        ]);
+        
+        // Nettoyer et valider les lignes avant validation Laravel
+        $cleanedLines = [];
+        foreach ($linesInput as $index => $line) {
+            if (!is_array($line)) {
+                \Log::warning("Ligne {$index} n'est pas un tableau", ['line' => $line]);
+                continue;
+            }
+            
+            // S'assurer que quantity existe et est valide
+            if (!isset($line['quantity']) || $line['quantity'] === null || $line['quantity'] === '') {
+                \Log::warning("Ligne {$index} n'a pas de quantity", ['line' => $line]);
+                continue;
+            }
+            
+            $quantity = (float) $line['quantity'];
+            if ($quantity <= 0 || is_nan($quantity)) {
+                \Log::warning("Ligne {$index} a une quantity invalide", ['quantity' => $line['quantity'], 'line' => $line]);
+                continue;
+            }
+            
+            // Créer une ligne propre
+            $cleanedLine = [
+                'product_id' => $line['product_id'] ?? '',
+                'quantity' => $quantity,
+            ];
+            
+            if (isset($line['unit_price']) && $line['unit_price'] !== null && $line['unit_price'] !== '') {
+                $cleanedLine['unit_price'] = (float) $line['unit_price'];
+            }
+            
+            if (isset($line['discount_percent']) && $line['discount_percent'] !== null && $line['discount_percent'] !== '') {
+                $cleanedLine['discount_percent'] = (float) $line['discount_percent'];
+            }
+            
+            $cleanedLines[] = $cleanedLine;
+        }
+        
+        // Remplacer les lignes dans la requête
+        $request->merge(['lines' => $cleanedLines]);
+        
+        if (empty($cleanedLines)) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Aucune ligne valide après nettoyage.'], 422);
+            }
+            return redirect()->back()->withErrors(['lines' => 'Aucune ligne valide.'])->withInput();
+        }
+        
         $validated = $request->validate([
             'currency' => 'required|string|size:3',
             'sale_mode' => 'nullable|in:retail,wholesale',

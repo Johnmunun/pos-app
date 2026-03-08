@@ -13,32 +13,106 @@ class EloquentPurchaseRepository implements PurchaseRepositoryInterface
 {
     public function save(Purchase $purchase): void
     {
-        PurchaseModel::updateOrCreate(
-            ['id' => $purchase->getId()],
-            [
-                'shop_id' => $purchase->getShopId(),
-                'supplier_id' => $purchase->getSupplierId(),
-                'status' => $purchase->getStatus(),
-                'total_amount' => $purchase->getTotalAmount(),
-                'currency' => $purchase->getCurrency(),
-                'expected_at' => $purchase->getExpectedAt(),
-                'received_at' => $purchase->getReceivedAt(),
-                'notes' => $purchase->getNotes(),
-            ]
-        );
-
-        PurchaseLineModel::where('purchase_id', $purchase->getId())->delete();
-        foreach ($purchase->getLines() as $line) {
-            PurchaseLineModel::create([
-                'id' => Uuid::uuid4()->toString(),
-                'purchase_id' => $purchase->getId(),
-                'product_id' => $line['product_id'],
-                'ordered_quantity' => $line['ordered_quantity'],
-                'received_quantity' => $line['received_quantity'] ?? 0,
-                'unit_cost' => $line['unit_cost'],
-                'line_total' => $line['line_total'],
-                'product_name' => $line['product_name'],
+        // S'assurer que shop_id est un entier (car la colonne est unsignedBigInteger)
+        $shopId = (int) $purchase->getShopId();
+        
+        \Log::debug('EloquentPurchaseRepository::save - Début sauvegarde', [
+            'purchase_id' => $purchase->getId(),
+            'shop_id' => $shopId,
+            'shop_id_original' => $purchase->getShopId(),
+            'supplier_id' => $purchase->getSupplierId(),
+            'status' => $purchase->getStatus(),
+            'total_amount' => $purchase->getTotalAmount(),
+            'lines_count' => count($purchase->getLines()),
+        ]);
+        
+        try {
+            // Utiliser une transaction pour garantir la cohérence
+            \DB::beginTransaction();
+            
+            // Créer ou mettre à jour l'achat
+            $purchaseModel = PurchaseModel::updateOrCreate(
+                ['id' => $purchase->getId()],
+                [
+                    'shop_id' => $shopId, // Convertir en entier
+                    'supplier_id' => $purchase->getSupplierId(),
+                    'status' => $purchase->getStatus(),
+                    'total_amount' => $purchase->getTotalAmount(),
+                    'currency' => $purchase->getCurrency(),
+                    'expected_at' => $purchase->getExpectedAt(),
+                    'received_at' => $purchase->getReceivedAt(),
+                    'notes' => $purchase->getNotes(),
+                ]
+            );
+            
+            \Log::debug('EloquentPurchaseRepository::save - Achat créé/mis à jour', [
+                'id' => $purchaseModel->id,
+                'shop_id' => $purchaseModel->shop_id,
+                'wasRecentlyCreated' => $purchaseModel->wasRecentlyCreated,
             ]);
+            
+            // Supprimer les anciennes lignes
+            $deletedCount = PurchaseLineModel::where('purchase_id', $purchase->getId())->delete();
+            \Log::debug('EloquentPurchaseRepository::save - Lignes supprimées', [
+                'deleted_count' => $deletedCount,
+            ]);
+            
+            // Créer les nouvelles lignes
+            $linesCreated = 0;
+            foreach ($purchase->getLines() as $index => $line) {
+                try {
+                    PurchaseLineModel::create([
+                        'id' => Uuid::uuid4()->toString(),
+                        'purchase_id' => $purchase->getId(),
+                        'product_id' => $line['product_id'],
+                        'ordered_quantity' => $line['ordered_quantity'],
+                        'received_quantity' => $line['received_quantity'] ?? 0,
+                        'unit_cost' => $line['unit_cost'],
+                        'line_total' => $line['line_total'],
+                        'product_name' => $line['product_name'],
+                    ]);
+                    $linesCreated++;
+                } catch (\Exception $e) {
+                    \Log::error('EloquentPurchaseRepository::save - Erreur création ligne', [
+                        'index' => $index,
+                        'line' => $line,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                    throw $e;
+                }
+            }
+            
+            \Log::debug('EloquentPurchaseRepository::save - Lignes créées', [
+                'created_count' => $linesCreated,
+            ]);
+            
+            // Commit la transaction
+            \DB::commit();
+            
+            // Vérifier que l'achat a bien été sauvegardé
+            $saved = PurchaseModel::with('lines')->find($purchase->getId());
+            if ($saved) {
+                \Log::debug('EloquentPurchaseRepository::save - Achat sauvegardé avec succès', [
+                    'id' => $saved->id,
+                    'shop_id' => $saved->shop_id,
+                    'lines_count' => $saved->lines->count(),
+                ]);
+            } else {
+                \Log::error('EloquentPurchaseRepository::save - Achat non trouvé après sauvegarde', [
+                    'purchase_id' => $purchase->getId(),
+                ]);
+                throw new \RuntimeException('L\'achat n\'a pas pu être sauvegardé.');
+            }
+            
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error('EloquentPurchaseRepository::save - Erreur lors de la sauvegarde', [
+                'purchase_id' => $purchase->getId(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
         }
     }
 

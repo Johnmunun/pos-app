@@ -68,7 +68,7 @@ class GcCustomerController
         return Inertia::render('Commerce/Customers/Create');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): JsonResponse|RedirectResponse
     {
         $tenantId = $this->getTenantId($request);
 
@@ -93,7 +93,42 @@ class GcCustomerController
             'is_active' => true,
         ]);
 
+        if ($request->wantsJson() || $request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Client créé.']);
+        }
         return redirect()->route('commerce.customers.index')->with('success', 'Client créé.');
+    }
+
+    public function update(Request $request, string $id): JsonResponse|RedirectResponse
+    {
+        $tenantId = $this->getTenantId($request);
+        $customer = Customer::where('tenant_id', $tenantId)->find($id);
+        
+        if (!$customer) {
+            if ($request->wantsJson() || $request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Client introuvable.'], 404);
+            }
+            return redirect()->route('commerce.customers.index')->with('error', 'Client introuvable.');
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:50',
+            'address' => 'nullable|string|max:500',
+        ]);
+
+        $customer->update([
+            'full_name' => $validated['name'],
+            'email' => $validated['email'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'address' => $validated['address'] ?? null,
+        ]);
+
+        if ($request->wantsJson() || $request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Client mis à jour.']);
+        }
+        return redirect()->route('commerce.customers.index')->with('success', 'Client mis à jour.');
     }
 
     private function generateCustomerCode(int $tenantId): string

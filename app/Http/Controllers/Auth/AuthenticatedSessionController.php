@@ -33,9 +33,9 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        // Si ROOT user → sélectionner tenant
+        // Si ROOT user → dashboard ROOT
         if (auth()->user()->type === 'ROOT') {
-            return redirect()->intended(route('admin.tenants.select.view', absolute: false));
+            return redirect()->intended(route('admin.dashboard', absolute: false));
         }
 
         // Sinon → dashboard du tenant

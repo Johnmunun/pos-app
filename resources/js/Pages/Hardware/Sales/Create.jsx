@@ -182,6 +182,47 @@ export default function HardwareSalesCreate({ products = [], categories = [], cu
         if (idx !== selectedCartIndex) setSelectedCartIndex(idx);
     }, [cart.length, selectedCartIndex]);
 
+    // Vérifier que les produits du panier sont toujours accessibles (important pour Hardware avec filtres dépôt)
+    const prevProductsRef = useRef(products);
+    useEffect(() => {
+        // Ne vérifier que si la liste des produits a changé (pas si c'est juste le panier qui change)
+        const productsChanged = JSON.stringify(prevProductsRef.current.map(p => p.id).sort()) !== 
+                                JSON.stringify(products.map(p => p.id).sort());
+        
+        if (!productsChanged || cart.length === 0 || products.length === 0) {
+            prevProductsRef.current = products;
+            return;
+        }
+        
+        prevProductsRef.current = products;
+        
+        const unavailableProducts = cart.filter(item => {
+            const product = products.find(p => p.id === item.product_id);
+            return !product || product.is_active === false;
+        });
+
+        if (unavailableProducts.length > 0) {
+            const productNames = unavailableProducts.map(item => {
+                // Le panier stocke déjà le nom du produit (voir addToCart)
+                return item.name || item.product_id;
+            }).join(', ');
+            
+            toast.error(
+                `${unavailableProducts.length} produit(s) du panier ne sont plus accessibles depuis le dépôt actuel: ${productNames}. Ces produits seront retirés automatiquement.`,
+                { 
+                    duration: 8000,
+                    id: 'depot-product-warning' // Utiliser un ID pour éviter les doublons
+                }
+            );
+            
+            // Retirer automatiquement les produits non accessibles
+            setCart(prevCart => prevCart.filter(item => {
+                const product = products.find(p => p.id === item.product_id);
+                return product && product.is_active !== false;
+            }));
+        }
+    }, [products]); // Se déclenche uniquement quand products change
+
     function generateOrderNumber() {
         return 'A01-' + String(Math.floor(Math.random() * 900000000) + 100000000).padStart(10, '0');
     }
@@ -213,15 +254,47 @@ export default function HardwareSalesCreate({ products = [], categories = [], cu
         return product.price_amount ?? 0;
     };
 
+    const getMinAllowedForProduct = (product) => {
+        if (!product) return { amount: 0, currency: defaultCurrency };
+        const productCurrency = product.price_currency ?? defaultCurrency;
+
+        // Pour Hardware, utiliser price_non_negotiable (détail) ou price_non_negotiable_wholesale (gros)
+        if (saleMode === 'wholesale' && canUseWholesale) {
+            const wholesaleMin = product.price_non_negotiable_wholesale ?? null;
+            if (wholesaleMin != null && !Number.isNaN(Number(wholesaleMin))) {
+                return { amount: Number(wholesaleMin), currency: productCurrency };
+            }
+            // fallback: si pas de min gros, on prend le min détail si défini
+            const retailMin = product.price_non_negotiable ?? null;
+            if (retailMin != null && !Number.isNaN(Number(retailMin))) {
+                return { amount: Number(retailMin), currency: productCurrency };
+            }
+        }
+
+        const retailMin = product.price_non_negotiable ?? null;
+        if (retailMin != null && !Number.isNaN(Number(retailMin))) {
+            return { amount: Number(retailMin), currency: productCurrency };
+        }
+
+        return { amount: 0, currency: productCurrency };
+    };
+
     useEffect(() => {
         if (cart.length === 0) return;
         setCart(prev => prev.map(item => {
             const product = products.find(p => p.id === item.product_id);
             if (!product) return item;
             const productCurrency = product.price_currency ?? defaultCurrency;
-            return { ...item, price: getProductPrice(product), price_currency: productCurrency };
+            const minAllowed = getMinAllowedForProduct(product);
+            return { 
+                ...item, 
+                price: getProductPrice(product), 
+                price_currency: productCurrency,
+                min_price_amount: minAllowed.amount ?? item.min_price_amount ?? 0,
+                min_price_currency: minAllowed.currency ?? item.min_price_currency ?? productCurrency,
+            };
         }));
-    }, [saleMode, defaultCurrency]);
+    }, [saleMode, canUseWholesale, products, defaultCurrency]);
 
     const [recentProductIds, setRecentProductIds] = useState(() => {
         try {
@@ -266,12 +339,15 @@ export default function HardwareSalesCreate({ products = [], categories = [], cu
             ));
         } else {
             const productCurrency = product.price_currency ?? defaultCurrency;
+            const minAllowed = getMinAllowedForProduct(product);
             setCart([...cart, {
                 product_id: product.id,
                 name: product.name,
                 code: product.code,
                 price: getProductPrice(product),
                 price_currency: productCurrency,
+                min_price_amount: minAllowed.amount ?? 0,
+                min_price_currency: minAllowed.currency ?? productCurrency,
                 quantity: 1,
                 max_stock: stock,
                 discount_percent: 0,
@@ -332,6 +408,79 @@ export default function HardwareSalesCreate({ products = [], categories = [], cu
         setCart([]);
         setDiscount({ type: 'percent', value: 0 });
         setCurrentOrderNumber(generateOrderNumber());
+    };
+
+    const editUnitPrice = (item) => {
+        if (!item) return;
+        const val = prompt(`Prix unitaire (${currency}) ?`, String(item.price ?? 0));
+        if (val === null) return;
+        const next = Number(String(val).replace(',', '.'));
+        if (Number.isNaN(next) || next < 0) {
+            toast.error('Prix invalide.');
+            return;
+        }
+
+        // Recalculer le minimum à partir du produit (évite les valeurs "stale" dans le panier)
+        const product = products.find((p) => p.id === item.product_id);
+        const minAllowed = product
+            ? getMinAllowedForProduct(product)
+            : { amount: item.min_price_amount ?? 0, currency: item.min_price_currency ?? defaultCurrency };
+
+        // Calcul du minimum en devise sélectionnée
+        const minInSelected = convertToSelected(minAllowed.amount ?? 0, minAllowed.currency ?? defaultCurrency);
+
+        if (next < minInSelected) {
+            const manque = Math.max(0, minInSelected - next);
+            toast.error(`Prix minimum non négociable: ${fmt(minInSelected)} (il manque ${fmt(manque)})`);
+            return;
+        }
+
+        // On considère la saisie dans la devise sélectionnée
+        setCart((prev) =>
+            prev.map((i) =>
+                i.product_id === item.product_id
+                    ? { ...i, price: next, price_currency: currency }
+                    : i,
+            ),
+        );
+    };
+
+    const setUnitPriceToMin = (item) => {
+        if (!item) return;
+        const product = products.find((p) => p.id === item.product_id);
+        const minAllowed = product
+            ? getMinAllowedForProduct(product)
+            : { amount: item.min_price_amount ?? 0, currency: item.min_price_currency ?? defaultCurrency };
+        const minInSelected = convertToSelected(minAllowed.amount ?? 0, minAllowed.currency ?? defaultCurrency);
+        if (!(minInSelected > 0)) {
+            toast.error('Aucun prix minimum défini pour ce produit.');
+            return;
+        }
+        setCart((prev) =>
+            prev.map((i) =>
+                i.product_id === item.product_id
+                    ? { ...i, price: minInSelected, price_currency: currency }
+                    : i,
+            ),
+        );
+        toast.success(`Prix appliqué: ${fmt(minInSelected)}`);
+    };
+
+    const resetUnitPriceToDefault = (item) => {
+        if (!item) return;
+        const product = products.find((p) => p.id === item.product_id);
+        if (!product) return;
+        const productCurrency = product.price_currency ?? defaultCurrency;
+        const base = Number(getProductPrice(product)) || 0;
+        const baseInSelected = convertToSelected(base, productCurrency);
+        setCart((prev) =>
+            prev.map((i) =>
+                i.product_id === item.product_id
+                    ? { ...i, price: baseInSelected, price_currency: currency }
+                    : i,
+            ),
+        );
+        toast.success(`Prix réinitialisé: ${fmt(baseInSelected)}`);
     };
 
     // Cart calculations (tous les montants en devise affichée via les taux configurés)
@@ -456,24 +605,77 @@ export default function HardwareSalesCreate({ products = [], categories = [], cu
         }
         
         setSubmitting(true);
+        let saleId = null;
         try {
+            // Valider que tous les produits du panier existent encore
+            const validLines = cart
+                .map((item) => {
+                    const product = products.find((p) => p.id === item.product_id);
+                    if (!product) {
+                        console.warn(`Produit introuvable dans le panier: ${item.product_id}`, item);
+                        return null;
+                    }
+                    // Vérifier que le produit est actif (pour Hardware)
+                    if (product.is_active === false) {
+                        console.warn(`Produit désactivé: ${item.product_id}`, product);
+                        return null;
+                    }
+                    return {
+                        product_id: String(item.product_id), // S'assurer que c'est une string
+                        quantity: item.quantity,
+                        unit_price: convertToSelected(item.price, item.price_currency ?? defaultCurrency),
+                        discount_percent: item.discount_percent || null
+                    };
+                })
+                .filter((line) => line !== null);
+
+            if (validLines.length === 0) {
+                toast.error('Aucun produit valide dans le panier. Veuillez recharger la page et réessayer.', {
+                    duration: 6000
+                });
+                setSubmitting(false);
+                return;
+            }
+
+            if (validLines.length < cart.length) {
+                const removedCount = cart.length - validLines.length;
+                const removedProducts = cart.filter(item => {
+                    const product = products.find((p) => p.id === item.product_id);
+                    return !product || product.is_active === false;
+                }).map(item => {
+                    const product = products.find((p) => p.id === item.product_id);
+                    return product?.name || item.product_id;
+                });
+                
+                toast.error(
+                    `${removedCount} produit(s) invalide(s) ou désactivé(s) retiré(s) du panier: ${removedProducts.join(', ')}. Veuillez vérifier le dépôt sélectionné ou recharger la page.`,
+                    { duration: 8000 }
+                );
+                // Retirer les produits invalides du panier
+                setCart(validLines.map((line) => {
+                    const originalItem = cart.find(item => item.product_id === line.product_id);
+                    return originalItem;
+                }).filter(Boolean));
+            }
+
+            // Étape 1: Créer la vente (brouillon)
             const storeRes = await axios.post(route(`${routePrefix}.sales.store`), {
                 customer_id: customerId || null,
                 currency,
                 sale_mode: saleMode,
-                lines: cart.map(item => ({
-                    product_id: item.product_id,
-                    quantity: item.quantity,
-                    unit_price: convertToSelected(item.price, item.price_currency ?? defaultCurrency),
-                    discount_percent: item.discount_percent || null
-                })),
+                lines: validLines,
                 ...(activeCashSession ? { cash_register_id: activeCashSession.cash_register_id, cash_register_session_id: activeCashSession.cash_register_session_id } : {}),
             });
             
-            const saleId = storeRes.data.sale.id;
+            saleId = storeRes.data.sale.id;
             
+            // Étape 2: Finaliser la vente
+            const finalizeAmount = Number(paidAmount) || Number(total) || 0;
+            if (finalizeAmount <= 0) {
+                throw new Error('Le montant payé doit être supérieur à 0');
+            }
             await axios.post(route(`${routePrefix}.sales.finalize`, saleId), {
-                paid_amount: paidAmount || total
+                paid_amount: finalizeAmount
             });
             
             const saleTotal = total;
@@ -488,7 +690,40 @@ export default function HardwareSalesCreate({ products = [], categories = [], cu
                 window.open(route(`${routePrefix}.sales.receipt`, saleId), '_blank', 'noopener,noreferrer');
             }
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Erreur lors de la vente');
+            console.error('Erreur lors de la finalisation de la vente:', err);
+            
+            // Extraire le message d'erreur détaillé
+            let errorMessage = 'Erreur lors de la vente';
+            if (err.response?.data) {
+                // Si c'est une erreur de validation Laravel
+                if (err.response.data.errors) {
+                    const errors = Object.values(err.response.data.errors).flat();
+                    errorMessage = errors.join(', ') || err.response.data.message || errorMessage;
+                } else {
+                    errorMessage = err.response.data.message || errorMessage;
+                }
+            } else if (err.message) {
+                errorMessage = err.message;
+            }
+            
+            // Si la vente a été créée mais la finalisation a échoué, informer l'utilisateur
+            if (saleId) {
+                toast.error(`La vente a été créée mais la finalisation a échoué: ${errorMessage}. La vente reste en brouillon.`, {
+                    duration: 8000,
+                });
+                // Rediriger vers la page de la vente pour permettre une nouvelle tentative
+                router.visit(route(`${routePrefix}.sales.show`, saleId));
+            } else {
+                // Si l'erreur mentionne un produit non accessible, suggérer de vérifier le dépôt
+                if (errorMessage.includes('Product not found') || errorMessage.includes('non accessible')) {
+                    toast.error(
+                        `${errorMessage} Pour Hardware, vérifiez que le dépôt sélectionné contient bien ce produit.`,
+                        { duration: 8000 }
+                    );
+                } else {
+                    toast.error(errorMessage, { duration: 5000 });
+                }
+            }
         } finally {
             setSubmitting(false);
         }
@@ -940,6 +1175,16 @@ export default function HardwareSalesCreate({ products = [], categories = [], cu
                                                     Promo -{item.discount_percent}%
                                                 </Badge>
                                             )}
+                                            <div className="flex flex-wrap items-center gap-2 mt-1">
+                                                <Badge className="text-[11px] bg-slate-100 text-slate-800 dark:bg-slate-700/60 dark:text-slate-100 border-0">
+                                                    PU: {fmt(convertToSelected(item.price ?? 0, item.price_currency ?? defaultCurrency))}
+                                                </Badge>
+                                                {Number(item.min_price_amount ?? 0) > 0 && (
+                                                    <Badge className="text-[11px] bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-200 border-0">
+                                                        Min: {fmt(convertToSelected(item.min_price_amount ?? 0, item.min_price_currency ?? defaultCurrency))}
+                                                    </Badge>
+                                                )}
+                                            </div>
                                             
                                             <div className="flex items-center gap-2 mt-2">
                                                 <button
@@ -973,12 +1218,53 @@ export default function HardwareSalesCreate({ products = [], categories = [], cu
                                             <p className="font-semibold text-gray-900 dark:text-white">
                                                 {fmt(convertToSelected(item.price * item.quantity, item.price_currency ?? defaultCurrency))}
                                             </p>
-                                            <button
-                                                onClick={() => removeFromCart(item.product_id)}
-                                                className="text-red-500 hover:text-red-600 mt-1"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
+                                            <div className="flex items-center justify-end gap-2 mt-1">
+                                                {Number(item.min_price_amount ?? 0) > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setUnitPriceToMin(item);
+                                                        }}
+                                                        className="text-xs text-amber-700 dark:text-amber-300 hover:underline"
+                                                        title="Appliquer le prix minimum"
+                                                    >
+                                                        Prix min
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        resetUnitPriceToDefault(item);
+                                                    }}
+                                                    className="text-xs text-gray-600 dark:text-gray-300 hover:underline"
+                                                    title="Réinitialiser au prix produit"
+                                                >
+                                                    Reset
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        editUnitPrice(item);
+                                                    }}
+                                                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                                                    title="Modifier le prix unitaire"
+                                                >
+                                                    Edit
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        removeFromCart(item.product_id);
+                                                    }}
+                                                    className="text-red-500 hover:text-red-600"
+                                                    title="Retirer du panier"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}

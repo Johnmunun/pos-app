@@ -99,7 +99,13 @@ export default function SelectTenant() {
                         {/* Admin Panel Links */}
                         <div className="mt-12 p-6 bg-blue-50 border border-blue-200 rounded-xl">
                             <h3 className="font-bold text-gray-900 mb-4">Panel d'administration</h3>
-                            <div className="grid md:grid-cols-2 gap-4">
+                            <div className="grid md:grid-cols-3 gap-4">
+                                <Link
+                                    href={route('admin.dashboard')}
+                                    className="p-3 bg-white border border-blue-200 hover:border-blue-500 rounded-lg text-center text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                                >
+                                    Dashboard ROOT
+                                </Link>
                                 {canViewTenants ? (
                                     <Link
                                         href={route('admin.tenants.view')}

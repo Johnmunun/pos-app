@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Badge } from '@/Components/ui/badge';
-import { Plus, Search, Tag, FolderTree, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Tag, FolderTree, Pencil, Trash2, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import CommerceCategoryDrawer from '@/Components/Commerce/CategoryDrawer';
 import ImportModal from '@/Components/ImportModal';
@@ -202,17 +202,30 @@ export default function CommerceCategoriesIndex({ tree = [], categories = [] }) 
             <Head title="Catégories - Commerce" />
             <div className="py-6">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-                    <div className="flex gap-4">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                                placeholder="Rechercher..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="pl-10"
-                            />
-                        </div>
-                    </div>
+                    {/* Recherche - Mobile optimisée */}
+                    <Card className="mb-6 bg-white dark:bg-gray-800">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center text-gray-900 dark:text-white text-base sm:text-lg">
+                                <Search className="h-4 w-4 sm:h-5 sm:w-5 mr-2" /> 
+                                <span className="hidden sm:inline">Recherche</span>
+                                <span className="sm:hidden">Rechercher catégories...</span>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input
+                                    placeholder="Rechercher catégories..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="pl-10"
+                                />
+                            </div>
+                            <div className="md:hidden flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
+                                <span>Affichage de {filtered.length} catégorie{filtered.length > 1 ? 's' : ''}</span>
+                            </div>
+                        </CardContent>
+                    </Card>
 
                     <Card className="bg-white dark:bg-slate-900">
                         <CardHeader>
@@ -230,73 +243,162 @@ export default function CommerceCategoriesIndex({ tree = [], categories = [] }) 
                             <CardTitle className="text-gray-900 dark:text-white">Liste des catégories</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="overflow-x-auto -mx-2 sm:mx-0">
-                                <table className="w-full text-sm bg-white dark:bg-slate-900">
-                                    <thead>
-                                        <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800/70">
-                                            <th className="text-left py-2 px-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">
-                                                Nom
-                                            </th>
-                                            <th className="text-left py-2 px-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">
-                                                Description
-                                            </th>
-                                            <th className="text-left py-2 px-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">
-                                                Ordre
-                                            </th>
-                                            <th className="text-left py-2 px-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">
-                                                Statut
-                                            </th>
-                                            <th className="text-right py-2 px-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 w-24">
-                                                Actions
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
+                            {filtered.length === 0 ? (
+                                <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                                    <Tag className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                                    <p>Aucune catégorie trouvée.</p>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Vue Mobile - Cartes */}
+                                    <div className="md:hidden space-y-3">
                                         {filtered.map((c) => (
-                                            <tr
-                                                key={c.id}
-                                                className="border-b border-gray-100 dark:border-gray-800"
+                                            <div 
+                                                key={c.id} 
+                                                className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 transition-colors"
                                             >
-                                                <td className="py-2 px-2 text-gray-900 dark:text-gray-100">
-                                                    {c.name}
-                                                </td>
-                                                <td className="py-2 px-2 text-gray-500 dark:text-gray-400">
-                                                    {c.description || '—'}
-                                                </td>
-                                                <td className="py-2 px-2">{c.sort_order}</td>
-                                                <td className="py-2 px-2">
-                                                    {c.is_active ? (
-                                                        <Badge variant="default">Actif</Badge>
-                                                    ) : (
-                                                        <Badge variant="secondary">Inactif</Badge>
-                                                    )}
-                                                </td>
-                                                <td className="py-2 px-2 text-right">
-                                                    <div className="flex justify-end gap-1">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => handleEdit(c)}
-                                                        >
-                                                            <Pencil className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                                            onClick={() => handleDelete(c)}
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
+                                                <div className="flex items-start gap-3 p-4">
+                                                    {/* Icône circulaire */}
+                                                    <div className="flex-shrink-0">
+                                                        <div className="h-16 w-16 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center border-2 border-gray-200 dark:border-gray-600">
+                                                            <Tag className="h-8 w-8 text-white" />
+                                                        </div>
                                                     </div>
-                                                </td>
-                                            </tr>
+                                                    
+                                                    {/* Contenu principal */}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                                            <h3 className="font-semibold text-gray-900 dark:text-white text-sm truncate">
+                                                                {c.name}
+                                                            </h3>
+                                                            <div className="flex items-center gap-1 flex-shrink-0">
+                                                                <button
+                                                                    onClick={() => handleEdit(c)}
+                                                                    className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                                                    title="Modifier"
+                                                                >
+                                                                    <Pencil className="h-4 w-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDelete(c)}
+                                                                    className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                                                                    title="Supprimer"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {c.description && (
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 line-clamp-2">
+                                                                {c.description}
+                                                            </p>
+                                                        )}
+                                                        
+                                                        {/* Badges */}
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <Badge className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300 border-0">
+                                                                Ordre: {c.sort_order}
+                                                            </Badge>
+                                                            {c.is_active ? (
+                                                                <Badge className="text-[10px] px-2 py-0.5 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-0 flex items-center gap-1">
+                                                                    <CheckCircle className="h-3 w-3" />
+                                                                    Actif
+                                                                </Badge>
+                                                            ) : (
+                                                                <Badge className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300 border-0 flex items-center gap-1">
+                                                                    <XCircle className="h-3 w-3" />
+                                                                    Inactif
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                    </div>
+
+                                    {/* Vue Desktop - Tableau */}
+                                    <div className="hidden md:block overflow-x-auto -mx-2 sm:mx-0">
+                                        <table className="w-full text-sm bg-white dark:bg-slate-900">
+                                            <thead>
+                                                <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-800/70">
+                                                    <th className="text-left py-2 px-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">
+                                                        Nom
+                                                    </th>
+                                                    <th className="text-left py-2 px-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">
+                                                        Description
+                                                    </th>
+                                                    <th className="text-left py-2 px-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">
+                                                        Ordre
+                                                    </th>
+                                                    <th className="text-left py-2 px-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">
+                                                        Statut
+                                                    </th>
+                                                    <th className="text-right py-2 px-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 w-24">
+                                                        Actions
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {filtered.map((c) => (
+                                                    <tr
+                                                        key={c.id}
+                                                        className="border-b border-gray-100 dark:border-gray-800"
+                                                    >
+                                                        <td className="py-2 px-2 text-gray-900 dark:text-gray-100">
+                                                            {c.name}
+                                                        </td>
+                                                        <td className="py-2 px-2 text-gray-500 dark:text-gray-400">
+                                                            {c.description || '—'}
+                                                        </td>
+                                                        <td className="py-2 px-2">{c.sort_order}</td>
+                                                        <td className="py-2 px-2">
+                                                            {c.is_active ? (
+                                                                <Badge variant="default">Actif</Badge>
+                                                            ) : (
+                                                                <Badge variant="secondary">Inactif</Badge>
+                                                            )}
+                                                        </td>
+                                                        <td className="py-2 px-2 text-right">
+                                                            <div className="flex justify-end gap-1">
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleEdit(c)}
+                                                                >
+                                                                    <Pencil className="h-4 w-4" />
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                                                    onClick={() => handleDelete(c)}
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </>
+                            )}
                         </CardContent>
                     </Card>
+
+                    {/* FAB Mobile - Ajouter catégorie */}
+                    <div className="md:hidden fixed bottom-20 right-4 z-30">
+                        <Button
+                            onClick={handleCreate}
+                            className="h-14 w-14 rounded-full bg-rose-500 hover:bg-rose-600 text-white shadow-lg flex items-center justify-center"
+                            size="icon"
+                        >
+                            <Plus className="h-6 w-6" />
+                        </Button>
+                    </div>
                 </div>
             </div>
             <CommerceCategoryDrawer

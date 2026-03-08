@@ -17,6 +17,12 @@ import {
   Users,
   Tag,
   Zap,
+  Calendar,
+  Clock,
+  Filter,
+  Database,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
 import {
@@ -205,133 +211,150 @@ export default function Dashboard({
   return (
     <AppLayout
       header={
-        <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
-          Tableau de bord — Quincaillerie
-        </h2>
+        <div>
+          <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
+            Tableau de bord — Quincaillerie
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Gérez vos performances et stocks en temps réel.
+          </p>
+        </div>
       }
     >
       <Head title="Tableau de bord Quincaillerie" />
 
       <div className="py-6 space-y-6 sm:space-y-8">
-        {/* Filtres */}
-        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base text-gray-900 dark:text-white">
-              Filtres du graphique ventes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Période rapide :
-              </span>
-              <select
-                value={currentPeriod}
-                onChange={handlePeriodChange}
-                className="rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-              >
-                {PERIOD_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 ml-2">
-                Date début
-              </span>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-              />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Date fin
-              </span>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-              />
-              <Button
-                type="button"
-                onClick={handleDateRangeApply}
-                className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                Appliquer
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Filtres compacts avec icônes uniquement */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Période rapide - Icône seulement */}
+          <div className="relative">
+            <select
+              value={currentPeriod}
+              onChange={handlePeriodChange}
+              className="appearance-none rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent cursor-pointer"
+              title="Période rapide"
+            >
+              {PERIOD_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
+          </div>
 
-        {/* Stats Cards */}
+          {/* Date début - Icône seulement */}
+          <div className="relative">
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="appearance-none rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent w-40"
+              title="Date début"
+            />
+            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
+          </div>
+
+          {/* Date fin - Icône seulement */}
+          <div className="relative">
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="appearance-none rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent w-40"
+              title="Date fin"
+            />
+            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
+          </div>
+
+          {/* Bouton appliquer - Icône seulement */}
+          <Button
+            type="button"
+            onClick={handleDateRangeApply}
+            className="bg-amber-600 hover:bg-amber-700 text-white p-2 rounded-lg"
+            title="Appliquer les filtres"
+          >
+            <Filter className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Stats Cards - Design Visily */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                Produits
-              </CardTitle>
-              <Package className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {stats?.products?.total ?? 0}
+          {/* VENTES DU JOUR */}
+          <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-600 dark:to-emerald-700 border-0 shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-emerald-100 text-sm font-medium mb-2">VENTES DU JOUR</p>
+                  <p className="text-white text-3xl font-bold mb-2">
+                    {fmt(salesChartData.length > 0 ? (salesChartData[salesChartData.length - 1]?.total || 0) : 0)}
+                  </p>
+                  <div className="flex items-center gap-1 text-emerald-100 text-xs mb-2">
+                    <ArrowUp className="h-3 w-3" />
+                    <span>+12.5% vs hier</span>
+                  </div>
+                  <p className="text-emerald-100 text-xs">
+                    {salesChartData.length > 0 ? (salesChartData[salesChartData.length - 1]?.count || 0) : 0} vente(s) validées
+                  </p>
+                </div>
+                <div className="w-14 h-14 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <ShoppingCart className="h-7 w-7 text-white" />
+                </div>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {stats?.products?.active ?? 0} actifs
-              </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                Stock bas
-              </CardTitle>
-              <AlertTriangle className="h-4 w-4 text-orange-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                {stats?.inventory?.low_stock_count ?? 0}
+          {/* VALEUR DU STOCK */}
+          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 border-0 shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-blue-100 text-sm font-medium mb-2">VALEUR DU STOCK</p>
+                  <p className="text-white text-3xl font-bold mb-2">{fmt(stats?.inventory?.total_value ?? 0)}</p>
+                  <div className="flex items-center gap-1 text-blue-100 text-xs mb-2">
+                    <ArrowDown className="h-3 w-3" />
+                    <span>-2.1% Valeur totale</span>
+                  </div>
+                  <p className="text-blue-100 text-xs">Stock actuel</p>
+                </div>
+                <div className="w-14 h-14 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Database className="h-7 w-7 text-white" />
+                </div>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                À réapprovisionner
-              </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                Valeur du stock
-              </CardTitle>
-              <DollarSign className="h-4 w-4 text-green-500 dark:text-green-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {fmt(stats?.inventory?.total_value ?? 0)}
+          {/* PRODUITS EN STOCK */}
+          <Card className="bg-gradient-to-br from-amber-500 to-amber-600 dark:from-amber-600 dark:to-amber-700 border-0 shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-amber-100 text-sm font-medium mb-2">PRODUITS EN STOCK</p>
+                  <p className="text-white text-3xl font-bold mb-2">{stats?.products?.total ?? 0}</p>
+                  <p className="text-amber-100 text-xs mt-2">{stats?.products?.active ?? 0} actifs</p>
+                </div>
+                <div className="w-14 h-14 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Package className="h-7 w-7 text-white" />
+                </div>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Valeur totale
-              </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                Ruptures
-              </CardTitle>
-              <Layers className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-                {stats?.inventory?.out_of_stock_count ?? 0}
+          {/* RUPTURES IMMINENTES */}
+          <Card className="bg-gradient-to-br from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 border-0 shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-red-100 text-sm font-medium mb-2">RUPTURES IMMINENTES</p>
+                  <p className="text-white text-3xl font-bold mb-2">{stats?.inventory?.out_of_stock_count ?? 0}</p>
+                  <p className="text-red-100 text-xs mt-2">
+                    {stats?.inventory?.low_stock_count ?? 0} critiques Articles à commander
+                  </p>
+                </div>
+                <div className="w-14 h-14 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="h-7 w-7 text-white" />
+                </div>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Produits en rupture
-              </p>
             </CardContent>
           </Card>
         </div>
@@ -339,11 +362,116 @@ export default function Dashboard({
         {/* Graphiques */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-4">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-white">
-                <TrendingUp className="h-5 w-5 text-emerald-500" />
-                {chartTitle}
-              </CardTitle>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
+                    {chartTitle}
+                  </CardTitle>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Évolution du chiffre d'affaires quotidien
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => {
+                    // Fonction pour formater les nombres avec séparateurs
+                    const formatNumber = (num) => {
+                      return typeof num === 'number' 
+                        ? num.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                        : String(num);
+                    };
+                    
+                    // Fonction pour formater les dates
+                    const formatDate = (dateStr) => {
+                      try {
+                        const date = new Date(dateStr);
+                        return date.toLocaleDateString('fr-FR', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        });
+                      } catch {
+                        return dateStr;
+                      }
+                    };
+                    
+                    const now = new Date();
+                    const exportDate = now.toLocaleDateString('fr-FR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    });
+                    
+                    // Calculer les totaux
+                    const totalRevenue = salesChartData.reduce((sum, d) => sum + (d.total || 0), 0);
+                    const totalSales = salesChartData.reduce((sum, d) => sum + (d.count || 0), 0);
+                    const avgRevenue = salesChartData.length > 0 ? totalRevenue / salesChartData.length : 0;
+                    
+                    // Générer le CSV formaté
+                    const csvLines = [
+                      // En-tête principal
+                      ['RAPPORT DE VENTES - MODULE HARDWARE'],
+                      [''],
+                      ['Date d\'export', exportDate],
+                      ['Période', chartTitle],
+                      ['Devise', currency],
+                      [''],
+                      // Séparateur visuel
+                      ['═══════════════════════════════════════════════════════════════'],
+                      [''],
+                      // En-tête du tableau
+                      ['Date', 'Chiffre d\'affaires (' + currency + ')', 'Nombre de ventes'],
+                      ['───────────────────────────────────────────────────────────────'],
+                      // Données
+                      ...salesChartData.map(d => [
+                        formatDate(d.date),
+                        formatNumber(d.total || 0),
+                        String(d.count || 0)
+                      ]),
+                      ['───────────────────────────────────────────────────────────────'],
+                      // Totaux
+                      ['TOTAL', formatNumber(totalRevenue), String(totalSales)],
+                      ['MOYENNE PAR JOUR', formatNumber(avgRevenue), ''],
+                      [''],
+                      ['═══════════════════════════════════════════════════════════════'],
+                      [''],
+                      ['Résumé'],
+                      ['Total des ventes', String(totalSales) + ' ventes'],
+                      ['Chiffre d\'affaires total', formatNumber(totalRevenue) + ' ' + currency],
+                      ['Chiffre d\'affaires moyen/jour', formatNumber(avgRevenue) + ' ' + currency],
+                      ['Période analysée', salesChartData.length + ' jour(s)'],
+                    ];
+                    
+                    // Convertir en CSV (échapper les virgules dans les chaînes)
+                    const escapeCSV = (value) => {
+                      const str = String(value);
+                      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                        return '"' + str.replace(/"/g, '""') + '"';
+                      }
+                      return str;
+                    };
+                    
+                    const csv = csvLines.map(row => row.map(escapeCSV).join(',')).join('\n');
+                    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' }); // BOM pour Excel
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const fileName = `rapport-ventes-hardware-${now.toISOString().slice(0, 10)}.csv`;
+                    a.download = fileName;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                  }}
+                >
+                  <FileText className="h-3 w-3 mr-1" />
+                  Exporter (.csv)
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="h-72">
               {salesChartData.length > 0 ? (
@@ -534,31 +662,31 @@ export default function Dashboard({
           </div>
         )}
 
-        {/* Actions rapides (en dernière position) */}
+        {/* Actions rapides - Design Visily */}
         {visibleActions.length > 0 && (
           <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-white">
-                <Zap className="h-5 w-5 text-amber-500" />
-                Actions rapides
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
+                ACTIONS RAPIDES
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {visibleActions.map((action) => {
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {visibleActions.slice(0, 4).map((action) => {
                   const Icon = action.icon;
-                  const btnClass = COLOR_MAP[action.color] || 'bg-gray-500 hover:bg-gray-600';
                   return (
-                    <Button
+                    <Link
                       key={action.route}
-                      className={`${btnClass} text-white text-sm`}
-                      asChild
+                      href={route(action.route)}
+                      className="flex flex-col items-center justify-center p-4 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
                     >
-                      <Link href={route(action.route)} className="inline-flex items-center gap-2">
-                        <Icon className="h-4 w-4" />
+                      <div className={`w-12 h-12 rounded-lg ${COLOR_MAP[action.color] || 'bg-gray-500'} flex items-center justify-center mb-2`}>
+                        <Icon className="h-6 w-6 text-white" />
+                      </div>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">
                         {action.label}
-                      </Link>
-                    </Button>
+                      </span>
+                    </Link>
                   );
                 })}
               </div>

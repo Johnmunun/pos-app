@@ -24,7 +24,7 @@ const typeOptions = [
     { value: 'ADJUSTMENT', label: 'Ajustements' },
 ];
 
-export default function ProductMovementsMacModal({ isOpen, onClose }) {
+export default function ProductMovementsMacModal({ isOpen, onClose, productId = null }) {
     const { shop } = usePage().props;
     const [loading, setLoading] = useState(false);
     const [movements, setMovements] = useState([]);
@@ -36,16 +36,30 @@ export default function ProductMovementsMacModal({ isOpen, onClose }) {
         from: '',
         to: '',
     });
+    
+    // Réinitialiser les filtres quand le modal s'ouvre avec un produit spécifique
+    useEffect(() => {
+        if (isOpen && productId) {
+            setFilters(prev => ({
+                ...prev,
+                product_name: '',
+                product_code: '',
+            }));
+        }
+    }, [isOpen, productId]);
 
     const paramsString = useMemo(() => {
         const p = new URLSearchParams();
+        if (productId) {
+            p.append('product_id', productId);
+        }
         if (filters.product_name) p.append('product_name', filters.product_name);
         if (filters.product_code) p.append('product_code', filters.product_code);
         if (filters.type) p.append('type', filters.type);
         if (filters.from) p.append('from', filters.from);
         if (filters.to) p.append('to', filters.to);
         return p.toString();
-    }, [filters]);
+    }, [filters, productId]);
 
     const load = useCallback(async () => {
         setLoading(true);

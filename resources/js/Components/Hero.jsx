@@ -56,6 +56,61 @@ export default function Hero() {
                     ))}
                 </div>
 
+                {/* Équipements compatibles */}
+                <div className="mb-16">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-6">
+                        Compatible avec vos équipements existants
+                    </p>
+                    <div className="flex flex-wrap items-center justify-center gap-6">
+                        {[
+                            { 
+                                icon: (
+                                    <svg className="w-10 h-10 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                    </svg>
+                                ),
+                                label: 'Imprimante thermique',
+                                desc: 'Reçus instantanés'
+                            },
+                            { 
+                                icon: (
+                                    <svg className="w-10 h-10 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                                    </svg>
+                                ),
+                                label: 'Scanner code-barres',
+                                desc: 'Ajout rapide'
+                            },
+                            { 
+                                icon: (
+                                    <svg className="w-10 h-10 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                    </svg>
+                                ),
+                                label: 'Terminal de paiement',
+                                desc: 'Tous modes'
+                            },
+                            { 
+                                icon: (
+                                    <svg className="w-10 h-10 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                ),
+                                label: 'Tablette & Mobile',
+                                desc: 'Multi-appareils'
+                            },
+                        ].map((item, idx) => (
+                            <div key={idx} className="flex flex-col items-center gap-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-amber-500 dark:hover:border-amber-500 transition-colors">
+                                <div className="w-14 h-14 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 rounded-lg flex items-center justify-center">
+                                    {item.icon}
+                                </div>
+                                <p className="text-xs font-semibold text-gray-900 dark:text-white text-center">{item.label}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">{item.desc}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
                 {/* Image/mockup - POS Dashboard */}
                 <div className="mt-20">
                     <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-1 shadow-2xl">

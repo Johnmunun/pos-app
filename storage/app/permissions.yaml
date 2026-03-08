@@ -9,6 +9,9 @@ general:
 
 # Administration
 admin:
+  - admin.dashboard.view
+  - admin.dashboard.export
+  - admin.tenants.view
   - admin.users.view
   - admin.access.permissions.view
   - users.assign_role
@@ -199,29 +202,146 @@ supermarket:
 # Utilisateurs avec secteur kiosk, supermarket, butchery ou other au register.
 commerce:
   - module.commerce
+  # Assistant intelligent Commerce
+  - commerce.assistant.use
+  - commerce.assistant.voice
+  # Produits
   - commerce.product.view
   - commerce.product.create
   - commerce.product.update
   - commerce.product.delete
   - commerce.product.manage
+  # Catégories
   - commerce.category.view
   - commerce.category.create
   - commerce.category.update
   - commerce.category.delete
   - commerce.category.manage
+  # Ventes
+  - commerce.sales.view
+  - commerce.sales.create
+  - commerce.sales.manage
+  - commerce.sales.cancel
+  # Achats
   - commerce.purchases.view
   - commerce.purchases.manage
   - commerce.purchases.receive
+  # Fournisseurs
   - commerce.supplier.view
   - commerce.supplier.create
+  - commerce.supplier.edit
+  - commerce.supplier.manage
+  # Clients
   - commerce.customer.view
+  - commerce.customer.create
+  - commerce.customer.edit
   - commerce.customer.manage
-
-  # Stock & mouvements (Global Commerce)
+  # Vendeurs
+  - commerce.seller.view
+  - commerce.seller.create
+  - commerce.seller.edit
+  - commerce.seller.delete
+  - commerce.seller.manage
+  # Stock & mouvements
   - commerce.stock.view
   - commerce.stock.manage
   - commerce.stock.movement.view
   - commerce.stock.movement.export
+  # Inventaires
+  - commerce.inventory.view
+  - commerce.inventory.create
+  - commerce.inventory.manage
+  # Transferts
+  - commerce.transfer.view
+  - commerce.transfer.create
+  - commerce.transfer.manage
+  # Dépôts
+  - commerce.depot.view
+  - commerce.depot.manage
+  # Rapports
+  - commerce.report.view
+  - commerce.report.export
+
+# Module Ecommerce - Vente en ligne (Boutique en ligne)
+# Module séparé du Global Commerce - Permet de lancer une boutique en ligne
+ecommerce:
+  - module.ecommerce
+  # Vue d'ensemble
+  - ecommerce.view
+  - ecommerce.dashboard.view
+  # Catalogue & Produits
+  - ecommerce.catalog.view
+  - ecommerce.product.view
+  - ecommerce.product.create
+  - ecommerce.product.update
+  - ecommerce.product.delete
+  - ecommerce.product.manage
+  # Catégories
+  - ecommerce.category.view
+  - ecommerce.category.create
+  - ecommerce.category.update
+  - ecommerce.category.delete
+  - ecommerce.category.manage
+  # Commandes
+  - ecommerce.order.view
+  - ecommerce.order.create
+  - ecommerce.order.update
+  - ecommerce.order.delete
+  - ecommerce.order.manage
+  - ecommerce.order.status.update
+  - ecommerce.order.payment.update
+  - ecommerce.order.ship
+  - ecommerce.order.cancel
+  - ecommerce.order.refund
+  # Clients
+  - ecommerce.customer.view
+  - ecommerce.customer.create
+  - ecommerce.customer.update
+  - ecommerce.customer.delete
+  - ecommerce.customer.manage
+  # Panier
+  - ecommerce.cart.view
+  - ecommerce.cart.manage
+  # Paiements
+  - ecommerce.payment.view
+  - ecommerce.payment.process
+  - ecommerce.payment.refund
+  - ecommerce.payment.manage
+  # Livraisons
+  - ecommerce.shipping.view
+  - ecommerce.shipping.create
+  - ecommerce.shipping.update
+  - ecommerce.shipping.manage
+  - ecommerce.shipping.track
+  # Promotions & Réductions
+  - ecommerce.promotion.view
+  - ecommerce.promotion.create
+  - ecommerce.promotion.update
+  - ecommerce.promotion.delete
+  - ecommerce.promotion.manage
+  - ecommerce.coupon.view
+  - ecommerce.coupon.create
+  - ecommerce.coupon.update
+  - ecommerce.coupon.delete
+  - ecommerce.coupon.manage
+  # Avis & Reviews
+  - ecommerce.review.view
+  - ecommerce.review.moderate
+  - ecommerce.review.delete
+  - ecommerce.review.manage
+  # Stock (pour boutique en ligne)
+  - ecommerce.stock.view
+  - ecommerce.stock.manage
+  - ecommerce.stock.alert
+  # Rapports
+  - ecommerce.report.view
+  - ecommerce.report.export
+  - ecommerce.analytics.view
+  # Paramètres boutique
+  - ecommerce.settings.view
+  - ecommerce.settings.update
+  - ecommerce.theme.manage
+  - ecommerce.domain.manage
 
 # Module Hardware (Quincaillerie) — même granularité que Pharmacy où applicable
 hardware:

@@ -140,9 +140,9 @@ export default function GlobalSearch({ isRoot = false }) {
     const shortcutKey = isMac ? '⌘K' : 'Ctrl+K';
 
     return (
-        <div className="relative flex flex-1" ref={searchRef}>
+        <div className="relative flex flex-1 min-w-0 max-w-full" ref={searchRef}>
             <form
-                className="relative flex flex-1"
+                className="relative flex flex-1 min-w-0"
                 onSubmit={(e) => {
                     e.preventDefault();
                     if (hasResults && Object.values(results)[0]?.length > 0) {
@@ -155,7 +155,7 @@ export default function GlobalSearch({ isRoot = false }) {
                     Rechercher
                 </label>
                 <svg
-                    className="pointer-events-none absolute inset-y-0 left-0 h-full w-5 text-gray-400 pl-3"
+                    className="pointer-events-none absolute inset-y-0 left-0 h-full w-4 sm:w-5 text-gray-400 pl-2 sm:pl-3 flex-shrink-0"
                     viewBox="0 0 20 20"
                     fill="currentColor"
                 >
@@ -168,7 +168,7 @@ export default function GlobalSearch({ isRoot = false }) {
                 <input
                     ref={inputRef}
                     id="search-field"
-                    className="block h-full w-full border-0 py-0 pl-10 pr-20 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-0 sm:text-sm bg-transparent"
+                    className="block h-full w-full border-0 py-0 pl-8 sm:pl-10 pr-16 sm:pr-20 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-0 text-xs sm:text-sm bg-transparent min-w-0"
                     placeholder={`Rechercher...`}
                     type="search"
                     name="search"
@@ -182,9 +182,9 @@ export default function GlobalSearch({ isRoot = false }) {
                     autoComplete="off"
                 />
                 {/* Badge du raccourci clavier */}
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                    <kbd className="hidden sm:inline-flex items-center gap-1 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 shadow-sm">
-                        <span className="text-xs">{shortcutKey}</span>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3">
+                    <kbd className="hidden sm:inline-flex items-center gap-1 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 shadow-sm">
+                        <span>{shortcutKey}</span>
                     </kbd>
                 </div>
             </form>

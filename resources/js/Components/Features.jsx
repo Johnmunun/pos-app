@@ -1,4 +1,4 @@
-import { ShoppingBag, CreditCard, BarChart, Smartphone, Users, Link } from 'lucide-react';
+import { ShoppingBag, CreditCard, BarChart, Smartphone, Users, Link, Printer, ScanLine, Package } from 'lucide-react';
 
 /**
  * Component: Features
@@ -11,31 +11,91 @@ export default function Features() {
             icon: ShoppingBag,
             title: 'Vente de produits digitaux',
             description: 'Gérez facilement vos produits, stocks et inventaires en temps réel.',
+            image: (
+                <svg className="w-20 h-20 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+            ),
+        },
+        {
+            icon: Printer,
+            title: 'Imprimante thermique',
+            description: 'Imprimez vos reçus instantanément avec une imprimante thermique compatible.',
+            image: (
+                <svg className="w-20 h-20 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+            ),
+        },
+        {
+            icon: ScanLine,
+            title: 'Scanner de code-barres',
+            description: 'Scannez rapidement les codes-barres pour ajouter des produits au panier.',
+            image: (
+                <svg className="w-20 h-20 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                </svg>
+            ),
         },
         {
             icon: CreditCard,
             title: 'Paiements sécurisés',
             description: 'Acceptez tous les modes de paiement en toute sécurité.',
+            image: (
+                <svg className="w-20 h-20 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+            ),
+        },
+        {
+            icon: Package,
+            title: 'Gestion de stock',
+            description: 'Suivez votre inventaire en temps réel avec alertes de stock bas.',
+            image: (
+                <svg className="w-20 h-20 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+            ),
         },
         {
             icon: BarChart,
             title: 'Tableaux de bord intelligents',
             description: 'Analysez vos ventes et revenus avec des rapports détaillés.',
+            image: (
+                <svg className="w-20 h-20 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+            ),
         },
         {
             icon: Smartphone,
             title: 'Accès multi-appareils',
             description: 'Gérez votre boutique depuis n\'importe quel appareil.',
+            image: (
+                <svg className="w-20 h-20 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+            ),
         },
         {
             icon: Users,
             title: 'Gestion de clients',
             description: 'Fidélisez vos clients avec un système de profils complets.',
+            image: (
+                <svg className="w-20 h-20 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+            ),
         },
         {
             icon: Link,
             title: 'Intégrations puissantes',
             description: 'Connectez vos outils préférés : réseaux sociaux, email, etc.',
+            image: (
+                <svg className="w-20 h-20 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+            ),
         },
     ];
 
@@ -64,14 +124,14 @@ export default function Features() {
                             key={idx} 
                             className="group bg-gray-50 dark:bg-gray-800 hover:bg-white dark:hover:bg-gray-700 rounded-xl p-6 transition-all duration-300 border border-gray-200 dark:border-gray-700 hover:border-amber-500 dark:hover:border-amber-500 hover:shadow-xl transform hover:-translate-y-1"
                         >
-                            {/* Icon with background */}
-                            <div className="mb-4 transform group-hover:scale-110 transition-transform duration-300">
-                                <div className="w-14 h-14 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 rounded-xl flex items-center justify-center group-hover:from-amber-200 group-hover:to-orange-200 dark:group-hover:from-amber-800/50 dark:group-hover:to-orange-800/50 transition-colors">
-                                    <feature.icon className="w-7 h-7 text-amber-600 dark:text-amber-400" />
+                            {/* Image SVG */}
+                            <div className="mb-4 flex justify-center transform group-hover:scale-110 transition-transform duration-300">
+                                <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 rounded-xl flex items-center justify-center group-hover:from-amber-200 group-hover:to-orange-200 dark:group-hover:from-amber-800/50 dark:group-hover:to-orange-800/50 transition-colors">
+                                    {feature.image}
                                 </div>
                             </div>
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{feature.title}</h3>
-                            <p className="text-gray-600 dark:text-gray-400 leading-relaxed">{feature.description}</p>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">{feature.title}</h3>
+                            <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-center">{feature.description}</p>
                         </div>
                     ))}
                 </div>

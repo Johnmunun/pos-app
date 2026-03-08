@@ -6,6 +6,67 @@ import DepotAlert from '@/Components/DepotAlert';
 import FlashMessages from '@/Components/FlashMessages';
 import PharmacyAssistant from '@/Components/Pharmacy/PharmacyAssistant';
 import HardwareAssistant from '@/Components/Hardware/HardwareAssistant';
+import CommerceAssistant from '@/Components/Commerce/CommerceAssistant';
+
+/**
+ * Conteneur pour aligner verticalement les boutons des assistants
+ */
+function AssistantsContainer({ permissions }) {
+    const hasPharmacy = permissions.includes('*') || permissions.includes('module.pharmacy')
+        || permissions.some((p) => typeof p === 'string' && p.startsWith('pharmacy.'));
+    const hasHardware = permissions.includes('*') || permissions.includes('module.hardware')
+        || permissions.some((p) => typeof p === 'string' && p.startsWith('hardware.'));
+    const hasCommerce = permissions.includes('*') || permissions.includes('module.commerce')
+        || permissions.includes('commerce.assistant.use')
+        || permissions.some((p) => typeof p === 'string' && p.startsWith('commerce.'));
+
+    // Compter les assistants disponibles
+    const assistants = [];
+    if (hasPharmacy) assistants.push('pharmacy');
+    if (hasHardware) assistants.push('hardware');
+    if (hasCommerce) assistants.push('commerce');
+
+    // Calculer les positions : le premier est en bas, les autres au-dessus
+    // Espacement : 64px entre chaque bouton sur mobile, 88px sur desktop
+    // Le premier assistant (index 0) est le plus bas
+    const getBottomOffset = (index) => {
+        // index 0 = le plus bas (premier), index 1 = au-dessus, index 2 = encore au-dessus
+        // Mobile: bottom-24 (96px), bottom-40 (160px), bottom-56 (224px)
+        // Desktop: bottom-6 (24px), bottom-28 (112px), bottom-50 (200px)
+        // Espacement: 64px mobile, 88px desktop entre chaque bouton
+        const mobileBottom = 96 + (index * 64); // 96, 160, 224
+        const desktopBottom = 24 + (index * 88); // 24, 112, 200
+        
+        return {
+            mobile: `${mobileBottom}px`,
+            desktop: `${desktopBottom}px`,
+        };
+    };
+
+    let pharmacyIndex = -1;
+    let hardwareIndex = -1;
+    let commerceIndex = -1;
+    
+    assistants.forEach((name, index) => {
+        if (name === 'pharmacy') pharmacyIndex = index;
+        if (name === 'hardware') hardwareIndex = index;
+        if (name === 'commerce') commerceIndex = index;
+    });
+
+    return (
+        <>
+            {hasPharmacy && pharmacyIndex >= 0 && (
+                <PharmacyAssistant bottomOffset={getBottomOffset(pharmacyIndex)} />
+            )}
+            {hasHardware && hardwareIndex >= 0 && (
+                <HardwareAssistant bottomOffset={getBottomOffset(hardwareIndex)} />
+            )}
+            {hasCommerce && commerceIndex >= 0 && (
+                <CommerceAssistant bottomOffset={getBottomOffset(commerceIndex)} />
+            )}
+        </>
+    );
+}
 
 /**
  * Layout: AppLayout
@@ -88,9 +149,8 @@ export default function AppLayout({ children, header, fullWidth = false }) {
             {/* Flash Messages */}
             <FlashMessages />
 
-            {/* Assistants intelligents (Pharmacie + Quincaillerie) */}
-            <PharmacyAssistant />
-            <HardwareAssistant />
+            {/* Assistants intelligents (Pharmacie + Quincaillerie + Commerce) */}
+            <AssistantsContainer permissions={permissions} />
         </div>
     );
 }

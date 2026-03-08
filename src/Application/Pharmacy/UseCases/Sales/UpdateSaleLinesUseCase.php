@@ -50,8 +50,72 @@ class UpdateSaleLinesUseCase
             foreach ($lines as $lineDto) {
                 // Vérifier que le produit existe
                 $product = $this->productRepository->findById($lineDto->productId);
+                
+                // Si le produit n'est pas trouvé via le repository, vérifier directement dans la base
+                // (peut arriver si le produit vient d'être créé ou si le repository filtre par dépôt)
                 if (!$product) {
-                    throw new \InvalidArgumentException('Product not found for line');
+                    $productModel = null;
+                    $productName = 'Inconnu';
+                    
+                    try {
+                        // Pour Hardware, vérifier directement dans le modèle Eloquent
+                        if (class_exists(\Src\Infrastructure\Quincaillerie\Models\ProductModel::class)) {
+                            $productModel = \Src\Infrastructure\Quincaillerie\Models\ProductModel::find($lineDto->productId);
+                            if ($productModel && $productModel->is_active) {
+                                // Le produit existe et est actif, utiliser l'adapter pour le convertir
+                                $adapter = new \Src\Infrastructure\Pharmacy\Adapters\QuincaillerieProductRepositoryAdapter(
+                                    app(\Src\Domain\Quincaillerie\Repositories\ProductRepositoryInterface::class)
+                                );
+                                $product = $adapter->findById($lineDto->productId);
+                                $productName = $productModel->name ?? 'Inconnu';
+                            } else if ($productModel) {
+                                $productName = $productModel->name ?? 'Inconnu';
+                                throw new \InvalidArgumentException(
+                                    sprintf(
+                                        'Le produit "%s" (ID: %s) est désactivé.',
+                                        $productName,
+                                        $lineDto->productId
+                                    )
+                                );
+                            }
+                        }
+                        
+                        // Pour Pharmacy, essayer aussi
+                        if (!$product && class_exists(\Src\Infrastructure\Pharmacy\Models\ProductModel::class)) {
+                            $productModel = \Src\Infrastructure\Pharmacy\Models\ProductModel::find($lineDto->productId);
+                            if ($productModel && $productModel->is_active) {
+                                // Utiliser le repository Pharmacy directement
+                                $pharmacyRepo = app(\Src\Domain\Pharmacy\Repositories\ProductRepositoryInterface::class);
+                                $product = $pharmacyRepo->findById($lineDto->productId);
+                                $productName = $productModel->name ?? 'Inconnu';
+                            } else if ($productModel) {
+                                $productName = $productModel->name ?? 'Inconnu';
+                                throw new \InvalidArgumentException(
+                                    sprintf(
+                                        'Le produit "%s" (ID: %s) est désactivé.',
+                                        $productName,
+                                        $lineDto->productId
+                                    )
+                                );
+                            }
+                        }
+                    } catch (\InvalidArgumentException $e) {
+                        // Relancer les InvalidArgumentException
+                        throw $e;
+                    } catch (\Throwable $e) {
+                        // Ignorer les autres erreurs
+                    }
+                    
+                    // Si le produit n'a toujours pas été trouvé
+                    if (!$product) {
+                        throw new \InvalidArgumentException(
+                            sprintf(
+                                'Produit introuvable: "%s" (ID: %s). Le produit a peut-être été supprimé ou n\'existe pas.',
+                                $productName,
+                                $lineDto->productId
+                            )
+                        );
+                    }
                 }
 
                 // Règle métier : produit non divisible → quantité entière obligatoire

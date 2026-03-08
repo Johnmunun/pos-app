@@ -96,7 +96,7 @@ class OnboardingController extends Controller
 
     /**
      * Traiter l'étape 2
-     *a
+     */
     public function processStep2(Request $request)
     {
         $session = $this->getOrCreateSession($request);
@@ -230,6 +230,40 @@ class OnboardingController extends Controller
                 $commerceRole = \App\Models\Role::where('name', 'Commerçant Commerce')->whereNull('tenant_id')->first();
                 if ($commerceRole) {
                     $user->roles()->syncWithoutDetaching([$commerceRole->id]);
+                }
+            }
+
+            // Secteur E-commerce = module E-commerce : assigner le rôle Commerçant E-commerce
+            if ($tenant->sector === 'ecommerce') {
+                $ecommerceRole = \App\Models\Role::where('name', 'Commerçant E-commerce')->whereNull('tenant_id')->first();
+                if ($ecommerceRole) {
+                    $user->roles()->syncWithoutDetaching([$ecommerceRole->id]);
+                } else {
+                    // Si le rôle n'existe pas, créer un rôle par défaut avec les permissions e-commerce
+                    $ecommerceRole = \App\Models\Role::create([
+                        'tenant_id' => null,
+                        'name' => 'Commerçant E-commerce',
+                        'description' => 'Rôle par défaut pour les commerçants e-commerce (créé automatiquement).',
+                        'is_active' => true,
+                    ]);
+                    
+                    // Assigner les permissions e-commerce
+                    $ecommercePermissions = \App\Models\Permission::where('is_old', false)
+                        ->whereIn('code', [
+                            'module.ecommerce',
+                            'ecommerce.view',
+                            'ecommerce.create',
+                            'ecommerce.update',
+                            'ecommerce.manage_orders',
+                        ])
+                        ->pluck('id')
+                        ->toArray();
+                    
+                    if (!empty($ecommercePermissions)) {
+                        $ecommerceRole->permissions()->sync($ecommercePermissions);
+                    }
+                    
+                    $user->roles()->syncWithoutDetaching([$ecommerceRole->id]);
                 }
             }
 

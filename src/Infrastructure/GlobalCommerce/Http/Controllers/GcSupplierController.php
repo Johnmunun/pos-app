@@ -68,7 +68,7 @@ class GcSupplierController
         return Inertia::render('Commerce/Suppliers/Create');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): JsonResponse|RedirectResponse
     {
         $shopId = $this->getShopId($request);
         $validated = $request->validate([
@@ -86,6 +86,10 @@ class GcSupplierController
             'address' => $validated['address'] ?? null,
             'is_active' => true,
         ]);
+        
+        if ($request->wantsJson() || $request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Fournisseur créé.']);
+        }
         return redirect()->route('commerce.suppliers.index')->with('success', 'Fournisseur créé.');
     }
 
@@ -108,11 +112,14 @@ class GcSupplierController
         ]);
     }
 
-    public function update(Request $request, string $id): RedirectResponse
+    public function update(Request $request, string $id): JsonResponse|RedirectResponse
     {
         $shopId = $this->getShopId($request);
         $supplier = SupplierModel::byShop($shopId)->find($id);
         if (!$supplier) {
+            if ($request->wantsJson() || $request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Fournisseur introuvable.'], 404);
+            }
             return redirect()->route('commerce.suppliers.index')->with('error', 'Fournisseur introuvable.');
         }
         $validated = $request->validate([
@@ -129,6 +136,10 @@ class GcSupplierController
             'address' => $validated['address'] ?? null,
             'is_active' => isset($validated['is_active']) ? (bool) $validated['is_active'] : $supplier->is_active,
         ]);
+        
+        if ($request->wantsJson() || $request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Fournisseur mis à jour.']);
+        }
         return redirect()->route('commerce.suppliers.index')->with('success', 'Fournisseur mis à jour.');
     }
 

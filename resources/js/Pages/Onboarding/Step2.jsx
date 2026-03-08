@@ -20,6 +20,7 @@ export default function Step2({ sectors, businessTypes, sessionData }) {
         { key: 'supermarket', name: 'Supermarché', icon: '🛒', description: 'Épicerie, produits alimentaires, ménagers' },
         { key: 'butchery', name: 'Boucherie', icon: '🥩', description: 'Viandes, volailles, produits frais' },
         { key: 'hardware', name: 'Quincaillerie', icon: '🔧', description: 'Matériel, outillage, bricolage' },
+        { key: 'ecommerce', name: 'E-commerce', icon: '🛍️', description: 'Vente en ligne, marketplace, boutique digitale' },
         { key: 'other', name: 'Autre', icon: '🏢', description: 'Autres types de commerce' },
     ];
 

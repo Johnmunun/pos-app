@@ -28,10 +28,13 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
+import { formatCurrency } from '@/lib/currency';
 
 export default function ProductsIndex({ auth, products, categories, filters, canImport = false, routePrefix = 'pharmacy', pageTitle = 'Gestion des Produits' }) {
-    const { auth: authPage, depots = [], currentDepot } = usePage().props ?? {};
+    const { auth: authPage, depots = [], currentDepot, shop } = usePage().props ?? {};
     const permissions = authPage?.permissions || [];
+    const currency = shop?.currency || 'CDF';
+    const fmt = (amount) => formatCurrency(amount, currency);
     
     const hasPermission = (permission) => {
         if (authPage?.user?.type === 'ROOT') return true;
@@ -352,27 +355,30 @@ export default function ProductsIndex({ auth, products, categories, filters, can
         >
             <Head title={pageTitle} />
             <div className="py-6 space-y-6">
-                    {/* Search and Filters */}
+                    {/* Search and Filters - Mobile optimisée */}
                     <Card className="mb-6 bg-white dark:bg-gray-800">
-                        <CardHeader>
-                            <CardTitle className="flex items-center text-gray-900 dark:text-white">
-                                <Search className="h-5 w-5 mr-2" />
-                                Search Products
+                        <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center text-gray-900 dark:text-white text-base sm:text-lg">
+                                <Search className="h-4 w-4 sm:h-5 sm:w-5 mr-2" /> 
+                                <span className="hidden sm:inline">Search Products</span>
+                                <span className="sm:hidden">Rechercher produits, SKU...</span>
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <form onSubmit={handleSearch} className="flex flex-col gap-4">
-                                <div className="flex flex-col md:flex-row gap-4">
-                                    <div className="flex-1">
-                                        <Input
-                                            placeholder="Rechercher par nom ou code..."
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                        />
-                                    </div>
+                            <form onSubmit={handleSearch} className="space-y-3">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                    <Input
+                                        placeholder="Rechercher produits, SKU..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="pl-10"
+                                    />
+                                </div>
+                                <div className="flex flex-col sm:flex-row gap-3">
                                     <div className="flex-1">
                                         <select
-                                            className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                            className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-2"
                                             value={selectedCategory}
                                             onChange={(e) => setSelectedCategory(e.target.value)}
                                         >
@@ -386,7 +392,7 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                                     </div>
                                     <div className="flex-1">
                                         <select
-                                            className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                            className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-2"
                                             value={selectedStatus}
                                             onChange={(e) => setSelectedStatus(e.target.value)}
                                         >
@@ -395,10 +401,14 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                                             <option value="inactive">Inactif</option>
                                         </select>
                                     </div>
-                                    <Button type="submit">
+                                    <Button type="submit" className="w-full sm:w-auto">
                                         <Search className="h-4 w-4 mr-2" />
-                                        Rechercher
+                                        <span className="hidden sm:inline">Rechercher</span>
+                                        <span className="sm:hidden">Filtrer</span>
                                     </Button>
+                                </div>
+                                <div className="md:hidden flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700">
+                                    <span>Affichage de {products.length} produit{products.length > 1 ? 's' : ''}</span>
                                 </div>
                             </form>
                         </CardContent>
@@ -427,8 +437,106 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                                     </button>
                                 </div>
                             ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <>
+                                    {/* Vue Mobile - Cartes */}
+                                    <div className="md:hidden space-y-3">
+                                        {products.map((product) => {
+                                            const stock = product.current_stock ?? product.stock ?? 0;
+                                            const minStock = product.minimum_stock ?? 0;
+                                            const stockStatus = stock <= 0 ? 'out' : stock <= minStock ? 'low' : 'in';
+                                            
+                                            return (
+                                                <div 
+                                                    key={product.id} 
+                                                    className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 transition-colors"
+                                                >
+                                                    <div className="flex items-start gap-3 p-4">
+                                                        {/* Image circulaire */}
+                                                        <div className="flex-shrink-0">
+                                                            <div className="h-16 w-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden border-2 border-gray-200 dark:border-gray-600">
+                                                                {product.image_url ? (
+                                                                    <img 
+                                                                        src={product.image_url} 
+                                                                        alt={product.name}
+                                                                        className="h-full w-full object-cover"
+                                                                        onError={(e) => {
+                                                                            e.target.style.display = 'none';
+                                                                        }}
+                                                                    />
+                                                                ) : (
+                                                                    <Package className="h-8 w-8 text-gray-400 dark:text-gray-500" />
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {/* Contenu principal */}
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-start justify-between gap-2 mb-1">
+                                                                <h3 className="font-semibold text-gray-900 dark:text-white text-sm truncate">
+                                                                    {product.name}
+                                                                </h3>
+                                                                <div className="flex items-center gap-1 flex-shrink-0">
+                                                                    <button
+                                                                        onClick={() => handleEdit(product)}
+                                                                        className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                                                        title="Modifier"
+                                                                    >
+                                                                        <Edit className="h-4 w-4" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDelete(product)}
+                                                                        className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                                                                        title="Supprimer"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <p className="text-base font-bold text-gray-900 dark:text-white mb-1">
+                                                                {fmt(Number(product.price_amount || 0))}
+                                                            </p>
+                                                            
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono">
+                                                                SKU: {product.product_code}
+                                                            </p>
+                                                            
+                                                            {/* Badges */}
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                {product.category?.name && (
+                                                                    <Badge className="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-0">
+                                                                        {product.category.name}
+                                                                    </Badge>
+                                                                )}
+                                                                {stockStatus === 'in' && (
+                                                                    <Badge className="text-[10px] px-2 py-0.5 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-0 flex items-center gap-1">
+                                                                        <CheckCircle className="h-3 w-3" />
+                                                                        En stock
+                                                                    </Badge>
+                                                                )}
+                                                                {stockStatus === 'low' && (
+                                                                    <Badge className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-0 flex items-center gap-1">
+                                                                        <AlertTriangle className="h-3 w-3" />
+                                                                        Stock bas
+                                                                    </Badge>
+                                                                )}
+                                                                {stockStatus === 'out' && (
+                                                                    <Badge className="text-[10px] px-2 py-0.5 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-0 flex items-center gap-1">
+                                                                        <XCircle className="h-3 w-3" />
+                                                                        Rupture
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Vue Desktop - Tableau */}
+                                    <div className="hidden md:block overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                         <thead className="bg-gray-50 dark:bg-gray-800">
                                             <tr>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -554,10 +662,21 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                                             ))}
                                         </tbody>
                                     </table>
-                                </div>
+                                    </div>
+                                </>
                             )}
                         </CardContent>
                     </Card>
+
+                    {/* FAB Mobile - Ajouter produit */}
+                    <div className="md:hidden fixed bottom-20 right-4 z-30">
+                        <button
+                            onClick={handleCreate}
+                            className="h-14 w-14 rounded-full bg-amber-500 hover:bg-amber-600 text-white shadow-lg flex items-center justify-center transition-colors"
+                        >
+                            <Plus className="h-6 w-6" />
+                        </button>
+                    </div>
             </div>
 
             {/* Modal détail produit */}

@@ -133,7 +133,7 @@ export default function ImportModal({
                             <Button
                                 type="button"
                                 onClick={() => window.open(templateUrl, '_blank')}
-                                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white"
                             >
                                 <Download className="h-4 w-4 shrink-0" />
                                 Télécharger le modèle
@@ -167,7 +167,7 @@ export default function ImportModal({
                         >
                             {previewLoading || confirmingImport ? (
                                 <>
-                                    <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+                                    <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-gray-300 dark:border-gray-600 border-t-blue-600 dark:border-t-blue-400" />
                                     {directImport ? 'Import en cours...' : 'Analyse en cours...'}
                                 </>
                             ) : directImport ? (
@@ -260,7 +260,7 @@ export default function ImportModal({
                             type="button"
                             disabled={!canConfirm}
                             onClick={onConfirmImport}
-                            className={canConfirm ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'opacity-50 cursor-not-allowed'}
+                            className={canConfirm ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white' : 'opacity-50 cursor-not-allowed'}
                         >
                             {confirmingImport ? "Import en cours..." : "Confirmer l'import"}
                         </Button>

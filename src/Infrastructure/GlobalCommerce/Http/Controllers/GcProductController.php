@@ -69,9 +69,19 @@ class GcProductController
         $shopId = $this->getShopId($request);
         $search = (string) $request->input('search', '');
         $categoryId = $request->input('category_id');
+        $status = $request->input('status');
+        
+        // Convertir le statut en is_active
+        $isActive = null;
+        if ($status === 'active') {
+            $isActive = true;
+        } elseif ($status === 'inactive') {
+            $isActive = false;
+        }
+        
         $products = $this->productRepository->search($shopId, $search, array_filter([
             'category_id' => $categoryId,
-            'is_active' => $request->boolean('active', true) ? true : null,
+            'is_active' => $isActive,
         ]));
 
         // L'écran Index ouvre un drawer d'édition. On doit donc inclure les champs nécessaires
@@ -90,6 +100,10 @@ class GcProductController
                 if (Schema::hasColumn('gc_products', $c)) {
                     $cols[] = $c;
                 }
+            }
+            // S'assurer que 'unit' est toujours inclus
+            if (!in_array('unit', $cols) && Schema::hasColumn('gc_products', 'unit')) {
+                $cols[] = 'unit';
             }
 
             $models = ProductModel::whereIn('id', $ids)->get($cols);
@@ -197,7 +211,7 @@ class GcProductController
             'discount_percent' => 'nullable|numeric|min:0|max:100',
             'price_non_negotiable' => 'nullable|boolean',
             'product_type' => 'nullable|string|in:simple,variable,service',
-            'unit' => 'nullable|string|max:50',
+            'unit' => 'required|string|max:50',
             'weight' => 'nullable|numeric|min:0',
             'length' => 'nullable|numeric|min:0',
             'width' => 'nullable|numeric|min:0',
@@ -331,6 +345,42 @@ class GcProductController
         ]);
     }
 
+    public function toggleStatus(Request $request, string $id): JsonResponse
+    {
+        $shopId = $this->getShopId($request);
+        $product = $this->productRepository->findById($id);
+        
+        if (!$product) {
+            return response()->json(['success' => false, 'message' => 'Produit non trouvé.'], 404);
+        }
+        
+        // Vérifier que le produit appartient au shop
+        if ($product->getShopId() !== $shopId) {
+            return response()->json(['success' => false, 'message' => 'Accès non autorisé.'], 403);
+        }
+        
+        // Toggle le statut
+        if ($product->isActive()) {
+            $product->markInactive();
+        } else {
+            $product->markActive();
+        }
+        
+        $this->productRepository->save($product);
+        
+        // Mettre à jour aussi le modèle pour synchroniser is_active
+        $model = ProductModel::find($id);
+        if ($model) {
+            $model->update(['is_active' => $product->isActive()]);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'message' => $product->isActive() ? 'Produit activé avec succès.' : 'Produit désactivé avec succès.',
+            'is_active' => $product->isActive(),
+        ]);
+    }
+
     public function update(Request $request, string $id): RedirectResponse
     {
         $shopId = $this->getShopId($request);
@@ -355,7 +405,7 @@ class GcProductController
             'discount_percent' => 'nullable|numeric|min:0|max:100',
             'price_non_negotiable' => 'nullable|boolean',
             'product_type' => 'nullable|string|in:simple,variable,service',
-            'unit' => 'nullable|string|max:50',
+            'unit' => 'required|string|max:50',
             'weight' => 'nullable|numeric|min:0',
             'length' => 'nullable|numeric|min:0',
             'width' => 'nullable|numeric|min:0',
@@ -700,6 +750,183 @@ class GcProductController
             'success' => $success,
             'failed' => $failed,
             'errors' => $errors,
+        ]);
+    }
+
+    public function importPreview(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,csv,txt|max:10240',
+        ], [
+            'file.required' => 'Veuillez sélectionner un fichier.',
+            'file.mimes' => 'Le fichier doit être au format .xlsx ou .csv.',
+            'file.max' => 'Le fichier ne doit pas dépasser 10 Mo.',
+        ]);
+
+        $shopId = $this->getShopId($request);
+        $file = $request->file('file');
+        $path = $file->getRealPath();
+
+        // 1) Construire un aperçu brut (quelques lignes) pour affichage tableau
+        $sampleHeader = [];
+        $sampleRows = [];
+        $sheet = null;
+        try {
+            $ext = strtolower($file->getClientOriginalExtension());
+            if ($ext === 'csv' || $ext === 'txt') {
+                $reader = new Csv();
+                // Détecter le délimiteur de manière simple
+                $line = fgets(fopen($path, 'r'));
+                $delimiter = strpos($line, ';') !== false ? ';' : ',';
+                $reader->setDelimiter($delimiter);
+                $reader->setInputEncoding('UTF-8');
+                $spreadsheet = $reader->load($path);
+            } else {
+                $spreadsheet = IOFactory::load($path);
+            }
+            $sheet = $spreadsheet->getActiveSheet();
+            $allRows = $sheet->toArray();
+            $sampleHeader = $allRows[0] ?? [];
+            $dataRows = array_slice($allRows, 1);
+            $sampleRows = array_slice($dataRows, 0, 20);
+        } catch (\Throwable $e) {
+            Log::warning('GcProduct import preview: failed to build sample', ['error' => $e->getMessage()]);
+            return response()->json([
+                'message' => 'Impossible de lire le fichier : ' . $e->getMessage(),
+            ], 422);
+        }
+
+        if ($sheet === null) {
+            return response()->json([
+                'message' => 'Impossible de charger le fichier.',
+            ], 422);
+        }
+
+        // 2) Valider les données sans les insérer
+        try {
+            $rows = $sheet->toArray();
+        } catch (\Throwable $e) {
+            Log::error('GcProduct import preview: parse error', ['error' => $e->getMessage()]);
+            return response()->json([
+                'message' => 'Impossible de lire le fichier : ' . $e->getMessage(),
+            ], 422);
+        }
+
+        if (empty($rows)) {
+            return response()->json([
+                'total' => 0,
+                'valid' => 0,
+                'invalid' => 0,
+                'errors' => [],
+                'sample' => [
+                    'header' => [],
+                    'rows' => [],
+                ],
+            ]);
+        }
+
+        $headerRow = array_map('trim', array_map('strtolower', (array) $rows[0]));
+        $dataRows = array_slice($rows, 1);
+
+        $required = ['sku', 'nom', 'categorie', 'prix_vente'];
+        foreach ($required as $col) {
+            if (!in_array($col, $headerRow, true)) {
+                return response()->json([
+                    'message' => "Colonne obligatoire manquante : '{$col}'.",
+                    'total' => count($dataRows),
+                    'valid' => 0,
+                    'invalid' => count($dataRows),
+                    'errors' => [],
+                    'sample' => [
+                        'header' => $sampleHeader,
+                        'rows' => $sampleRows,
+                    ],
+                ], 422);
+            }
+        }
+
+        // Précharger les catégories
+        $categories = CategoryModel::where('shop_id', $shopId)->get(['id', 'name']);
+        $categoriesByName = [];
+        foreach ($categories as $cat) {
+            $categoriesByName[mb_strtolower($cat->name)] = $cat->id;
+        }
+
+        $valid = 0;
+        $invalid = 0;
+        $errorsDetailed = [];
+
+        foreach ($dataRows as $index => $row) {
+            $lineNum = $index + 2;
+            $rowAssoc = [];
+            foreach ($headerRow as $i => $key) {
+                $rowAssoc[$key] = isset($row[$i]) ? trim((string) $row[$i]) : '';
+            }
+
+            if (!array_filter($rowAssoc, fn ($v) => $v !== '' && $v !== null)) {
+                continue;
+            }
+
+            $lineErrors = [];
+
+            $sku = $rowAssoc['sku'] ?? '';
+            $name = $rowAssoc['nom'] ?? '';
+            $categoryRaw = $rowAssoc['categorie'] ?? '';
+
+            if ($sku === '') {
+                $lineErrors[] = 'SKU obligatoire.';
+            }
+            if ($name === '') {
+                $lineErrors[] = 'Nom obligatoire.';
+            }
+            if ($categoryRaw === '') {
+                $lineErrors[] = 'Catégorie obligatoire.';
+            }
+
+            $categoryId = null;
+            if ($categoryRaw !== '') {
+                $category = $categories->firstWhere('id', $categoryRaw);
+                if ($category) {
+                    $categoryId = $category->id;
+                } else {
+                    $lower = mb_strtolower($categoryRaw);
+                    if (isset($categoriesByName[$lower])) {
+                        $categoryId = $categoriesByName[$lower];
+                    }
+                }
+                if ($categoryId === null) {
+                    $lineErrors[] = "Catégorie introuvable : {$categoryRaw}.";
+                }
+            }
+
+            $salePrice = $rowAssoc['prix_vente'] !== ''
+                ? (float) str_replace(',', '.', (string) $rowAssoc['prix_vente'])
+                : 0.0;
+            if ($salePrice < 0) {
+                $lineErrors[] = 'Prix de vente doit être positif.';
+            }
+
+            if (!empty($lineErrors)) {
+                $invalid++;
+                $errorsDetailed[] = [
+                    'line' => $lineNum,
+                    'field' => null,
+                    'message' => implode(' | ', $lineErrors),
+                ];
+            } else {
+                $valid++;
+            }
+        }
+
+        return response()->json([
+            'total' => count($dataRows),
+            'valid' => $valid,
+            'invalid' => $invalid,
+            'errors' => $errorsDetailed,
+            'sample' => [
+                'header' => $sampleHeader,
+                'rows' => $sampleRows,
+            ],
         ]);
     }
 }

@@ -40,7 +40,7 @@ function saveMessages(messages) {
   }
 }
 
-export default function HardwareAssistant() {
+export default function HardwareAssistant({ bottomOffset = null }) {
   const { auth } = usePage().props;
   const permissions = auth?.permissions ?? [];
   const hasHardware =
@@ -62,12 +62,31 @@ export default function HardwareAssistant() {
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const currentAudioRef = useRef(null);
+  const buttonRef = useRef(null);
 
   useEffect(() => {
     if (!loading && messages.length > 0) {
       saveMessages(messages);
     }
   }, [messages, loading]);
+
+  // Appliquer les styles avec media queries pour le positionnement
+  useEffect(() => {
+    if (buttonRef.current && bottomOffset) {
+      const button = buttonRef.current;
+      const mobileQuery = window.matchMedia('(max-width: 639px)');
+      const updatePosition = () => {
+        if (mobileQuery.matches) {
+          button.style.bottom = bottomOffset.mobile;
+        } else {
+          button.style.bottom = bottomOffset.desktop;
+        }
+      };
+      updatePosition();
+      mobileQuery.addEventListener('change', updatePosition);
+      return () => mobileQuery.removeEventListener('change', updatePosition);
+    }
+  }, [bottomOffset]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -259,10 +278,11 @@ export default function HardwareAssistant() {
     <>
       {/* Bouton flottant */}
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="fixed bottom-4 right-4 z-40 inline-flex items-center justify-center rounded-full bg-amber-500 text-white shadow-lg hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
-        style={{ width: 52, height: 52 }}
+        className="fixed right-4 sm:right-6 z-40 inline-flex items-center justify-center rounded-full bg-amber-500 text-white shadow-lg hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
+        style={{ width: 52, height: 52, ...(!bottomOffset ? { bottom: '16px' } : {}) }}
         title="Assistant Quincaillerie"
         aria-label="Ouvrir l'assistant Quincaillerie"
       >

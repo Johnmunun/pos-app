@@ -470,7 +470,11 @@ export default function CommerceSalesCreate({
 
     const updateQuantity = (productId, newQuantity) => {
         const q = Number(newQuantity);
-        if (Number.isNaN(q)) return;
+        if (Number.isNaN(q) || q <= 0) {
+            // Si la quantité est invalide, retirer du panier
+            removeFromCart(productId);
+            return;
+        }
         const item = cart.find((i) => i.product_id === productId);
         if (!item) return;
         const estDivisible = Boolean(item.est_divisible ?? true);
@@ -485,6 +489,11 @@ export default function CommerceSalesCreate({
             return;
         }
         const normalized = estDivisible ? Math.round(q * 10000) / 10000 : Math.max(1, Math.floor(q));
+        // S'assurer que la quantité normalisée est toujours > 0
+        if (normalized <= 0) {
+            removeFromCart(productId);
+            return;
+        }
         setCart((prev) =>
             prev.map((i) => (i.product_id === productId ? { ...i, quantity: normalized } : i)),
         );
@@ -639,28 +648,265 @@ export default function CommerceSalesCreate({
 
         setSubmitting(true);
         try {
-            const storeRes = await axios.post(route(`${routePrefix}.sales.store`), {
+            // Valider que tous les produits du panier existent encore
+            const validLines = cart
+                .map((item, index) => {
+                    // Vérifier que l'item a toutes les propriétés nécessaires
+                    if (!item || typeof item !== 'object') {
+                        console.error(`Item invalide à l'index ${index}:`, item);
+                        return null;
+                    }
+
+                    const product = products.find((p) => p.id === item.product_id);
+                    if (!product) {
+                        console.warn(`Produit introuvable dans le panier: ${item.product_id}`, item);
+                        return null;
+                    }
+                    // Vérifier que le produit est actif
+                    if (product.is_active === false) {
+                        console.warn(`Produit désactivé: ${item.product_id}`, product);
+                        return null;
+                    }
+                    
+                    // S'assurer que la quantité est un nombre valide > 0
+                    const quantity = Number(item.quantity);
+                    if (item.quantity === undefined || item.quantity === null || isNaN(quantity) || quantity <= 0) {
+                        console.error(`Quantité invalide pour le produit à l'index ${index}:`, {
+                            product_id: item.product_id,
+                            quantity: item.quantity,
+                            quantityType: typeof item.quantity,
+                            quantityNumber: quantity,
+                            item: item
+                        });
+                        return null;
+                    }
+
+                    const unitPrice = convertToSelected(item.price, item.price_currency ?? defaultCurrency);
+                    if (isNaN(unitPrice) || unitPrice < 0) {
+                        console.error(`Prix unitaire invalide pour le produit: ${item.product_id}`, {
+                            price: item.price,
+                            price_currency: item.price_currency,
+                            unitPrice: unitPrice
+                        });
+                        return null;
+                    }
+
+                    const line = {
+                        product_id: String(item.product_id), // S'assurer que c'est une string/UUID
+                        quantity: quantity, // S'assurer que c'est un nombre valide
+                        unit_price: unitPrice,
+                        discount_percent: item.discount_percent || null,
+                    };
+
+                    // Vérification finale que tous les champs requis sont présents
+                    if (!line.product_id || !line.quantity || line.quantity <= 0) {
+                        console.error(`Ligne invalide après validation:`, line);
+                        return null;
+                    }
+
+                    return line;
+                })
+                .filter((line) => line !== null);
+
+            if (validLines.length === 0) {
+                toast.error('Aucun produit valide dans le panier. Veuillez recharger la page et réessayer.', {
+                    duration: 6000
+                });
+                setSubmitting(false);
+                return;
+            }
+
+            if (validLines.length < cart.length) {
+                const removedCount = cart.length - validLines.length;
+                toast.error(
+                    `${removedCount} produit(s) invalide(s) ou désactivé(s) retiré(s) du panier. Veuillez vérifier.`,
+                    { duration: 6000 }
+                );
+            }
+
+            // Vérification finale avant l'envoi
+            if (validLines.length === 0) {
+                toast.error('Aucun produit valide dans le panier. Veuillez recharger la page et réessayer.', {
+                    duration: 6000
+                });
+                setSubmitting(false);
+                return;
+            }
+
+            // Vérifier que toutes les lignes ont les champs requis et créer un nouvel objet propre
+            const finalLines = validLines.map((line, index) => {
+                // Vérifier que tous les champs requis sont présents
+                if (!line || typeof line !== 'object') {
+                    console.error(`Ligne ${index} n'est pas un objet:`, line);
+                    return null;
+                }
+                
+                const productId = line.product_id;
+                const quantity = line.quantity;
+                
+                if (!productId || productId === undefined || productId === null || productId === '') {
+                    console.error(`Ligne ${index} - product_id manquant:`, line);
+                    return null;
+                }
+                
+                if (quantity === undefined || quantity === null || isNaN(Number(quantity)) || Number(quantity) <= 0) {
+                    console.error(`Ligne ${index} - quantity invalide:`, {
+                        quantity: quantity,
+                        quantityType: typeof quantity,
+                        line: line
+                    });
+                    return null;
+                }
+
+                // Créer un nouvel objet avec tous les champs explicitement définis
+                const finalLine = {
+                    product_id: String(productId),
+                    quantity: Number(quantity),
+                };
+
+                // Ajouter unit_price seulement s'il existe
+                if (line.unit_price !== undefined && line.unit_price !== null) {
+                    finalLine.unit_price = Number(line.unit_price);
+                }
+
+                // Ajouter discount_percent seulement s'il existe
+                if (line.discount_percent !== undefined && line.discount_percent !== null) {
+                    finalLine.discount_percent = Number(line.discount_percent);
+                }
+
+                return finalLine;
+            }).filter(line => {
+                // Vérification finale que la ligne est valide
+                if (!line) return false;
+                if (!line.product_id || !line.quantity || line.quantity <= 0) {
+                    console.error('Ligne filtrée car invalide:', line);
+                    return false;
+                }
+                return true;
+            });
+
+            if (finalLines.length === 0) {
+                toast.error('Aucune ligne valide après validation finale. Veuillez recharger la page.', {
+                    duration: 6000
+                });
+                setSubmitting(false);
+                return;
+            }
+
+            // Vérification finale stricte avant envoi
+            const payloadLines = finalLines.map((line, idx) => {
+                // Créer un nouvel objet avec seulement les propriétés nécessaires
+                const cleanLine = {
+                    product_id: String(line.product_id),
+                    quantity: Number(line.quantity),
+                };
+                
+                // Vérifier que quantity est bien un nombre valide
+                if (isNaN(cleanLine.quantity) || cleanLine.quantity <= 0) {
+                    console.error(`Ligne ${idx} a une quantité invalide après nettoyage:`, cleanLine);
+                    return null;
+                }
+                
+                // Ajouter unit_price si présent
+                if (line.unit_price !== undefined && line.unit_price !== null && !isNaN(Number(line.unit_price))) {
+                    cleanLine.unit_price = Number(line.unit_price);
+                }
+                
+                // Ajouter discount_percent si présent
+                if (line.discount_percent !== undefined && line.discount_percent !== null && !isNaN(Number(line.discount_percent))) {
+                    cleanLine.discount_percent = Number(line.discount_percent);
+                }
+                
+                return cleanLine;
+            }).filter(line => line !== null && line.quantity > 0);
+
+            if (payloadLines.length === 0) {
+                toast.error('Aucune ligne valide après nettoyage final. Veuillez recharger la page.', {
+                    duration: 6000
+                });
+                setSubmitting(false);
+                return;
+            }
+
+            // Log pour déboguer
+            console.log('Envoi des lignes de vente:', {
+                linesCount: payloadLines.length,
+                lines: payloadLines,
+                firstLine: payloadLines[0],
+                firstLineKeys: payloadLines[0] ? Object.keys(payloadLines[0]) : [],
+                firstLineQuantity: payloadLines[0]?.quantity,
+                firstLineQuantityType: typeof payloadLines[0]?.quantity,
+            });
+
+            const payload = {
                 customer_id: customerId || null,
                 currency,
                 sale_mode: saleMode,
-                lines: cart.map((item) => ({
-                    product_id: item.product_id,
-                    quantity: item.quantity,
-                    unit_price: convertToSelected(item.price, item.price_currency ?? defaultCurrency),
-                    discount_percent: item.discount_percent || null,
-                })),
-                ...(activeCashSession
-                    ? {
-                          cash_register_id: activeCashSession.cash_register_id,
-                          cash_register_session_id: activeCashSession.cash_register_session_id,
-                      }
-                    : {}),
+                lines: payloadLines,
+            };
+
+            if (activeCashSession) {
+                payload.cash_register_id = activeCashSession.cash_register_id;
+                payload.cash_register_session_id = activeCashSession.cash_register_session_id;
+            }
+
+            // Vérification finale avant envoi - s'assurer que toutes les lignes ont quantity
+            const finalPayloadLines = payload.lines.map((line, idx) => {
+                if (!line || typeof line !== 'object') {
+                    console.error(`Ligne ${idx} invalide dans le payload:`, line);
+                    return null;
+                }
+                if (line.quantity === undefined || line.quantity === null) {
+                    console.error(`Ligne ${idx} n'a pas de quantity:`, line);
+                    return null;
+                }
+                // Créer un nouvel objet avec tous les champs explicitement définis
+                const cleanLine = {
+                    product_id: String(line.product_id),
+                    quantity: Number(line.quantity),
+                };
+                if (line.unit_price !== undefined && line.unit_price !== null) {
+                    cleanLine.unit_price = Number(line.unit_price);
+                }
+                if (line.discount_percent !== undefined && line.discount_percent !== null) {
+                    cleanLine.discount_percent = Number(line.discount_percent);
+                }
+                return cleanLine;
+            }).filter(line => line !== null && line.quantity > 0);
+
+            if (finalPayloadLines.length === 0) {
+                toast.error('Aucune ligne valide dans le payload final. Veuillez recharger la page.', {
+                    duration: 6000
+                });
+                setSubmitting(false);
+                return;
+            }
+
+            payload.lines = finalPayloadLines;
+
+            // Log final avant envoi
+            console.log('Payload final avant envoi:', {
+                payload,
+                linesCount: payload.lines.length,
+                firstLine: payload.lines[0],
+                firstLineStringified: JSON.stringify(payload.lines[0]),
+            });
+
+            const storeRes = await axios.post(route(`${routePrefix}.sales.store`), payload, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
             });
 
             const saleId = storeRes.data.sale.id;
 
+            const finalizeAmount = Number(paidAmount) || Number(total) || 0;
+            if (finalizeAmount <= 0) {
+                throw new Error('Le montant payé doit être supérieur à 0');
+            }
             await axios.post(route(`${routePrefix}.sales.finalize`, saleId), {
-                paid_amount: paidAmount || total,
+                paid_amount: finalizeAmount,
             });
 
             const saleTotal = total;
@@ -679,7 +925,23 @@ export default function CommerceSalesCreate({
                 );
             }
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Erreur lors de la vente');
+            console.error('Erreur lors de la finalisation de la vente:', err);
+            
+            // Extraire le message d'erreur détaillé
+            let errorMessage = 'Erreur lors de la vente';
+            if (err.response?.data) {
+                // Si c'est une erreur de validation Laravel
+                if (err.response.data.errors) {
+                    const errors = Object.values(err.response.data.errors).flat();
+                    errorMessage = errors.join(', ') || err.response.data.message || errorMessage;
+                } else {
+                    errorMessage = err.response.data.message || errorMessage;
+                }
+            } else if (err.message) {
+                errorMessage = err.message;
+            }
+            
+            toast.error(errorMessage, { duration: 5000 });
         } finally {
             setSubmitting(false);
         }

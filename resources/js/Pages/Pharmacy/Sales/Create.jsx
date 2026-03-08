@@ -457,23 +457,60 @@ export default function POSCreate({ products = [], categories = [], customers = 
         
         setSubmitting(true);
         try {
+            // Valider que tous les produits du panier existent encore
+            const validLines = cart
+                .map((item) => {
+                    const product = products.find((p) => p.id === item.product_id);
+                    if (!product) {
+                        console.warn(`Produit introuvable dans le panier: ${item.product_id}`, item);
+                        return null;
+                    }
+                    // Vérifier que le produit est actif
+                    if (product.is_active === false) {
+                        console.warn(`Produit désactivé: ${item.product_id}`, product);
+                        return null;
+                    }
+                    return {
+                        product_id: String(item.product_id), // S'assurer que c'est une string
+                        quantity: item.quantity,
+                        unit_price: convertToSelected(item.price, item.price_currency ?? defaultCurrency),
+                        discount_percent: item.discount_percent || null
+                    };
+                })
+                .filter((line) => line !== null);
+
+            if (validLines.length === 0) {
+                toast.error('Aucun produit valide dans le panier. Veuillez recharger la page et réessayer.', {
+                    duration: 6000
+                });
+                setSubmitting(false);
+                return;
+            }
+
+            if (validLines.length < cart.length) {
+                const removedCount = cart.length - validLines.length;
+                toast.error(
+                    `${removedCount} produit(s) invalide(s) ou désactivé(s) retiré(s) du panier. Veuillez vérifier.`,
+                    { duration: 6000 }
+                );
+            }
+
             const storeRes = await axios.post(route(`${routePrefix}.sales.store`), {
                 customer_id: customerId || null,
                 currency,
                 sale_mode: saleMode,
-                lines: cart.map(item => ({
-                    product_id: item.product_id,
-                    quantity: item.quantity,
-                    unit_price: convertToSelected(item.price, item.price_currency ?? defaultCurrency),
-                    discount_percent: item.discount_percent || null
-                })),
+                lines: validLines,
                 ...(activeCashSession ? { cash_register_id: activeCashSession.cash_register_id, cash_register_session_id: activeCashSession.cash_register_session_id } : {}),
             });
             
             const saleId = storeRes.data.sale.id;
             
+            const finalizeAmount = Number(paidAmount) || Number(total) || 0;
+            if (finalizeAmount <= 0) {
+                throw new Error('Le montant payé doit être supérieur à 0');
+            }
             await axios.post(route(`${routePrefix}.sales.finalize`, saleId), {
-                paid_amount: paidAmount || total
+                paid_amount: finalizeAmount
             });
             
             const saleTotal = total;
@@ -488,7 +525,23 @@ export default function POSCreate({ products = [], categories = [], customers = 
                 window.open(route(`${routePrefix}.sales.receipt`, saleId), '_blank', 'noopener,noreferrer');
             }
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Erreur lors de la vente');
+            console.error('Erreur lors de la finalisation de la vente:', err);
+            
+            // Extraire le message d'erreur détaillé
+            let errorMessage = 'Erreur lors de la vente';
+            if (err.response?.data) {
+                // Si c'est une erreur de validation Laravel
+                if (err.response.data.errors) {
+                    const errors = Object.values(err.response.data.errors).flat();
+                    errorMessage = errors.join(', ') || err.response.data.message || errorMessage;
+                } else {
+                    errorMessage = err.response.data.message || errorMessage;
+                }
+            } else if (err.message) {
+                errorMessage = err.message;
+            }
+            
+            toast.error(errorMessage, { duration: 5000 });
         } finally {
             setSubmitting(false);
         }

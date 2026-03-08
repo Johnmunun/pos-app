@@ -13,6 +13,7 @@ class Sector
         'supermarket' => 'Supermarché',
         'butchery' => 'Boucherie',
         'hardware' => 'Quincaillerie',
+        'ecommerce' => 'E-commerce',
         'other' => 'Autre'
     ];
 

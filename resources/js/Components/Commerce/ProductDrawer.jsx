@@ -327,6 +327,40 @@ export default function CommerceProductDrawer({ isOpen, onClose, product = null,
                                 </p>
                             )}
                         </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="unit">Unité *</Label>
+                            <select
+                                id="unit"
+                                value={data.unit || ''}
+                                onChange={(e) => setData('unit', e.target.value)}
+                                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm"
+                                required
+                            >
+                                <option value="">Sélectionner une unité</option>
+                                <option value="PIECE">Pièce</option>
+                                <option value="CARTON">Carton</option>
+                                <option value="BOITE">Boîte</option>
+                                <option value="LOT">Lot</option>
+                                <option value="KG">Kilogramme (KG)</option>
+                                <option value="G">Gramme (G)</option>
+                                <option value="LITRE">Litre</option>
+                                <option value="ML">Millilitre (ML)</option>
+                                <option value="METRE">Mètre</option>
+                                <option value="CM">Centimètre (CM)</option>
+                                <option value="M2">Mètre carré (M²)</option>
+                                <option value="M3">Mètre cube (M³)</option>
+                                <option value="UNITE">Unité</option>
+                                <option value="PAQUET">Paquet</option>
+                                <option value="SACHET">Sachet</option>
+                                <option value="BOUTEILLE">Bouteille</option>
+                                <option value="CANETTE">Canette</option>
+                            </select>
+                            {errors.unit && (
+                                <p className="text-sm text-red-600 dark:text-red-400">
+                                    {errors.unit}
+                                </p>
+                            )}
+                        </div>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="description">Description</Label>

@@ -284,3 +284,24 @@ html {
 .overflow-y-auto {
     scroll-behavior: auto; /* Scroll instantané pour les conteneurs scrollables */
 }
+
+/* ============================================
+   PAGE TRANSITIONS
+   ============================================
+   Transitions fluides entre les pages Inertia
+   ============================================ */
+
+/* Transition de base pour toutes les pages Inertia */
+#app > div {
+    animation: pageFadeIn 0.2s ease-in-out;
+}
+
+/* Animation d'entrée pour les nouvelles pages */
+@keyframes pageFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}

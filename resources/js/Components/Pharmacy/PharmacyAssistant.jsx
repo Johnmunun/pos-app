@@ -53,7 +53,7 @@ function saveMessages(messages) {
   }
 }
 
-export default function PharmacyAssistant() {
+export default function PharmacyAssistant({ bottomOffset = null }) {
   const { auth } = usePage().props;
   const permissions = auth?.permissions ?? [];
   const hasPharmacy = permissions.includes('*') || permissions.includes('module.pharmacy')
@@ -73,6 +73,7 @@ export default function PharmacyAssistant() {
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const currentAudioRef = useRef(null);
+  const buttonRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -95,6 +96,24 @@ export default function PharmacyAssistant() {
       }).catch(() => {});
     }
   }, [open, hasPharmacy]);
+
+  // Appliquer les styles avec media queries pour le positionnement
+  useEffect(() => {
+    if (buttonRef.current && bottomOffset) {
+      const button = buttonRef.current;
+      const mobileQuery = window.matchMedia('(max-width: 639px)');
+      const updatePosition = () => {
+        if (mobileQuery.matches) {
+          button.style.bottom = bottomOffset.mobile;
+        } else {
+          button.style.bottom = bottomOffset.desktop;
+        }
+      };
+      updatePosition();
+      mobileQuery.addEventListener('change', updatePosition);
+      return () => mobileQuery.removeEventListener('change', updatePosition);
+    }
+  }, [bottomOffset]);
 
   const buildMessageWithHistory = (currentText) => {
     const recent = messages.slice(-6);
@@ -299,9 +318,11 @@ Question actuelle: ${currentText}`;
   return (
     <>
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed right-4 bottom-24 sm:bottom-6 sm:right-6 z-40 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg transition hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-400"
+        className="fixed right-4 sm:right-6 z-40 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg transition hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-400"
+        style={!bottomOffset ? { bottom: '96px' } : {}}
         title="Assistant Pharmacie"
         aria-label="Ouvrir l'assistant"
       >

@@ -17,6 +17,9 @@ if (file_exists(__DIR__.'/hardware.php')) {
 if (file_exists(__DIR__.'/commerce.php')) {
     require __DIR__.'/commerce.php';
 }
+if (file_exists(__DIR__.'/ecommerce.php')) {
+    require __DIR__.'/ecommerce.php';
+}
 
 /**
  * Public Routes - Landing Page
@@ -50,14 +53,20 @@ Route::get('/dashboard', function (\Illuminate\Http\Request $request) {
         $hasPharmacy = $user->hasPermission('module.pharmacy');
         $hasHardware = $user->hasPermission('module.hardware');
         $hasCommerce = $user->hasPermission('module.commerce');
+        $hasEcommerce = $user->hasPermission('module.ecommerce');
+        // ROOT user → dashboard ROOT
         if ($user->isRoot()) {
-            return redirect()->route('pharmacy.dashboard', $request->only(['period']));
+            return redirect()->route('admin.dashboard');
         }
-        if ($hasHardware && !$hasPharmacy && !$hasCommerce) {
+        // E-commerce a la priorité si l'utilisateur a uniquement e-commerce
+        if ($hasEcommerce && !$hasPharmacy && !$hasHardware && !$hasCommerce) {
+            return redirect()->route('ecommerce.dashboard');
+        }
+        if ($hasHardware && !$hasPharmacy && !$hasCommerce && !$hasEcommerce) {
             return redirect()->route('hardware.dashboard');
         }
-        if ($hasCommerce && !$hasPharmacy && !$hasHardware) {
-            return redirect()->route('commerce.products.index');
+        if ($hasCommerce && !$hasPharmacy && !$hasHardware && !$hasEcommerce) {
+            return redirect()->route('commerce.dashboard');
         }
         if ($hasPharmacy) {
             return redirect()->route('pharmacy.dashboard', $request->only(['period']));
@@ -87,6 +96,20 @@ Route::middleware('auth')->group(function () {
  * Admin Routes - ROOT user only
  */
 Route::middleware(['auth', 'verified', 'root', 'permission'])->group(function () {
+    // Dashboard ROOT global (accessible par ROOT ou avec permission admin.dashboard.view)
+    Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])
+        ->middleware('permission:admin.dashboard.view')
+        ->name('admin.dashboard');
+    
+    // Exports dashboard ROOT (accessible par ROOT ou avec permission admin.dashboard.export)
+    Route::get('/admin/dashboard/export/pdf', [AdminController::class, 'exportPdf'])
+        ->middleware('permission:admin.dashboard.export')
+        ->name('admin.dashboard.export.pdf');
+    
+    Route::get('/admin/dashboard/export/excel', [AdminController::class, 'exportExcel'])
+        ->middleware('permission:admin.dashboard.export')
+        ->name('admin.dashboard.export.excel');
+    
     // Sélection de tenant
     Route::get('/admin/select-tenant', [AdminController::class, 'selectTenant'])
         ->name('admin.tenants.select.view');
@@ -112,6 +135,9 @@ Route::middleware(['auth', 'verified', 'root', 'permission'])->group(function ()
     
     // Gestion complète des utilisateurs
     Route::prefix('admin/users')->name('admin.users.')->group(function () {
+        Route::get('/{id}', [AdminController::class, 'showUser'])
+            ->name('show');
+        
         Route::post('/{id}/assign-role', [\Src\Infrastructure\User\Http\Controllers\UserManagementController::class, 'assignRole'])
             ->middleware('permission:users.assign_role')
             ->name('assign-role');

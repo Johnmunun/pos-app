@@ -4,6 +4,7 @@ return [
     App\Providers\AppServiceProvider::class,
     App\Providers\DomainServiceProvider::class,
     Src\Infrastructure\Pharmacy\Providers\PharmacyServiceProvider::class,
+    Src\Infrastructure\Ecommerce\Providers\EcommerceServiceProvider::class,
     Src\Infrastructure\Quincaillerie\Providers\QuincaillerieServiceProvider::class,
     Src\Infrastructure\GlobalCommerce\Providers\GlobalCommerceServiceProvider::class,
     Src\Infrastructure\Finance\Providers\FinanceServiceProvider::class,
