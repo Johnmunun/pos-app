@@ -37,6 +37,11 @@ final class UpdateProductUseCase
             throw new \InvalidArgumentException('Prix et stock minimum doivent être >= 0.');
         }
 
+        $stock = $dto->stock !== null ? new Quantity($dto->stock) : $product->getStock();
+        if ($stock->getValue() < 0) {
+            throw new \InvalidArgumentException('Le stock ne peut pas être négatif.');
+        }
+
         $updated = new Product(
             $product->getId(),
             $dto->shopId,
@@ -47,7 +52,7 @@ final class UpdateProductUseCase
             $dto->categoryId,
             new Money($dto->purchasePrice, $dto->currency),
             new Money($dto->salePrice, $dto->currency),
-            $product->getStock(),
+            $stock,
             new Quantity($dto->minimumStock),
             $dto->isWeighted,
             $dto->hasExpiration,

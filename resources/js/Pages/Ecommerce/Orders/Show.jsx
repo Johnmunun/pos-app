@@ -14,9 +14,9 @@ export default function OrderShow({ order }) {
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <Link href={route('ecommerce.orders.index')}>
-                            <Button variant="ghost" size="sm">
-                                <ArrowLeft className="h-4 w-4 mr-2" />
-                                Retour
+                            <Button variant="ghost" size="sm" className="inline-flex items-center gap-2">
+                                <ArrowLeft className="h-4 w-4 shrink-0" />
+                                <span>Retour</span>
                             </Button>
                         </Link>
                         <div className="flex items-center gap-2">

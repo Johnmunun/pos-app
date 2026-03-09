@@ -16,6 +16,7 @@ import {
     CheckCircle,
     XCircle,
     Clock,
+    Download,
 } from 'lucide-react';
 
 export default function OrderDetailModal({ order, show, onClose, onStatusUpdate, onPaymentStatusUpdate }) {
@@ -154,10 +155,21 @@ export default function OrderDetailModal({ order, show, onClose, onStatusUpdate,
                                             )}
                                         </p>
                                     </div>
-                                    <div className="text-right">
+                                    <div className="text-right flex flex-col items-end gap-1">
                                         <p className="font-medium text-gray-900 dark:text-white">
                                             {item.subtotal.toFixed(2)} {order.currency}
                                         </p>
+                                        {item.is_digital && item.download_link && (
+                                            <a
+                                                href={item.download_link}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                                            >
+                                                <Download className="h-4 w-4" />
+                                                Télécharger
+                                            </a>
+                                        )}
                                     </div>
                                 </div>
                             ))}

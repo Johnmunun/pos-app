@@ -86,11 +86,21 @@ class PharmacyExportService
         $settings = null;
         $currency = 'CDF';
         $shop = $shopId ? \App\Models\Shop::find($shopId) : null;
+        $tenantId = $user->tenant_id ?? $shopId;
 
         if ($shopId) {
             $settings = $this->getStoreSettingsUseCase->execute((string) $shopId);
             if ($shop && isset($shop->currency)) {
                 $currency = $shop->currency;
+            } else {
+                $defaultCurrency = \App\Models\Currency::where('tenant_id', $tenantId)
+                    ->where('is_active', true)
+                    ->orderByDesc('is_default')
+                    ->orderBy('code')
+                    ->first();
+                if ($defaultCurrency) {
+                    $currency = $defaultCurrency->code;
+                }
             }
         }
 

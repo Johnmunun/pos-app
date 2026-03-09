@@ -13,7 +13,7 @@ import {
     ArrowRight,
 } from 'lucide-react';
 
-export default function ShoppingCart() {
+export default function ShoppingCart({ buttonClassName }) {
     const { cart, updateQuantity, removeFromCart, getCartTotal, currency } = useCart();
     const [isOpen, setIsOpen] = useState(false);
     const [isMiniCartOpen, setIsMiniCartOpen] = useState(false);
@@ -41,7 +41,7 @@ export default function ShoppingCart() {
             {/* Mini Cart Button (Header) */}
             <button
                 onClick={() => setIsMiniCartOpen(true)}
-                className="relative p-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                className={buttonClassName ?? 'relative p-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors'}
             >
                 <ShoppingCartIcon className="h-6 w-6" />
                 {itemCount > 0 && (
@@ -161,11 +161,12 @@ export default function ShoppingCart() {
                     )}
                 </div>
 
-                {/* Overlay */}
+                {/* Overlay - clic pour fermer */}
                 {isMiniCartOpen && (
                     <div
-                        className="fixed inset-0 bg-black/50 z-40 sm:hidden"
+                        className="fixed inset-0 bg-black/50 z-40"
                         onClick={() => setIsMiniCartOpen(false)}
+                        aria-hidden="true"
                     />
                 )}
             </div>

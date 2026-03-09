@@ -3,10 +3,10 @@ import { useForm, usePage, router } from '@inertiajs/react';
 import Drawer from '@/Components/Drawer';
 import { Label } from '@/Components/ui/label';
 import { Input } from '@/Components/ui/input';
-import { Textarea } from '@/Components/ui/textarea';
 import { Button } from '@/Components/ui/button';
 import { Package, Hash, Image as ImageIcon, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import RichTextEditor from '@/Components/RichTextEditor';
 
 export default function CommerceProductDrawer({ isOpen, onClose, product = null, categories = [] }) {
     const isEditing = !!product;
@@ -48,6 +48,10 @@ export default function CommerceProductDrawer({ isOpen, onClose, product = null,
         status: product?.status ?? (product?.is_active ? 'active' : 'inactive'),
         image: null,
         remove_image: false,
+        download_url: product?.download_url ?? '',
+        download_file: null,
+        remove_download: false,
+        requires_shipping: product?.requires_shipping ?? true,
     });
 
     useEffect(() => {
@@ -82,6 +86,10 @@ export default function CommerceProductDrawer({ isOpen, onClose, product = null,
                 status: product.status ?? (product.is_active !== false ? 'active' : 'inactive'),
                 image: null,
                 remove_image: false,
+                download_url: product.download_url ?? '',
+                download_file: null,
+                remove_download: false,
+                requires_shipping: product.requires_shipping ?? true,
             }));
             setImagePreview(product.image_url || null);
         } else if (isOpen && !product) {
@@ -117,6 +125,10 @@ export default function CommerceProductDrawer({ isOpen, onClose, product = null,
                 status: 'active',
                 image: null,
                 remove_image: false,
+                download_url: '',
+                download_file: null,
+                remove_download: false,
+                requires_shipping: true,
             }));
             setImagePreview(null);
         } else if (!isOpen) {
@@ -364,12 +376,10 @@ export default function CommerceProductDrawer({ isOpen, onClose, product = null,
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="description">Description</Label>
-                        <Textarea
-                            id="description"
+                        <RichTextEditor
                             value={data.description}
-                            onChange={(e) => setData('description', e.target.value)}
-                            placeholder="Description du produit"
-                            className="bg-white dark:bg-slate-800 text-gray-900 dark:text-white min-h-[80px]"
+                            onChange={(content) => setData('description', content)}
+                            placeholder="Description détaillée du produit (texte enrichi, listes, liens...)"
                         />
                         {errors.description && (
                             <p className="text-sm text-red-600 dark:text-red-400">
@@ -492,6 +502,75 @@ export default function CommerceProductDrawer({ isOpen, onClose, product = null,
                         Options avancées (facultatif)
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="product_type">Type de produit</Label>
+                            <select
+                                id="product_type"
+                                value={data.product_type || ''}
+                                onChange={(e) => {
+                                    setData('product_type', e.target.value);
+                                    if (e.target.value === 'digital') {
+                                        setData('requires_shipping', false);
+                                    }
+                                }}
+                                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm"
+                            >
+                                <option value="">—</option>
+                                <option value="simple">Simple</option>
+                                <option value="variable">Variable</option>
+                                <option value="service">Service</option>
+                                <option value="digital">Digital (téléchargement)</option>
+                            </select>
+                        </div>
+                        {data.product_type === 'digital' && (
+                            <>
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label htmlFor="download_url">URL de téléchargement</Label>
+                                    <Input
+                                        id="download_url"
+                                        type="url"
+                                        value={data.download_url}
+                                        onChange={(e) => setData('download_url', e.target.value)}
+                                        placeholder="https://..."
+                                        className="bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+                                    />
+                                    <p className="text-xs text-gray-500">Ou joignez un fichier ci-dessous</p>
+                                </div>
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label htmlFor="download_file">Fichier à télécharger</Label>
+                                    <Input
+                                        id="download_file"
+                                        type="file"
+                                        accept=".pdf,.mp3,.mp4,.zip,.doc,.docx,.xls,.xlsx,.txt"
+                                        onChange={(e) => setData('download_file', e.target.files?.[0] || null)}
+                                        className="bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+                                    />
+                                    {product?.download_path && (
+                                        <label className="inline-flex items-center gap-2 cursor-pointer mt-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={data.remove_download}
+                                                onChange={(e) => setData('remove_download', e.target.checked)}
+                                                className="rounded border-gray-300"
+                                            />
+                                            <span className="text-sm">Supprimer le fichier actuel</span>
+                                        </label>
+                                    )}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="inline-flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={data.requires_shipping}
+                                            onChange={(e) => setData('requires_shipping', e.target.checked)}
+                                            className="rounded border-gray-300"
+                                        />
+                                        <span>Nécessite une livraison</span>
+                                    </Label>
+                                    <p className="text-xs text-gray-500">Décoché pour les produits 100% digitaux</p>
+                                </div>
+                            </>
+                        )}
                         <div className="space-y-2 md:col-span-2">
                             <Label className="inline-flex items-center gap-2 cursor-pointer">
                                 <input

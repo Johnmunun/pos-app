@@ -337,6 +337,9 @@ ecommerce:
   - ecommerce.report.view
   - ecommerce.report.export
   - ecommerce.analytics.view
+  # CMS (contenu du site)
+  - ecommerce.cms.view
+  - ecommerce.cms.manage
   # Paramètres boutique
   - ecommerce.settings.view
   - ecommerce.settings.update

@@ -1,9 +1,8 @@
 import { useState, useMemo } from 'react';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
-import { Badge } from '@/Components/ui/badge';
 import { CartProvider, useCart } from '@/Contexts/CartContext';
 import ShoppingCart from '@/Components/Ecommerce/ShoppingCart';
 import ProductCard from '@/Components/Ecommerce/ProductCard';
@@ -11,16 +10,16 @@ import {
     Search,
     Package,
     Filter,
-    RefreshCw,
     Grid,
     List,
     SlidersHorizontal,
     X,
+    Eye,
 } from 'lucide-react';
 
 function CatalogContent({ products = [], categories = [], filters = {} }) {
-    const { auth, shop } = usePage().props;
-    const { addToCart, cart } = useCart();
+    const { shop } = usePage().props;
+    const { addToCart } = useCart();
     const currency = shop?.currency || 'USD';
 
     const [search, setSearch] = useState(filters.search || '');
@@ -98,69 +97,56 @@ function CatalogContent({ products = [], categories = [], filters = {} }) {
         router.get(route('ecommerce.catalog.index'), {}, { preserveState: true });
     };
 
-    const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('fr-FR', {
-            style: 'currency',
-            currency: currency || 'USD',
-        }).format(amount);
-    };
+    const selectClass =
+        'w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-colors appearance-none cursor-pointer';
 
     return (
         <>
-            <Head title="Catalogue Ecommerce" />
+            <Head title="Catalogue - Boutique" />
 
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-                {/* Hero Section */}
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-12">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <h1 className="text-4xl font-bold mb-2">Boutique en ligne</h1>
-                        <p className="text-blue-100 text-lg">
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+                {/* Hero - Desktop: large, Mobile: compact */}
+                <div className="relative overflow-hidden bg-gradient-to-br from-amber-500 via-amber-600 to-amber-700 dark:from-amber-600 dark:via-amber-700 dark:to-amber-800">
+                    <div className="absolute inset-0 opacity-10 bg-[length:24px_24px] [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.4)_1px,transparent_0)]" />
+                    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 lg:py-14">
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight drop-shadow-sm">
+                            Boutique en ligne
+                        </h1>
+                        <p className="mt-1 sm:mt-2 text-amber-100 text-sm sm:text-base lg:text-lg max-w-xl">
                             Découvrez notre sélection de produits de qualité
                         </p>
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    {/* Search and Filters Bar */}
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-                        <div className="flex flex-col lg:flex-row gap-4">
-                            {/* Search */}
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4 sm:-mt-6 lg:-mt-8 relative z-10">
+                    {/* Search + Filters bar */}
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg shadow-slate-200/50 dark:shadow-slate-900/50 border border-slate-200/60 dark:border-slate-700/60 p-4 sm:p-5 mb-6">
+                        {/* Row 1: Search + Category (mobile: stacked, desktop: inline) */}
+                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                             <div className="flex-1 relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none" />
                                 <Input
                                     type="text"
                                     placeholder="Rechercher un produit..."
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
-                                    onKeyPress={(e) => {
-                                        if (e.key === 'Enter') {
-                                            handleFilter();
-                                        }
-                                    }}
-                                    className="pl-10"
+                                    onKeyPress={(e) => e.key === 'Enter' && handleFilter()}
+                                    className="pl-11 h-12 rounded-xl border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/50 focus:ring-2 focus:ring-amber-500/30 text-base"
                                 />
                             </div>
-
-                            {/* Category Filter */}
-                            <div className="w-full lg:w-64">
+                            <div className="flex flex-col sm:flex-row gap-3 sm:gap-3 sm:items-center">
                                 <select
-                                    className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm"
+                                    className={selectClass + ' sm:w-56'}
                                     value={selectedCategory}
                                     onChange={(e) => setSelectedCategory(e.target.value)}
                                 >
                                     <option value="">Toutes les catégories</option>
-                                    {categories.map((category) => (
-                                        <option key={category.id} value={category.id}>
-                                            {category.name}
-                                        </option>
+                                    {categories.map((c) => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
                                     ))}
                                 </select>
-                            </div>
-
-                            {/* Sort */}
-                            <div className="w-full lg:w-48">
                                 <select
-                                    className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm"
+                                    className={selectClass + ' sm:w-48'}
                                     value={sortBy}
                                     onChange={(e) => setSortBy(e.target.value)}
                                 >
@@ -168,70 +154,72 @@ function CatalogContent({ products = [], categories = [], filters = {} }) {
                                     <option value="price_asc">Prix croissant</option>
                                     <option value="price_desc">Prix décroissant</option>
                                 </select>
-                            </div>
-
-                            {/* View Mode Toggle */}
-                            <div className="flex gap-2">
-                                <Button
-                                    variant={viewMode === 'grid' ? 'default' : 'outline'}
-                                    size="icon"
-                                    onClick={() => setViewMode('grid')}
-                                >
-                                    <Grid className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                    variant={viewMode === 'list' ? 'default' : 'outline'}
-                                    size="icon"
-                                    onClick={() => setViewMode('list')}
-                                >
-                                    <List className="h-4 w-4" />
-                                </Button>
+                                {/* View mode - hidden on very small screens */}
+                                <div className="hidden sm:flex gap-1.5">
+                                    <Button
+                                        variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                                        size="sm"
+                                        className="h-10 w-10 rounded-xl"
+                                        onClick={() => setViewMode('grid')}
+                                    >
+                                        <Grid className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant={viewMode === 'list' ? 'default' : 'ghost'}
+                                        size="sm"
+                                        className="h-10 w-10 rounded-xl"
+                                        onClick={() => setViewMode('list')}
+                                    >
+                                        <List className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                                {/* Mobile: filters toggle */}
                                 <Button
                                     variant={showFilters ? 'default' : 'outline'}
-                                    size="icon"
+                                    size="sm"
+                                    className="sm:ml-auto gap-2 rounded-xl h-12 sm:h-10"
                                     onClick={() => setShowFilters(!showFilters)}
                                 >
                                     <SlidersHorizontal className="h-4 w-4" />
+                                    <span className="sm:hidden">Filtres avancés</span>
                                 </Button>
                             </div>
                         </div>
 
-                        {/* Advanced Filters */}
+                        {/* Advanced Filters (collapsible) */}
                         {showFilters && (
-                            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                                             Prix minimum
                                         </label>
                                         <Input
                                             type="number"
                                             placeholder="0"
                                             value={priceRange.min}
-                                            onChange={(e) =>
-                                                setPriceRange({ ...priceRange, min: e.target.value })
-                                            }
+                                            onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
+                                            className="rounded-xl"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                                             Prix maximum
                                         </label>
                                         <Input
                                             type="number"
                                             placeholder="1000"
                                             value={priceRange.max}
-                                            onChange={(e) =>
-                                                setPriceRange({ ...priceRange, max: e.target.value })
-                                            }
+                                            onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
+                                            className="rounded-xl"
                                         />
                                     </div>
-                                    <div className="flex items-end gap-2">
-                                        <Button onClick={handleFilter} variant="outline" className="gap-2">
+                                    <div className="flex items-end gap-2 sm:col-span-2">
+                                        <Button onClick={handleFilter} variant="default" className="gap-2 rounded-xl">
                                             <Filter className="h-4 w-4" />
                                             Appliquer
                                         </Button>
-                                        <Button onClick={clearFilters} variant="outline" size="icon">
+                                        <Button onClick={clearFilters} variant="outline" size="icon" className="rounded-xl">
                                             <X className="h-4 w-4" />
                                         </Button>
                                     </div>
@@ -240,24 +228,42 @@ function CatalogContent({ products = [], categories = [], filters = {} }) {
                         )}
                     </div>
 
-                    {/* Results Count */}
-                    <div className="mb-4 flex items-center justify-between">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {filteredAndSortedProducts.length} produit(s) trouvé(s)
+                    {/* Results count + optional mobile view toggle */}
+                    <div className="flex items-center justify-between mb-4 sm:mb-5">
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                            {filteredAndSortedProducts.length} produit{filteredAndSortedProducts.length !== 1 ? 's' : ''} trouvé{filteredAndSortedProducts.length !== 1 ? 's' : ''}
                         </p>
+                        <div className="sm:hidden flex gap-1">
+                            <button
+                                type="button"
+                                onClick={() => setViewMode('grid')}
+                                className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' : 'text-slate-400'}`}
+                            >
+                                <Grid className="h-4 w-4" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setViewMode('list')}
+                                className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' : 'text-slate-400'}`}
+                            >
+                                <List className="h-4 w-4" />
+                            </button>
+                        </div>
                     </div>
 
-                    {/* Products Grid/List */}
+                    {/* Products */}
                     {filteredAndSortedProducts.length === 0 ? (
-                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
-                            <Package className="h-16 w-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
-                            <p className="text-lg font-medium text-gray-600 dark:text-gray-300 mb-2">
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-8 sm:p-12 lg:p-16 text-center">
+                            <div className="w-20 h-20 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-6">
+                                <Package className="h-10 w-10 text-slate-400" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2">
                                 Aucun produit trouvé
+                            </h3>
+                            <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-sm mx-auto">
+                                Essayez de modifier vos filtres ou votre recherche
                             </p>
-                            <p className="text-gray-500 dark:text-gray-400 mb-4">
-                                Essayez de modifier vos filtres de recherche
-                            </p>
-                            <Button onClick={clearFilters} variant="outline">
+                            <Button onClick={clearFilters} variant="outline" className="rounded-xl">
                                 Réinitialiser les filtres
                             </Button>
                         </div>
@@ -265,8 +271,8 @@ function CatalogContent({ products = [], categories = [], filters = {} }) {
                         <div
                             className={
                                 viewMode === 'grid'
-                                    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
-                                    : 'space-y-4'
+                                    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6'
+                                    : 'space-y-4 sm:space-y-5'
                             }
                         >
                             {filteredAndSortedProducts.map((product) => (
@@ -299,9 +305,16 @@ export default function CatalogIndex({ products = [], categories = [], filters =
                             <div className="flex items-center gap-2">
                                 <Package className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                                 <h2 className="font-semibold text-xl text-gray-800 dark:text-white leading-tight">
-                                    Boutique
+                                    Catalogue
                                 </h2>
                             </div>
+                            <Link
+                                href={route('ecommerce.storefront.index')}
+                                className="inline-flex items-center gap-2 rounded-lg border border-amber-500/60 px-3 py-1.5 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                            >
+                                <Eye className="h-4 w-4" />
+                                Prévisualiser la boutique
+                            </Link>
                         </div>
                         <div className="flex items-center gap-4">
                             <ShoppingCart />

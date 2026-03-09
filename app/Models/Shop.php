@@ -29,6 +29,7 @@ class Shop extends Model
         'email',
         'currency',
         'default_tax_rate',
+        'ecommerce_storefront_config',
         'is_active',
     ];
 
@@ -42,6 +43,7 @@ class Shop extends Model
         return [
             'is_active' => 'boolean',
             'default_tax_rate' => 'decimal:2',
+            'ecommerce_storefront_config' => 'array',
         ];
     }
 

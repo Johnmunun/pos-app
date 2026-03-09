@@ -123,9 +123,9 @@ export default function RootDashboard() {
       <Head title="Dashboard ROOT" />
 
       <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
-        {/* Header */}
+        {/* Header - full width */}
         <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard ROOT</h1>

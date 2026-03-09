@@ -130,7 +130,7 @@ export default function AppLayout({ children, header, fullWidth = false }) {
                 {/* Header optionnel */}
                 {header && (
                     <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
+                        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
                             {header}
                         </div>
                     </header>

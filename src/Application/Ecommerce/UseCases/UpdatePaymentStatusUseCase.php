@@ -2,13 +2,15 @@
 
 namespace Src\Application\Ecommerce\UseCases;
 
+use Src\Application\Ecommerce\Services\GenerateDownloadTokensService;
 use Src\Domain\Ecommerce\Entities\Order;
 use Src\Domain\Ecommerce\Repositories\OrderRepositoryInterface;
 
 class UpdatePaymentStatusUseCase
 {
     public function __construct(
-        private readonly OrderRepositoryInterface $orderRepository
+        private readonly OrderRepositoryInterface $orderRepository,
+        private readonly GenerateDownloadTokensService $generateDownloadTokensService
     ) {
     }
 
@@ -23,6 +25,7 @@ class UpdatePaymentStatusUseCase
         switch ($paymentStatus) {
             case Order::PAYMENT_STATUS_PAID:
                 $order->markPaymentAsPaid();
+                $this->generateDownloadTokensService->generateForOrder($orderId);
                 break;
             case Order::PAYMENT_STATUS_FAILED:
                 $order->markPaymentAsFailed();

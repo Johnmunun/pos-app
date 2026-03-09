@@ -2,15 +2,16 @@ import React from 'react';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { router } from '@inertiajs/react';
 
-export function Pagination({ pagination, filters = {} }) {
+export function Pagination({ pagination, filters = {}, routeName }) {
     if (!pagination || pagination.last_page <= 1) {
         return null;
     }
 
     const { current_page, last_page, per_page, total, from, to } = pagination;
+    const targetRoute = routeName || 'pharmacy.categories.index';
 
     const handlePageChange = (page) => {
-        router.get(route('pharmacy.categories.index'), {
+        router.get(route(targetRoute), {
             ...filters,
             page
         }, {
@@ -20,7 +21,7 @@ export function Pagination({ pagination, filters = {} }) {
     };
 
     const handlePerPageChange = (newPerPage) => {
-        router.get(route('pharmacy.categories.index'), {
+        router.get(route(targetRoute), {
             ...filters,
             per_page: newPerPage,
             page: 1

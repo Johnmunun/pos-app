@@ -20,12 +20,26 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 
-export default function OrderDrawer({ isOpen, onClose, order = null, products = [], initialCart = [] }) {
+export default function OrderDrawer({
+    isOpen,
+    onClose,
+    order = null,
+    products = [],
+    initialCart = [],
+    shippingMethods = [],
+    paymentMethods = [],
+    shippingAmount = 0,
+    taxRate = 0,
+    taxAmount = 0,
+    couponDiscount = 0,
+    selectedShippingId = '',
+    selectedPaymentCode = '',
+}) {
     const isEditing = !!order;
     const { shop } = usePage().props;
     const defaultCurrency = shop?.currency || 'USD';
+    const fromCart = initialCart?.length > 0 && (shippingMethods?.length > 0 || paymentMethods?.length > 0);
 
-    // Transformer le panier en items pour le formulaire
     const getInitialItems = () => {
         if (order && order.items) {
             return order.items;
@@ -84,26 +98,27 @@ export default function OrderDrawer({ isOpen, onClose, order = null, products = 
                 items: order.items || [],
             });
         } else {
-            // Utiliser le panier initial si disponible
             const initialItems = getInitialItems();
+            const subtotal = initialItems.reduce((s, i) => s + (i.unit_price * i.quantity) - (i.discount_amount || 0), 0);
+            const tax = fromCart && taxRate ? subtotal * (taxRate / 100) : 0;
             setFormData({
                 customer_name: '',
                 customer_email: '',
                 customer_phone: '',
                 shipping_address: '',
                 billing_address: '',
-                subtotal_amount: 0,
-                shipping_amount: 0,
-                tax_amount: 0,
-                discount_amount: 0,
+                subtotal_amount: subtotal,
+                shipping_amount: fromCart ? (shippingAmount ?? 0) : 0,
+                tax_amount: fromCart ? (taxAmount ?? tax) : 0,
+                discount_amount: fromCart ? (couponDiscount ?? 0) : 0,
                 currency: defaultCurrency,
-                payment_method: '',
+                payment_method: fromCart ? (selectedPaymentCode ?? '') : '',
                 notes: '',
                 items: initialItems,
             });
         }
         setErrors({});
-    }, [order, isOpen, defaultCurrency, initialCart]);
+    }, [order, isOpen, defaultCurrency, initialCart, fromCart, shippingAmount, taxAmount, couponDiscount, selectedPaymentCode]);
 
     const calculateSubtotal = () => {
         return formData.items.reduce((sum, item) => {
@@ -442,59 +457,98 @@ export default function OrderDrawer({ isOpen, onClose, order = null, products = 
                             Totaux
                         </h3>
 
+                        {paymentMethods?.length > 0 && (
+                            <div>
+                                <Label className="font-normal">Mode de paiement</Label>
+                                <select
+                                    value={formData.payment_method}
+                                    onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+                                    className="w-full mt-1 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm"
+                                >
+                                    <option value="">Sélectionner</option>
+                                    {paymentMethods.map((m) => (
+                                        <option key={m.id} value={m.code ?? m.name}>
+                                            {m.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
                         <div className="space-y-2">
                             <div className="flex justify-between">
                                 <span className="text-gray-600 dark:text-gray-400">Sous-total</span>
                                 <span className="font-medium">{calculateSubtotal().toFixed(2)} {formData.currency}</span>
                             </div>
 
-                            <div className="flex justify-between">
-                                <Label htmlFor="shipping_amount" className="font-normal">Frais de livraison</Label>
-                                <div className="flex items-center gap-2">
-                                    <Input
-                                        id="shipping_amount"
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        value={formData.shipping_amount}
-                                        onChange={(e) => setFormData({ ...formData, shipping_amount: parseFloat(e.target.value) || 0 })}
-                                        className="w-24"
-                                    />
-                                    <span>{formData.currency}</span>
+                            {fromCart && shippingMethods?.length > 0 ? (
+                                <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                                    <span>Frais de livraison</span>
+                                    <span>{formData.shipping_amount.toFixed(2)} {formData.currency}</span>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="flex justify-between">
+                                    <Label htmlFor="shipping_amount" className="font-normal">Frais de livraison</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            id="shipping_amount"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={formData.shipping_amount}
+                                            onChange={(e) => setFormData({ ...formData, shipping_amount: parseFloat(e.target.value) || 0 })}
+                                            className="w-24"
+                                        />
+                                        <span>{formData.currency}</span>
+                                    </div>
+                                </div>
+                            )}
 
-                            <div className="flex justify-between">
-                                <Label htmlFor="tax_amount" className="font-normal">Taxes</Label>
-                                <div className="flex items-center gap-2">
-                                    <Input
-                                        id="tax_amount"
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        value={formData.tax_amount}
-                                        onChange={(e) => setFormData({ ...formData, tax_amount: parseFloat(e.target.value) || 0 })}
-                                        className="w-24"
-                                    />
-                                    <span>{formData.currency}</span>
+                            {fromCart && taxRate ? (
+                                <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                                    <span>Taxes ({taxRate}%)</span>
+                                    <span>{formData.tax_amount.toFixed(2)} {formData.currency}</span>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="flex justify-between">
+                                    <Label htmlFor="tax_amount" className="font-normal">Taxes</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            id="tax_amount"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={formData.tax_amount}
+                                            onChange={(e) => setFormData({ ...formData, tax_amount: parseFloat(e.target.value) || 0 })}
+                                            className="w-24"
+                                        />
+                                        <span>{formData.currency}</span>
+                                    </div>
+                                </div>
+                            )}
 
-                            <div className="flex justify-between">
-                                <Label htmlFor="discount_amount" className="font-normal">Remise globale</Label>
-                                <div className="flex items-center gap-2">
-                                    <Input
-                                        id="discount_amount"
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        value={formData.discount_amount}
-                                        onChange={(e) => setFormData({ ...formData, discount_amount: parseFloat(e.target.value) || 0 })}
-                                        className="w-24"
-                                    />
-                                    <span>{formData.currency}</span>
+                            {fromCart && couponDiscount > 0 ? (
+                                <div className="flex justify-between text-green-600 dark:text-green-400">
+                                    <span>Réduction promo</span>
+                                    <span>-{formData.discount_amount.toFixed(2)} {formData.currency}</span>
                                 </div>
-                            </div>
+                            ) : !fromCart && (
+                                <div className="flex justify-between">
+                                    <Label htmlFor="discount_amount" className="font-normal">Remise globale</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            id="discount_amount"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={formData.discount_amount}
+                                            onChange={(e) => setFormData({ ...formData, discount_amount: parseFloat(e.target.value) || 0 })}
+                                            className="w-24"
+                                        />
+                                        <span>{formData.currency}</span>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="flex justify-between text-lg font-bold border-t border-gray-200 dark:border-gray-700 pt-2">
                                 <span>Total</span>

@@ -57,27 +57,45 @@ class OrderController
         $from = $request->input('from') ? Carbon::parse($request->input('from')) : null;
         $to = $request->input('to') ? Carbon::parse($request->input('to')) : null;
         $status = $request->input('status');
+        $search = $request->input('search', '');
 
-        $orders = $this->orderRepository->findByShop(
-            $shopId,
-            $from ? \DateTimeImmutable::createFromMutable($from) : null,
-            $to ? \DateTimeImmutable::createFromMutable($to) : null,
-            $status
-        );
+        $query = \Src\Infrastructure\Ecommerce\Models\OrderModel::query()->where('shop_id', $shopId);
 
-        $ordersData = array_map(function ($order) {
+        if ($from) {
+            $query->where('created_at', '>=', $from->copy()->startOfDay());
+        }
+        if ($to) {
+            $query->where('created_at', '<=', $to->copy()->endOfDay());
+        }
+        if ($status) {
+            $query->where('status', $status);
+        }
+        if ($search !== '') {
+            $term = '%' . $search . '%';
+            $query->where(function ($q) use ($term) {
+                $q->where('order_number', 'like', $term)
+                    ->orWhere('customer_name', 'like', $term)
+                    ->orWhere('customer_email', 'like', $term);
+            });
+        }
+
+        $perPage = (int) $request->input('per_page', 15);
+        $perPage = max(10, min(100, $perPage));
+        $paginator = $query->orderBy('created_at', 'desc')->paginate($perPage)->withQueryString();
+
+        $ordersData = collect($paginator->items())->map(function ($model) {
             return [
-                'id' => $order->getId(),
-                'order_number' => $order->getOrderNumber(),
-                'status' => $order->getStatus(),
-                'customer_name' => $order->getCustomerName(),
-                'customer_email' => $order->getCustomerEmail(),
-                'total_amount' => $order->getTotal()->getAmount(),
-                'currency' => $order->getCurrency(),
-                'payment_status' => $order->getPaymentStatus(),
-                'created_at' => $order->getCreatedAt()->format('d/m/Y H:i'),
+                'id' => $model->id,
+                'order_number' => $model->order_number,
+                'status' => $model->status,
+                'customer_name' => $model->customer_name,
+                'customer_email' => $model->customer_email,
+                'total_amount' => (float) $model->total_amount,
+                'currency' => $model->currency ?? 'USD',
+                'payment_status' => $model->payment_status,
+                'created_at' => $model->created_at?->format('d/m/Y H:i') ?? '',
             ];
-        }, $orders);
+        })->all();
 
         // Stats
         $stats = [
@@ -96,6 +114,15 @@ class OrderController
                 'from' => $from?->format('Y-m-d'),
                 'to' => $to?->format('Y-m-d'),
                 'status' => $status,
+                'search' => $search,
+            ],
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'from' => $paginator->firstItem(),
+                'to' => $paginator->lastItem(),
             ],
         ]);
     }
@@ -113,6 +140,7 @@ class OrderController
         }
 
         $items = $this->orderItemRepository->findByOrderId($id);
+        $itemModels = \Src\Infrastructure\Ecommerce\Models\OrderItemModel::where('order_id', $id)->get()->keyBy('id');
 
         $orderData = [
             'id' => $order->getId(),
@@ -137,7 +165,12 @@ class OrderController
             'delivered_at' => $order->getDeliveredAt()?->format('d/m/Y H:i'),
             'cancelled_at' => $order->getCancelledAt()?->format('d/m/Y H:i'),
             'created_at' => $order->getCreatedAt()->format('d/m/Y H:i'),
-            'items' => array_map(function ($item) {
+            'items' => array_map(function ($item) use ($itemModels) {
+                $model = $itemModels[$item->getId()] ?? null;
+                $downloadLink = null;
+                if ($model?->is_digital && $model?->download_token) {
+                    $downloadLink = route('ecommerce.download', ['token' => $model->download_token]);
+                }
                 return [
                     'id' => $item->getId(),
                     'product_id' => $item->getProductId(),
@@ -148,6 +181,8 @@ class OrderController
                     'discount_amount' => $item->getDiscountAmount()->getAmount(),
                     'subtotal' => $item->getSubtotal()->getAmount(),
                     'product_image_url' => $item->getProductImageUrl(),
+                    'is_digital' => (bool) ($model?->is_digital ?? false),
+                    'download_link' => $downloadLink,
                 ];
             }, $items),
         ];

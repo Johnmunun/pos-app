@@ -119,6 +119,9 @@ class EloquentProductRepository implements ProductRepositoryInterface
         if (isset($filters['is_active']) && $filters['is_active'] === true) {
             $q->where('is_active', true);
         }
+        if (isset($filters['is_published_ecommerce']) && $filters['is_published_ecommerce'] === true) {
+            $q->where('is_published_ecommerce', true);
+        }
         $models = $q->with('category')->orderBy('name')->get();
         return $models->map(fn (ProductModel $m) => $this->toDomainEntity($m))->toArray();
     }

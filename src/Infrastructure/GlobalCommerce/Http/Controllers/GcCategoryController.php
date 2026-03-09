@@ -203,6 +203,145 @@ class GcCategoryController
     }
 
     /**
+     * Aperçu de l'import de catégories (validation sans insertion).
+     */
+    public function importPreview(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,csv,txt|max:10240',
+        ], [
+            'file.required' => 'Veuillez sélectionner un fichier.',
+            'file.mimes' => 'Le fichier doit être au format .xlsx ou .csv.',
+            'file.max' => 'Le fichier ne doit pas dépasser 10 Mo.',
+        ]);
+
+        $shopId = $this->getShopId($request);
+        $file = $request->file('file');
+        $path = $file->getRealPath();
+
+        $sampleHeader = [];
+        $sampleRows = [];
+        try {
+            $ext = strtolower($file->getClientOriginalExtension());
+            if ($ext === 'csv' || $ext === 'txt') {
+                $reader = new Csv();
+                $handle = fopen($path, 'r');
+                $line = $handle ? fgets($handle) : null;
+                if ($handle) {
+                    fclose($handle);
+                }
+                $delimiter = $line !== null && strpos($line, ';') !== false ? ';' : ',';
+                $reader->setDelimiter($delimiter);
+                $reader->setInputEncoding('UTF-8');
+                $spreadsheet = $reader->load($path);
+            } else {
+                $spreadsheet = IOFactory::load($path);
+            }
+            $sheet = $spreadsheet->getActiveSheet();
+            $allRows = $sheet->toArray();
+            $sampleHeader = $allRows[0] ?? [];
+            $dataRows = array_slice($allRows, 1);
+            $sampleRows = array_slice($dataRows, 0, 20);
+        } catch (\Throwable $e) {
+            Log::error('GcCategory import preview: parse error', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Impossible de lire le fichier : ' . $e->getMessage()], 422);
+        }
+
+        $rows = $sheet->toArray();
+        if (empty($rows)) {
+            return response()->json([
+                'total' => 0,
+                'valid' => 0,
+                'invalid' => 0,
+                'errors' => [],
+                'sample' => ['header' => [], 'rows' => []],
+            ]);
+        }
+
+        $headerRow = array_map('trim', array_map('strtolower', (array) $rows[0]));
+        $dataRows = array_slice($rows, 1);
+
+        if (!in_array('nom', $headerRow, true)) {
+            return response()->json([
+                'message' => "Colonne obligatoire manquante : 'nom'.",
+                'total' => count($dataRows),
+                'valid' => 0,
+                'invalid' => count($dataRows),
+                'errors' => [['line' => 1, 'field' => 'nom', 'message' => "Colonne obligatoire manquante : 'nom'."]],
+                'sample' => ['header' => $sampleHeader, 'rows' => $sampleRows],
+            ], 422);
+        }
+
+        $existing = CategoryModel::where('shop_id', $shopId)->get(['id', 'name']);
+        $existingByName = [];
+        foreach ($existing as $cat) {
+            $existingByName[mb_strtolower($cat->name)] = $cat->id;
+        }
+
+        $seenNames = [];
+        $valid = 0;
+        $invalid = 0;
+        $errorsDetailed = [];
+
+        foreach ($dataRows as $index => $row) {
+            $lineNum = $index + 2;
+            $rowAssoc = [];
+            foreach ($headerRow as $i => $key) {
+                $rowAssoc[$key] = isset($row[$i]) ? trim((string) $row[$i]) : '';
+            }
+
+            if (!array_filter($rowAssoc, fn ($v) => $v !== '' && $v !== null)) {
+                continue;
+            }
+
+            $lineErrors = [];
+            $name = $rowAssoc['nom'] ?? '';
+            if ($name === '') {
+                $lineErrors[] = 'Nom obligatoire.';
+            } else {
+                $lower = mb_strtolower($name);
+                if (isset($existingByName[$lower])) {
+                    $lineErrors[] = "Catégorie déjà existante : {$name}.";
+                }
+                if (isset($seenNames[$lower])) {
+                    $lineErrors[] = "Nom en double dans le fichier : {$name}.";
+                }
+            }
+
+            $parentRaw = $rowAssoc['parent'] ?? '';
+            if ($parentRaw !== '') {
+                $parentId = $existing->firstWhere('id', $parentRaw)?->id ?? ($existingByName[mb_strtolower($parentRaw)] ?? null);
+                if ($parentId === null) {
+                    $lineErrors[] = "Catégorie parente introuvable : {$parentRaw}.";
+                }
+            }
+
+            $orderRaw = $rowAssoc['ordre'] ?? '';
+            if ($orderRaw !== '' && !is_numeric($orderRaw)) {
+                $lineErrors[] = 'Ordre doit être un nombre.';
+            }
+
+            if (!empty($lineErrors)) {
+                $invalid++;
+                $errorsDetailed[] = ['line' => $lineNum, 'field' => null, 'message' => implode(' | ', $lineErrors)];
+            } else {
+                $valid++;
+                if ($name !== '') {
+                    $seenNames[mb_strtolower($name)] = true;
+                }
+            }
+        }
+
+        return response()->json([
+            'total' => count($dataRows),
+            'valid' => $valid,
+            'invalid' => $invalid,
+            'errors' => $errorsDetailed,
+            'sample' => ['header' => $sampleHeader, 'rows' => $sampleRows],
+        ]);
+    }
+
+    /**
      * Import simple de catégories Global Commerce.
      */
     public function import(Request $request): JsonResponse

@@ -216,8 +216,11 @@ class CommerceVoiceController
         if (!$user) {
             return null;
         }
+        if (!\Illuminate\Support\Facades\Schema::hasTable('shops')) {
+            return null;
+        }
         $depotId = $request->session()->get('current_depot_id');
-        if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
+        if ($depotId && $user->tenant_id) {
             $shop = \App\Models\Shop::where('depot_id', $depotId)->where('tenant_id', $user->tenant_id)->first();
             if ($shop) {
                 return (string) $shop->id;
@@ -226,7 +229,14 @@ class CommerceVoiceController
         if ($user->shop_id !== null && $user->shop_id !== '') {
             return (string) $user->shop_id;
         }
-        return $user->tenant_id ? (string) $user->tenant_id : null;
+        // Fallback: premier shop du tenant (fréquent quand dépôt non lié à un shop en GlobalCommerce)
+        if ($user->tenant_id) {
+            $shop = \App\Models\Shop::where('tenant_id', $user->tenant_id)->first();
+            if ($shop) {
+                return (string) $shop->id;
+            }
+        }
+        return null;
     }
 
     private function getSettings(string $shopId): array

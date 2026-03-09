@@ -14,7 +14,7 @@
             <div class="summary-row">
                 <span class="summary-label">Montant total</span>
                 <span class="summary-value">
-                    {{ number_format($summary['total_amount'] ?? 0, 2, ',', ' ') }} {{ $header['currency'] ?? 'USD' }}
+                    {{ number_format($summary['total_amount'] ?? $summary['amount'] ?? 0, 2, ',', ' ') }} {{ $header['currency'] ?? 'CDF' }}
                 </span>
             </div>
         </div>
@@ -40,9 +40,9 @@
                 <td class="nowrap">{{ $item['date'] }}</td>
                 <td>{{ $item['customer_name'] ?? 'Client comptoir' }}</td>
                 <td class="align-right">
-                    {{ number_format($item['total_amount'] ?? 0, 2, ',', ' ') }} {{ $item['currency'] ?? $header['currency'] ?? 'USD' }}
+                    {{ number_format($item['total_amount'] ?? $item['total'] ?? 0, 2, ',', ' ') }} {{ $item['currency'] ?? $header['currency'] ?? 'CDF' }}
                 </td>
-                <td>{{ $item['currency'] ?? $header['currency'] ?? 'USD' }}</td>
+                <td>{{ $item['currency'] ?? $header['currency'] ?? 'CDF' }}</td>
                 <td class="align-center">
                     @php $status = strtoupper($item['status'] ?? ''); @endphp
                     @if($status === 'COMPLETED')

@@ -13,7 +13,21 @@ export const useCart = () => {
 
 const CART_STORAGE_KEY = 'ecommerce_cart';
 
-export const CartProvider = ({ children, initialCart = [], currency = 'USD' }) => {
+/**
+ * Converts amount from one currency to the display currency.
+ * exchangeRates: { [code]: rate } where rate = units of that currency per 1 unit of default.
+ * Default currency has rate 1.
+ * Formula: amountInTarget = amount * targetRate / sourceRate
+ */
+function convertToCurrency(amount, fromCurrency, toCurrency, exchangeRates = {}) {
+    if (!fromCurrency || !toCurrency || fromCurrency === toCurrency) return Number(amount);
+    const fromRate = exchangeRates[fromCurrency] ?? exchangeRates[toCurrency] ?? 1;
+    const toRate = exchangeRates[toCurrency] ?? 1;
+    if (toRate === 0) return 0;
+    return (Number(amount) * toRate) / fromRate;
+}
+
+export const CartProvider = ({ children, initialCart = [], currency = 'USD', exchangeRates = {} }) => {
     const [cart, setCart] = useState(() => {
         try {
             const stored = localStorage.getItem(CART_STORAGE_KEY);
@@ -94,7 +108,19 @@ export const CartProvider = ({ children, initialCart = [], currency = 'USD' }) =
     };
 
     const getCartTotal = () => {
-        return cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const displayCurrency = currency || 'USD';
+        const rates = Object.keys(exchangeRates).length ? exchangeRates : { [displayCurrency]: 1 };
+        return cart.reduce((sum, item) => {
+            const itemCurrency = item.price_currency || displayCurrency;
+            const convertedPrice = convertToCurrency(item.price, itemCurrency, displayCurrency, rates);
+            return sum + convertedPrice * item.quantity;
+        }, 0);
+    };
+
+    const getPriceInDisplayCurrency = (amount, fromCurrency) => {
+        const displayCurrency = currency || 'USD';
+        const rates = Object.keys(exchangeRates).length ? exchangeRates : { [displayCurrency]: 1 };
+        return convertToCurrency(amount, fromCurrency || displayCurrency, displayCurrency, rates);
     };
 
     const getCartItemCount = () => {
@@ -111,7 +137,9 @@ export const CartProvider = ({ children, initialCart = [], currency = 'USD' }) =
                 clearCart,
                 getCartTotal,
                 getCartItemCount,
+                getPriceInDisplayCurrency,
                 currency,
+                exchangeRates,
             }}
         >
             {children}

@@ -21,10 +21,14 @@ import {
     CheckCircle,
     XCircle,
     Truck,
+    Download,
 } from 'lucide-react';
+import EcommercePageHeader from '@/Components/Ecommerce/EcommercePageHeader';
+import EcommerceActionButton from '@/Components/Ecommerce/EcommerceActionButton';
+import { Pagination } from '@/Components/ui/pagination';
 import axios from 'axios';
 
-export default function OrdersIndex({ orders = [], stats = {}, filters = {} }) {
+export default function OrdersIndex({ orders = [], stats = {}, filters = {}, pagination }) {
     const { auth } = usePage().props;
     const permissions = auth?.permissions || [];
 
@@ -38,7 +42,7 @@ export default function OrdersIndex({ orders = [], stats = {}, filters = {} }) {
     const canDelete = hasPermission('ecommerce.delete');
     const canView = hasPermission('ecommerce.view');
 
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = useState(filters.search || '');
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -115,6 +119,8 @@ export default function OrdersIndex({ orders = [], stats = {}, filters = {} }) {
             status: statusFilter,
             from: dateFrom,
             to: dateTo,
+            search: search || undefined,
+            page: 1,
         }, {
             preserveState: true,
             preserveScroll: true,
@@ -140,16 +146,6 @@ export default function OrdersIndex({ orders = [], stats = {}, filters = {} }) {
         );
     };
 
-    const filteredOrders = orders.filter(order => {
-        if (!search) return true;
-        const searchLower = search.toLowerCase();
-        return (
-            order.order_number.toLowerCase().includes(searchLower) ||
-            order.customer_name.toLowerCase().includes(searchLower) ||
-            order.customer_email.toLowerCase().includes(searchLower)
-        );
-    });
-
     const formatCurrency = (amount, currency) => {
         return new Intl.NumberFormat('fr-FR', {
             style: 'currency',
@@ -160,25 +156,28 @@ export default function OrdersIndex({ orders = [], stats = {}, filters = {} }) {
     return (
         <AppLayout
             header={
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                            <Package className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                            <h2 className="font-semibold text-xl text-gray-800 dark:text-white leading-tight">
-                                Commandes Ecommerce
-                            </h2>
-                        </div>
-                    </div>
+                <EcommercePageHeader title="Ventes Ecommerce" icon={Package}>
+                    <EcommerceActionButton
+                        icon={Download}
+                        label="Export Excel"
+                        variant="outline"
+                        className="border-emerald-500 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-400 dark:text-emerald-300 dark:hover:bg-emerald-900/20"
+                        onClick={() => window.open(route('ecommerce.exports.orders.excel'), '_blank')}
+                    />
+                    <EcommerceActionButton
+                        icon={Download}
+                        label="Export PDF"
+                        variant="outline"
+                        className="border-red-500 text-red-700 hover:bg-red-50 dark:border-red-400 dark:text-red-300 dark:hover:bg-red-900/20"
+                        onClick={() => window.open(route('ecommerce.exports.orders.pdf'), '_blank')}
+                    />
                     {canCreate && (
-                        <Button onClick={handleOpenCreate} className="gap-2">
-                            <Plus className="h-4 w-4" />
-                            Nouvelle commande
-                        </Button>
+                        <EcommerceActionButton icon={Plus} label="Nouvelle commande" onClick={handleOpenCreate} />
                     )}
-                </div>
+                </EcommercePageHeader>
             }
         >
-            <Head title="Commandes Ecommerce" />
+            <Head title="Ventes Ecommerce" />
 
             <div className="py-6">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -253,8 +252,8 @@ export default function OrdersIndex({ orders = [], stats = {}, filters = {} }) {
                                     onChange={(e) => setDateTo(e.target.value)}
                                 />
                             </div>
-                            <div className="flex items-end gap-2">
-                                <Button onClick={handleFilter} variant="outline" className="gap-2">
+                                <div className="flex items-end gap-2">
+                                <Button onClick={handleFilter} variant="outline" className="gap-2" type="button">
                                     <Filter className="h-4 w-4" />
                                     Filtrer
                                 </Button>
@@ -271,23 +270,27 @@ export default function OrdersIndex({ orders = [], stats = {}, filters = {} }) {
 
                     {/* Barre de recherche */}
                     <div className="mb-6">
-                        <div className="flex gap-4">
+                        <form
+                            onSubmit={(e) => { e.preventDefault(); handleFilter(); }}
+                            className="flex gap-4"
+                        >
                             <div className="flex-1 relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                                 <Input
                                     type="text"
-                                    placeholder="Rechercher une commande..."
+                                    placeholder="Rechercher par n° commande, client..."
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     className="pl-10"
                                 />
                             </div>
-                        </div>
+                            <Button type="submit" variant="outline">Rechercher</Button>
+                        </form>
                     </div>
 
                     {/* Liste des commandes */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                        {filteredOrders.length === 0 ? (
+                        {orders.length === 0 ? (
                             <div className="py-12 text-center">
                                 <Package className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
                                 <p className="text-lg font-medium text-gray-600 dark:text-gray-300 mb-2">
@@ -306,7 +309,61 @@ export default function OrdersIndex({ orders = [], stats = {}, filters = {} }) {
                                 )}
                             </div>
                         ) : (
-                            <div className="overflow-x-auto">
+                            <>
+                                {/* Mobile: cartes */}
+                                <div className="md:hidden divide-y divide-gray-200 dark:divide-gray-700">
+                                    {orders.map((order) => (
+                                        <div
+                                            key={order.id}
+                                            className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <p className="font-medium text-gray-900 dark:text-white">{order.order_number}</p>
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{order.customer_name}</p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{order.created_at}</p>
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <span className="font-semibold text-gray-900 dark:text-white">
+                                                        {formatCurrency(order.total_amount, order.currency)}
+                                                    </span>
+                                                    <div className="mt-1">{getStatusBadge(order.status)}</div>
+                                                </div>
+                                            </div>
+                                            <div className="mt-3 flex gap-2">
+                                                {canView && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="flex-1"
+                                                        onClick={() => handleOpenDetail(order)}
+                                                    >
+                                                        <Eye className="h-4 w-4 mr-1" />
+                                                        Voir
+                                                    </Button>
+                                                )}
+                                                {canDelete && order.status !== 'cancelled' && order.status !== 'delivered' && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleDelete(order)}
+                                                        disabled={deleting === order.id}
+                                                        className="text-red-600 dark:text-red-400 border-red-200 dark:border-red-800"
+                                                    >
+                                                        {deleting === order.id ? (
+                                                            <RefreshCw className="h-4 w-4 animate-spin" />
+                                                        ) : (
+                                                            <Trash2 className="h-4 w-4" />
+                                                        )}
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Desktop: tableau */}
+                                <div className="hidden md:block overflow-x-auto">
                                 <table className="w-full">
                                     <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
                                         <tr>
@@ -331,7 +388,7 @@ export default function OrdersIndex({ orders = [], stats = {}, filters = {} }) {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                                        {filteredOrders.map((order) => (
+                                        {orders.map((order) => (
                                             <tr
                                                 key={order.id}
                                                 className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
@@ -395,11 +452,32 @@ export default function OrdersIndex({ orders = [], stats = {}, filters = {} }) {
                                         ))}
                                     </tbody>
                                 </table>
-                            </div>
+                                </div>
+                            </>
+                        )}
+                        {pagination && pagination.last_page > 1 && (
+                            <Pagination
+                                pagination={pagination}
+                                filters={{ status: statusFilter, from: dateFrom, to: dateTo, search: search || undefined }}
+                                routeName="ecommerce.orders.index"
+                            />
                         )}
                     </div>
                 </div>
             </div>
+
+            {canCreate && (
+                <div className="md:hidden fixed bottom-20 right-4 z-30">
+                    <Button
+                        onClick={handleOpenCreate}
+                        className="h-14 w-14 rounded-full bg-amber-500 hover:bg-amber-600 text-white shadow-lg"
+                        size="icon"
+                        title="Nouvelle commande"
+                    >
+                        <Plus className="h-6 w-6" />
+                    </Button>
+                </div>
+            )}
 
             {/* Drawer pour créer */}
             {drawerOpen && (

@@ -22,6 +22,39 @@ if (file_exists(__DIR__.'/ecommerce.php')) {
 }
 
 /**
+ * Currency Management Routes (DDD Architecture)
+ */
+Route::middleware(['auth', 'verified'])->prefix('settings')->name('settings.')->group(function () {
+    Route::get('/currencies', [\Src\Infrastructure\Currency\Http\Controllers\CurrencyController::class, 'index'])
+        ->middleware('permission:settings.currency.view|settings.settings.currency.view')
+        ->name('currencies');
+
+    Route::post('/currencies', [\Src\Infrastructure\Currency\Http\Controllers\CurrencyController::class, 'store'])
+        ->middleware('permission:settings.currency.create|settings.settings.currency.create')
+        ->name('currencies.store');
+
+    Route::put('/currencies/{currency}', [\Src\Infrastructure\Currency\Http\Controllers\CurrencyController::class, 'update'])
+        ->middleware('permission:settings.currency.update|settings.settings.currency.update')
+        ->name('currencies.update');
+
+    Route::delete('/currencies/{currency}', [\Src\Infrastructure\Currency\Http\Controllers\CurrencyController::class, 'destroy'])
+        ->middleware('permission:settings.currency.delete|settings.settings.currency.delete')
+        ->name('currencies.destroy');
+
+    Route::post('/exchange-rates', [\Src\Infrastructure\Currency\Http\Controllers\CurrencyController::class, 'storeExchangeRate'])
+        ->middleware('permission:settings.currency.update|settings.settings.currency.update')
+        ->name('exchange-rates.store');
+
+    Route::put('/exchange-rates/{exchangeRate}', [\Src\Infrastructure\Currency\Http\Controllers\CurrencyController::class, 'updateExchangeRate'])
+        ->middleware('permission:settings.currency.update|settings.settings.currency.update')
+        ->name('exchange-rates.update');
+
+    Route::delete('/exchange-rates/{exchangeRate}', [\Src\Infrastructure\Currency\Http\Controllers\CurrencyController::class, 'destroyExchangeRate'])
+        ->middleware('permission:settings.currency.update|settings.settings.currency.update')
+        ->name('exchange-rates.destroy');
+});
+
+/**
  * Public Routes - Landing Page
  */
 Route::get('/', function () {
@@ -785,36 +818,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('permission:settings.update')
         ->name('settings.update');
 
-    // Currency Management Routes (DDD Architecture)
-    Route::prefix('settings')->name('settings.')->group(function () {
-        Route::get('/currencies', [\Src\Infrastructure\Currency\Http\Controllers\CurrencyController::class, 'index'])
-            ->middleware('permission:settings.currency.view|settings.settings.currency.view')
-            ->name('currencies');
-        
-        Route::post('/currencies', [\Src\Infrastructure\Currency\Http\Controllers\CurrencyController::class, 'store'])
-            ->middleware('permission:settings.currency.create|settings.settings.currency.create')
-            ->name('currencies.store');
-        
-        Route::put('/currencies/{currency}', [\Src\Infrastructure\Currency\Http\Controllers\CurrencyController::class, 'update'])
-            ->middleware('permission:settings.currency.update|settings.settings.currency.update')
-            ->name('currencies.update');
-        
-        Route::delete('/currencies/{currency}', [\Src\Infrastructure\Currency\Http\Controllers\CurrencyController::class, 'destroy'])
-            ->middleware('permission:settings.currency.delete|settings.settings.currency.delete')
-            ->name('currencies.destroy');
-        
-        Route::post('/exchange-rates', [\Src\Infrastructure\Currency\Http\Controllers\CurrencyController::class, 'storeExchangeRate'])
-            ->middleware('permission:settings.currency.update|settings.settings.currency.update')
-            ->name('exchange-rates.store');
-        
-        Route::put('/exchange-rates/{exchangeRate}', [\Src\Infrastructure\Currency\Http\Controllers\CurrencyController::class, 'updateExchangeRate'])
-            ->middleware('permission:settings.currency.update|settings.settings.currency.update')
-            ->name('exchange-rates.update');
-        
-        Route::delete('/exchange-rates/{exchangeRate}', [\Src\Infrastructure\Currency\Http\Controllers\CurrencyController::class, 'destroyExchangeRate'])
-            ->middleware('permission:settings.currency.update|settings.settings.currency.update')
-            ->name('exchange-rates.destroy');
-    });
 });
 
 /**

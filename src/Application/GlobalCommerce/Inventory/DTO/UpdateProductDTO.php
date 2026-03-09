@@ -15,6 +15,7 @@ final class UpdateProductDTO
         public readonly float $purchasePrice,
         public readonly float $salePrice,
         public readonly float $minimumStock,
+        public readonly ?float $stock,
         public readonly string $currency,
         public readonly bool $isWeighted,
         public readonly bool $hasExpiration,

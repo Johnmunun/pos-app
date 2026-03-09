@@ -11,6 +11,7 @@ use Src\Domain\Ecommerce\Entities\Order;
 use Src\Domain\Ecommerce\Entities\OrderItem;
 use Src\Domain\Ecommerce\Repositories\OrderRepositoryInterface;
 use Src\Domain\Ecommerce\Repositories\OrderItemRepositoryInterface;
+use Src\Domain\GlobalCommerce\Inventory\Repositories\ProductRepositoryInterface as GcProductRepositoryInterface;
 use Src\Domain\Ecommerce\ValueObjects\OrderNumber;
 use Src\Shared\ValueObjects\Money;
 use Src\Shared\ValueObjects\Quantity;
@@ -19,7 +20,8 @@ class CreateOrderUseCase
 {
     public function __construct(
         private readonly OrderRepositoryInterface $orderRepository,
-        private readonly OrderItemRepositoryInterface $orderItemRepository
+        private readonly OrderItemRepositoryInterface $orderItemRepository,
+        private readonly GcProductRepositoryInterface $gcProductRepository
     ) {
     }
 
@@ -78,6 +80,13 @@ class CreateOrderUseCase
                 );
 
                 $this->orderItemRepository->save($item);
+
+                // Déduire le stock du produit (gc_products)
+                $product = $this->gcProductRepository->findById($itemDto->productId);
+                if ($product && (string) $product->getShopId() === $dto->shopId) {
+                    $product->removeStock(new Quantity($itemDto->quantity));
+                    $this->gcProductRepository->update($product);
+                }
             }
 
             return $order;

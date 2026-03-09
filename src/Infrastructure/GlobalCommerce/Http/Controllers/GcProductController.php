@@ -96,7 +96,7 @@ class GcProductController
             if (Schema::hasColumn('gc_products', 'min_wholesale_price_amount')) {
                 $cols[] = 'min_wholesale_price_amount';
             }
-            foreach (['product_type', 'unit', 'weight', 'length', 'width', 'height', 'tax_rate', 'tax_type', 'status'] as $c) {
+            foreach (['product_type', 'download_url', 'download_path', 'requires_shipping', 'unit', 'weight', 'length', 'width', 'height', 'tax_rate', 'tax_type', 'status'] as $c) {
                 if (Schema::hasColumn('gc_products', $c)) {
                     $cols[] = $c;
                 }
@@ -119,6 +119,9 @@ class GcProductController
                     'min_sale_price_amount' => $m->min_sale_price_amount ?? null,
                     'min_wholesale_price_amount' => $m->min_wholesale_price_amount ?? null,
                     'product_type' => $m->product_type ?? null,
+                    'download_url' => $m->download_url ?? null,
+                    'download_path' => $m->download_path ?? null,
+                    'requires_shipping' => (bool) ($m->requires_shipping ?? true),
                     'unit' => $m->unit ?? null,
                     'weight' => $m->weight ?? null,
                     'length' => $m->length ?? null,
@@ -160,6 +163,9 @@ class GcProductController
                 'min_sale_price_amount' => $extra['min_sale_price_amount'] ?? null,
                 'min_wholesale_price_amount' => $extra['min_wholesale_price_amount'] ?? null,
                 'product_type' => $extra['product_type'] ?? null,
+                'download_url' => $extra['download_url'] ?? null,
+                'download_path' => $extra['download_path'] ?? null,
+                'requires_shipping' => $extra['requires_shipping'] ?? null,
                 'unit' => $extra['unit'] ?? null,
                 'weight' => $extra['weight'] ?? null,
                 'length' => $extra['length'] ?? null,
@@ -210,7 +216,10 @@ class GcProductController
             'min_wholesale_price' => 'nullable|numeric|min:0',
             'discount_percent' => 'nullable|numeric|min:0|max:100',
             'price_non_negotiable' => 'nullable|boolean',
-            'product_type' => 'nullable|string|in:simple,variable,service',
+            'product_type' => 'nullable|string|in:simple,variable,service,digital',
+            'download_url' => 'nullable|string|url|max:2048',
+            'download_file' => 'nullable|file|mimes:pdf,mp3,mp4,zip,doc,docx,xls,xlsx,txt|max:51200',
+            'requires_shipping' => 'nullable|boolean',
             'unit' => 'required|string|max:50',
             'weight' => 'nullable|numeric|min:0',
             'length' => 'nullable|numeric|min:0',
@@ -258,6 +267,21 @@ class GcProductController
             $extra['price_non_negotiable'] = (bool) ($validated['price_non_negotiable'] ?? false);
             if (array_key_exists('product_type', $validated)) {
                 $extra['product_type'] = $validated['product_type'] ?: null;
+            }
+            if (array_key_exists('download_url', $validated) && $validated['download_url']) {
+                $extra['download_url'] = $validated['download_url'];
+                $extra['download_path'] = null;
+                $extra['requires_shipping'] = false;
+            }
+            if ($request->hasFile('download_file')) {
+                $file = $request->file('download_file');
+                $path = $file->store('digital_products', 'public');
+                $extra['download_path'] = $path;
+                $extra['download_url'] = null;
+                $extra['requires_shipping'] = false;
+            }
+            if (array_key_exists('requires_shipping', $validated)) {
+                $extra['requires_shipping'] = (bool) $validated['requires_shipping'];
             }
             if (array_key_exists('unit', $validated)) {
                 $extra['unit'] = $validated['unit'] ?: null;
@@ -328,6 +352,9 @@ class GcProductController
                 'min_sale_price' => $model?->min_sale_price_amount,
                 'min_wholesale_price' => $model?->min_wholesale_price_amount,
                 'product_type' => $model?->product_type,
+                'download_url' => $model?->download_url,
+                'download_path' => $model?->download_path,
+                'requires_shipping' => (bool) ($model->requires_shipping ?? true),
                 'unit' => $model?->unit,
                 'weight' => $model?->weight,
                 'length' => $model?->length,
@@ -381,6 +408,30 @@ class GcProductController
         ]);
     }
 
+    public function toggleEcommercePublish(Request $request, string $id): JsonResponse
+    {
+        $shopId = $this->getShopId($request);
+
+        /** @var ProductModel|null $model */
+        $model = ProductModel::where('shop_id', $shopId)->find($id);
+
+        if (!$model) {
+            return response()->json(['success' => false, 'message' => 'Produit non trouvé.'], 404);
+        }
+
+        $current = (bool) ($model->is_published_ecommerce ?? false);
+        $model->is_published_ecommerce = !$current;
+        $model->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => $model->is_published_ecommerce
+                ? 'Produit publié sur la boutique.'
+                : 'Produit retiré de la boutique.',
+            'is_published_ecommerce' => (bool) $model->is_published_ecommerce,
+        ]);
+    }
+
     public function update(Request $request, string $id): RedirectResponse
     {
         $shopId = $this->getShopId($request);
@@ -399,12 +450,19 @@ class GcProductController
             'is_active' => 'boolean',
             'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
             'remove_image' => 'nullable|boolean',
+            'download_url' => 'nullable|string|url|max:2048',
+            'download_file' => 'nullable|file|mimes:pdf,mp3,mp4,zip,doc,docx,xls,xlsx,txt|max:51200',
+            'remove_download' => 'nullable|boolean',
+            'requires_shipping' => 'nullable|boolean',
             'wholesale_price' => 'nullable|numeric|min:0',
             'min_sale_price' => 'nullable|numeric|min:0',
             'min_wholesale_price' => 'nullable|numeric|min:0',
             'discount_percent' => 'nullable|numeric|min:0|max:100',
             'price_non_negotiable' => 'nullable|boolean',
-            'product_type' => 'nullable|string|in:simple,variable,service',
+            'product_type' => 'nullable|string|in:simple,variable,service,digital',
+            'download_url' => 'nullable|string|url|max:2048',
+            'download_file' => 'nullable|file|mimes:pdf,mp3,mp4,zip,doc,docx,xls,xlsx,txt|max:51200',
+            'requires_shipping' => 'nullable|boolean',
             'unit' => 'required|string|max:50',
             'weight' => 'nullable|numeric|min:0',
             'length' => 'nullable|numeric|min:0',
@@ -427,6 +485,7 @@ class GcProductController
             (float) $validated['purchase_price'],
             (float) $validated['sale_price'],
             (float) ($validated['minimum_stock'] ?? 0),
+            null,
             $validated['currency'] ?? 'USD',
             (bool) ($validated['is_weighted'] ?? false),
             (bool) ($validated['has_expiration'] ?? false),
@@ -480,6 +539,31 @@ class GcProductController
                 $extra['status'] = $validated['status'] ?? 'active';
             }
 
+            if (array_key_exists('download_url', $validated) && $validated['download_url']) {
+                $extra['download_url'] = $validated['download_url'];
+                $extra['download_path'] = null;
+                $extra['requires_shipping'] = false;
+            }
+            if (!empty($validated['remove_download'])) {
+                if ($model->download_path) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($model->download_path);
+                }
+                $extra['download_path'] = null;
+                $extra['download_url'] = null;
+                $extra['requires_shipping'] = true;
+            } elseif ($request->hasFile('download_file')) {
+                if ($model->download_path) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($model->download_path);
+                }
+                $file = $request->file('download_file');
+                $path = $file->store('digital_products', 'public');
+                $extra['download_path'] = $path;
+                $extra['download_url'] = null;
+                $extra['requires_shipping'] = false;
+            }
+            if (array_key_exists('requires_shipping', $validated)) {
+                $extra['requires_shipping'] = (bool) $validated['requires_shipping'];
+            }
             if (!empty($validated['remove_image'])) {
                 $this->imageService->delete($model->image_path, $model->image_type ?? 'upload');
                 $extra['image_path'] = null;

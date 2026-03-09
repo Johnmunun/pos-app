@@ -5,7 +5,9 @@ import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Badge } from '@/Components/ui/badge';
 import CustomerDrawer from '@/Components/Ecommerce/CustomerDrawer';
+import ImportModal from '@/Components/ImportModal';
 import { toast } from 'react-hot-toast';
+import axios from 'axios';
 import {
     Plus,
     Search,
@@ -13,7 +15,11 @@ import {
     Mail,
     Phone,
     RefreshCw,
+    Upload,
+    Download,
 } from 'lucide-react';
+import EcommercePageHeader from '@/Components/Ecommerce/EcommercePageHeader';
+import EcommerceActionButton from '@/Components/Ecommerce/EcommerceActionButton';
 
 export default function CustomersIndex({ customers = [] }) {
     const { auth } = usePage().props;
@@ -30,6 +36,66 @@ export default function CustomersIndex({ customers = [] }) {
     const [search, setSearch] = useState('');
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
+    const [importOpen, setImportOpen] = useState(false);
+    const [importFile, setImportFile] = useState(null);
+    const [importPreview, setImportPreview] = useState(null);
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [importing, setImporting] = useState(false);
+
+    const handleOpenImport = () => {
+        setImportOpen(true);
+        setImportFile(null);
+        setImportPreview(null);
+    };
+
+    const handleGeneratePreview = async (e) => {
+        e.preventDefault();
+        if (!importFile) {
+            toast.error('Veuillez sélectionner un fichier.');
+            return;
+        }
+        setPreviewLoading(true);
+        setImportPreview(null);
+        try {
+            const formData = new FormData();
+            formData.append('file', importFile);
+            const res = await axios.post(route('ecommerce.customers.import.preview'), formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            setImportPreview(res.data);
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Erreur lors de l'aperçu.");
+        } finally {
+            setPreviewLoading(false);
+        }
+    };
+
+    const handleConfirmImport = async () => {
+        if (!importFile) {
+            toast.error('Veuillez sélectionner un fichier.');
+            return;
+        }
+        setImporting(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', importFile);
+            const { data } = await axios.post(route('ecommerce.customers.import'), formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            toast.success(data.message || 'Import clients terminé.');
+            if (data.errors?.length) {
+                console.warn('Erreurs import clients:', data.errors);
+            }
+            setImportOpen(false);
+            setImportFile(null);
+            setImportPreview(null);
+            router.reload();
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Erreur lors de l'import des clients.");
+        } finally {
+            setImporting(false);
+        }
+    };
 
     const handleOpenCreate = () => {
         setSelectedCustomer(null);
@@ -61,22 +127,34 @@ export default function CustomersIndex({ customers = [] }) {
     return (
         <AppLayout
             header={
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                            <Users className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                            <h2 className="font-semibold text-xl text-gray-800 dark:text-white leading-tight">
-                                Clients Ecommerce
-                            </h2>
-                        </div>
-                    </div>
+                <EcommercePageHeader title="Clients Ecommerce" icon={Users}>
+                    <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="inline-flex items-center justify-center gap-2 p-2 sm:px-3 sm:py-2 min-w-[36px] sm:min-w-0 border-emerald-500 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-400 dark:text-emerald-300 dark:hover:bg-emerald-900/20"
+                    >
+                        <a href={route('ecommerce.exports.customers.excel')} target="_blank" rel="noopener noreferrer" title="Export Excel">
+                            <Download className="h-4 w-4 shrink-0" />
+                            <span className="hidden sm:inline">Export Excel</span>
+                        </a>
+                    </Button>
+                    <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="inline-flex items-center justify-center gap-2 p-2 sm:px-3 sm:py-2 min-w-[36px] sm:min-w-0 border-red-500 text-red-700 hover:bg-red-50 dark:border-red-400 dark:text-red-300 dark:hover:bg-red-900/20"
+                    >
+                        <a href={route('ecommerce.exports.customers.pdf')} target="_blank" rel="noopener noreferrer" title="Export PDF">
+                            <Download className="h-4 w-4 shrink-0" />
+                            <span className="hidden sm:inline">Export PDF</span>
+                        </a>
+                    </Button>
+                    <EcommerceActionButton icon={Upload} label="Importer" variant="outline" onClick={handleOpenImport} />
                     {canCreate && (
-                        <Button onClick={handleOpenCreate} className="gap-2">
-                            <Plus className="h-4 w-4" />
-                            Nouveau client
-                        </Button>
+                        <EcommerceActionButton icon={Plus} label="Nouveau client" onClick={handleOpenCreate} />
                     )}
-                </div>
+                </EcommercePageHeader>
             }
         >
             <Head title="Clients Ecommerce" />
@@ -127,7 +205,51 @@ export default function CustomersIndex({ customers = [] }) {
                                 )}
                             </div>
                         ) : (
-                            <div className="overflow-x-auto">
+                            <>
+                                {/* Mobile: cartes */}
+                                <div className="md:hidden divide-y divide-gray-200 dark:divide-gray-700">
+                                    {filteredCustomers.map((customer) => (
+                                        <div
+                                            key={customer.id}
+                                            className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <p className="font-medium text-gray-900 dark:text-white">{customer.full_name}</p>
+                                                    <div className="mt-1 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                                        <Mail className="h-3 w-3 shrink-0" />
+                                                        <span className="truncate">{customer.email}</span>
+                                                    </div>
+                                                    {customer.phone && (
+                                                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                            <Phone className="h-3 w-3 shrink-0" />
+                                                            {customer.phone}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <Badge className={customer.is_active
+                                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 shrink-0'
+                                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300 shrink-0'
+                                                }>
+                                                    {customer.is_active ? 'Actif' : 'Inactif'}
+                                                </Badge>
+                                            </div>
+                                            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                                                <div>
+                                                    <span className="text-gray-500 dark:text-gray-400">Commandes</span>
+                                                    <p className="font-medium text-gray-900 dark:text-white">{customer.total_orders}</p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-gray-500 dark:text-gray-400">Total</span>
+                                                    <p className="font-medium text-gray-900 dark:text-white">{formatCurrency(customer.total_spent, 'USD')}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Desktop: tableau */}
+                                <div className="hidden md:block overflow-x-auto">
                                 <table className="w-full">
                                     <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
                                         <tr>
@@ -191,11 +313,25 @@ export default function CustomersIndex({ customers = [] }) {
                                         ))}
                                     </tbody>
                                 </table>
-                            </div>
+                                </div>
+                            </>
                         )}
                     </div>
                 </div>
             </div>
+
+            {canCreate && (
+                <div className="md:hidden fixed bottom-20 right-4 z-30">
+                    <Button
+                        onClick={handleOpenCreate}
+                        className="h-14 w-14 rounded-full bg-amber-500 hover:bg-amber-600 text-white shadow-lg"
+                        size="icon"
+                        title="Nouveau client"
+                    >
+                        <Plus className="h-6 w-6" />
+                    </Button>
+                </div>
+            )}
 
             {/* Drawer pour créer */}
             {drawerOpen && (
@@ -205,6 +341,29 @@ export default function CustomersIndex({ customers = [] }) {
                     customer={selectedCustomer}
                 />
             )}
+
+            <ImportModal
+                show={importOpen}
+                onClose={() => { setImportOpen(false); setImportFile(null); setImportPreview(null); }}
+                title="Importer des clients"
+                summaryItems={[
+                    'Importez vos clients via un fichier Excel (.xlsx) ou CSV.',
+                    'Colonnes obligatoires : prenom, nom, email. Les autres sont optionnelles.',
+                    'Ne pas modifier les en-têtes du modèle.',
+                ]}
+                examples={[
+                    { values: { prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', telephone: '0999999999' } },
+                ]}
+                templateUrl={route('ecommerce.customers.import.template')}
+                accept=".xlsx,.csv,.txt"
+                file={importFile}
+                onFileChange={setImportFile}
+                onGeneratePreview={handleGeneratePreview}
+                previewLoading={previewLoading}
+                preview={importPreview}
+                onConfirmImport={handleConfirmImport}
+                confirmingImport={importing}
+            />
         </AppLayout>
     );
 }

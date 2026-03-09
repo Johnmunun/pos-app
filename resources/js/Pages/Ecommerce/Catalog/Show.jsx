@@ -20,13 +20,16 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-function ProductContent({ product }) {
+function ProductContent({ product, reviews = [] }) {
     const { shop } = usePage().props;
     const { addToCart } = useCart();
     const currency = shop?.currency || 'USD';
 
+    const thumbnails = [product.image_url, ...(product.gallery_urls || [])].filter(Boolean);
+    const initialImage = thumbnails[0] || null;
+
     const [quantity, setQuantity] = useState(1);
-    const [selectedImage, setSelectedImage] = useState(product.image_url || null);
+    const [selectedImage, setSelectedImage] = useState(initialImage);
     const [imageError, setImageError] = useState(false);
 
     const formatCurrency = (amount) => {
@@ -107,22 +110,25 @@ function ProductContent({ product }) {
                                 </div>
 
                                 {/* Thumbnails (if multiple images) */}
-                                {product.image_url && (
+                                {thumbnails.length > 0 && (
                                     <div className="flex gap-2">
-                                        <button
-                                            onClick={() => setSelectedImage(product.image_url)}
-                                            className={`w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                                                selectedImage === product.image_url
-                                                    ? 'border-blue-500'
-                                                    : 'border-gray-200 dark:border-gray-700'
-                                            }`}
-                                        >
-                                            <img
-                                                src={product.image_url}
-                                                alt={product.name}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        </button>
+                                        {thumbnails.map((url, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => setSelectedImage(url)}
+                                                className={`w-20 h-20 rounded-lg overflow-hidden border-2 group ${
+                                                    selectedImage === url
+                                                        ? 'border-blue-500'
+                                                        : 'border-gray-200 dark:border-gray-700'
+                                                }`}
+                                            >
+                                                <img
+                                                    src={url}
+                                                    alt={product.name}
+                                                    className="w-full h-full object-cover transform transition-transform duration-200 group-hover:scale-110"
+                                                />
+                                            </button>
+                                        ))}
                                     </div>
                                 )}
                             </div>
@@ -149,6 +155,13 @@ function ProductContent({ product }) {
                                         </p>
                                     </div>
                                 </div>
+
+                                {/* Paiement à la livraison */}
+                                {product.mode_paiement === 'paiement_livraison' && (
+                                    <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-200">
+                                        Ce produit peut être payé à la livraison.
+                                    </div>
+                                )}
 
                                 {/* Stock Status */}
                                 <div className="flex items-center gap-2">
@@ -238,6 +251,40 @@ function ProductContent({ product }) {
                                         <span>Stock disponible: {product.stock}</span>
                                     </div>
                                 </div>
+
+                                {/* Avis clients */}
+                                {reviews?.length > 0 && (
+                                    <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                            <Star className="h-5 w-5 text-amber-500" />
+                                            Avis clients ({reviews.length})
+                                        </h3>
+                                        <div className="space-y-4">
+                                            {reviews.map((r) => (
+                                                <div key={r.id} className="border border-gray-200 dark:border-slate-600 rounded-lg p-4">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="font-medium text-gray-900 dark:text-white">{r.customer_name}</span>
+                                                        <div className="flex gap-0.5">
+                                                            {[1, 2, 3, 4, 5].map((s) => (
+                                                                <Star
+                                                                    key={s}
+                                                                    className={`h-4 w-4 ${s <= r.rating ? 'text-amber-500 fill-amber-500' : 'text-gray-300'}`}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    {r.title && (
+                                                        <p className="font-medium text-gray-800 dark:text-gray-200 mb-1">{r.title}</p>
+                                                    )}
+                                                    {r.comment && (
+                                                        <p className="text-sm text-gray-600 dark:text-gray-400">{r.comment}</p>
+                                                    )}
+                                                    <p className="text-xs text-gray-500 mt-2">{r.created_at}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -247,7 +294,7 @@ function ProductContent({ product }) {
     );
 }
 
-export default function ProductShow({ product }) {
+export default function ProductShow({ product, reviews = [] }) {
     const { shop } = usePage().props;
     const currency = shop?.currency || 'USD';
 
@@ -258,9 +305,9 @@ export default function ProductShow({ product }) {
                     <div className="flex items-center justify-between w-full">
                         <div className="flex items-center gap-4">
                             <Link href={route('ecommerce.catalog.index')}>
-                                <Button variant="ghost" size="sm">
-                                    <ArrowLeft className="h-4 w-4 mr-2" />
-                                    Retour
+                                <Button variant="ghost" size="sm" className="inline-flex items-center gap-2">
+                                    <ArrowLeft className="h-4 w-4 shrink-0" />
+                                    <span>Retour</span>
                                 </Button>
                             </Link>
                         </div>
@@ -270,7 +317,7 @@ export default function ProductShow({ product }) {
                     </div>
                 }
             >
-                <ProductContent product={product} />
+                <ProductContent product={product} reviews={reviews} />
             </AppLayout>
         </CartProvider>
     );

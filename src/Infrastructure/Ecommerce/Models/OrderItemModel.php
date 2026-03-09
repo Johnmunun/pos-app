@@ -22,6 +22,9 @@ class OrderItemModel extends Model
         'discount_amount',
         'subtotal',
         'product_image_url',
+        'is_digital',
+        'download_token',
+        'download_expires_at',
     ];
 
     protected $casts = [
@@ -29,6 +32,8 @@ class OrderItemModel extends Model
         'unit_price' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'subtotal' => 'decimal:2',
+        'is_digital' => 'boolean',
+        'download_expires_at' => 'datetime',
     ];
 
     public function order()

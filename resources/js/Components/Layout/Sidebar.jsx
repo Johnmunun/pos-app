@@ -43,6 +43,12 @@ import {
     Truck as TruckIcon,
     Gift,
     Star,
+    FileText as PageIcon,
+    Image,
+    LayoutTemplate,
+    BookOpen as BlogIcon,
+    FolderOpen,
+    Eye,
 } from 'lucide-react';
 
 /**
@@ -246,8 +252,9 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                 { label: 'Catalogue', href: '/ecommerce/catalog', permission: 'ecommerce.catalog.view|ecommerce.product.view|module.ecommerce', icon: Package },
                 { label: 'Produits', href: '/ecommerce/products', permission: 'ecommerce.product.view|ecommerce.product.manage|module.ecommerce', icon: Package },
                 { label: 'Catégories', href: '/ecommerce/categories', permission: 'ecommerce.category.view|ecommerce.category.manage|module.ecommerce', icon: Tag },
-                { label: 'Commandes', href: '/ecommerce/orders', permission: 'ecommerce.order.view|ecommerce.order.manage|module.ecommerce', icon: ShoppingCart },
+                { label: 'Ventes', href: '/ecommerce/orders', permission: 'ecommerce.order.view|ecommerce.order.manage|module.ecommerce', icon: ShoppingCart },
                 { label: 'Clients', href: '/ecommerce/customers', permission: 'ecommerce.customer.view|ecommerce.customer.manage|module.ecommerce', icon: Users },
+                { label: 'Fournisseurs', href: '/ecommerce/suppliers', permission: 'ecommerce.view|module.ecommerce', icon: Truck },
                 { label: 'Paiements', href: '/ecommerce/payments', permission: 'ecommerce.payment.view|ecommerce.payment.manage|module.ecommerce', icon: CreditCard },
                 { label: 'Livraisons', href: '/ecommerce/shipping', permission: 'ecommerce.shipping.view|ecommerce.shipping.manage|module.ecommerce', icon: TruckIcon },
                 { label: 'Promotions', href: '/ecommerce/promotions', permission: 'ecommerce.promotion.view|ecommerce.promotion.manage|module.ecommerce', icon: Gift },
@@ -256,6 +263,13 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                 { label: 'Stock', href: '/ecommerce/stock', permission: 'ecommerce.stock.view|ecommerce.stock.manage|module.ecommerce', icon: Warehouse },
                 { label: 'Rapports', href: '/ecommerce/reports', permission: 'ecommerce.report.view|ecommerce.analytics.view|module.ecommerce', icon: BarChart },
                 { label: 'Paramètres', href: '/ecommerce/settings', permission: 'ecommerce.settings.view|ecommerce.settings.update|module.ecommerce', icon: Settings },
+                { label: 'Prévisualiser la boutique', href: '/ecommerce/storefront', permission: 'ecommerce.catalog.view|ecommerce.view|module.ecommerce', icon: Eye },
+                { header: true, label: 'CMS' },
+                { label: 'Pages', href: '/ecommerce/cms/pages', permission: 'ecommerce.cms.view|ecommerce.settings.view|module.ecommerce', icon: PageIcon },
+                { label: 'Bannières', href: '/ecommerce/cms/banners', permission: 'ecommerce.cms.view|ecommerce.settings.view|module.ecommerce', icon: Image },
+                { label: 'Sections accueil', href: '/ecommerce/storefront/cms', permission: 'ecommerce.cms.view|ecommerce.settings.view|module.ecommerce', icon: LayoutTemplate },
+                { label: 'Blog / Articles', href: '/ecommerce/cms/blog', permission: 'ecommerce.cms.view|ecommerce.settings.view|module.ecommerce', icon: BlogIcon },
+                { label: 'Médias', href: '/ecommerce/cms/media', permission: 'ecommerce.cms.view|ecommerce.settings.view|module.ecommerce', icon: FolderOpen },
             ]
         },
         {
@@ -393,6 +407,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                                                        (group.key === 'ecommerce' && hasEcommerceModuleAccess());
                                 
                                 const visibleItems = group.items.filter((item) => {
+                                    if (item.header) return true;
                                     if (item.rootOnly && !isRoot) return false;
                                     // Exclure les items pour certains secteurs
                                     if (item.excludeSectors && item.excludeSectors.includes(tenantSector)) return false;
@@ -413,6 +428,13 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                                         </div>
                                         <ul role="list" className="-mx-2 space-y-1">
                                             {visibleItems.map((item) => {
+                                                if (item.header) {
+                                                    return (
+                                                        <li key={item.label} className="pt-3 mt-2 border-t border-gray-200 dark:border-gray-600 first:border-0 first:pt-0 first:mt-0">
+                                                            <div className="px-2 py-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{item.label}</div>
+                                                        </li>
+                                                    );
+                                                }
                                                 const IconComponent = item.icon;
                                                 const isActive = isActiveRoute(item.href);
                                                 return (
@@ -484,6 +506,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                                                        (group.key === 'ecommerce' && hasEcommerceModuleAccess());
                                 
                                 const visibleItems = group.items.filter((item) => {
+                                    if (item.header) return true;
                                     if (item.rootOnly && !isRoot) return false;
                                     // Exclure les items pour certains secteurs
                                     if (item.excludeSectors && item.excludeSectors.includes(tenantSector)) return false;
@@ -504,6 +527,13 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                                         </div>
                                         <ul role="list" className="-mx-2 space-y-1">
                                             {visibleItems.map((item) => {
+                                                if (item.header) {
+                                                    return (
+                                                        <li key={item.label} className="pt-3 mt-2 border-t border-gray-200 dark:border-gray-600 first:border-0 first:pt-0 first:mt-0">
+                                                            <div className="px-2 py-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{item.label}</div>
+                                                        </li>
+                                                    );
+                                                }
                                                 const IconComponent = item.icon;
                                                 const isActive = isActiveRoute(item.href);
                                                 return (

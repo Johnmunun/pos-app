@@ -85,6 +85,21 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
                         </div>
                     )}
 
+                    {/* Prévisualisation boutique e-commerce */}
+                    {(permissions.includes('module.ecommerce') || permissions.some((p) => typeof p === 'string' && p.startsWith('ecommerce.'))) && (
+                        <Link
+                            href={route('ecommerce.storefront.index')}
+                            target="_blank"
+                            className="hidden sm:inline-flex rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0 items-center justify-center"
+                            title="Prévisualiser la boutique"
+                        >
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12s3-7 9-7 9 7 9 7-3 7-9 7-9-7-9-7z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                        </Link>
+                    )}
+
                     {/* Toggle Dark Mode */}
                     <button
                         type="button"
