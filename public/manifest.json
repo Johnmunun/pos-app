@@ -1,7 +1,7 @@
 {
-  "name": "POS SaaS - Point de Vente",
-  "short_name": "POS SaaS",
-  "description": "Système de point de vente professionnel multi-tenant",
+  "name": "OmniPOS - Smart POS & Business Management",
+  "short_name": "OmniPOS",
+  "description": "OmniPOS, solution de point de vente et gestion business multi-modules",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

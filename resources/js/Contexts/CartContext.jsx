@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
+import { normalizeCurrencyCode } from '@/lib/currency';
 
 const CartContext = createContext();
 
@@ -20,9 +21,12 @@ const CART_STORAGE_KEY = 'ecommerce_cart';
  * Formula: amountInTarget = amount * targetRate / sourceRate
  */
 function convertToCurrency(amount, fromCurrency, toCurrency, exchangeRates = {}) {
-    if (!fromCurrency || !toCurrency || fromCurrency === toCurrency) return Number(amount);
-    const fromRate = exchangeRates[fromCurrency] ?? exchangeRates[toCurrency] ?? 1;
-    const toRate = exchangeRates[toCurrency] ?? 1;
+    if (!fromCurrency || !toCurrency) return Number(amount);
+    const fromNorm = normalizeCurrencyCode(fromCurrency);
+    const toNorm = normalizeCurrencyCode(toCurrency);
+    if (fromNorm === toNorm) return Number(amount);
+    const fromRate = exchangeRates[fromNorm] ?? exchangeRates[fromCurrency] ?? 1;
+    const toRate = exchangeRates[toNorm] ?? exchangeRates[toCurrency] ?? 1;
     if (toRate === 0) return 0;
     return (Number(amount) * toRate) / fromRate;
 }
@@ -72,6 +76,10 @@ export const CartProvider = ({ children, initialCart = [], currency = 'USD', exc
                         image_url: product.image_url,
                         sku: product.sku,
                         stock: product.stock,
+                        // Infos nécessaires au checkout (numérique / livraison / paiement)
+                        is_digital: !!product.is_digital,
+                        requires_shipping: product.requires_shipping ?? !product.is_digital,
+                        mode_paiement: product.mode_paiement ?? (product.is_digital ? 'paiement_immediat' : 'paiement_immediat'),
                     },
                 ];
             }
@@ -107,8 +115,9 @@ export const CartProvider = ({ children, initialCart = [], currency = 'USD', exc
         setCart([]);
     };
 
+    const displayCurrency = normalizeCurrencyCode(currency || 'USD');
+
     const getCartTotal = () => {
-        const displayCurrency = currency || 'USD';
         const rates = Object.keys(exchangeRates).length ? exchangeRates : { [displayCurrency]: 1 };
         return cart.reduce((sum, item) => {
             const itemCurrency = item.price_currency || displayCurrency;
@@ -118,7 +127,6 @@ export const CartProvider = ({ children, initialCart = [], currency = 'USD', exc
     };
 
     const getPriceInDisplayCurrency = (amount, fromCurrency) => {
-        const displayCurrency = currency || 'USD';
         const rates = Object.keys(exchangeRates).length ? exchangeRates : { [displayCurrency]: 1 };
         return convertToCurrency(amount, fromCurrency || displayCurrency, displayCurrency, rates);
     };
@@ -138,8 +146,8 @@ export const CartProvider = ({ children, initialCart = [], currency = 'USD', exc
                 getCartTotal,
                 getCartItemCount,
                 getPriceInDisplayCurrency,
-                currency,
-                exchangeRates,
+            currency: displayCurrency,
+            exchangeRates,
             }}
         >
             {children}

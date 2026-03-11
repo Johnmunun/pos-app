@@ -71,6 +71,24 @@ class EloquentCategoryRepository implements CategoryRepositoryInterface
         return $roots->map(fn (CategoryModel $m) => $this->buildTree($m))->toArray();
     }
 
+    /**
+     * @return Category[]
+     */
+    public function findByShop(string $shopId, array $filters = []): array
+    {
+        $query = CategoryModel::where('shop_id', $shopId);
+
+        if (isset($filters['active'])) {
+            $query->where('is_active', (bool) $filters['active']);
+        }
+
+        return $query->orderBy('sort_order')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (CategoryModel $model) => $this->toDomainEntity($model))
+            ->toArray();
+    }
+
     public function delete(string $id): void
     {
         CategoryModel::destroy($id);

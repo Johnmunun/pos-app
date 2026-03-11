@@ -298,7 +298,8 @@ class PharmacyServiceProvider extends ServiceProvider
             return new FinalizeSaleUseCase(
                 $app->make(SaleRepositoryInterface::class),
                 $app->make(SaleLineRepositoryInterface::class),
-                $app->make(UpdateStockUseCase::class)
+                $app->make(UpdateStockUseCase::class),
+                $app->make(\Src\Application\Referral\Services\ReferralService::class)
             );
         });
         $this->app->bind(CancelSaleUseCase::class, function ($app) {

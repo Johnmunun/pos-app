@@ -47,7 +47,7 @@ export default function Testimonials() {
             name: 'Sophie Martin',
             role: 'Fondatrice',
             company: 'Digital Shop',
-            content: 'POS SaaS a transformé ma façon de vendre. Interface intuitive et support formidable!',
+            content: 'OmniPOS a transformé ma façon de vendre. Interface intuitive et support formidable!',
             avatar: 'SM',
         },
         {
@@ -101,7 +101,7 @@ export default function Testimonials() {
                         Ce que nos clients disent
                     </h2>
                     <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                        Des milliers de commerçants font confiance à POS SaaS.
+                        Des milliers de commerçants font confiance à OmniPOS.
                     </p>
                 </div>
 

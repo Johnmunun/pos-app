@@ -63,6 +63,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
 
     const page = usePage();
     const url = currentUrl || page.url;
+    const appLogoUrl = page.props?.appLogoUrl || null;
     
     // Fonction pour vérifier si une route est active
     const isActiveRoute = (href) => {
@@ -263,6 +264,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                 { label: 'Stock', href: '/ecommerce/stock', permission: 'ecommerce.stock.view|ecommerce.stock.manage|module.ecommerce', icon: Warehouse },
                 { label: 'Rapports', href: '/ecommerce/reports', permission: 'ecommerce.report.view|ecommerce.analytics.view|module.ecommerce', icon: BarChart },
                 { label: 'Paramètres', href: '/ecommerce/settings', permission: 'ecommerce.settings.view|ecommerce.settings.update|module.ecommerce', icon: Settings },
+                { label: 'Marketing', href: '/ecommerce/marketing', permission: 'ecommerce.marketing.view|ecommerce.marketing.manage|ecommerce.settings.view|module.ecommerce', icon: BarChart },
                 { label: 'Prévisualiser la boutique', href: '/ecommerce/storefront', permission: 'ecommerce.catalog.view|ecommerce.view|module.ecommerce', icon: Eye },
                 { header: true, label: 'CMS' },
                 { label: 'Pages', href: '/ecommerce/cms/pages', permission: 'ecommerce.cms.view|ecommerce.settings.view|module.ecommerce', icon: PageIcon },
@@ -311,13 +313,13 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
             icon: LifeBuoy,
             permissions: ['support.tickets.create', 'support.tickets.view', 'support.admin', 'support.faq'],
             items: [
-                { label: 'Créer un ticket', href: '#', permission: 'support.tickets.create', icon: Plus },
-                { label: 'Mes tickets', href: '#', permission: 'support.tickets.view', icon: Ticket },
-                { label: 'Tous les tickets', href: '#', permission: 'support.admin', icon: ClipboardList },
-                { label: 'Incidents', href: '#', permission: 'support.admin', icon: AlertCircle },
-                { label: 'FAQ / Base de connaissance', href: '#', permission: 'support.faq', icon: HelpCircle },
-                { label: 'Contact support', href: '#', permission: 'support.tickets.create', icon: MessageCircle },
-                { label: 'Statut système', href: '#', permission: 'support.admin', icon: Settings },
+                { label: 'Créer un ticket', href: '/support/tickets/create', permission: 'support.tickets.create', icon: Plus },
+                { label: 'Mes tickets', href: '/support/tickets', permission: 'support.tickets.view', icon: Ticket },
+                { label: 'Tous les tickets', href: '/support/admin/tickets', permission: 'support.admin', icon: ClipboardList },
+                { label: 'Incidents', href: '/support/incidents', permission: 'support.admin', icon: AlertCircle },
+                { label: 'FAQ / Base de connaissance', href: '/support/faq', permission: 'support.faq', icon: HelpCircle },
+                { label: 'Contact support', href: '/support/contact', permission: 'support.tickets.create', icon: MessageCircle },
+                { label: 'Statut système', href: '/support/status', permission: 'support.admin', icon: Settings },
             ]
         },
         {
@@ -352,8 +354,18 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
             items: [
                 { label: 'Paramètres boutique', href: '/settings', permission: 'settings.view', icon: Building },
                 { label: 'Gestion des devises', href: '/settings/currencies', permission: 'settings.currency.view|settings.settings.currency.view', icon: DollarSign },
-                { label: 'Branding (logo, couleurs)', href: '#', permission: 'settings.branding', icon: Palette },
+                { label: 'Branding (logo, couleurs)', href: '/admin/branding', permission: 'settings.branding', icon: Palette },
                 { label: 'Préférences UI', href: '#', permission: 'settings.ui', icon: Palette },
+                { label: 'Referral / Parrainage', href: '/referrals/settings', permission: 'referral.settings.view|referral.settings.manage', icon: Users },
+            ]
+        },
+        {
+            key: 'referral',
+            label: 'Referral',
+            icon: Users,
+            permissions: ['referral.view', 'referral.stats.view'],
+            items: [
+                { label: 'Mon programme', href: '/referrals', permission: 'referral.view|referral.stats.view', icon: Users },
             ]
         },
         {
@@ -362,9 +374,9 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
             icon: Scroll,
             permissions: ['logs.system', 'logs.actions', 'logs.connections'],
             items: [
-                { label: 'Logs système', href: '#', permission: 'logs.system', icon: ClipboardList },
-                { label: 'Historique des actions', href: '#', permission: 'logs.actions', icon: Scroll },
-                { label: 'Connexions utilisateurs', href: '#', permission: 'logs.connections', icon: Lock },
+                { label: 'Logs système', href: '/logs/system', permission: 'logs.system', icon: ClipboardList },
+                { label: 'Historique des actions', href: '/logs/actions', permission: 'logs.actions', icon: Scroll },
+                { label: 'Connexions utilisateurs', href: '/logs/connections', permission: 'logs.connections', icon: Lock },
             ]
         },
     ];
@@ -388,10 +400,20 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                     {/* Logo */}
                     <div className="flex h-16 shrink-0 items-center">
                         <Link href="/" className="flex items-center space-x-2 group">
-                            <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
-                                <span className="text-white font-bold text-lg">POS</span>
-                            </div>
-                            <span className="text-xl font-bold text-gray-900 dark:text-white">POS SaaS</span>
+                            {appLogoUrl ? (
+                                <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex items-center justify-center overflow-hidden shadow-lg group-hover:shadow-xl transition-shadow">
+                                    <img
+                                        src={appLogoUrl}
+                                        alt="OmniPOS"
+                                        className="max-w-full max-h-full object-contain"
+                                    />
+                                </div>
+                            ) : (
+                                <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+                                    <span className="text-white font-bold text-lg">OP</span>
+                                </div>
+                            )}
+                            <span className="text-xl font-bold text-gray-900 dark:text-white">OmniPOS</span>
                         </Link>
                     </div>
 
@@ -480,10 +502,20 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                     {/* Header avec bouton fermer */}
                     <div className="flex h-16 shrink-0 items-center justify-between">
                         <Link href="/" className="flex items-center space-x-2">
-                            <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
-                                <span className="text-white font-bold text-lg">POS</span>
-                            </div>
-                            <span className="text-xl font-bold text-gray-900 dark:text-white">POS SaaS</span>
+                            {appLogoUrl ? (
+                                <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex items-center justify-center overflow-hidden shadow-lg">
+                                    <img
+                                        src={appLogoUrl}
+                                        alt="OmniPOS"
+                                        className="max-w-full max-h-full object-contain"
+                                    />
+                                </div>
+                            ) : (
+                                <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+                                    <span className="text-white font-bold text-lg">OP</span>
+                                </div>
+                            )}
+                            <span className="text-xl font-bold text-gray-900 dark:text-white">OmniPOS</span>
                         </Link>
                         <button
                             onClick={onClose}

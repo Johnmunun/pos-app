@@ -27,7 +27,7 @@ export default function SelectTenant() {
                             <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
                                 <span className="text-white font-bold text-sm">POS</span>
                             </div>
-                            <span className="font-bold text-gray-900">POS SaaS Admin</span>
+                            <span className="font-bold text-gray-900">OmniPOS Admin</span>
                         </Link>
                     </div>
                 </div>

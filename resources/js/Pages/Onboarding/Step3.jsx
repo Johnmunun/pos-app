@@ -1,6 +1,7 @@
 import { Head, useForm } from '@inertiajs/react';
 import OnboardingStepper from '@/Components/OnboardingStepper';
 import OnboardingNavigationButtons from '@/Components/OnboardingNavigationButtons';
+import { useEffect } from 'react';
 
 export default function Step3({ sessionData }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -8,7 +9,23 @@ export default function Step3({ sessionData }) {
         address: sessionData?.address || '',
         phone: sessionData?.phone || '',
         company_email: sessionData?.company_email || '',
+        referral_code: sessionData?.referral_code || '',
     });
+
+    // Pré-remplir le code de parrainage depuis l'URL (?ref=CODE) si présent
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const ref = params.get('ref');
+            if (ref && !data.referral_code) {
+                setData('referral_code', ref);
+            }
+        } catch {
+            // Ignorer les erreurs de parsing URL
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const submit = (e) => {
         e.preventDefault();
@@ -17,7 +34,7 @@ export default function Step3({ sessionData }) {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-amber-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-            <Head title="Informations boutique - Étape 3/4" />
+            <Head title="Informations boutique" />
             
             {/* Header fixé */}
             <header className="fixed top-0 left-0 right-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 z-50">
@@ -25,10 +42,10 @@ export default function Step3({ sessionData }) {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                             <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
-                                <span className="text-white font-bold text-sm">POS</span>
+                                <span className="text-white font-bold text-sm">OP</span>
                             </div>
                             <div>
-                                <h1 className="text-xl font-bold text-gray-900 dark:text-white">POS SaaS</h1>
+                                <h1 className="text-xl font-bold text-gray-900 dark:text-white">OmniPOS</h1>
                                 <p className="text-sm text-gray-600 dark:text-gray-400">Inscription marchand</p>
                             </div>
                         </div>
@@ -168,6 +185,31 @@ export default function Step3({ sessionData }) {
                                 {errors.company_email && (
                                     <p className="mt-2 text-sm text-red-600 dark:text-red-400">{errors.company_email}</p>
                                 )}
+                            </div>
+
+                            {/* Code de parrainage / invitation (optionnel) */}
+                            <div>
+                                <label
+                                    htmlFor="referral_code"
+                                    className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2"
+                                >
+                                    Code de parrainage (optionnel)
+                                </label>
+                                <input
+                                    id="referral_code"
+                                    name="referral_code"
+                                    type="text"
+                                    value={data.referral_code}
+                                    onChange={(e) => setData('referral_code', e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                                    placeholder="Ex: ABCD1234"
+                                />
+                                {errors.referral_code && (
+                                    <p className="mt-2 text-sm text-red-600 dark:text-red-400">{errors.referral_code}</p>
+                                )}
+                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    Si vous avez été invité, entrez ici le code de votre parrain. Laissez vide si vous n&apos;en avez pas.
+                                </p>
                             </div>
 
                             {/* Message d'information */}

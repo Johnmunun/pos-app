@@ -8,7 +8,7 @@ import axios from 'axios';
  * Page publique d'accueil et de connexion.
  *
  * Affiche:
- * - Présentation du système POS SaaS
+ * - Présentation du système OmniPOS
  * - Formulaire de connexion
  *
  * Utilisée comme point d'entrée pour les utilisateurs non authentifiés.
@@ -61,10 +61,10 @@ export default function Welcome() {
                 {/* Header */}
                 <div className="text-center mb-8">
                     <h1 className="text-4xl font-bold text-white mb-2">
-                        POS SaaS
+                        OmniPOS
                     </h1>
                     <p className="text-blue-100">
-                        Système de Point de Vente Professionnel
+                        Smart POS &amp; Business Management
                     </p>
                 </div>
 
@@ -137,7 +137,7 @@ export default function Welcome() {
                             🔐 Identifiants de développement:
                         </p>
                         <p>
-                            <strong>Email:</strong> admin@pos-saas.local
+                            <strong>Email:</strong> admin@omnipos.test
                         </p>
                         <p>
                             <strong>Mot de passe:</strong>{' '}
@@ -153,7 +153,7 @@ export default function Welcome() {
 
                 {/* Footer */}
                 <div className="text-center mt-8 text-blue-100 text-sm">
-                    <p>© 2026 POS SaaS. Tous droits réservés.</p>
+                    <p>© 2026 OmniPOS. Tous droits réservés.</p>
                 </div>
             </div>
         </div>

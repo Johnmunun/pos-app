@@ -19,8 +19,10 @@ class ToggleUserStatusUseCase
         if (!$user) {
             throw new \Exception("User not found");
         }
-        
-        $newStatus = !$user->getStatus();
+
+        $currentStatus = $user->isActive();
+        $newStatus = !$currentStatus;
+
         $this->repository->updateUserStatus($userId, $newStatus);
     }
 }

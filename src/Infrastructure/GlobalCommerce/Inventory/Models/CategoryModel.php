@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $parent_id
  * @property int $sort_order
  * @property bool $is_active
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, self> $children
  */
 class CategoryModel extends Model
 {

@@ -5,10 +5,13 @@ namespace Src\Infrastructure\Ecommerce\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 use Src\Infrastructure\Ecommerce\Models\OrderModel;
 use Src\Infrastructure\Ecommerce\Models\CustomerModel;
+use Src\Infrastructure\Ecommerce\Models\CmsMediaModel;
+use Src\Infrastructure\GlobalCommerce\Inventory\Models\ProductModel as GcProductModel;
 use Carbon\Carbon;
 
 class DashboardController
@@ -81,6 +84,85 @@ class DashboardController
             ->where('created_at', '>=', $last7)
             ->sum('total_amount');
 
+        // Stockage médias : images produits (GlobalCommerce) + médias CMS
+        $productImageCount = (int) GcProductModel::where('shop_id', $shopId)
+            ->whereNotNull('image_path')
+            ->count();
+        $mediaImageCount = (int) CmsMediaModel::where('shop_id', $shopId)
+            ->whereNotNull('file_path')
+            ->where(function ($q) {
+                $q->where('mime_type', 'like', 'image/%')
+                  ->orWhere('file_type', 'image')
+                  ->orWhere('file_path', 'like', '%.jpg')
+                  ->orWhere('file_path', 'like', '%.jpeg')
+                  ->orWhere('file_path', 'like', '%.png')
+                  ->orWhere('file_path', 'like', '%.webp');
+            })
+            ->count();
+        $totalImages = $productImageCount + $mediaImageCount;
+        // La table `users` n'a pas toujours `shop_id` (selon migrations).
+        // On utilise `tenant_id` (présent) comme scope boutique/tenant.
+        $usersCount = (int) \App\Models\User::query()
+            ->where('tenant_id', $shopId)
+            ->count();
+        $perUserLimitMb = 100.0;
+        $mediaStorageLimitMb = max($perUserLimitMb, $usersCount * $perUserLimitMb);
+
+        $usedBytes = 0;
+        try {
+            $paths = [];
+
+            // CMS media files
+            $cmsPaths = CmsMediaModel::where('shop_id', $shopId)
+                ->whereNotNull('file_path')
+                ->pluck('file_path')
+                ->toArray();
+            foreach ($cmsPaths as $p) {
+                if (is_string($p) && $p !== '') {
+                    $paths[] = $p;
+                }
+            }
+
+            // Product images (main + extras)
+            $productRows = GcProductModel::where('shop_id', $shopId)
+                ->get(['image_path', 'extra_images']);
+            foreach ($productRows as $row) {
+                if (!empty($row->image_path) && is_string($row->image_path)) {
+                    $paths[] = $row->image_path;
+                }
+                $extras = $row->extra_images ?? null;
+                if (is_array($extras)) {
+                    foreach ($extras as $ep) {
+                        if (is_string($ep) && $ep !== '') {
+                            $paths[] = $ep;
+                        }
+                    }
+                }
+            }
+
+            $paths = array_values(array_unique(array_filter($paths)));
+
+            // Prevent huge scans
+            $paths = array_slice($paths, 0, 500);
+
+            foreach ($paths as $path) {
+                if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+                    continue;
+                }
+                try {
+                    if (Storage::disk('public')->exists($path)) {
+                        $usedBytes += (int) Storage::disk('public')->size($path);
+                    }
+                } catch (\Throwable) {
+                    // ignore unreadable files
+                }
+            }
+        } catch (\Throwable) {
+            $usedBytes = 0;
+        }
+
+        $usedMb = $usedBytes > 0 ? round($usedBytes / 1024 / 1024, 2) : 0.0;
+
         // Graphique commandes (période filtrée ou 30 derniers jours)
         $chartOrders = $this->getOrdersChartDataFiltered($shopId, $from, $to);
 
@@ -118,6 +200,13 @@ class DashboardController
                     'last_7_days' => round($revenueLast7Days, 2),
                 ],
                 'alerts' => $alerts,
+                'media_storage' => [
+                    'images_count' => $totalImages,
+                    'used_mb' => $usedMb,
+                    'limit_mb' => $mediaStorageLimitMb,
+                    'users_count' => $usersCount,
+                    'per_user_limit_mb' => $perUserLimitMb,
+                ],
             ],
             'chartOrders' => $chartOrders,
             'chartOrderStatus' => $chartOrderStatus,

@@ -23,6 +23,7 @@ final class CreateOrderDTO
      * @param string $currency
      * @param string|null $paymentMethod
      * @param string|null $notes
+     * @param string $paymentStatus
      * @param OrderItemDTO[] $items
      * @param int|null $createdBy
      */
@@ -40,6 +41,7 @@ final class CreateOrderDTO
         public readonly string $currency,
         public readonly ?string $paymentMethod,
         public readonly ?string $notes,
+        public readonly string $paymentStatus,
         public readonly array $items,
         public readonly ?int $createdBy = null
     ) {

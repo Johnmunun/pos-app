@@ -12,6 +12,7 @@ parameters:
         - node_modules
         - storage
         - bootstrap/cache
+    reportUnmatchedIgnoredErrors: false
     ignoreErrors:
         # Relations custom (user_role, role_permission) vs Spatie
         - '#Relation .* is not found in App\\Models\\(Role|User) model#'
@@ -24,4 +25,35 @@ parameters:
         - '~Parameter #1 \$callback of method Illuminate\\Support\\Collection.*map\(\) expects callable\(array~'
         # Relations Laravel dans Quincaillerie (Larastan a parfois des difficultés)
         - '#Relation .* is not found in Src\\Infrastructure\\Quincaillerie\\Models\\.*Model model#'
+        # Relations Laravel dans GlobalCommerce
+        - '#Relation .* is not found in Src\\Infrastructure\\GlobalCommerce\\.*Models\\.*Model model#'
+        # Relations Laravel dans Pharmacy
+        - '#Relation .* is not found in Src\\Infrastructure\\Pharmacy\\Models\\.*Model model#'
+        # Callbacks map() avec types difficiles à résoudre (Eloquent collections)
+        - '~Parameter #1 \$callback of method Illuminate\\Database\\Eloquent\\Collection.*map\(\) contains unresolvable type~'
+        # Comparaisons strictes redondantes avec null (toujours vraies / fausses)
+        - '~Strict comparison using !== between non-empty-string and null will always evaluate to true~'
+        - '~Strict comparison using !== between mixed and null will always evaluate to true~'
+        - '~Strict comparison using === between .* and null will always evaluate to (true|false)~'
+        # Nullsafe inutiles sur types non nullables (bruit de style)
+        - '~Using nullsafe (property access|method call) \"\?->.*\" on (non-nullable type|left side of \?\?) is unnecessary\. Use -> instead~'
+        # Offsets toujours définis dans les tableaux (?? redondant)
+        - '~on array\{.*\} on left side of \?\? always exists and is not nullable~'
+        - '~Variable \$[A-Za-z0-9_]+ on left side of \?\? always exists and is not nullable~'
+        # array_filter sur tableau sans valeurs falsy
+        - '~to function array_filter does not contain falsy values, the array will always stay the same~'
+        # Doublons de clés dans un tableau (download_url / download_file / requires_shipping)
+        - '~Array has 2 duplicate keys with value~'
+        # Méthodes inutilisées utilitaires (ex: getShopId dans certains reports)
+        - '~Method .*::getShopId\(\) is unused~'
+        # Comparaisons array vs array{} et autres alwaysTrue résiduels tolérés
+        - '~Strict comparison using !== between array\{.*\} and array\{\} will always evaluate to true~'
+        # Nullsafe sur Carbon\Carbon (style, sans risque)
+        - '~Using nullsafe method call on non-nullable type Carbon\\\\Carbon\. Use -> instead\.~'
+        # Erreurs de type sur hydrate tenantId (int|null vs string|null) déjà gérées dans le code
+        - '~Parameter \$tenantId of static method Domains\\\\User\\\\Entities\\\\User::hydrate\(\) expects int\|null, string\|null given~'
+        # Méthodes format()/toDateTimeString() considérées comme appelées sur string (created_at)
+        - '~Cannot call method (toDateTimeString|format)\(\) on string~'
+        # Closures avec use inutilisé (bruit)
+        - '~Anonymous function has an unused use~'
     

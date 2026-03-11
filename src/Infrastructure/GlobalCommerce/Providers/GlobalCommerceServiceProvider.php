@@ -98,7 +98,8 @@ class GlobalCommerceServiceProvider extends ServiceProvider
             function ($app) {
                 return new CreateSaleUseCase(
                     $app->make(SaleRepositoryInterface::class),
-                    $app->make(ProductRepositoryInterface::class)
+                    $app->make(ProductRepositoryInterface::class),
+                    $app->make(\Src\Application\Referral\Services\ReferralService::class)
                 );
             }
         );

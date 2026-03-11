@@ -3,12 +3,19 @@
 namespace Src\Infrastructure\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\Role;
+use App\Models\Permission;
+use App\Models\Tenant as TenantModel;
+use App\Models\User as UserModel;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use Src\Domains\Onboarding\Services\OnboardingService;
+use Src\Infrastructure\Referral\Models\ReferralAccountModel;
 use Src\Infrastructure\Repositories\EloquentOnboardingRepository;
 use Src\Domains\Onboarding\ValueObjects\Sector;
 use Src\Domains\Onboarding\ValueObjects\BusinessType;
@@ -145,7 +152,8 @@ class OnboardingController extends Controller
             'company_name' => 'required|string|max:255',
             'address' => 'required|string|max:500',
             'phone' => 'required|string|max:20',
-            'email' => 'nullable|email|max:255'
+            'email' => 'nullable|email|max:255',
+            'referral_code' => 'nullable|string|max:100',
         ]);
 
         try {
@@ -227,7 +235,7 @@ class OnboardingController extends Controller
             // Secteurs Kiosque, Supermarché, Boucherie, Autre = module Global Commerce : assigner le rôle Commerçant Commerce
             $commerceSectors = ['kiosk', 'supermarket', 'butchery', 'other'];
             if (in_array($tenant->sector, $commerceSectors, true)) {
-                $commerceRole = \App\Models\Role::where('name', 'Commerçant Commerce')->whereNull('tenant_id')->first();
+                $commerceRole = Role::where('name', 'Commerçant Commerce')->whereNull('tenant_id')->first();
                 if ($commerceRole) {
                     $user->roles()->syncWithoutDetaching([$commerceRole->id]);
                 }
@@ -235,12 +243,12 @@ class OnboardingController extends Controller
 
             // Secteur E-commerce = module E-commerce : assigner le rôle Commerçant E-commerce
             if ($tenant->sector === 'ecommerce') {
-                $ecommerceRole = \App\Models\Role::where('name', 'Commerçant E-commerce')->whereNull('tenant_id')->first();
+                $ecommerceRole = Role::where('name', 'Commerçant E-commerce')->whereNull('tenant_id')->first();
                 if ($ecommerceRole) {
                     $user->roles()->syncWithoutDetaching([$ecommerceRole->id]);
                 } else {
                     // Si le rôle n'existe pas, créer un rôle par défaut avec les permissions e-commerce
-                    $ecommerceRole = \App\Models\Role::create([
+                    $ecommerceRole = Role::create([
                         'tenant_id' => null,
                         'name' => 'Commerçant E-commerce',
                         'description' => 'Rôle par défaut pour les commerçants e-commerce (créé automatiquement).',
@@ -248,7 +256,7 @@ class OnboardingController extends Controller
                     ]);
                     
                     // Assigner les permissions e-commerce
-                    $ecommercePermissions = \App\Models\Permission::where('is_old', false)
+                    $ecommercePermissions = Permission::where('is_old', false)
                         ->whereIn('code', [
                             'module.ecommerce',
                             'ecommerce.view',
@@ -264,6 +272,22 @@ class OnboardingController extends Controller
                     }
                     
                     $user->roles()->syncWithoutDetaching([$ecommerceRole->id]);
+                }
+            }
+
+            // Créer le compte de parrainage si un code d'invitation a été fourni
+            $step3Data = $session->getStepData(3);
+            $rawReferralCode = $step3Data['referral_code'] ?? $request->query('ref');
+            if ($rawReferralCode) {
+                $referrerAccount = ReferralAccountModel::where('code', $rawReferralCode)->first();
+                if ($referrerAccount) {
+                    ReferralAccountModel::create([
+                        'tenant_id' => (int) $tenant->id,
+                        'user_id' => (int) $user->id,
+                        'parent_id' => $referrerAccount->id,
+                        'code' => strtoupper(Str::random(8)),
+                        'currency' => null,
+                    ]);
                 }
             }
 
@@ -345,13 +369,13 @@ class OnboardingController extends Controller
      */
     private function createUser(array $userData)
     {
-        return \App\Models\User::create([
+        return UserModel::create([
             'name' => $userData['name'],
             'email' => $userData['email'],
-            'password' => \Illuminate\Support\Facades\Hash::make($userData['password']),
+            'password' => Hash::make($userData['password']),
             'type' => $userData['type'],
             'status' => $userData['status'],
-            'is_active' => $userData['is_active']
+            'is_active' => $userData['is_active'],
         ]);
     }
 
@@ -360,7 +384,7 @@ class OnboardingController extends Controller
      */
     private function createTenant(array $tenantData)
     {
-        return \App\Models\Tenant::create([
+        return TenantModel::create([
             'name' => $tenantData['name'],
             'sector' => $tenantData['sector'],
             'address' => $tenantData['address'],
@@ -370,7 +394,7 @@ class OnboardingController extends Controller
             'idnat' => $tenantData['idnat'],
             'rccm' => $tenantData['rccm'],
             'is_active' => true,
-            'code' => strtoupper(\Illuminate\Support\Str::random(8))
+            'code' => strtoupper(Str::random(8)),
         ]);
     }
 }

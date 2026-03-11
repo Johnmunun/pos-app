@@ -6,7 +6,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { Toaster } from 'react-hot-toast';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'OmniPOS';
 
 // Dark mode support basé sur la préférence du navigateur
 function initDarkMode() {
@@ -66,7 +66,7 @@ if (typeof window !== 'undefined') {
 }
 
 createInertiaApp({
-    title: (title) => `${title} - ${appName}`,
+    title: (title) => title ? `${title} | ${appName}` : `${appName} - Smart POS & Business Management`,
     resolve: (name) =>
         resolvePageComponent(
             `./Pages/${name}.jsx`,

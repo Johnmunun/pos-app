@@ -1,11 +1,32 @@
 import React, { useMemo } from 'react';
-import ReactQuill from 'react-quill';
+import ReactQuill, { Quill } from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+
+// Définir explicitement la liste de polices disponibles dans l'éditeur
+const FONT_WHITELIST = [
+    'times-new-roman',
+    'arial',
+    'calibri',
+    'cambria',
+    'verdana',
+    'tahoma',
+    'georgia',
+    'courier-new',
+    'garamond',
+    'trebuchet-ms',
+    'sans-serif',
+    'serif',
+];
+
+const Font = Quill.import('formats/font');
+Font.whitelist = FONT_WHITELIST;
+Quill.register(Font, true);
 
 export default function RichTextEditor({ value, onChange, placeholder }) {
     const modules = useMemo(
         () => ({
             toolbar: [
+                [{ font: FONT_WHITELIST }, { size: ['small', false, 'large', 'huge'] }],
                 [{ header: [1, 2, 3, false] }],
                 ['bold', 'italic', 'underline', 'strike'],
                 [{ list: 'ordered' }, { list: 'bullet' }],

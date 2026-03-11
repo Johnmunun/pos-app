@@ -35,6 +35,7 @@ use Src\Domain\Pharmacy\Repositories\StockMovementRepositoryInterface;
 use Src\Infrastructure\Pharmacy\Adapters\HardwareUpdateStockUseCase;
 use Src\Shared\ValueObjects\Money;
 use Src\Domain\Pharmacy\Entities\Sale as SaleEntity;
+use Src\Application\Referral\Services\ReferralService;
 
 class SaleController
 {
@@ -71,7 +72,8 @@ class SaleController
         private CreateDebtUseCase $createDebtUseCase,
         private ?DepotFilterService $depotFilterService = null,
         private ?QuincaillerieProductRepositoryInterface $hardwareProductRepository = null,
-        private ?ProductRepositoryInterface $pharmacyProductRepository = null
+        private ?ProductRepositoryInterface $pharmacyProductRepository = null,
+        private ?ReferralService $referralService = null
     ) {}
 
     /**
@@ -915,7 +917,8 @@ class SaleController
                 abort(403, 'User not authenticated.');
             }
             // Si module Hardware, utiliser un flux de finalisation adapté (sans lots Pharmacy)
-            if ($this->getModule() === 'Hardware') {
+            $isHardware = $this->getModule() === 'Hardware';
+            if ($isHardware) {
                 $this->finalizeHardwareSale($sale, (float) $request->input('paid_amount'), (int) $authUser->id);
             } else {
                 $this->finalizeSaleUseCase->execute($id, (float) $request->input('paid_amount'), (int) $authUser->id);
@@ -945,6 +948,21 @@ class SaleController
                         $id,
                         null
                     );
+                }
+
+                // Enregistrer la transaction pour le système de parrainage
+                if ($this->referralService !== null) {
+                    $sourceType = $isHardware ? 'hardware_sale' : 'pharmacy_sale';
+                    $buyerUserId = $sale->getCreatedBy();
+                    if ($buyerUserId !== null) {
+                        $this->referralService->recordTransaction(
+                            (int) $sale->getShopId(),
+                            (int) $buyerUserId,
+                            $sale->getTotal()->getAmount(),
+                            $sourceType,
+                            $sale->getId()
+                        );
+                    }
                 }
             }
 

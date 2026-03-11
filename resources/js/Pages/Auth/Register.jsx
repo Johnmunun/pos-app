@@ -4,6 +4,7 @@ import TextInput from '@/Components/TextInput';
 import FlashMessages from '@/Components/FlashMessages';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { useEffect } from 'react';
 
 /**
  * Page: Register
@@ -18,7 +19,22 @@ export default function Register() {
         email: '',
         password: '',
         password_confirmation: '',
+        referral_code: '',
     });
+
+    // Pré-remplir le code de parrainage à partir de l'URL (?ref=CODE)
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const ref = params.get('ref');
+            if (ref && !data.referral_code) {
+                setData('referral_code', ref);
+            }
+        } catch {
+            // Ignorer en cas d'erreur parsing URL
+        }
+    }, [data.referral_code, setData]);
 
     const submit = (e) => {
         e.preventDefault();
@@ -58,9 +74,9 @@ export default function Register() {
                             className="flex items-center space-x-3 mb-8 group hover:opacity-90 transition-opacity"
                         >
                             <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
-                                <span className="text-white font-bold text-lg">POS</span>
+                                <span className="text-white font-bold text-lg">OP</span>
                             </div>
-                            <span className="text-2xl font-bold text-gray-900 dark:text-white">POS SaaS</span>
+                            <span className="text-2xl font-bold text-gray-900 dark:text-white">OmniPOS</span>
                         </Link>
                         
                         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white text-center mb-3">
@@ -210,6 +226,30 @@ export default function Register() {
                                     message={errors.password_confirmation}
                                     className="mt-2 text-red-500 dark:text-red-400 text-sm"
                                 />
+                            </div>
+
+                            {/* Referral Code (optional) */}
+                            <div>
+                                <InputLabel
+                                    htmlFor="referral_code"
+                                    value="Code de parrainage (optionnel)"
+                                    className="text-gray-900 dark:text-gray-100 font-semibold mb-2 block text-sm"
+                                />
+                                <TextInput
+                                    id="referral_code"
+                                    name="referral_code"
+                                    value={data.referral_code}
+                                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all shadow-sm"
+                                    onChange={(e) => setData('referral_code', e.target.value)}
+                                    placeholder="Ex: ABCD1234"
+                                />
+                                <InputError
+                                    message={errors.referral_code}
+                                    className="mt-2 text-red-500 dark:text-red-400 text-sm"
+                                />
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    Si vous avez été invité, entrez ici le code de votre parrain.
+                                </p>
                             </div>
 
                             {/* Submit button */}

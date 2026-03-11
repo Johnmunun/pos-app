@@ -29,17 +29,17 @@ final class TenantName
         // Nettoyer les espaces
         $value = trim($value);
 
+        // Valider que ce n'est pas vide après nettoyage
+        if ($value === '') {
+            throw new \InvalidArgumentException(
+                'TenantName cannot be empty'
+            );
+        }
+
         // Valider la longueur
         if (strlen($value) < 3 || strlen($value) > 255) {
             throw new \InvalidArgumentException(
                 'TenantName must be between 3 and 255 characters'
-            );
-        }
-
-        // Valider que ce n'est pas vide après nettoyage
-        if (empty($value)) {
-            throw new \InvalidArgumentException(
-                'TenantName cannot be empty'
             );
         }
 

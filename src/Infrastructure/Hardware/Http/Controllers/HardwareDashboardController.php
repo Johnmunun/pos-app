@@ -10,6 +10,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Src\Application\Quincaillerie\Services\DashboardService;
 use Src\Infrastructure\Pharmacy\Models\SaleModel;
+use Src\Infrastructure\Quincaillerie\Models\ProductModel as HardwareProductModel;
 
 class HardwareDashboardController
 {
@@ -109,6 +110,16 @@ class HardwareDashboardController
                 }
             }
         }
+
+        // Stockage médias: images produits hardware uniquement
+        $productImageCount = (int) HardwareProductModel::where('shop_id', $shopId)
+            ->whereNotNull('image_path')
+            ->count();
+        $stats['media_storage'] = [
+            'images_count' => $productImageCount,
+            'used_mb' => null,
+            'limit_mb' => 100.0,
+        ];
 
         $depotsData = HandleInertiaRequests::getDepotsForRequest($request);
         return Inertia::render('Hardware/Dashboard', [

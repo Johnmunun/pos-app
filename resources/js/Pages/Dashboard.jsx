@@ -21,7 +21,7 @@ import {
  * Version 1 : Frontend uniquement (placeholders)
  */
 export default function Dashboard() {
-    const { auth } = usePage().props;
+    const { auth, referralStats } = usePage().props;
     const permissions = auth?.permissions ?? [];
 
     // Widgets généraux (toujours visibles)
@@ -53,6 +53,17 @@ export default function Dashboard() {
             icon: AlertTriangle,
             trend: 'Alerte',
             color: 'amber',
+        },
+        {
+            title: 'Parrainage',
+            value: referralStats
+                ? `${referralStats.total_direct_children ?? 0} filleul(s)`
+                : '0 filleul',
+            icon: Users,
+            trend: referralStats
+                ? `Commissions: ${(referralStats.total_commissions ?? 0).toFixed(2)} ${referralStats.currency ?? ''}`
+                : 'Commissions: 0',
+            color: 'emerald',
         },
     ];
 

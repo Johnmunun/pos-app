@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property \Carbon\Carbon|null $expected_at
  * @property \Carbon\Carbon|null $received_at
  * @property string|null $notes
+ * @property \Carbon\Carbon|null $created_at
  * @property \Illuminate\Database\Eloquent\Collection<int, PurchaseLineModel> $lines
  */
 class PurchaseModel extends Model

@@ -4,15 +4,32 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title inertia>{{ config('app.name', 'Laravel') }}</title>
+        <title inertia>{{ config('app.name', 'OmniPOS') }}</title>
+
+        {{-- Thème storefront : variables CSS inline pour éviter le flash couleur au refresh --}}
+        @php
+            $sfTheme = $page['props']['storefrontTheme'] ?? null;
+            $themeColor = (is_array($sfTheme) && !empty($sfTheme['primary'])) ? $sfTheme['primary'] : '#f59e0b';
+        @endphp
+        @if(!empty($sfTheme) && is_array($sfTheme))
+        <style id="storefront-theme">
+:root {
+    --sf-primary: {{ $sfTheme['primary'] ?? '#f59e0b' }};
+    --sf-secondary: {{ $sfTheme['secondary'] ?? '#d97706' }};
+    --sf-primary-hover: {{ $sfTheme['secondary'] ?? '#d97706' }};
+}
+        </style>
+        @endif
 
         <!-- PWA Meta Tags -->
-        <meta name="theme-color" content="#f59e0b">
+        <meta name="theme-color" content="{{ $themeColor }}">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="default">
-        <meta name="apple-mobile-web-app-title" content="POS SaaS">
+        <meta name="apple-mobile-web-app-title" content="OmniPOS">
         <link rel="manifest" href="/manifest.json">
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+        <link rel="icon" href="/favicon.ico" type="image/x-icon">
+        <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">

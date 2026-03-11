@@ -173,7 +173,7 @@
     @endif
     
     <div class="footer">
-        <p>Document généré automatiquement par le système POS SaaS - Pharmacy Module</p>
+        <p>Document généré automatiquement par le système OmniPOS - Pharmacy Module</p>
         <p>Page 1/1</p>
     </div>
 </body>

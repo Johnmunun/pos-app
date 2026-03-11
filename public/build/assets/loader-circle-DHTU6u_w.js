@@ -1,1 +1,0 @@
-import{c}from"./createLucideIcon-DFdTwjzB.js";const o=[["path",{d:"M12 6v6l4 2",key:"mmk7yg"}],["circle",{cx:"12",cy:"12",r:"10",key:"1mglay"}]],r=c("clock",o);const e=[["path",{d:"M21 12a9 9 0 1 1-6.219-8.56",key:"13zald"}]],l=c("loader-circle",e);export{r as C,l as L};

@@ -2,7 +2,7 @@
 
 namespace Src\Application\GlobalSearch\Repositories;
 
-use Domains\GlobalSearch\ValueObjects\GlobalSearchItem;
+use Src\Domains\GlobalSearch\ValueObjects\GlobalSearchItem;
 
 /**
  * Interface GlobalSearchRepositoryInterface

@@ -30,6 +30,7 @@ class CmsBlogController
             return Inertia::render('Ecommerce/Cms/Blog/Index', ['articles' => [], 'categories' => []]);
         }
 
+        /** @phpstan-ignore-next-line Larastan relation false positive for category */
         $articles = CmsBlogArticleModel::where('shop_id', $shopId)
             ->with('category')
             ->orderByDesc('published_at')

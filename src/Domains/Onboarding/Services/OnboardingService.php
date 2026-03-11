@@ -52,7 +52,8 @@ class OnboardingService
             'company_name' => $data['company_name'],
             'address' => $data['address'],
             'phone' => $data['phone'],
-            'email' => $data['email'] ?? null
+            'email' => $data['email'] ?? null,
+            'referral_code' => $data['referral_code'] ?? null,
         ]);
     }
 

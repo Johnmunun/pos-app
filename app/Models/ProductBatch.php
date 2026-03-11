@@ -5,6 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property \Illuminate\Support\Carbon|null $expiration_date
+ * @property \Illuminate\Support\Carbon|null $manufacturing_date
+ */
 class ProductBatch extends Model
 {
     use HasFactory;

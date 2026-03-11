@@ -4,6 +4,7 @@ namespace Src\Infrastructure\Ecommerce\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Illuminate\Support\Facades\Storage;
 use Src\Infrastructure\Ecommerce\Models\OrderItemModel;
 use Src\Infrastructure\Ecommerce\Models\OrderModel;
@@ -15,7 +16,7 @@ use Src\Infrastructure\GlobalCommerce\Inventory\Models\ProductModel;
  */
 class DownloadController
 {
-    public function __invoke(Request $request, string $token): Response|\Illuminate\Http\RedirectResponse
+    public function __invoke(Request $request, string $token): Response|\Illuminate\Http\RedirectResponse|BinaryFileResponse
     {
         $item = OrderItemModel::where('download_token', $token)->first();
 

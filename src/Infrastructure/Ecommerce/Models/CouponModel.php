@@ -6,6 +6,25 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property string $id
+ * @property int $shop_id
+ * @property string $code
+ * @property string $name
+ * @property string|null $description
+ * @property string $type
+ * @property float|null $discount_value
+ * @property float|null $minimum_purchase
+ * @property int|null $maximum_uses
+ * @property int|null $maximum_uses_per_customer
+ * @property int $used_count
+ * @property \Illuminate\Support\Carbon|null $starts_at
+ * @property \Illuminate\Support\Carbon|null $ends_at
+ * @property bool $is_active
+ * @property array<int,string>|null $applicable_products
+ * @property array<int,string>|null $applicable_categories
+ * @property array<int,string>|null $excluded_products
+ */
 class CouponModel extends Model
 {
     use HasUuids, SoftDeletes;

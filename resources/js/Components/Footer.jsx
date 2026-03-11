@@ -57,9 +57,9 @@ export default function Footer() {
                             <div>
                                 <div className="flex items-center space-x-2 mb-4">
                                     <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
-                                        <span className="text-white font-bold text-sm">POS</span>
+                                        <span className="text-white font-bold text-sm">OP</span>
                                     </div>
-                                    <span className="text-xl font-bold text-gray-900">POS SaaS</span>
+                                    <span className="text-xl font-bold text-gray-900">OmniPOS</span>
                                 </div>
                                 <p className="text-sm text-gray-600 mb-6">
                                     La plateforme complète pour gérer vos ventes digitales et faire croître votre activité.
@@ -107,7 +107,7 @@ export default function Footer() {
                         {/* Bottom */}
                         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                             <p className="text-sm text-gray-600">
-                                © {currentYear} POS SaaS. Tous droits réservés.
+                                © {currentYear} OmniPOS. Tous droits réservés.
                             </p>
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                                 <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>

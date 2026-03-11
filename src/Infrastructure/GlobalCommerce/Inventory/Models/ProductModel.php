@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $category_id
  * @property string|null $image_path
  * @property string|null $image_type
- * @property array|null $extra_images
+ * @property array<int,string>|null $extra_images
  * @property float|null $wholesale_price_amount
  * @property float|null $min_sale_price_amount
  * @property float|null $min_wholesale_price_amount
@@ -33,6 +33,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property bool $has_expiration
  * @property bool $is_active
  * @property bool $is_published_ecommerce
+ * @property bool|null $is_new
  * @property string|null $product_type physical|digital
  * @property string|null $download_url
  * @property string|null $download_path
@@ -50,6 +51,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $type_produit physique|numerique
  * @property string|null $mode_paiement paiement_immediat|paiement_livraison
  * @property string|null $lien_telechargement
+ * @property-read \Src\Infrastructure\GlobalCommerce\Inventory\Models\CategoryModel|null $category
  */
 class ProductModel extends Model
 {
@@ -117,6 +119,7 @@ class ProductModel extends Model
         'has_expiration' => 'boolean',
         'is_active' => 'boolean',
         'is_published_ecommerce' => 'boolean',
+        'is_new' => 'boolean',
         'requires_shipping' => 'boolean',
         'weight' => 'float',
         'length' => 'float',

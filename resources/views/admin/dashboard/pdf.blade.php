@@ -108,7 +108,7 @@
     </div>
 
     <div class="footer">
-        <p>Rapport généré automatiquement par le système POS SaaS</p>
+        <p>Rapport généré automatiquement par le système OmniPOS</p>
     </div>
 </body>
 </html>

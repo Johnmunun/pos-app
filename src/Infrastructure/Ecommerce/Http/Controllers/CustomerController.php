@@ -256,7 +256,7 @@ class CustomerController
                 $rowAssoc[$key] = isset($row[$i]) ? trim((string) $row[$i]) : '';
             }
 
-            if (!array_filter($rowAssoc, fn ($v) => $v !== '' && $v !== null)) {
+            if (!array_filter($rowAssoc, fn ($v) => $v !== '')) {
                 continue;
             }
 
@@ -386,7 +386,7 @@ class CustomerController
                 $rowAssoc[$key] = isset($row[$i]) ? trim((string) $row[$i]) : '';
             }
 
-            if (!array_filter($rowAssoc, fn ($v) => $v !== '' && $v !== null)) {
+            if (!array_filter($rowAssoc, fn ($v) => $v !== '')) {
                 continue;
             }
 

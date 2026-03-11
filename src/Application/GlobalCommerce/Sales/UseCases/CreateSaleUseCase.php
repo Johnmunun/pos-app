@@ -6,13 +6,15 @@ use Src\Application\GlobalCommerce\Sales\DTO\CreateSaleDTO;
 use Src\Domain\GlobalCommerce\Sales\Entities\Sale;
 use Src\Domain\GlobalCommerce\Sales\Repositories\SaleRepositoryInterface;
 use Src\Domain\GlobalCommerce\Inventory\Repositories\ProductRepositoryInterface;
+use Src\Application\Referral\Services\ReferralService;
 use Src\Shared\ValueObjects\Quantity;
 
 final class CreateSaleUseCase
 {
     public function __construct(
         private readonly SaleRepositoryInterface $saleRepository,
-        private readonly ProductRepositoryInterface $productRepository
+        private readonly ProductRepositoryInterface $productRepository,
+        private readonly ReferralService $referralService
     ) {
     }
 
@@ -103,6 +105,19 @@ final class CreateSaleUseCase
         }
 
         $this->saleRepository->save($sale);
+
+        // Enregistrer la transaction pour le système de parrainage (Global Commerce),
+        // uniquement si la vente n'est pas en brouillon.
+        if (!$dto->isDraft && $dto->createdByUserId !== null) {
+            $this->referralService->recordTransaction(
+                (int) $dto->shopId,
+                (int) $dto->createdByUserId,
+                $sale->getTotalAmount(),
+                'commerce_sale',
+                $sale->getId()
+            );
+        }
+
         return $sale;
     }
 }

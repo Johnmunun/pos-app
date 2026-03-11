@@ -123,6 +123,13 @@ settings:
   - settings.currency.update
   - settings.currency.delete
 
+# Referral / Parrainage
+referral:
+  - referral.settings.view
+  - referral.settings.manage
+  - referral.view
+  - referral.stats.view
+
 # Module Pharmacy
 pharmacy:
   - module.pharmacy
@@ -345,6 +352,19 @@ ecommerce:
   - ecommerce.settings.update
   - ecommerce.theme.manage
   - ecommerce.domain.manage
+  # Marketing (SEO, tracking, campagnes)
+  - ecommerce.marketing.view
+  - ecommerce.marketing.manage
+  - ecommerce.marketing.seo.view
+  - ecommerce.marketing.seo.manage
+  - ecommerce.marketing.pixel.view
+  - ecommerce.marketing.pixel.manage
+  - ecommerce.marketing.campaign.view
+  - ecommerce.marketing.campaign.manage
+  - ecommerce.marketing.newsletter.view
+  - ecommerce.marketing.newsletter.manage
+  - ecommerce.marketing.tracking.view
+  - ecommerce.marketing.tracking.manage
 
 # Module Hardware (Quincaillerie) — même granularité que Pharmacy où applicable
 hardware:

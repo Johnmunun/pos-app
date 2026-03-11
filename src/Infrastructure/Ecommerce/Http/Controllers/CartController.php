@@ -71,7 +71,8 @@ class CartController
     public function index(Request $request): Response
     {
         $shopId = $this->getShopId($request);
-        $tenantId = (int) ($request->user()?->tenant_id ?? $shopId);
+        $user = $request->user();
+        $tenantId = $user && $user->tenant_id !== null ? (int) $user->tenant_id : (int) $shopId;
 
         $shop = \App\Models\Shop::find($shopId);
         $taxRate = $shop && $shop->default_tax_rate ? (float) $shop->default_tax_rate : 0;

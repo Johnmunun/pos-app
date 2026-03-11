@@ -16,8 +16,10 @@ class CmsPageModel extends Model
         'shop_id',
         'title',
         'slug',
+        'template',
         'content',
         'image_path',
+        'metadata',
         'is_active',
         'published_at',
         'sort_order',
@@ -27,5 +29,6 @@ class CmsPageModel extends Model
         'is_active' => 'boolean',
         'published_at' => 'datetime',
         'sort_order' => 'integer',
+        'metadata' => 'array',
     ];
 }

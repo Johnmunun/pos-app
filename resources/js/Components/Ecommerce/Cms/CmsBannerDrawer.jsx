@@ -18,7 +18,7 @@ export default function CmsBannerDrawer({ isOpen, onClose, banner = null, positi
     const [helpOpen, setHelpOpen] = useState(false);
     const opts = positions.length ? positions : POSITIONS;
 
-    const { data, setData, post, put, processing, errors, reset } = useForm({
+    const { data, setData, post, put, processing, errors } = useForm({
         title: banner?.title ?? '',
         image_path: banner?.image_path ?? '',
         link: banner?.link ?? '',
@@ -28,14 +28,14 @@ export default function CmsBannerDrawer({ isOpen, onClose, banner = null, positi
 
     useEffect(() => {
         if (!isOpen) return;
-        reset({
+        setData({
             title: banner?.title ?? '',
             image_path: banner?.image_path ?? '',
             link: banner?.link ?? '',
             position: banner?.position ?? 'homepage',
             is_active: banner?.is_active ?? true,
         });
-    }, [isOpen, banner?.id]);
+    }, [isOpen, banner]);
 
     const handleSubmit = (e) => {
         e.preventDefault();

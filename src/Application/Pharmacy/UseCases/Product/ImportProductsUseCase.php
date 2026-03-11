@@ -15,7 +15,6 @@ use PhpOffice\PhpSpreadsheet\Reader\Csv;
 class ImportProductsUseCase
 {
     private const REQUIRED_COLUMNS = ['nom', 'code', 'categorie_id', 'prix', 'unite'];
-    private const OPTIONAL_COLUMNS = ['description', 'prix_revient', 'stock_minimum', 'fabricant', 'type_medicament', 'dosage', 'ordonnance'];
     private const COLUMN_ALIASES = [
         'name' => 'nom', 'product_name' => 'nom', 'produit' => 'nom', 'nom' => 'nom',
         'product_code' => 'code', 'reference' => 'code', 'sku' => 'code', 'code' => 'code',
@@ -199,10 +198,10 @@ class ImportProductsUseCase
     private function persistInfraFields(string $productId, array $row): void
     {
         $data = [];
-        if (isset($row['prix_revient']) && $row['prix_revient'] !== '' && $row['prix_revient'] !== null) {
+        if (isset($row['prix_revient']) && $row['prix_revient'] !== '') {
             $data['cost_amount'] = $this->toFloat($row['prix_revient']);
         }
-        if (isset($row['fabricant']) && $row['fabricant'] !== '' && $row['fabricant'] !== null) {
+        if (isset($row['fabricant']) && $row['fabricant'] !== '') {
             $data['manufacturer'] = $this->toString($row['fabricant']);
         }
         if (!empty($data)) {

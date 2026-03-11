@@ -128,17 +128,17 @@ class EloquentUserRepository implements UserRepository
     private function modelToEntity(UserModel $model): User
     {
         return User::hydrate(
-            id: $model->id,
+            id: (int) $model->id,
             email: $model->email,
             passwordHash: $model->password,
             firstName: $model->first_name,
             lastName: $model->last_name,
             type: $model->type,
-            tenantId: $model->tenant_id,
+            tenantId: $model->tenant_id !== null ? (int) $model->tenant_id : null,
             isActive: $model->is_active,
-            lastLoginAt: $model->last_login_at,
-            createdAt: $model->created_at ?? new \DateTime(),
-            updatedAt: $model->updated_at
+            lastLoginAt: $model->last_login_at instanceof \DateTimeInterface ? $model->last_login_at : null,
+            createdAt: $model->created_at instanceof \DateTimeInterface ? $model->created_at : new \DateTime(),
+            updatedAt: $model->updated_at instanceof \DateTimeInterface ? $model->updated_at : null
         );
     }
 }

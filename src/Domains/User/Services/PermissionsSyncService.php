@@ -225,7 +225,7 @@ general:
         if ($action === false) {
             $action = '';
         }
-        $module = $parts[0] ?? 'general';
+        $module = $parts[0];
         
         // Pour les permissions multi-niveaux (ex: pharmacy.category.view)
         $resource = count($parts) > 2 && isset($parts[1]) ? $parts[1] : null;

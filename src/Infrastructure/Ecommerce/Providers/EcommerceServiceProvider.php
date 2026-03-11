@@ -39,7 +39,8 @@ class EcommerceServiceProvider extends ServiceProvider
             return new CreateOrderUseCase(
                 $app->make(OrderRepositoryInterface::class),
                 $app->make(OrderItemRepositoryInterface::class),
-                $app->make(\Src\Domain\GlobalCommerce\Inventory\Repositories\ProductRepositoryInterface::class)
+                $app->make(\Src\Domain\GlobalCommerce\Inventory\Repositories\ProductRepositoryInterface::class),
+                $app->make(\Src\Application\Ecommerce\Services\GenerateDownloadTokensService::class)
             );
         });
 
@@ -52,7 +53,8 @@ class EcommerceServiceProvider extends ServiceProvider
         $this->app->bind(UpdatePaymentStatusUseCase::class, function ($app) {
             return new UpdatePaymentStatusUseCase(
                 $app->make(OrderRepositoryInterface::class),
-                $app->make(\Src\Application\Ecommerce\Services\GenerateDownloadTokensService::class)
+                $app->make(\Src\Application\Ecommerce\Services\GenerateDownloadTokensService::class),
+                $app->make(\Src\Application\Referral\Services\ReferralService::class)
             );
         });
 

@@ -6,6 +6,23 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property int|null $tenant_id
+ * @property int|null $depot_id
+ * @property string $name
+ * @property string|null $code
+ * @property string|null $type
+ * @property string|null $address
+ * @property string|null $city
+ * @property string|null $postal_code
+ * @property string|null $country
+ * @property string|null $phone
+ * @property string|null $email
+ * @property string|null $currency
+ * @property float|null $default_tax_rate
+ * @property array<mixed>|null $ecommerce_storefront_config
+ * @property bool $is_active
+ */
 class Shop extends Model
 {
     use HasFactory, SoftDeletes;
@@ -13,7 +30,7 @@ class Shop extends Model
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<int, string>
+     * @var list<string>
      */
     protected $fillable = [
         'tenant_id',
@@ -36,7 +53,6 @@ class Shop extends Model
     /**
      * The attributes that should be cast.
      *
-     * @var array<string, string>
      */
     protected function casts(): array
     {

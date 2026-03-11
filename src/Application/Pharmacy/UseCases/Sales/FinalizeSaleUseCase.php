@@ -7,6 +7,7 @@ use Src\Domain\Pharmacy\Entities\Sale;
 use Src\Domain\Pharmacy\Repositories\SaleLineRepositoryInterface;
 use Src\Domain\Pharmacy\Repositories\SaleRepositoryInterface;
 use Src\Application\Pharmacy\UseCases\Inventory\UpdateStockUseCase;
+use Src\Application\Referral\Services\ReferralService;
 use Src\Shared\ValueObjects\Money;
 
 /**
@@ -17,7 +18,8 @@ class FinalizeSaleUseCase
     public function __construct(
         private SaleRepositoryInterface $saleRepository,
         private SaleLineRepositoryInterface $saleLineRepository,
-        private UpdateStockUseCase $updateStockUseCase
+        private UpdateStockUseCase $updateStockUseCase,
+        private ReferralService $referralService
     ) {}
 
     /**
@@ -72,6 +74,15 @@ class FinalizeSaleUseCase
 
             $sale->markCompleted();
             $this->saleRepository->save($sale);
+
+            // Enregistrer la transaction pour le système de parrainage (Pharmacy)
+            $this->referralService->recordTransaction(
+                (int) $sale->getShopId(),
+                (int) $sale->getCreatedBy(),
+                $sale->getTotal()->getAmount(),
+                'pharmacy_sale',
+                $sale->getId()
+            );
         });
     }
 }

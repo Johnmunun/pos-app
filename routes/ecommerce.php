@@ -10,6 +10,7 @@ use Src\Infrastructure\Ecommerce\Http\Controllers\ProductController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\CategoryController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\ShippingMethodController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\PaymentMethodController;
+use Src\Infrastructure\Ecommerce\Http\Controllers\PaymentSuccessController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\PromotionController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\CouponController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\CartController;
@@ -24,6 +25,7 @@ use Src\Infrastructure\Ecommerce\Http\Controllers\CmsBannerController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\CmsBlogController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\CmsBlogCategoryController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\CmsMediaController;
+use Src\Infrastructure\Ecommerce\Http\Controllers\MarketingController;
 use Src\Infrastructure\GlobalCommerce\Http\Controllers\GcProductController;
 use Src\Infrastructure\GlobalCommerce\Http\Controllers\GcCategoryController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\SupplierController;
@@ -36,6 +38,13 @@ use Src\Infrastructure\Ecommerce\Http\Controllers\ExportController as EcommerceE
  */
 Route::get('/ecommerce/download/{token}', DownloadController::class)
     ->name('ecommerce.download');
+
+/**
+ * Page succès paiement (produit digital)
+ * - token = token de téléchargement sécurisé
+ */
+Route::get('/ecommerce/payment/success/{token}', [PaymentSuccessController::class, 'show'])
+    ->name('ecommerce.payment.success');
 
 /**
  * Module Ecommerce - Vente en ligne
@@ -56,6 +65,21 @@ Route::prefix('ecommerce')
         Route::get('/storefront/page/{slug}', [StorefrontController::class, 'showPage'])
             ->middleware('permission:ecommerce.catalog.view|ecommerce.view|module.ecommerce')
             ->name('storefront.page');
+        Route::get('/storefront/blog', [StorefrontController::class, 'blog'])
+            ->middleware('permission:ecommerce.catalog.view|ecommerce.view|module.ecommerce')
+            ->name('storefront.blog');
+        Route::get('/storefront/blog/{slug}', [StorefrontController::class, 'blogShow'])
+            ->middleware('permission:ecommerce.catalog.view|ecommerce.view|module.ecommerce')
+            ->name('storefront.blog.show');
+        Route::get('/storefront/catalog', [StorefrontController::class, 'catalog'])
+            ->middleware('permission:ecommerce.catalog.view|ecommerce.view|module.ecommerce')
+            ->name('storefront.catalog');
+        Route::get('/storefront/product/{id}', [StorefrontController::class, 'showProduct'])
+            ->middleware('permission:ecommerce.catalog.view|ecommerce.view|module.ecommerce')
+            ->name('storefront.product');
+        Route::get('/storefront/cart', [StorefrontController::class, 'cart'])
+            ->middleware('permission:ecommerce.cart.view|ecommerce.view|module.ecommerce')
+            ->name('storefront.cart');
 
         // Catalogue
         Route::get('/catalog', [CatalogController::class, 'index'])
@@ -355,6 +379,14 @@ Route::prefix('ecommerce')
             ->middleware('permission:ecommerce.settings.view|module.ecommerce')
             ->name('settings.update');
 
+        // Marketing (SEO, Pixels, Tracking)
+        Route::get('/marketing', [MarketingController::class, 'index'])
+            ->middleware('permission:ecommerce.marketing.view|ecommerce.settings.view|module.ecommerce')
+            ->name('marketing.index');
+        Route::put('/marketing', [MarketingController::class, 'update'])
+            ->middleware('permission:ecommerce.marketing.manage|ecommerce.settings.update|module.ecommerce')
+            ->name('marketing.update');
+
         // CMS vitrine e-commerce
         Route::get('/storefront/cms', [StorefrontController::class, 'cms'])
             ->middleware('permission:ecommerce.settings.view|module.ecommerce')
@@ -373,6 +405,9 @@ Route::prefix('ecommerce')
         Route::post('/cms/pages', [CmsPageController::class, 'store'])
             ->middleware('permission:ecommerce.cms.manage|ecommerce.settings.view|module.ecommerce')
             ->name('cms.pages.store');
+        Route::post('/cms/pages/create-defaults', [CmsPageController::class, 'createDefaults'])
+            ->middleware('permission:ecommerce.cms.manage|ecommerce.settings.view|module.ecommerce')
+            ->name('cms.pages.create-defaults');
         Route::get('/cms/pages/{id}/edit', [CmsPageController::class, 'edit'])
             ->middleware('permission:ecommerce.cms.view|ecommerce.settings.view|module.ecommerce')
             ->name('cms.pages.edit');

@@ -120,6 +120,21 @@ class AdminController
             $totalRevenue += $revenueQuery('sales', 'total', 'status', 'completed');
         }
 
+        // Total produits (tous modules)
+        $totalProducts = 0;
+        if (\Illuminate\Support\Facades\Schema::hasTable('pharmacy_products')) {
+            $totalProducts += \Illuminate\Support\Facades\DB::table('pharmacy_products')->count();
+        }
+        if (\Illuminate\Support\Facades\Schema::hasTable('gc_products')) {
+            $totalProducts += \Illuminate\Support\Facades\DB::table('gc_products')->count();
+        }
+        if (\Illuminate\Support\Facades\Schema::hasTable('quincaillerie_products')) {
+            $totalProducts += \Illuminate\Support\Facades\DB::table('quincaillerie_products')->count();
+        }
+        if (\Illuminate\Support\Facades\Schema::hasTable('products')) {
+            $totalProducts += \Illuminate\Support\Facades\DB::table('products')->count();
+        }
+
         // 3. Répartition par module
         $moduleStats = [
             'pharmacy' => [
@@ -311,7 +326,7 @@ class AdminController
                         'id' => $t->id,
                         'name' => $t->name,
                         'sector' => $t->sector,
-                        'created_at' => $t->created_at->toDateTimeString(),
+                        'created_at' => $t->created_at !== null ? $t->created_at->toDateTimeString() : null,
                     ];
                 })->toArray(),
                 'users' => $recentUsers->map(function ($u) {
@@ -319,7 +334,7 @@ class AdminController
                         'id' => $u->id,
                         'name' => trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? '')),
                         'email' => $u->email,
-                        'created_at' => $u->created_at->toDateTimeString(),
+                        'created_at' => $u->created_at !== null ? $u->created_at->toDateTimeString() : null,
                     ];
                 })->toArray(),
                 'logins' => $recentLogins->map(function ($u) {
@@ -327,7 +342,7 @@ class AdminController
                         'id' => $u->id,
                         'name' => trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? '')),
                         'email' => $u->email,
-                        'last_login_at' => $u->last_login_at ? $u->last_login_at->toDateTimeString() : null,
+                        'last_login_at' => $u->last_login_at !== null ? $u->last_login_at->toDateTimeString() : null,
                     ];
                 })->toArray(),
             ],
@@ -619,7 +634,7 @@ class AdminController
         $totalUsers = \App\Models\User::where('type', '!=', 'ROOT')->count();
         $activeUsers = \App\Models\User::where('type', '!=', 'ROOT')->where('is_active', true)->count();
         
-        // Total produits
+        // Total produits (tous modules)
         $totalProducts = 0;
         if (\Illuminate\Support\Facades\Schema::hasTable('pharmacy_products')) {
             $totalProducts += \Illuminate\Support\Facades\DB::table('pharmacy_products')->count();

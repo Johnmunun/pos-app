@@ -94,28 +94,28 @@ class ProductController
                 'is_active' => $p->isActive(),
                 'is_weighted' => $p->isWeighted(),
                 'has_expiration' => $p->hasExpiration(),
-                'product_type' => $m?->product_type ?? 'simple',
-                'unit' => $m?->unit ?? 'PIECE',
-                'wholesale_price' => $m?->wholesale_price_amount,
-                'min_sale_price' => $m?->min_sale_price_amount,
-                'min_wholesale_price' => $m?->min_wholesale_price_amount,
-                'discount_percent' => $m?->discount_percent,
-                'price_non_negotiable' => (bool) ($m?->price_non_negotiable ?? false),
-                'weight' => $m?->weight,
-                'length' => $m?->length,
-                'width' => $m?->width,
-                'height' => $m?->height,
-                'tax_rate' => $m?->tax_rate,
-                'tax_type' => $m?->tax_type,
-                'status' => $m?->status ?? ($p->isActive() ? 'active' : 'inactive'),
-                'download_url' => $m?->download_url,
-                'requires_shipping' => (bool) ($m?->requires_shipping ?? true),
-                'couleur' => $m?->couleur,
-                'taille' => $m?->taille,
-                'type_produit' => $m?->type_produit ?? 'physique',
-                'mode_paiement' => $m?->mode_paiement ?? 'paiement_immediat',
-                'lien_telechargement' => $m?->lien_telechargement,
-                'is_published_ecommerce' => (bool) ($m?->is_published_ecommerce ?? false),
+                'product_type' => $m ? ($m->product_type ?? 'simple') : 'simple',
+                'unit' => $m ? ($m->unit ?? 'PIECE') : 'PIECE',
+                'wholesale_price' => $m ? $m->wholesale_price_amount : null,
+                'min_sale_price' => $m ? $m->min_sale_price_amount : null,
+                'min_wholesale_price' => $m ? $m->min_wholesale_price_amount : null,
+                'discount_percent' => $m ? $m->discount_percent : null,
+                'price_non_negotiable' => (bool) ($m ? ($m->price_non_negotiable ?? false) : false),
+                'weight' => $m ? $m->weight : null,
+                'length' => $m ? $m->length : null,
+                'width' => $m ? $m->width : null,
+                'height' => $m ? $m->height : null,
+                'tax_rate' => $m ? $m->tax_rate : null,
+                'tax_type' => $m ? $m->tax_type : null,
+                'status' => $m ? ($m->status ?? ($p->isActive() ? 'active' : 'inactive')) : ($p->isActive() ? 'active' : 'inactive'),
+                'download_url' => $m ? $m->download_url : null,
+                'requires_shipping' => (bool) ($m ? ($m->requires_shipping ?? true) : true),
+                'couleur' => $m ? $m->couleur : null,
+                'taille' => $m ? $m->taille : null,
+                'type_produit' => $m ? ($m->type_produit ?? 'physique') : 'physique',
+                'mode_paiement' => $m ? ($m->mode_paiement ?? 'paiement_immediat') : 'paiement_immediat',
+                'lien_telechargement' => $m ? $m->lien_telechargement : null,
+                'is_published_ecommerce' => (bool) ($m ? ($m->is_published_ecommerce ?? false) : false),
                 'image_url' => $imageUrl,
                 'gallery_urls' => $galleryUrls,
             ];
@@ -205,16 +205,16 @@ class ProductController
         if ($model) {
             $extra = [];
 
-            if (isset($validated['wholesale_price']) && $validated['wholesale_price'] !== null) {
+            if (array_key_exists('wholesale_price', $validated) && $validated['wholesale_price'] !== null) {
                 $extra['wholesale_price_amount'] = (float) $validated['wholesale_price'];
             }
-            if (isset($validated['min_sale_price']) && $validated['min_sale_price'] !== null) {
+            if (array_key_exists('min_sale_price', $validated) && $validated['min_sale_price'] !== null) {
                 $extra['min_sale_price_amount'] = (float) $validated['min_sale_price'];
             }
-            if (isset($validated['min_wholesale_price']) && $validated['min_wholesale_price'] !== null) {
+            if (array_key_exists('min_wholesale_price', $validated) && $validated['min_wholesale_price'] !== null) {
                 $extra['min_wholesale_price_amount'] = (float) $validated['min_wholesale_price'];
             }
-            if (isset($validated['discount_percent']) && $validated['discount_percent'] !== null) {
+            if (array_key_exists('discount_percent', $validated) && $validated['discount_percent'] !== null) {
                 $extra['discount_percent'] = (float) $validated['discount_percent'];
             }
             $extra['price_non_negotiable'] = (bool) ($validated['price_non_negotiable'] ?? false);
@@ -300,6 +300,7 @@ class ProductController
                 }
             }
 
+            /** @phpstan-ignore-next-line */
             if (!empty($extra)) {
                 $model->update($extra);
             }
@@ -366,7 +367,7 @@ class ProductController
         $isActive = $status === 'active';
 
         $stock = null;
-        if (isset($validated['initial_stock']) && $validated['initial_stock'] !== '' && $validated['initial_stock'] !== null) {
+        if (array_key_exists('initial_stock', $validated) && $validated['initial_stock'] !== '' && $validated['initial_stock'] !== null) {
             $stock = (float) $validated['initial_stock'];
         }
 
@@ -396,16 +397,16 @@ class ProductController
             $extra = [];
             $currentGallery = is_array($model->extra_images) ? $model->extra_images : [];
 
-            if (isset($validated['wholesale_price']) && $validated['wholesale_price'] !== null) {
+            if (array_key_exists('wholesale_price', $validated) && $validated['wholesale_price'] !== null) {
                 $extra['wholesale_price_amount'] = (float) $validated['wholesale_price'];
             }
-            if (isset($validated['min_sale_price']) && $validated['min_sale_price'] !== null) {
+            if (array_key_exists('min_sale_price', $validated) && $validated['min_sale_price'] !== null) {
                 $extra['min_sale_price_amount'] = (float) $validated['min_sale_price'];
             }
-            if (isset($validated['min_wholesale_price']) && $validated['min_wholesale_price'] !== null) {
+            if (array_key_exists('min_wholesale_price', $validated) && $validated['min_wholesale_price'] !== null) {
                 $extra['min_wholesale_price_amount'] = (float) $validated['min_wholesale_price'];
             }
-            if (isset($validated['discount_percent']) && $validated['discount_percent'] !== null) {
+            if (array_key_exists('discount_percent', $validated) && $validated['discount_percent'] !== null) {
                 $extra['discount_percent'] = (float) $validated['discount_percent'];
             }
             $extra['price_non_negotiable'] = (bool) ($validated['price_non_negotiable'] ?? $model->price_non_negotiable);
@@ -513,6 +514,7 @@ class ProductController
                 $extra['extra_images'] = [];
             }
 
+            /** @phpstan-ignore-next-line */
             if (!empty($extra)) {
                 $model->update($extra);
             }

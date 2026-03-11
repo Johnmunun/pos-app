@@ -36,7 +36,7 @@ class CurrencyController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $tenantId = $user->tenant_id;
+        $tenantId = (int) $user->tenant_id;
 
         // Récupérer les devises via Use Case
         $currencies = $this->getCurrenciesUseCase->execute($tenantId);
@@ -86,7 +86,7 @@ class CurrencyController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $tenantId = $user->tenant_id;
+        $tenantId = (int) $user->tenant_id;
 
         $validated = $request->validate([
             'code' => 'required|string|size:3',
@@ -124,7 +124,7 @@ class CurrencyController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $tenantId = $user->tenant_id;
+        $tenantId = (int) $user->tenant_id;
 
         $validated = $request->validate([
             'code' => 'sometimes|string|size:3',
@@ -176,7 +176,7 @@ class CurrencyController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $tenantId = $user->tenant_id;
+        $tenantId = (int) $user->tenant_id;
 
         $validated = $request->validate([
             'from_currency_id' => 'required|exists:currencies,id',
@@ -212,7 +212,7 @@ class CurrencyController
         $tenantId = $user->tenant_id;
 
         $fromCurrency = $exchangeRate->fromCurrency;
-        if ($fromCurrency->tenant_id !== $tenantId) {
+        if ($fromCurrency && $fromCurrency->tenant_id !== $tenantId) {
             abort(403, 'Accès non autorisé');
         }
 
@@ -244,7 +244,7 @@ class CurrencyController
         $tenantId = $user->tenant_id;
 
         $fromCurrency = $exchangeRate->fromCurrency;
-        if ($fromCurrency->tenant_id !== $tenantId) {
+        if ($fromCurrency && $fromCurrency->tenant_id !== $tenantId) {
             abort(403, 'Accès non autorisé');
         }
 

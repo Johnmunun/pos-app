@@ -58,9 +58,9 @@ export default function Login({ status, canResetPassword }) {
                             className="flex items-center space-x-3 mb-8 group hover:opacity-90 transition-opacity"
                         >
                             <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
-                                <span className="text-white font-bold text-lg">POS</span>
+                                <span className="text-white font-bold text-lg">OP</span>
                             </div>
-                            <span className="text-2xl font-bold text-gray-900 dark:text-white">POS SaaS</span>
+                            <span className="text-2xl font-bold text-gray-900 dark:text-white">OmniPOS</span>
                         </Link>
                         
                         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white text-center mb-3">
@@ -202,7 +202,7 @@ export default function Login({ status, canResetPassword }) {
                             </div>
                             <div className="relative flex justify-center text-sm">
                                 <span className="px-4 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                                    Nouveau sur POS SaaS ?
+                                    Nouveau sur OmniPOS ?
                                 </span>
                             </div>
                         </div>

@@ -208,6 +208,9 @@ export default function Dashboard({
     count: Number(d.count),
   }));
 
+  const mediaStorage = stats?.media_storage || { images_count: 0, used_mb: null, limit_mb: 100 };
+  const imagesCount = Number(mediaStorage.images_count ?? 0);
+
   return (
     <AppLayout
       header={
@@ -351,6 +354,26 @@ export default function Dashboard({
                   </div>
                   <div className="w-14 h-14 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
                     <Calendar className="h-7 w-7 text-white" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* STOCKAGE MÉDIAS */}
+            <Card className="bg-gradient-to-br from-slate-600 to-slate-700 dark:from-slate-700 dark:to-slate-800 border-0 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <p className="text-slate-100 text-sm font-medium mb-2">STOCKAGE MÉDIAS</p>
+                    <p className="text-white text-3xl font-bold mb-1">
+                      {imagesCount}
+                    </p>
+                    <p className="text-slate-100 text-xs">
+                      Images produits pharmacie
+                    </p>
+                  </div>
+                  <div className="w-14 h-14 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Database className="h-7 w-7 text-white" />
                   </div>
                 </div>
               </CardContent>

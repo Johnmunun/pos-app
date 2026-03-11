@@ -5,6 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property string $city
+ * @property string $country
+ * @property bool $status
+ * @property string|null $logo
+ * @property string|null $legal_form
+ * @property string|null $registration_number
+ * @property string|null $currency_code
+ * @property string|null $timezone
+ * @property string|null $locale
+ */
 class Tenant extends Model
 {
     use HasFactory;
@@ -12,7 +23,7 @@ class Tenant extends Model
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<int, string>
+     * @var list<string>
      */
     protected $fillable = [
         'name',
@@ -38,7 +49,6 @@ class Tenant extends Model
     /**
      * The attributes that should be cast.
      *
-     * @var array<string, string>
      */
     protected function casts(): array
     {
@@ -69,5 +79,45 @@ class Tenant extends Model
     public function depots()
     {
         return $this->hasMany(Depot::class);
+    }
+
+    /**
+     * Trouve un tenant par code unique.
+     */
+    public static function findByCode(string $code): ?self
+    {
+        return static::where('code', $code)->first();
+    }
+
+    /**
+     * Trouve un tenant par email.
+     */
+    public static function findByEmail(string $email): ?self
+    {
+        return static::where('email', $email)->first();
+    }
+
+    /**
+     * Scope pour les tenants actifs.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('status', true);
+    }
+
+    /**
+     * Vérifie si un code existe déjà.
+     */
+    public static function codeExists(string $code): bool
+    {
+        return static::where('code', $code)->exists();
+    }
+
+    /**
+     * Vérifie si un email existe déjà.
+     */
+    public static function emailExists(string $email): bool
+    {
+        return static::where('email', $email)->exists();
     }
 }

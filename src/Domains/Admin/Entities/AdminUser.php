@@ -19,7 +19,7 @@ class AdminUser extends User
 
     private function hasAdminPermissions(): bool
     {
-        $names = array_map(fn ($p) => is_object($p) && isset($p->name) ? $p->name : null, $this->permissions);
+        $names = array_map(fn (object $p) => $p->name ?? null, $this->permissions);
         return in_array('admin.access', $names, true) ||
                in_array('admin.users.view', $names, true) ||
                in_array('admin.tenants.view', $names, true);

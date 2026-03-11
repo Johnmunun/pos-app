@@ -12,7 +12,7 @@ class Product extends Model
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<int, string>
+     * @var list<string>
      */
     protected $fillable = [
         'tenant_id',
@@ -48,7 +48,6 @@ class Product extends Model
     /**
      * The attributes that should be cast.
      *
-     * @var array<string, string>
      */
     protected function casts(): array
     {

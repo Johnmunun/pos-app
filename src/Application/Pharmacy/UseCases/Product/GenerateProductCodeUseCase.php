@@ -23,9 +23,9 @@ class GenerateProductCodeUseCase
     {
         // Normaliser le nom pour créer un préfixe significatif
         $normalizedName = strtoupper(trim($productName));
-        $normalizedName = preg_replace('/[^A-Z0-9]/', '', $normalizedName ?? '');
+        $normalizedName = preg_replace('/[^A-Z0-9]/', '', $normalizedName);
 
-        if ($normalizedName === '' || $normalizedName === null) {
+        if ($normalizedName === '') {
             $normalizedName = 'PROD';
         }
 
@@ -33,6 +33,9 @@ class GenerateProductCodeUseCase
         $prefix = substr($normalizedName, 0, 3);
 
         // Boucle jusqu'à obtenir un code valide ET unique
+        $exists = false;
+        $productCode = null;
+
         do {
             // 4 chiffres aléatoires → format du type ABC-1234 (longueur 8, conforme à ProductCode)
             $randomNumber = random_int(1000, 9999);

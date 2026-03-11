@@ -33,7 +33,7 @@ class ReportController
     private function getCurrencyForShop(Request $request, string $shopId): string
     {
         $user = $request->user();
-        $tenantId = $user?->tenant_id ?? $shopId;
+        $tenantId = $user ? ($user->tenant_id ?? $shopId) : $shopId;
 
         $shop = \App\Models\Shop::find($shopId);
         if ($shop && $shop->currency) {
@@ -46,7 +46,7 @@ class ReportController
             ->orderBy('code')
             ->first();
 
-        return $defaultCurrency?->code ?? 'CDF';
+        return $defaultCurrency ? $defaultCurrency->code : 'CDF';
     }
 
     public function index(Request $request): Response
@@ -65,6 +65,7 @@ class ReportController
 
         $chartData = $this->getChartData($shopId, $from, $to);
 
+        /** @phpstan-ignore-next-line Larastan relation false positive for order */
         $topProducts = OrderItemModel::whereHas('order', fn ($q) => $q->where('shop_id', $shopId)->where('payment_status', 'paid')
             ->whereBetween('created_at', [$from, $to]))
             ->select('product_id', 'product_name', DB::raw('SUM(quantity) as total_qty'), DB::raw('SUM(subtotal) as total_revenue'))
@@ -72,11 +73,17 @@ class ReportController
             ->orderByDesc('total_qty')
             ->limit(10)
             ->get()
-            ->map(fn ($r) => [
-                'product_name' => $r->product_name,
-                'quantity' => (float) $r->total_qty,
-                'revenue' => round((float) $r->total_revenue, 2),
-            ])
+            ->map(function ($r) {
+                $productName = (string) $r->getAttribute('product_name');
+                $totalQty = (float) $r->getAttribute('total_qty');
+                $totalRevenue = (float) $r->getAttribute('total_revenue');
+
+                return [
+                    'product_name' => $productName,
+                    'quantity' => $totalQty,
+                    'revenue' => round($totalRevenue, 2),
+                ];
+            })
             ->toArray();
 
         $currency = $this->getCurrencyForShop($request, $shopId);

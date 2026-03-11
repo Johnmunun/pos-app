@@ -8,7 +8,7 @@ import { FileText, Plus, Pencil, Trash2, HelpCircle } from 'lucide-react';
 import CmsPageDrawer from '@/Components/Ecommerce/Cms/CmsPageDrawer';
 import CmsHelpModal from '@/Components/Ecommerce/Cms/CmsHelpModal';
 
-export default function CmsPagesIndex({ pages = [] }) {
+export default function CmsPagesIndex({ pages = [], media = [] }) {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [editingPage, setEditingPage] = useState(null);
     const [helpOpen, setHelpOpen] = useState(false);
@@ -35,6 +35,8 @@ export default function CmsPagesIndex({ pages = [] }) {
 
     const pageForDrawer = editingPage ? {
         ...editingPage,
+        template: editingPage.template ?? 'standard',
+        metadata: editingPage.metadata ?? {},
         published_at: editingPage.published_at ? String(editingPage.published_at).replace(' ', 'T').slice(0, 16) : '',
     } : null;
 
@@ -47,6 +49,14 @@ export default function CmsPagesIndex({ pages = [] }) {
                         <Button variant="ghost" size="sm" onClick={() => setHelpOpen(true)} className="text-amber-600">
                             <HelpCircle className="h-4 w-4 mr-1" />
                             Tutoriel
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => router.post(route('ecommerce.cms.pages.create-defaults'), {}, { preserveScroll: true })}
+                        >
+                            <FileText className="h-4 w-4 mr-1" />
+                            Créer pages par défaut
                         </Button>
                         <Button size="sm" onClick={handleCreate} className="inline-flex items-center gap-2">
                             <Plus className="h-4 w-4" />
@@ -108,7 +118,7 @@ export default function CmsPagesIndex({ pages = [] }) {
                 </Card>
             </div>
 
-            <CmsPageDrawer isOpen={drawerOpen} onClose={handleCloseDrawer} page={pageForDrawer} />
+            <CmsPageDrawer key={editingPage?.id ?? 'new'} isOpen={drawerOpen} onClose={handleCloseDrawer} page={pageForDrawer} media={media} />
             <CmsHelpModal show={helpOpen} onClose={() => setHelpOpen(false)} module="pages" />
         </AppLayout>
     );

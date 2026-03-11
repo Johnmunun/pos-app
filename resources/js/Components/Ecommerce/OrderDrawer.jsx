@@ -34,6 +34,8 @@ export default function OrderDrawer({
     couponDiscount = 0,
     selectedShippingId = '',
     selectedPaymentCode = '',
+    paymentStatusOnSubmit = null,
+    onSuccess = null,
 }) {
     const isEditing = !!order;
     const { shop } = usePage().props;
@@ -230,6 +232,7 @@ export default function OrderDrawer({
             discount_amount: Number(formData.discount_amount) || 0,
             currency: formData.currency,
             payment_method: formData.payment_method || null,
+            ...(paymentStatusOnSubmit ? { payment_status: paymentStatusOnSubmit } : {}),
             notes: formData.notes || null,
             items: validItems, // Utiliser 'items', pas 'lines'
         };
@@ -237,6 +240,17 @@ export default function OrderDrawer({
         try {
             const response = await axios.post(route('ecommerce.orders.store'), payload);
             toast.success(response.data.message || 'Commande créée avec succès');
+            if (response.data?.redirect_url) {
+                window.location.href = response.data.redirect_url;
+                return;
+            }
+            if (typeof onSuccess === 'function') {
+                try {
+                    onSuccess(response.data);
+                } catch (callbackError) {
+                    console.error('OrderDrawer onSuccess callback error', callbackError);
+                }
+            }
             onClose();
             router.reload({ only: ['orders'] });
         } catch (error) {

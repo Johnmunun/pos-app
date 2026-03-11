@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $customer_name
  * @property string|null $notes
  * @property int|null $created_by
+ * @property \Carbon\Carbon|null $created_at
  * @property \Illuminate\Database\Eloquent\Collection<int, SaleLineModel> $lines
  * @property \App\Models\User|null $creator
  */

@@ -1,0 +1,106 @@
+<?php
+
+namespace Src\Infrastructure\Ecommerce\Http\Controllers;
+
+use App\Models\Shop;
+use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class MarketingController
+{
+    private function getShopId(Request $request): string
+    {
+        $user = $request->user();
+        if (!$user) {
+            abort(403, 'User not authenticated.');
+        }
+
+        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        $isRoot = \App\Models\User::find($user->id)?->isRoot() ?? false;
+
+        if (!$shopId && !$isRoot) {
+            abort(403, 'Shop ID not found.');
+        }
+        if ($isRoot && !$shopId) {
+            abort(403, 'Please select a shop first.');
+        }
+
+        return (string) $shopId;
+    }
+
+    public function index(Request $request): Response
+    {
+        $shopId = $this->getShopId($request);
+        $shop = Shop::find($shopId);
+
+        if (!$shop) {
+            abort(404, 'Shop not found');
+        }
+
+        $config = $shop->ecommerce_storefront_config ?? [];
+        if (!is_array($config)) {
+            $config = [];
+        }
+
+        $marketing = [
+            'seo_title' => $config['seo_title'] ?? null,
+            'seo_description' => $config['seo_description'] ?? null,
+            'seo_keywords' => $config['seo_keywords'] ?? null,
+            'seo_indexing_enabled' => (bool) ($config['seo_indexing_enabled'] ?? true),
+            'facebook_pixel_id' => $config['facebook_pixel_id'] ?? null,
+            'tiktok_pixel_id' => $config['tiktok_pixel_id'] ?? null,
+            'google_analytics_id' => $config['google_analytics_id'] ?? null,
+            'meta_verification' => $config['meta_verification'] ?? null,
+            'marketing_notes' => $config['marketing_notes'] ?? null,
+        ];
+
+        return Inertia::render('Ecommerce/Marketing/Index', [
+            'shop' => [
+                'id' => $shop->id,
+                'name' => $shop->name,
+            ],
+            'marketing' => $marketing,
+        ]);
+    }
+
+    public function update(Request $request): RedirectResponse
+    {
+        $shopId = $this->getShopId($request);
+        $shop = Shop::find($shopId);
+
+        if (!$shop) {
+            abort(404, 'Shop not found');
+        }
+
+        $data = $request->validate([
+            'seo_title' => 'nullable|string|max:150',
+            'seo_description' => 'nullable|string|max:255',
+            'seo_keywords' => 'nullable|string|max:255',
+            'seo_indexing_enabled' => 'sometimes|boolean',
+            'facebook_pixel_id' => 'nullable|string|max:100',
+            'tiktok_pixel_id' => 'nullable|string|max:100',
+            'google_analytics_id' => 'nullable|string|max:100',
+            'meta_verification' => 'nullable|string|max:255',
+            'marketing_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $current = $shop->ecommerce_storefront_config ?? [];
+        if (!is_array($current)) {
+            $current = [];
+        }
+
+        if (!array_key_exists('seo_indexing_enabled', $data)) {
+            $data['seo_indexing_enabled'] = $current['seo_indexing_enabled'] ?? true;
+        }
+
+        $shop->ecommerce_storefront_config = array_merge($current, $data);
+        $shop->save();
+
+        return redirect()
+            ->route('ecommerce.marketing.index')
+            ->with('success', 'Paramètres marketing mis à jour.');
+    }
+}
+

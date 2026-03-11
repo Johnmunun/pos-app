@@ -4,10 +4,23 @@
  */
 
 /**
+ * Normalise un code devise vers un code ISO 4217 valide.
+ * FCFA n'est pas un code ISO - on le mappe vers XAF (Franc CFA d'Afrique centrale).
+ */
+export function normalizeCurrencyCode(currencyCode) {
+    if (!currencyCode || typeof currencyCode !== 'string') return 'CDF';
+    const code = currencyCode.toUpperCase().trim();
+    // FCFA -> XAF (Intl.NumberFormat attend un code ISO, XAF affiche "FCFA" en fr-FR)
+    if (code === 'FCFA' || code === 'FRANC CFA') return 'XAF';
+    if (code === 'XOF' || code === 'XAF') return code;
+    return code || 'CDF';
+}
+
+/**
  * Format an amount with the specified currency.
  * 
  * @param {number} amount - The amount to format
- * @param {string} currencyCode - The ISO 4217 currency code (e.g., 'CDF', 'USD', 'EUR')
+ * @param {string} currencyCode - The ISO 4217 currency code (e.g., 'CDF', 'USD', 'EUR', 'FCFA' -> XAF)
  * @param {string} locale - The locale for formatting (default: 'fr-FR')
  * @returns {string} The formatted currency string
  */
@@ -16,17 +29,19 @@ export function formatCurrency(amount, currencyCode = 'CDF', locale = 'fr-FR') {
         return formatCurrency(0, currencyCode, locale);
     }
 
+    const isoCode = normalizeCurrencyCode(currencyCode);
+
     try {
         return new Intl.NumberFormat(locale, {
             style: 'currency',
-            currency: currencyCode,
+            currency: isoCode,
             minimumFractionDigits: 0,
-            maximumFractionDigits: 2,
+            maximumFractionDigits: 0,
         }).format(amount);
     } catch (error) {
-        // Fallback for unsupported currency codes
-        console.warn(`Currency code "${currencyCode}" not supported, using fallback format`);
-        return `${currencyCode} ${formatNumber(amount, locale)}`;
+        // Fallback : symbole personnalisé pour codes non supportés
+        const symbol = getCurrencySymbol(isoCode);
+        return `${formatNumber(amount, locale)} ${symbol}`;
     }
 }
 
@@ -124,6 +139,7 @@ export default {
     formatCurrency,
     formatNumber,
     getCurrencySymbol,
+    normalizeCurrencyCode,
     createCurrencyFormatter,
     useCurrencyFormatter,
     parseCurrency,

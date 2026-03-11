@@ -61,7 +61,7 @@ export default function Register({ currentStep, sectors, businessTypes, sessionD
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-amber-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-            <Head title={`Inscription - Étape ${step}/4`} />
+            <Head title={`Inscription étape ${step}`} />
 
             {/* Header fixé */}
             <header className="fixed top-0 left-0 right-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 z-50">
@@ -69,10 +69,10 @@ export default function Register({ currentStep, sectors, businessTypes, sessionD
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                             <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
-                                <span className="text-white font-bold text-sm">POS</span>
+                                <span className="text-white font-bold text-sm">OP</span>
                             </div>
                             <div>
-                                <h1 className="text-xl font-bold text-gray-900 dark:text-white">POS SaaS</h1>
+                                <h1 className="text-xl font-bold text-gray-900 dark:text-white">OmniPOS</h1>
                                 <p className="text-sm text-gray-600 dark:text-gray-400">Inscription marchand</p>
                             </div>
                         </div>

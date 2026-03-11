@@ -61,7 +61,7 @@ class InventoryService
         }
         
         // Reorder to double the minimum stock
-        return ($minimum * 2) - $current;
+        return (int) round(($minimum * 2) - $current);
     }
 
     /**

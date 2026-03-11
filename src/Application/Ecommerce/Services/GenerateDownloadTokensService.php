@@ -25,12 +25,17 @@ class GenerateDownloadTokensService
                 continue;
             }
 
+            $typeProduit = $product->type_produit ?? null;
             $productType = $product->product_type ?? 'physical';
-            if ($productType !== 'digital') {
+            $isDigital = ($typeProduit === 'numerique') || ($productType === 'digital');
+            if (!$isDigital) {
                 continue;
             }
 
-            $hasDownload = !empty($product->download_url) || !empty($product->download_path);
+            // Accepter les différents champs possibles pour le lien de téléchargement
+            $hasDownload = !empty($product->download_url)
+                || !empty($product->download_path)
+                || !empty($product->lien_telechargement);
             if (!$hasDownload) {
                 continue;
             }

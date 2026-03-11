@@ -79,17 +79,17 @@ class EloquentCustomerRepository implements CustomerRepositoryInterface
         $currency = 'USD'; // Default, could be from shop settings
 
         return new Customer(
-            $model->id,
+            (string) $model->id,
             (string) $model->shop_id,
-            $model->email,
-            $model->first_name,
-            $model->last_name,
-            $model->phone,
+            (string) ($model->email ?? ''),
+            (string) ($model->first_name ?? ''),
+            (string) ($model->last_name ?? ''),
+            (string) ($model->phone ?? ''),
             $model->default_shipping_address,
             $model->default_billing_address,
-            $model->total_orders,
+            (int) $model->total_orders,
             new Money((float) $model->total_spent, $currency),
-            $model->is_active,
+            (bool) $model->is_active,
             $model->created_at ? \DateTimeImmutable::createFromMutable($model->created_at) : new \DateTimeImmutable(),
             $model->updated_at ? \DateTimeImmutable::createFromMutable($model->updated_at) : new \DateTimeImmutable()
         );

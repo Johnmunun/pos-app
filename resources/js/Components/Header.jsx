@@ -30,9 +30,9 @@ export default function Header({ onScrollToSection }) {
                     <div className="flex-shrink-0">
                         <a href="/" className="flex items-center space-x-2 group">
                             <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
-                                <span className="text-white font-bold text-sm">POS</span>
+                                <span className="text-white font-bold text-sm">OP</span>
                             </div>
-                            <span className="text-xl font-bold text-gray-900 dark:text-white">POS SaaS</span>
+                            <span className="text-xl font-bold text-gray-900 dark:text-white">OmniPOS</span>
                         </a>
                     </div>
 

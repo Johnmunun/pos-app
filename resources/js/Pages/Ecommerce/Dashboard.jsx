@@ -14,6 +14,7 @@ import {
     Filter,
     FileDown,
     BarChart3,
+    Database,
 } from 'lucide-react';
 import {
     LineChart,
@@ -40,6 +41,11 @@ export default function EcommerceDashboard({ stats = {}, chartOrders = [], chart
     const customers = stats.customers || {};
     const revenue = stats.revenue || {};
     const alerts = stats.alerts || [];
+    const mediaStorage = stats.media_storage || { images_count: 0, used_mb: 0, limit_mb: 100, users_count: 1, per_user_limit_mb: 100 };
+    const imagesCount = Number(mediaStorage.images_count ?? 0);
+    const usedMb = Number(mediaStorage.used_mb ?? 0);
+    const limitMb = Number(mediaStorage.limit_mb ?? 100);
+    const storagePct = limitMb > 0 ? Math.min(100, Math.max(0, (usedMb / limitMb) * 100)) : 0;
 
     const [showFilters, setShowFilters] = useState(false);
     const defaultTo = new Date().toISOString().slice(0, 10);
@@ -215,6 +221,40 @@ export default function EcommerceDashboard({ stats = {}, chartOrders = [], chart
                                 </div>
                                 <div className="w-12 h-12 md:w-14 md:h-14 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
                                     <TrendingUp className="h-6 w-6 md:h-7 md:w-7 text-white" />
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-gradient-to-br from-slate-600 to-slate-700 dark:from-slate-700 dark:to-slate-800 border-0 shadow-lg">
+                        <CardContent className="p-5 md:p-6">
+                            <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                    <p className="text-slate-100 text-sm font-medium mb-2">STOCKAGE MÉDIAS</p>
+                                    <p className="text-white text-2xl md:text-3xl font-bold mb-1">
+                                        {imagesCount}
+                                    </p>
+                                    <p className="text-slate-100 text-xs">
+                                        Images produits & médias e-commerce
+                                    </p>
+                                    <div className="mt-3">
+                                        <div className="flex items-center justify-between text-[11px] text-slate-100/90 mb-1">
+                                            <span>{usedMb.toFixed(2)} Mo utilisés</span>
+                                            <span>{limitMb.toFixed(0)} Mo max</span>
+                                        </div>
+                                        <div className="h-2.5 rounded-full bg-white/15 overflow-hidden ring-1 ring-white/10">
+                                            <div
+                                                className="h-full bg-emerald-400"
+                                                style={{ width: `${storagePct}%` }}
+                                            />
+                                        </div>
+                                        <div className="mt-1 text-[11px] text-slate-100/80">
+                                            100 Mo / utilisateur • {Number(mediaStorage.users_count ?? 0)} utilisateur(s)
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="w-12 h-12 md:w-14 md:h-14 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <Database className="h-6 w-6 md:h-7 md:w-7 text-white" />
                                 </div>
                             </div>
                         </CardContent>

@@ -32,15 +32,21 @@ export default function OrdersIndex({ orders = [], stats = {}, filters = {}, pag
     const { auth } = usePage().props;
     const permissions = auth?.permissions || [];
 
-    const hasPermission = (permission) => {
+    const hasPermission = (permissionExpression) => {
         if (auth?.user?.type === 'ROOT') return true;
-        return permissions.includes(permission);
+        if (!permissionExpression) return false;
+        const permsToCheck = String(permissionExpression)
+            .split('|')
+            .map((p) => p.trim())
+            .filter(Boolean);
+        return permsToCheck.some((p) => permissions.includes(p));
     };
 
-    const canCreate = hasPermission('ecommerce.create');
-    const canUpdate = hasPermission('ecommerce.update');
-    const canDelete = hasPermission('ecommerce.delete');
-    const canView = hasPermission('ecommerce.view');
+    const canCreate = hasPermission('ecommerce.order.create|ecommerce.create|module.ecommerce');
+    const canUpdateStatus = hasPermission('ecommerce.order.status.update|ecommerce.order.update|module.ecommerce');
+    const canUpdatePayment = hasPermission('ecommerce.order.payment.update|ecommerce.order.update|module.ecommerce');
+    const canDelete = hasPermission('ecommerce.order.delete|ecommerce.delete|module.ecommerce');
+    const canView = hasPermission('ecommerce.order.view|ecommerce.view|module.ecommerce');
 
     const [search, setSearch] = useState(filters.search || '');
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -100,7 +106,7 @@ export default function OrdersIndex({ orders = [], stats = {}, filters = {}, pag
     };
 
     const handleUpdateStatus = async (orderId, newStatus) => {
-        if (!canUpdate) {
+        if (!canUpdateStatus) {
             toast.error('Vous n\'avez pas la permission de modifier les commandes.');
             return;
         }
@@ -111,6 +117,21 @@ export default function OrdersIndex({ orders = [], stats = {}, filters = {}, pag
             router.reload({ only: ['orders', 'stats'] });
         } catch (error) {
             toast.error(error.response?.data?.message || 'Erreur lors de la mise à jour');
+        }
+    };
+
+    const handleUpdatePaymentStatus = async (orderId, paymentStatus) => {
+        if (!canUpdatePayment) {
+            toast.error('Vous n\'avez pas la permission de modifier le paiement.');
+            return;
+        }
+
+        try {
+            await axios.put(route('ecommerce.orders.update-payment-status', orderId), { payment_status: paymentStatus });
+            toast.success('Paiement mis à jour avec succès');
+            router.reload({ only: ['orders', 'stats'] });
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Erreur lors de la mise à jour du paiement');
         }
     };
 
@@ -494,8 +515,8 @@ export default function OrdersIndex({ orders = [], stats = {}, filters = {}, pag
                     order={selectedOrder}
                     show={detailModalOpen}
                     onClose={handleCloseDetailModal}
-                    onStatusUpdate={handleUpdateStatus}
-                    onPaymentStatusUpdate={handleUpdateStatus}
+                    onStatusUpdate={canUpdateStatus ? handleUpdateStatus : undefined}
+                    onPaymentStatusUpdate={canUpdatePayment ? handleUpdatePaymentStatus : undefined}
                 />
             )}
         </AppLayout>

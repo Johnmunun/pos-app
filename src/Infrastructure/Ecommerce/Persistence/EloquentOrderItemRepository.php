@@ -65,7 +65,7 @@ class EloquentOrderItemRepository implements OrderItemRepositoryInterface
     {
         // Charger l'order pour obtenir la currency
         $order = $model->order ?? OrderModel::find($model->order_id);
-        $currency = $order?->currency ?? 'USD';
+        $currency = $order ? $order->currency : 'USD';
 
         return new OrderItem(
             $model->id,

@@ -87,6 +87,7 @@ class AdminEloquentRepository implements AdminRepositoryInterface
     
     public function getUserById(int $id): ?User
     {
+        /** @var UserModel|null $userModel */
         $userModel = UserModel::find($id);
         if (!$userModel) {
             return null;
@@ -99,7 +100,7 @@ class AdminEloquentRepository implements AdminRepositoryInterface
             firstName: $userModel->first_name,
             lastName: $userModel->last_name,
             type: $userModel->type,
-            tenantId: $userModel->tenant_id,
+            tenantId: $userModel->tenant_id !== null ? (int) $userModel->tenant_id : null,
             isActive: $userModel->is_active ?? true,
             lastLoginAt: $userModel->last_login_at ? new \DateTime($userModel->last_login_at) : null,
             createdAt: $userModel->created_at ? new \DateTime($userModel->created_at) : new \DateTime(),

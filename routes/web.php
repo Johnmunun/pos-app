@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Src\Infrastructure\Admin\Http\Controllers\AdminController;
+use Src\Infrastructure\Settings\Http\Controllers\AppBrandingController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -19,6 +20,12 @@ if (file_exists(__DIR__.'/commerce.php')) {
 }
 if (file_exists(__DIR__.'/ecommerce.php')) {
     require __DIR__.'/ecommerce.php';
+}
+if (file_exists(__DIR__.'/support.php')) {
+    require __DIR__.'/support.php';
+}
+if (file_exists(__DIR__.'/logs.php')) {
+    require __DIR__.'/logs.php';
 }
 
 /**
@@ -108,7 +115,42 @@ Route::get('/dashboard', function (\Illuminate\Http\Request $request) {
             return redirect()->route('finance.dashboard', $request->only(['from', 'to']));
         }
     }
-    return Inertia::render('Dashboard');
+
+    // Stats Referral pour le dashboard générique
+    $referralStats = null;
+    if ($user && $user->tenant_id) {
+        try {
+            $account = \Src\Infrastructure\Referral\Models\ReferralAccountModel::where('tenant_id', $user->tenant_id)
+                ->where('user_id', $user->id)
+                ->first();
+            if ($account) {
+                $totalCommissions = (float) \Src\Infrastructure\Referral\Models\ReferralCommissionModel::where('tenant_id', $user->tenant_id)
+                    ->where('referrer_account_id', $account->id)
+                    ->sum('amount');
+                $currency = \Src\Infrastructure\Referral\Models\ReferralCommissionModel::where('tenant_id', $user->tenant_id)
+                    ->where('referrer_account_id', $account->id)
+                    ->value('currency') ?? 'USD';
+                $thisMonthStart = now()->startOfMonth();
+                $newReferralsThisMonth = \Src\Infrastructure\Referral\Models\ReferralAccountModel::where('tenant_id', $user->tenant_id)
+                    ->where('parent_id', $account->id)
+                    ->where('created_at', '>=', $thisMonthStart)
+                    ->count();
+
+                $referralStats = [
+                    'total_direct_children' => $account->total_referrals,
+                    'total_commissions' => $totalCommissions,
+                    'currency' => $currency,
+                    'new_referrals_this_month' => $newReferralsThisMonth,
+                ];
+            }
+        } catch (\Throwable $e) {
+            $referralStats = null;
+        }
+    }
+
+    return Inertia::render('Dashboard', [
+        'referralStats' => $referralStats,
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
@@ -123,6 +165,19 @@ Route::middleware('auth')->group(function () {
     // Global Search API
     Route::get('/api/search', [\Src\Infrastructure\Search\Http\Controllers\GlobalSearchController::class, 'search'])
         ->name('api.search');
+
+    // Referral / Parrainage
+    Route::prefix('referrals')->name('referrals.')->group(function () {
+        Route::get('/settings', [\Src\Infrastructure\Referral\Http\Controllers\ReferralSettingsController::class, 'index'])
+            ->middleware('permission:referral.settings.view|referral.settings.manage')
+            ->name('settings.index');
+        Route::put('/settings', [\Src\Infrastructure\Referral\Http\Controllers\ReferralSettingsController::class, 'update'])
+            ->middleware('permission:referral.settings.manage')
+            ->name('settings.update');
+        Route::get('/', [\Src\Infrastructure\Referral\Http\Controllers\ReferralDashboardController::class, 'index'])
+            ->middleware('permission:referral.view|referral.stats.view')
+            ->name('dashboard');
+    });
 });
 
 /**
@@ -142,6 +197,14 @@ Route::middleware(['auth', 'verified', 'root', 'permission'])->group(function ()
     Route::get('/admin/dashboard/export/excel', [AdminController::class, 'exportExcel'])
         ->middleware('permission:admin.dashboard.export')
         ->name('admin.dashboard.export.excel');
+
+    // Branding global application (logo OmniPOS)
+    Route::get('/admin/branding', [AppBrandingController::class, 'index'])
+        ->middleware('permission:settings.branding')
+        ->name('admin.branding');
+    Route::post('/admin/branding', [AppBrandingController::class, 'update'])
+        ->middleware('permission:settings.branding')
+        ->name('admin.branding.update');
     
     // Sélection de tenant
     Route::get('/admin/select-tenant', [AdminController::class, 'selectTenant'])
@@ -738,7 +801,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
      */
     Route::prefix('finance')->name('finance.')->group(function () {
         Route::get('/dashboard', [\Src\Infrastructure\Finance\Http\Controllers\FinanceDashboardController::class, 'index'])
-            ->middleware('permission:finance.dashboard.view|finance.report.view')
+            ->middleware('permission:finance.dashboard.view|finance.report.view|finance.reports')
             ->name('dashboard');
         Route::get('/dashboard/export/pdf', [\Src\Infrastructure\Finance\Http\Controllers\FinanceExportController::class, 'dashboardPdf'])
             ->middleware('permission:finance.dashboard.view|finance.report.view|finance.reports')

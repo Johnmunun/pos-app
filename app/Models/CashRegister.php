@@ -46,6 +46,7 @@ class CashRegister extends Model
     /** Session actuellement ouverte pour cette caisse, s'il y en a une. */
     public function openSession(): ?CashRegisterSession
     {
-        return $this->sessions()->where('status', 'open')->first();
+        $session = $this->sessions()->where('status', 'open')->first();
+        return $session instanceof CashRegisterSession ? $session : null;
     }
 }

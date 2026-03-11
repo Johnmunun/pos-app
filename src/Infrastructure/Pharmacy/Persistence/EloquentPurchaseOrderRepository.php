@@ -69,16 +69,16 @@ class EloquentPurchaseOrderRepository implements PurchaseOrderRepositoryInterfac
 
         return new PurchaseOrder(
             $model->id,
-            $model->shop_id,
-            $model->supplier_id,
+            (string) $model->shop_id,
+            (string) $model->supplier_id,
             $model->status,
             new Money((float) $model->total_amount, $currency),
             $currency,
-            $model->ordered_at ? new DateTimeImmutable($model->ordered_at->toDateTimeString()) : null,
-            $model->expected_at ? new DateTimeImmutable($model->expected_at->toDateTimeString()) : null,
-            $model->received_at ? new DateTimeImmutable($model->received_at->toDateTimeString()) : null,
+            $model->ordered_at ? new DateTimeImmutable($model->ordered_at->format(DATE_ATOM)) : null,
+            $model->expected_at ? new DateTimeImmutable($model->expected_at->format(DATE_ATOM)) : null,
+            $model->received_at ? new DateTimeImmutable($model->received_at->format(DATE_ATOM)) : null,
             (int) $model->created_by,
-            new DateTimeImmutable($model->created_at->toDateTimeString())
+            $model->created_at ? new DateTimeImmutable($model->created_at->format(DATE_ATOM)) : new DateTimeImmutable()
         );
     }
 }

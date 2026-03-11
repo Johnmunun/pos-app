@@ -51,13 +51,16 @@ class EnsureUserIsActive
         }
 
         // Si l'utilisateur est bloqué ou suspendu, refuser l'accès
-        if (in_array($user->status, ['blocked', 'suspended'])) {
+        if (in_array($user->status, ['blocked', 'suspended'], true)) {
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
-            
+
+            $status = (string) $user->status;
+            $statusLabel = $status === 'blocked' ? 'bloqué' : 'suspendu';
+
             return redirect()->route('login')->withErrors([
-                'email' => 'Votre compte a été ' . ($user->status === 'blocked' ? 'bloqué' : 'suspendu') . '. Veuillez contacter l\'administrateur.',
+                'email' => 'Votre compte a été ' . $statusLabel . '. Veuillez contacter l\'administrateur.',
             ]);
         }
 

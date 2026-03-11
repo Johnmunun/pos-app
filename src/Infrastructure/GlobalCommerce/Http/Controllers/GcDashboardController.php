@@ -7,6 +7,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Src\Infrastructure\GlobalCommerce\Sales\Models\SaleModel;
 use Src\Infrastructure\GlobalCommerce\Procurement\Models\PurchaseModel;
+use Src\Infrastructure\GlobalCommerce\Inventory\Models\ProductModel as GcProductModel;
 use Carbon\Carbon;
 
 class GcDashboardController
@@ -166,6 +167,11 @@ class GcDashboardController
             $currency = 'CDF';
         }
 
+        // Stockage médias: images produits GlobalCommerce uniquement
+        $productImageCount = (int) GcProductModel::where('shop_id', $shopId)
+            ->whereNotNull('image_path')
+            ->count();
+
         return Inertia::render('Commerce/Dashboard', [
             'stats' => [
                 'products' => [
@@ -192,6 +198,11 @@ class GcDashboardController
                     'active' => $customersActive,
                 ],
                 'alerts' => $alerts,
+                'media_storage' => [
+                    'images_count' => $productImageCount,
+                    'used_mb' => null,
+                    'limit_mb' => 100.0,
+                ],
             ],
             'chartSalesLastDays' => $chartSalesLastDays,
             'chartStockDistribution' => $chartStockDistribution,

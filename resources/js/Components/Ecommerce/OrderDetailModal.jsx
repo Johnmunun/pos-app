@@ -47,45 +47,67 @@ export default function OrderDetailModal({ order, show, onClose, onStatusUpdate,
         cancelled: XCircle,
     };
 
-    const StatusIcon = statusIcons[order.status] || Clock;
+    const statusLabels = {
+        pending: 'En attente',
+        confirmed: 'Confirmée',
+        processing: 'En traitement',
+        shipped: 'Expédiée',
+        delivered: 'Livrée',
+        cancelled: 'Annulée',
+    };
+
+    const paymentStatusLabels = {
+        pending: 'En attente de paiement',
+        paid: 'Payée',
+        failed: 'Échec paiement',
+        refunded: 'Remboursée',
+    };
+
+    const normalizedStatus = (order.status || '').toLowerCase();
+    const normalizedPaymentStatus = (order.payment_status || '').toLowerCase();
+
+    const StatusIcon = statusIcons[normalizedStatus] || Clock;
+
+    const canValidateOrder = onStatusUpdate && normalizedStatus === 'pending';
+    const canMarkAsPaid = onPaymentStatusUpdate && normalizedPaymentStatus === 'pending';
 
     return (
-        <Modal show={show} onClose={onClose} maxWidth="3xl">
-            <div className="p-6">
+        <Modal show={show} onClose={onClose} maxWidth="2xl">
+            <div className="p-5 sm:p-6">
                 {/* Header */}
-                <div className="flex items-start justify-between mb-6">
+                <div className="flex items-start justify-between mb-4 sm:mb-6">
                     <div className="flex items-center gap-3">
-                        <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                            <Package className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                        <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                            <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                                 Commande {order.order_number}
                             </h2>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                                 Créée le {order.created_at}
                             </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Badge className={statusColors[order.status] || statusColors.pending}>
+                        <Badge className={statusColors[normalizedStatus] || statusColors.pending}>
                             <StatusIcon className="h-3 w-3 mr-1" />
-                            {order.status}
+                            {statusLabels[normalizedStatus] || order.status}
                         </Badge>
-                        <Badge className={paymentStatusColors[order.payment_status] || paymentStatusColors.pending}>
-                            {order.payment_status}
+                        <Badge className={paymentStatusColors[normalizedPaymentStatus] || paymentStatusColors.pending}>
+                            {paymentStatusLabels[normalizedPaymentStatus] || order.payment_status}
                         </Badge>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                     {/* Informations client */}
                     <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                        <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                             <User className="h-5 w-5" />
                             Client
                         </h3>
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2">
+                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-2">
                             <div className="flex items-center gap-2">
                                 <User className="h-4 w-4 text-gray-500" />
                                 <span className="font-medium">{order.customer_name}</span>
@@ -103,12 +125,12 @@ export default function OrderDetailModal({ order, show, onClose, onStatusUpdate,
                         </div>
 
                         {/* Adresses */}
-                        <div className="space-y-3">
+                        <div className="space-y-2.5">
                             <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
                                 <MapPin className="h-4 w-4" />
                                 Adresse de livraison
                             </h4>
-                            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
                                 <p className="text-sm whitespace-pre-line">{order.shipping_address}</p>
                             </div>
                             {order.billing_address && (
@@ -117,7 +139,7 @@ export default function OrderDetailModal({ order, show, onClose, onStatusUpdate,
                                         <MapPin className="h-4 w-4" />
                                         Adresse de facturation
                                     </h4>
-                                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
                                         <p className="text-sm whitespace-pre-line">{order.billing_address}</p>
                                     </div>
                                 </>
@@ -127,11 +149,11 @@ export default function OrderDetailModal({ order, show, onClose, onStatusUpdate,
 
                     {/* Produits et totaux */}
                     <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                        <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                             <Package className="h-5 w-5" />
                             Produits
                         </h3>
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-3">
+                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-3 max-h-80 overflow-y-auto">
                             {order.items?.map((item, index) => (
                                 <div key={index} className="flex items-start gap-3 pb-3 border-b border-gray-200 dark:border-gray-700 last:border-0">
                                     {item.product_image_url && (
@@ -176,7 +198,7 @@ export default function OrderDetailModal({ order, show, onClose, onStatusUpdate,
                         </div>
 
                         {/* Totaux */}
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2">
+                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-2">
                             <div className="flex justify-between text-sm">
                                 <span className="text-gray-600 dark:text-gray-400">Sous-total</span>
                                 <span>{order.subtotal_amount.toFixed(2)} {order.currency}</span>
@@ -203,7 +225,7 @@ export default function OrderDetailModal({ order, show, onClose, onStatusUpdate,
 
                         {/* Paiement */}
                         {order.payment_method && (
-                            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
                                 <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2 mb-2">
                                     <CreditCard className="h-4 w-4" />
                                     Paiement
@@ -216,7 +238,7 @@ export default function OrderDetailModal({ order, show, onClose, onStatusUpdate,
 
                         {/* Notes */}
                         {order.notes && (
-                            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
                                 <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2 mb-2">
                                     <FileText className="h-4 w-4" />
                                     Notes
@@ -228,7 +250,7 @@ export default function OrderDetailModal({ order, show, onClose, onStatusUpdate,
                         )}
 
                         {/* Dates importantes */}
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2">
+                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-2">
                             <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2 mb-2">
                                 <Calendar className="h-4 w-4" />
                                 Dates
@@ -262,13 +284,30 @@ export default function OrderDetailModal({ order, show, onClose, onStatusUpdate,
                 </div>
 
                 {/* Actions */}
-                {onStatusUpdate && (
-                    <div className="mt-6 flex justify-end gap-3 border-t border-gray-200 dark:border-gray-700 pt-4">
-                        <Button variant="outline" onClick={onClose}>
-                            Fermer
+                <div className="mt-5 sm:mt-6 flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3 border-t border-gray-200 dark:border-gray-700 pt-4">
+                    {canMarkAsPaid && (
+                        <Button
+                            type="button"
+                            onClick={() => onPaymentStatusUpdate(order.id, 'paid')}
+                            className="order-last sm:order-first bg-emerald-600 hover:bg-emerald-700"
+                        >
+                            <CreditCard className="h-4 w-4 mr-2" />
+                            Marquer comme payée
                         </Button>
-                    </div>
-                )}
+                    )}
+                    {canValidateOrder && (
+                        <Button
+                            type="button"
+                            onClick={() => onStatusUpdate(order.id, 'confirmed')}
+                            className="order-last sm:order-first"
+                        >
+                            Valider la commande
+                        </Button>
+                    )}
+                    <Button variant="outline" onClick={onClose}>
+                        Fermer
+                    </Button>
+                </div>
             </div>
         </Modal>
     );

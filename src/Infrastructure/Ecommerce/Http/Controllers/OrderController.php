@@ -15,6 +15,7 @@ use Src\Application\Ecommerce\UseCases\UpdatePaymentStatusUseCase;
 use Src\Domain\Ecommerce\Repositories\OrderRepositoryInterface;
 use Src\Domain\Ecommerce\Repositories\OrderItemRepositoryInterface;
 use Carbon\Carbon;
+use Src\Domain\Ecommerce\Entities\Order;
 
 class OrderController
 {
@@ -168,7 +169,7 @@ class OrderController
             'items' => array_map(function ($item) use ($itemModels) {
                 $model = $itemModels[$item->getId()] ?? null;
                 $downloadLink = null;
-                if ($model?->is_digital && $model?->download_token) {
+                if ($model && $model->is_digital && $model->download_token) {
                     $downloadLink = route('ecommerce.download', ['token' => $model->download_token]);
                 }
                 return [
@@ -181,7 +182,7 @@ class OrderController
                     'discount_amount' => $item->getDiscountAmount()->getAmount(),
                     'subtotal' => $item->getSubtotal()->getAmount(),
                     'product_image_url' => $item->getProductImageUrl(),
-                    'is_digital' => (bool) ($model?->is_digital ?? false),
+                    'is_digital' => $model ? (bool) $model->is_digital : false,
                     'download_link' => $downloadLink,
                 ];
             }, $items),
@@ -194,7 +195,8 @@ class OrderController
 
     public function store(Request $request): JsonResponse
     {
-        if (!$request->user()?->hasPermission('ecommerce.create')) {
+            $user = $request->user();
+            if (!$user || (!$user->hasPermission('ecommerce.order.create') && !$user->hasPermission('ecommerce.create'))) {
             abort(403, 'Vous n\'avez pas la permission de créer des commandes.');
         }
 
@@ -210,6 +212,7 @@ class OrderController
             'discount_amount' => 'required|numeric|min:0',
             'currency' => 'required|string|size:3',
             'payment_method' => 'nullable|string|max:50',
+            'payment_status' => 'nullable|string|in:pending,paid,failed,refunded',
             'notes' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|string',
@@ -222,7 +225,6 @@ class OrderController
         ]);
 
         $shopId = $this->getShopId($request);
-        $user = $request->user();
 
         $items = array_map(function ($item) {
             return new OrderItemDTO(
@@ -250,12 +252,25 @@ class OrderController
             $validated['currency'],
             $validated['payment_method'] ?? null,
             $validated['notes'] ?? null,
+            $validated['payment_status'] ?? Order::PAYMENT_STATUS_PENDING,
             $items,
-            $user?->id
+            $user->id
         );
 
         try {
             $order = $this->createOrderUseCase->execute($dto);
+
+            $digitalTokens = \Src\Infrastructure\Ecommerce\Models\OrderItemModel::where('order_id', $order->getId())
+                ->where('is_digital', true)
+                ->whereNotNull('download_token')
+                ->pluck('download_token')
+                ->values()
+                ->toArray();
+
+            $redirectUrl = null;
+            if (!empty($digitalTokens) && $order->getPaymentStatus() === Order::PAYMENT_STATUS_PAID) {
+                $redirectUrl = route('ecommerce.payment.success', ['token' => $digitalTokens[0]]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -264,6 +279,8 @@ class OrderController
                     'id' => $order->getId(),
                     'order_number' => $order->getOrderNumber(),
                 ],
+                'digital_download_tokens' => $digitalTokens,
+                'redirect_url' => $redirectUrl,
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -275,7 +292,15 @@ class OrderController
 
     public function updateStatus(Request $request, string $id): JsonResponse
     {
-        if (!$request->user()?->hasPermission('ecommerce.update')) {
+        $user = $request->user();
+        if (
+            !$user
+            || (
+                !$user->hasPermission('ecommerce.order.status.update')
+                && !$user->hasPermission('ecommerce.order.update')
+                && !$user->hasPermission('module.ecommerce')
+            )
+        ) {
             abort(403, 'Vous n\'avez pas la permission de modifier les commandes.');
         }
 
@@ -304,7 +329,15 @@ class OrderController
 
     public function updatePaymentStatus(Request $request, string $id): JsonResponse
     {
-        if (!$request->user()?->hasPermission('ecommerce.update')) {
+        $user = $request->user();
+        if (
+            !$user
+            || (
+                !$user->hasPermission('ecommerce.order.payment.update')
+                && !$user->hasPermission('ecommerce.order.update')
+                && !$user->hasPermission('module.ecommerce')
+            )
+        ) {
             abort(403, 'Vous n\'avez pas la permission de modifier les commandes.');
         }
 

@@ -9,6 +9,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Src\Application\Pharmacy\Services\DashboardService;
 use Src\Infrastructure\Pharmacy\Models\SaleModel;
+use Src\Infrastructure\Pharmacy\Models\ProductModel as PharmacyProductModel;
 
 class PharmacyDashboardController
 {
@@ -104,6 +105,16 @@ class PharmacyDashboardController
                 }
             }
         }
+
+        // Stockage médias: images produits pharmacie uniquement
+        $productImageCount = (int) PharmacyProductModel::where('shop_id', $shopId)
+            ->whereNotNull('image_path')
+            ->count();
+        $stats['media_storage'] = [
+            'images_count' => $productImageCount,
+            'used_mb' => null,
+            'limit_mb' => 100.0,
+        ];
 
         return Inertia::render('Pharmacy/Dashboard', [
             'stats' => $stats,

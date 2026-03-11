@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Ramsey\Uuid\Uuid;
 use Src\Application\Ecommerce\DTO\CreateOrderDTO;
 use Src\Application\Ecommerce\DTO\OrderItemDTO;
+use Src\Application\Ecommerce\Services\GenerateDownloadTokensService;
 use Src\Domain\Ecommerce\Entities\Order;
 use Src\Domain\Ecommerce\Entities\OrderItem;
 use Src\Domain\Ecommerce\Repositories\OrderRepositoryInterface;
@@ -21,7 +22,8 @@ class CreateOrderUseCase
     public function __construct(
         private readonly OrderRepositoryInterface $orderRepository,
         private readonly OrderItemRepositoryInterface $orderItemRepository,
-        private readonly GcProductRepositoryInterface $gcProductRepository
+        private readonly GcProductRepositoryInterface $gcProductRepository,
+        private readonly GenerateDownloadTokensService $generateDownloadTokensService
     ) {
     }
 
@@ -34,6 +36,7 @@ class CreateOrderUseCase
         return DB::transaction(function () use ($dto) {
             $currency = $dto->currency;
             $orderNumber = OrderNumber::generate();
+            $initialPaymentStatus = $dto->paymentStatus ?: Order::PAYMENT_STATUS_PENDING;
 
             // Créer la commande
             $order = new Order(
@@ -53,7 +56,7 @@ class CreateOrderUseCase
                 new Money($dto->subtotalAmount + $dto->shippingAmount + $dto->taxAmount - $dto->discountAmount, $currency),
                 $currency,
                 $dto->paymentMethod,
-                Order::PAYMENT_STATUS_PENDING,
+                $initialPaymentStatus,
                 $dto->notes,
                 $dto->createdBy,
                 new DateTimeImmutable(),
@@ -87,6 +90,11 @@ class CreateOrderUseCase
                     $product->removeStock(new Quantity($itemDto->quantity));
                     $this->gcProductRepository->update($product);
                 }
+            }
+
+            // Si déjà payé (ex: paiement externe confirmé 200 OK), générer immédiatement les tokens de téléchargement
+            if ($initialPaymentStatus === Order::PAYMENT_STATUS_PAID) {
+                $this->generateDownloadTokensService->generateForOrder($order->getId());
             }
 
             return $order;

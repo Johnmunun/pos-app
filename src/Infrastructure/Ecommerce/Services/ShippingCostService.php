@@ -13,7 +13,7 @@ class ShippingCostService
      * @param float $cartSubtotal Montant HT du panier
      * @param float $cartWeight Poids total en kg (optionnel, pour weight_based)
      * @param string $shopId
-     * @return array{amount: float, method_name: string}|null
+     * @return array{amount: float, method_name: string, method_id: string}|null
      */
     public function calculate(string $methodId, float $cartSubtotal, float $cartWeight, string $shopId): ?array
     {

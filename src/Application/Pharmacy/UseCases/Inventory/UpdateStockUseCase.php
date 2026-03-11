@@ -142,8 +142,8 @@ class UpdateStockUseCase
 
             $currentStock = $product->getStock()->getValue();
             $difference = $newQuantity - $currentStock;
-            
-            if ($difference === 0) {
+
+            if (abs($difference) < 0.0001) {
                 return;
             }
 

@@ -188,32 +188,14 @@ class EloquentTenantRepository implements TenantRepository
     private function modelToEntity(TenantModel $model): Tenant
     {
         return Tenant::hydrate(
-            id: $model->id,
+            id: (int) $model->id,
             code: $model->code,
             name: $model->name,
             email: $model->email,
-            isActive: $model->is_active,
-            createdAt: $model->created_at ?? new \DateTime(),
-            updatedAt: $model->updated_at
+            isActive: (bool) $model->is_active,
+            createdAt: $model->created_at instanceof \DateTimeInterface ? $model->created_at : new \DateTime(),
+            updatedAt: $model->updated_at instanceof \DateTimeInterface ? $model->updated_at : null
         );
     }
 
-    /**
-     * Helper: Convertir une Entity en données Model (array)
-     *
-     * Transforme l'objet domain riche en données plates.
-     * Utilisé pour la persistance.
-     *
-     * @param Tenant $entity
-     * @return array
-     */
-    private function entityToArray(Tenant $entity): array
-    {
-        return [
-            'code'      => $entity->getCode()->getValue(),
-            'name'      => $entity->getName()->getValue(),
-            'email'     => $entity->getEmail()->getValue(),
-            'is_active' => $entity->isActive(),
-        ];
-    }
 }

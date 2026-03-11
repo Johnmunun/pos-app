@@ -315,7 +315,7 @@ class GcProductController
                 $extra['image_type'] = $stored['image_type'];
             }
 
-            if (!empty($extra)) {
+            if ($extra !== []) {
                 $model->update($extra);
             }
         }
@@ -576,7 +576,7 @@ class GcProductController
                 $extra['image_type'] = $stored['image_type'];
             }
 
-            if (!empty($extra)) {
+            if ($extra !== []) {
                 $model->update($extra);
             }
         }

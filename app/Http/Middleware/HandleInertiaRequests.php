@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Log;
 use Inertia\Middleware;
 use Symfony\Component\HttpFoundation\Response;
 use Src\Application\Settings\UseCases\GetStoreSettingsUseCase;
+use Src\Infrastructure\Settings\Services\StoreLogoService;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -39,6 +40,8 @@ class HandleInertiaRequests extends Middleware
         $shopCurrency = 'CDF'; // Devise par défaut (Franc Congolais)
         $shopCurrencies = []; // Liste des devises configurées
         $receiptAutoPrint = false;
+        $shopLogoUrl = null;
+        $appLogoUrl = null;
         
         $tenantSector = null;
         $currentDepot = null;
@@ -131,7 +134,7 @@ class HandleInertiaRequests extends Middleware
                 }
 
                 $shopId = $user->shop_id ?? $user->tenant_id;
-                if ($shopId) {
+                    if ($shopId) {
                     // Chercher la boutique (sauf si devise déjà obtenue depuis le dépôt Commerce)
                     if (!$currencyFromDepotShop) {
                         $shop = \App\Models\Shop::find($shopId);
@@ -164,20 +167,60 @@ class HandleInertiaRequests extends Middleware
                         }
                     }
 
-                    try {
-                        /** @var GetStoreSettingsUseCase $getSettings */
-                        $getSettings = app(GetStoreSettingsUseCase::class);
-                        $settings = $getSettings->execute((string) $shopId);
-                        if ($settings) {
-                            $receiptAutoPrint = $settings->isReceiptAutoPrintEnabled();
+                        try {
+                            /** @var GetStoreSettingsUseCase $getSettings */
+                            $getSettings = app(GetStoreSettingsUseCase::class);
+                            $settings = $getSettings->execute((string) $shopId);
+                            if ($settings) {
+                                $receiptAutoPrint = $settings->isReceiptAutoPrintEnabled();
+                                try {
+                                    /** @var StoreLogoService $logoService */
+                                    $logoService = app(StoreLogoService::class);
+                                    $shopLogoUrl = $logoService->getUrl($settings->getLogoPath());
+                                } catch (\Throwable $e) {
+                                    Log::warning('Error getting store logo for Inertia', ['error' => $e->getMessage()]);
+                                }
+                            }
+                        } catch (\Throwable $e) {
+                            Log::warning('Error getting store settings for Inertia', ['error' => $e->getMessage()]);
                         }
-                    } catch (\Throwable $e) {
-                        Log::warning('Error getting store settings for Inertia', ['error' => $e->getMessage()]);
-                    }
                 }
             } catch (\Exception $e) {
                 Log::warning('Error getting shop currency', ['error' => $e->getMessage()]);
             }
+        }
+
+        // Thème storefront (couleurs primaire/secondaire) — uniquement sur les routes storefront
+        // Injecté dans le HTML initial pour éviter le flash de couleur au refresh
+        $storefrontTheme = null;
+        if (str_starts_with($request->path(), 'ecommerce/storefront')) {
+            $shopId = $user ? ($user->shop_id ?? $user->tenant_id) : null;
+            if ($shopId) {
+                $shop = \App\Models\Shop::find($shopId);
+                if ($shop) {
+                    $config = $shop->ecommerce_storefront_config ?? [];
+                    if (!is_array($config)) {
+                        $config = [];
+                    }
+                    $storefrontTheme = [
+                        'primary' => $config['theme_primary_color'] ?? '#f59e0b',
+                        'secondary' => $config['theme_secondary_color'] ?? '#d97706',
+                    ];
+                }
+            }
+            if (!$storefrontTheme) {
+                $storefrontTheme = ['primary' => '#f59e0b', 'secondary' => '#d97706'];
+            }
+        }
+
+        // Logo global de l'application (OmniPOS) - même pour les invités
+        try {
+            $fullPath = 'settings/app/app-logo.png';
+            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($fullPath)) {
+                $appLogoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($fullPath);
+            }
+        } catch (\Throwable $e) {
+            Log::debug('Error getting app logo for Inertia', ['error' => $e->getMessage()]);
         }
 
         return [
@@ -195,12 +238,15 @@ class HandleInertiaRequests extends Middleware
                 'currency' => $shopCurrency,
                 'currencies' => $shopCurrencies,
                 'receipt_auto_print' => $receiptAutoPrint,
+                'logo_url' => $shopLogoUrl,
             ],
+            'appLogoUrl' => $appLogoUrl,
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
                 'message' => $request->session()->get('message'),
             ],
+            'storefrontTheme' => $storefrontTheme,
         ];
     }
 

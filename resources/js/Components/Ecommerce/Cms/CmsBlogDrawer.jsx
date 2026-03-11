@@ -18,7 +18,7 @@ export default function CmsBlogDrawer({ isOpen, onClose, article = null, categor
         return String(d).replace(' ', 'T').slice(0, 16);
     };
 
-    const { data, setData, post, put, processing, errors, reset } = useForm({
+    const { data, setData, post, put, processing, errors } = useForm({
         title: article?.title ?? '',
         slug: article?.slug ?? '',
         content: article?.content ?? '',
@@ -31,7 +31,7 @@ export default function CmsBlogDrawer({ isOpen, onClose, article = null, categor
 
     useEffect(() => {
         if (!isOpen) return;
-        reset({
+        setData({
             title: article?.title ?? '',
             slug: article?.slug ?? '',
             content: article?.content ?? '',
@@ -41,7 +41,7 @@ export default function CmsBlogDrawer({ isOpen, onClose, article = null, categor
             is_active: article?.is_active ?? true,
             published_at: formatDateForInput(article?.published_at ?? ''),
         });
-    }, [isOpen, article?.id]);
+    }, [isOpen, article]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
