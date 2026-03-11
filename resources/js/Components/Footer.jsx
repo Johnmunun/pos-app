@@ -40,9 +40,12 @@ export default function Footer() {
                             <h3 className="text-3xl font-bold mb-2">Prêt à commencer ?</h3>
                             <p className="text-amber-100">Rejoignez des milliers de commerçants satisfaits.</p>
                         </div>
-                        <button className="bg-white hover:bg-gray-100 text-amber-600 px-8 py-3 rounded-lg font-semibold transition-colors duration-200 whitespace-nowrap">
+                        <a
+                            href={route('register')}
+                            className="bg-white hover:bg-gray-100 text-amber-600 px-8 py-3 rounded-lg font-semibold transition-colors duration-200 whitespace-nowrap"
+                        >
                             Essayer gratuitement
-                        </button>
+                        </a>
                     </div>
                 </div>
             </div>
