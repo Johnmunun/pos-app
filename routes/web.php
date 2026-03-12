@@ -276,6 +276,11 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth'])->prefix('api')->group(function () {
     Route::get('/notifications', [\App\Http\Controllers\Api\NotificationController::class, 'index'])
         ->name('api.notifications.index');
+
+    Route::post('/push-subscriptions', [\App\Http\Controllers\Api\WebPushSubscriptionController::class, 'store'])
+        ->name('api.push-subscriptions.store');
+    Route::delete('/push-subscriptions', [\App\Http\Controllers\Api\WebPushSubscriptionController::class, 'destroy'])
+        ->name('api.push-subscriptions.destroy');
 });
 
 /**

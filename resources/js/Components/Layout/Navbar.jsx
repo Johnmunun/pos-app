@@ -40,24 +40,28 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
     const isDarkMode = document.documentElement.classList.contains('dark');
 
     const [notificationCount, setNotificationCount] = useState(0);
+    const [notifications, setNotifications] = useState([]);
+    const [showNotifications, setShowNotifications] = useState(false);
 
-    // Charger les notifications pour ROOT / admins
-    useEffect(() => {
-        const isRoot = user?.type === 'ROOT' || permissions.includes('admin.dashboard.view');
+    const isRoot = user?.type === 'ROOT' || permissions.includes('admin.dashboard.view');
+
+    const fetchNotifications = async () => {
         if (!isRoot) return;
+        try {
+            const response = await window.axios.get(route('api.notifications.index'));
+            setNotificationCount(response.data?.unread_count ?? 0);
+            setNotifications(response.data?.notifications ?? []);
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn('Erreur chargement notifications', e);
+        }
+    };
 
-        const fetchNotifications = async () => {
-            try {
-                const response = await window.axios.get(route('api.notifications.index'));
-                setNotificationCount(response.data?.unread_count ?? 0);
-            } catch (e) {
-                // eslint-disable-next-line no-console
-                console.warn('Erreur chargement notifications', e);
-            }
-        };
-
+    // Charger les notifications pour ROOT / admins au montage
+    useEffect(() => {
         fetchNotifications();
-    }, [user, permissions]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isRoot]);
 
     return (
         <nav className="sticky top-0 z-40 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
@@ -136,22 +140,62 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
                     </button>
 
                     {/* Notifications */}
-                    {permissions.includes('notifications.view') || permissions.length === 0 ? (
-                        <button
-                            type="button"
-                            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors relative flex-shrink-0"
-                            title="Notifications"
-                        >
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                            </svg>
-                            {notificationCount > 0 && (
-                                <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-white">
-                                    {notificationCount > 9 ? '9+' : notificationCount}
-                                </span>
+                    {isRoot && (
+                        <div className="relative">
+                            <button
+                                type="button"
+                                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors relative flex-shrink-0"
+                                title="Notifications"
+                                onClick={async () => {
+                                    await fetchNotifications();
+                                    setShowNotifications((prev) => !prev);
+                                }}
+                            >
+                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                                {notificationCount > 0 && (
+                                    <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-white">
+                                        {notificationCount > 9 ? '9+' : notificationCount}
+                                    </span>
+                                )}
+                            </button>
+                            {showNotifications && (
+                                <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg z-50">
+                                    <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                                        <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                                            Notifications
+                                        </span>
+                                        <span className="text-[11px] text-gray-400">
+                                            {notificationCount} non lue(s)
+                                        </span>
+                                    </div>
+                                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                                        {notifications.length === 0 && (
+                                            <div className="px-3 py-3 text-xs text-gray-500 dark:text-gray-400">
+                                                Aucune notification pour le moment.
+                                            </div>
+                                        )}
+                                        {notifications.map((n) => (
+                                            <div key={n.id} className="px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700/60">
+                                                <div className="font-semibold text-gray-800 dark:text-gray-100">
+                                                    {n.title}
+                                                </div>
+                                                {n.body && (
+                                                    <div className="mt-0.5 text-gray-600 dark:text-gray-300">
+                                                        {n.body}
+                                                    </div>
+                                                )}
+                                                <div className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">
+                                                    {n.created_at}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             )}
-                        </button>
-                    ) : null}
+                        </div>
+                    )}
 
                     {/* Aide / Support */}
                     <button

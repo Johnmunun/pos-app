@@ -109,6 +109,73 @@ export default function AppLayout({ children, header, fullWidth = false }) {
         };
     }, [auth?.user, auth?.permissions]);
 
+    // Web Push - abonnement pour ROOT / admins
+    useEffect(() => {
+        const isRootOrAdmin = isRoot || permissions.includes('admin.dashboard.view');
+        if (!isRootOrAdmin) return;
+        if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) {
+            return;
+        }
+
+        const alreadyAsked = localStorage.getItem('webPushSubscribed') === '1';
+        if (alreadyAsked) return;
+
+        const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+        if (!vapidKey) {
+            // eslint-disable-next-line no-console
+            console.warn('VAPID public key manquante (VITE_VAPID_PUBLIC_KEY)');
+            return;
+        }
+
+        const urlBase64ToUint8Array = (base64String) => {
+            const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        };
+
+        (async () => {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    return;
+                }
+
+                // S'assurer que le service worker est enregistré
+                let registration = await navigator.serviceWorker.getRegistration();
+                if (!registration) {
+                    registration = await navigator.serviceWorker.register('/sw.js');
+                }
+
+                const existing = await registration.pushManager.getSubscription();
+                let subscription = existing;
+                if (!subscription) {
+                    subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+                    });
+                }
+
+                const { endpoint, keys } = subscription.toJSON();
+                await window.axios.post(route('api.push-subscriptions.store'), {
+                    endpoint,
+                    public_key: keys.p256dh,
+                    auth_token: keys.auth,
+                    content_encoding: 'aesgcm',
+                });
+
+                localStorage.setItem('webPushSubscribed', '1');
+            } catch (e) {
+                // eslint-disable-next-line no-console
+                console.warn('Erreur abonnement Web Push', e);
+            }
+        })();
+    }, [isRoot, permissions]);
+
     // Fermer le sidebar sur mobile quand on change de page
     useEffect(() => {
         setSidebarOpen(false);

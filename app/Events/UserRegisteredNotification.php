@@ -35,6 +35,15 @@ class UserRegisteredNotification implements ShouldBroadcast
                 'created_at' => $user->created_at?->toDateTimeString(),
             ],
         ]);
+
+        // Optionnel : envoyer aussi une notification Web Push aux admins / ROOT
+        try {
+            if (class_exists(\App\Services\WebPushService::class)) {
+                app(\App\Services\WebPushService::class)->sendToAdmins($this->notification);
+            }
+        } catch (\Throwable $e) {
+            // Ne pas casser l'inscription si le push échoue
+        }
     }
 
     public function broadcastOn(): array

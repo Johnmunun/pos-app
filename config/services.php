@@ -39,4 +39,12 @@ return [
         'api_key' => env('OPENAI_API_KEY'),
     ],
 
+    'webpush' => [
+        'vapid' => [
+            'public_key' => env('VAPID_PUBLIC_KEY'),
+            'private_key' => env('VAPID_PRIVATE_KEY'),
+            'subject' => env('VAPID_SUBJECT', 'mailto:admin@example.com'),
+        ],
+    ],
+
 ];
