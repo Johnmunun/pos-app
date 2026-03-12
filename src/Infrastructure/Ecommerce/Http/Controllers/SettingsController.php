@@ -37,8 +37,48 @@ class SettingsController
                 'country' => $shop->country ?? '',
                 'phone' => $shop->phone ?? '',
                 'email' => $shop->email ?? '',
+                'ecommerce_subdomain' => $shop->ecommerce_subdomain,
+                'ecommerce_is_online' => (bool) $shop->ecommerce_is_online,
             ] : null,
         ]);
+    }
+
+    /**
+     * Met à jour le sous-domaine de la boutique (ex: kasashop pour kasashop.omnisolution.shop).
+     */
+    public function updateDomain(Request $request): RedirectResponse
+    {
+        $shopId = $this->getShopId($request);
+        $shop = Shop::find($shopId);
+        if (!$shop) {
+            abort(404, 'Shop not found');
+        }
+
+        $data = $request->validate([
+            'subdomain' => ['required', 'string', 'max:50', 'regex:/^[a-z0-9-]+$/i'],
+            'is_online' => ['sometimes', 'boolean'],
+        ]);
+
+        // Vérifier l'unicité du sous-domaine
+        $exists = Shop::where('id', '!=', $shop->id)
+            ->where('ecommerce_subdomain', $data['subdomain'])
+            ->exists();
+
+        if ($exists) {
+            return redirect()
+                ->route('ecommerce.settings.index')
+                ->withErrors(['subdomain' => 'Ce sous-domaine est déjà utilisé par une autre boutique.']);
+        }
+
+        $shop->ecommerce_subdomain = $data['subdomain'];
+        if (array_key_exists('is_online', $data)) {
+            $shop->ecommerce_is_online = (bool) $data['is_online'];
+        }
+        $shop->save();
+
+        return redirect()
+            ->route('ecommerce.settings.index')
+            ->with('success', 'Domaine de la boutique mis à jour.');
     }
 
     // Plus de mise à jour de devise ici : la devise est gérée globalement via /settings/currencies

@@ -296,6 +296,15 @@ class OnboardingController extends Controller
             
             // Connecter l'utilisateur
             Auth::login($user);
+
+            // Créer une notification système pour ROOT / admins (nouvelle inscription)
+            try {
+                event(new \App\Events\UserRegisteredNotification($user));
+            } catch (\Throwable $e) {
+                \Log::warning('UserRegisteredNotification dispatch failed', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
             
             // Ajouter un message de succès
             request()->session()->flash('success', 'Votre compte a été créé avec succès ! Il est en attente de validation par notre équipe.');

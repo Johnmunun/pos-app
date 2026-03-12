@@ -375,9 +375,9 @@ Route::prefix('ecommerce')
         Route::get('/settings', [SettingsController::class, 'index'])
             ->middleware('permission:ecommerce.settings.view|module.ecommerce')
             ->name('settings.index');
-        Route::put('/settings', [SettingsController::class, 'update'])
+        Route::put('/settings/domain', [SettingsController::class, 'updateDomain'])
             ->middleware('permission:ecommerce.settings.view|module.ecommerce')
-            ->name('settings.update');
+            ->name('settings.domain.update');
 
         // Marketing (SEO, Pixels, Tracking)
         Route::get('/marketing', [MarketingController::class, 'index'])

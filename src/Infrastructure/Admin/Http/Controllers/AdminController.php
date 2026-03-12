@@ -261,7 +261,76 @@ class AdminController
             ->limit(10)
             ->get(['id', 'first_name', 'last_name', 'email', 'last_login_at']);
 
-        // 7. Top tenants (par CA)
+        // 7. Gouvernance & Sécurité
+        $rootUsersCount = \App\Models\User::where('type', 'ROOT')->count();
+        $adminUsersCount = \App\Models\User::whereHas('roles', function ($q) {
+                $q->where('name', 'like', '%Admin%');
+            })
+            ->where('type', '!=', 'ROOT')
+            ->count();
+
+        // Derniers logs critiques (si la table existe)
+        $securityAlerts = [];
+        if (\Illuminate\Support\Facades\Schema::hasTable('system_logs')) {
+            $securityAlerts = \Src\Infrastructure\Logs\Models\SystemLogModel::query()
+                ->whereIn('level', ['error', 'critical'])
+                ->orderByDesc('logged_at')
+                ->limit(5)
+                ->get(['id', 'logged_at', 'level', 'module', 'message'])
+                ->map(function ($log) {
+                    return [
+                        'id' => $log->id,
+                        'logged_at' => $log->logged_at?->toDateTimeString(),
+                        'level' => $log->level,
+                        'module' => $log->module,
+                        'message' => $log->message,
+                    ];
+                })
+                ->toArray();
+        }
+
+        // Dernières connexions (table d’historique si disponible, sinon fallback sur last_login_at)
+        $recentSecurityLogins = [];
+        if (\Illuminate\Support\Facades\Schema::hasTable('user_login_histories')) {
+            $recentSecurityLogins = \Src\Infrastructure\Logs\Models\UserLoginHistoryModel::query()
+                ->orderByDesc('logged_in_at')
+                ->limit(5)
+                ->get(['id', 'user_id', 'logged_in_at', 'ip_address', 'status'])
+                ->map(function ($login) {
+                    return [
+                        'id' => $login->id,
+                        'user_id' => $login->user_id,
+                        'logged_in_at' => $login->logged_in_at?->toDateTimeString(),
+                        'ip_address' => $login->ip_address,
+                        'status' => $login->status,
+                    ];
+                })
+                ->toArray();
+        } else {
+            $recentSecurityLogins = \App\Models\User::whereNotNull('last_login_at')
+                ->orderByDesc('last_login_at')
+                ->limit(5)
+                ->get(['id', 'email', 'last_login_at'])
+                ->map(function ($u) {
+                    return [
+                        'id' => $u->id,
+                        'user_id' => $u->email,
+                        'logged_in_at' => $u->last_login_at?->toDateTimeString(),
+                        'ip_address' => null,
+                        'status' => 'success',
+                    ];
+                })
+                ->toArray();
+        }
+
+        $governanceSecurity = [
+            'root_users' => $rootUsersCount,
+            'admin_users' => $adminUsersCount,
+            'critical_logs' => $securityAlerts,
+            'recent_logins' => $recentSecurityLogins,
+        ];
+
+        // 8. Top tenants (par CA)
         $topTenants = [];
         $tenantRevenues = [];
         
@@ -347,6 +416,7 @@ class AdminController
                 })->toArray(),
             ],
             'top_tenants' => $topTenants,
+            'governance_security' => $governanceSecurity,
             'period' => $period,
             'from' => $from,
             'to' => $to,

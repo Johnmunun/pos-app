@@ -26,6 +26,9 @@ import {
   CheckCircle,
   XCircle,
   Package,
+  Shield,
+  ShieldAlert,
+  LogIn,
 } from 'lucide-react';
 import {
   LineChart,
@@ -59,10 +62,11 @@ function formatNumber(num) {
 }
 
 export default function RootDashboard() {
-  const { kpis, module_stats, trends, alerts, recent_activity, top_tenants, period, from, to, auth } = usePage().props;
+  const { kpis, module_stats, trends, alerts, recent_activity, top_tenants, governance_security, period, from, to, auth } = usePage().props;
   const permissions = auth?.permissions ?? [];
   const canViewDashboard = auth?.user?.type === 'ROOT' || permissions.includes('admin.dashboard.view');
   const canExport = auth?.user?.type === 'ROOT' || permissions.includes('admin.dashboard.export');
+  const canViewSecurity = auth?.user?.type === 'ROOT' || permissions.includes('logs.system') || permissions.includes('logs.actions') || permissions.includes('logs.connections');
 
   const [selectedPeriod, setSelectedPeriod] = useState(period || '30');
   const [dateFrom, setDateFrom] = useState(from || '');
@@ -534,43 +538,199 @@ export default function RootDashboard() {
             </Card>
           </div>
 
-          {/* 6. Top tenants */}
-          {top_tenants && top_tenants.length > 0 && (
-            <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-emerald-500" />
-                  Top 10 Tenants (par CA)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-slate-700">
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Rang</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Tenant</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Secteur</th>
-                        <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Chiffre d'affaires</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {top_tenants.map((tenant, index) => (
-                        <tr key={tenant.id} className="border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                          <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium">#{index + 1}</td>
-                          <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{tenant.name}</td>
-                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 capitalize">{tenant.sector || '—'}</td>
-                          <td className="py-3 px-4 text-sm text-right font-semibold text-emerald-600 dark:text-emerald-400">
-                            {formatCurrency(tenant.revenue)}
-                          </td>
+          {/* 6. Gouvernance & Sécurité + Top tenants */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {canViewSecurity && governance_security && (
+              <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 xl:col-span-1">
+                <CardHeader>
+                  <CardTitle className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-indigo-500" />
+                    Gouvernance & Sécurité
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40">
+                      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span>Utilisateurs ROOT</span>
+                        <ShieldAlert className="h-3 w-3 text-indigo-500" />
+                      </div>
+                      <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+                        {formatNumber(governance_security.root_users || 0)}
+                      </div>
+                    </div>
+                    <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40">
+                      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span>Admins</span>
+                        <Users className="h-3 w-3 text-emerald-500" />
+                      </div>
+                      <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+                        {formatNumber(governance_security.admin_users || 0)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Derniers événements critiques
+                      </span>
+                      <Link
+                        href={route('logs.system')}
+                        className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
+                      >
+                        Voir tous les logs
+                      </Link>
+                    </div>
+                    <div className="space-y-2 text-xs">
+                      {governance_security.critical_logs && governance_security.critical_logs.length > 0 ? (
+                        governance_security.critical_logs.map((log) => (
+                          <div
+                            key={log.id}
+                            className="p-2 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span
+                                className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
+                                  log.level === 'critical'
+                                    ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
+                                    : 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300'
+                                }`}
+                              >
+                                {log.level}
+                              </span>
+                              <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                                {log.logged_at
+                                  ? new Date(log.logged_at).toLocaleString('fr-FR')
+                                  : ''}
+                              </span>
+                            </div>
+                            <div className="mt-1 text-[11px] text-gray-600 dark:text-gray-300 line-clamp-2">
+                              {log.message}
+                            </div>
+                            {log.module && (
+                              <div className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">
+                                Module: {log.module}
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Aucun événement critique enregistré.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Dernières connexions
+                      </span>
+                      <Link
+                        href={route('logs.connections')}
+                        className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
+                      >
+                        Voir toutes les connexions
+                      </Link>
+                    </div>
+                    <div className="space-y-2 text-xs">
+                      {governance_security.recent_logins && governance_security.recent_logins.length > 0 ? (
+                        governance_security.recent_logins.map((login) => (
+                          <div
+                            key={login.id}
+                            className="flex items-center justify-between p-2 rounded-md bg-slate-50 dark:bg-slate-900/40"
+                          >
+                            <div className="flex items-center gap-2">
+                              <LogIn className="h-3 w-3 text-emerald-500" />
+                              <div>
+                                <div className="text-[11px] text-gray-800 dark:text-gray-200">
+                                  {login.user_id}
+                                </div>
+                                <div className="text-[10px] text-gray-500 dark:text-gray-400">
+                                  {login.logged_in_at
+                                    ? new Date(login.logged_in_at).toLocaleString('fr-FR')
+                                    : ''}
+                                </div>
+                              </div>
+                            </div>
+                            <span
+                              className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
+                                login.status === 'failed'
+                                  ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
+                                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
+                              }`}
+                            >
+                              {login.status}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Aucune connexion récente enregistrée.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {top_tenants && top_tenants.length > 0 && (
+              <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 xl:col-span-2">
+                <CardHeader>
+                  <CardTitle className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-emerald-500" />
+                    Top 10 Tenants (par CA)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-200 dark:border-slate-700">
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            Rang
+                          </th>
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            Tenant
+                          </th>
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            Secteur
+                          </th>
+                          <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            Chiffre d'affaires
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                      </thead>
+                      <tbody>
+                        {top_tenants.map((tenant, index) => (
+                          <tr
+                            key={tenant.id}
+                            className="border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50"
+                          >
+                            <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium">
+                              #{index + 1}
+                            </td>
+                            <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">
+                              {tenant.name}
+                            </td>
+                            <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 capitalize">
+                              {tenant.sector || '—'}
+                            </td>
+                            <td className="py-3 px-4 text-sm text-right font-semibold text-emerald-600 dark:text-emerald-400">
+                              {formatCurrency(tenant.revenue)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
     </AppLayout>

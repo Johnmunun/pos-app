@@ -98,6 +98,13 @@ class StorefrontController
             abort(404, 'Shop not found');
         }
 
+        // Si la boutique n'est pas en ligne, seuls ROOT et le propriétaire peuvent la prévisualiser
+        $user = $request->user();
+        $isRoot = $user ? (\App\Models\User::find($user->id)?->isRoot() ?? false) : false;
+        if (!$shop->ecommerce_is_online && !$isRoot) {
+            abort(403, 'La boutique en ligne n\'est pas encore publiée.');
+        }
+
         $config = $this->getStorefrontConfig($shop);
 
         // Produits en vedette (limités pour éviter les requêtes lourdes)
@@ -196,7 +203,6 @@ class StorefrontController
             }
         }
 
-        $user = $request->user();
         $tenantId = (string) (($user && $user->tenant_id) ? $user->tenant_id : $shopId);
         $displayCurrency = $this->getDefaultCurrencyForTenant($tenantId);
 

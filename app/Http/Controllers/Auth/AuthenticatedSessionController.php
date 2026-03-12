@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
+use Src\Infrastructure\Logs\Models\UserLoginHistoryModel;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -32,6 +33,23 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
+
+        // Enregistrer l'historique de connexion
+        try {
+            $user = Auth::user();
+            if ($user) {
+                UserLoginHistoryModel::create([
+                    'user_id' => $user->id,
+                    'logged_in_at' => now(),
+                    'ip_address' => $request->ip(),
+                    'user_agent' => (string) $request->userAgent(),
+                    'device' => php_uname('n'),
+                    'status' => 'success',
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // Ne pas casser le login si l'historique échoue
+        }
 
         // Si ROOT user → dashboard ROOT
         if (auth()->user()->type === 'ROOT') {

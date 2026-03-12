@@ -90,7 +90,14 @@ Route::get('/dashboard', function (\Illuminate\Http\Request $request) {
         return redirect()->route('login');
     }
     if (method_exists($user, 'hasPermission')) {
-        $hasPharmacy = $user->hasPermission('module.pharmacy');
+        // Détection des modules actifs pour l'utilisateur
+        // Pharmacie : on considère le module actif si l'utilisateur a soit le flag de module,
+        // soit des permissions clés du module (cas où le flag n'a pas été synchronisé).
+        $hasPharmacy = $user->hasPermission('module.pharmacy')
+            || $user->hasPermission('pharmacy.sales.view')
+            || $user->hasPermission('pharmacy.report.view')
+            || $user->hasPermission('pharmacy.product.view');
+
         $hasHardware = $user->hasPermission('module.hardware');
         $hasCommerce = $user->hasPermission('module.commerce');
         $hasEcommerce = $user->hasPermission('module.ecommerce');
@@ -263,6 +270,12 @@ Route::middleware(['auth', 'verified', 'root', 'permission'])->group(function ()
 Route::middleware(['auth'])->group(function () {
     Route::post('/admin/stop-impersonation', [\Src\Infrastructure\User\Http\Controllers\UserManagementController::class, 'stopImpersonation'])
         ->name('admin.stop-impersonation');
+});
+
+// Notifications API simples pour la navbar (ROOT / admins)
+Route::middleware(['auth'])->prefix('api')->group(function () {
+    Route::get('/notifications', [\App\Http\Controllers\Api\NotificationController::class, 'index'])
+        ->name('api.notifications.index');
 });
 
 /**

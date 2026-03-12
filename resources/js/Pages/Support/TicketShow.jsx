@@ -1,5 +1,5 @@
 import AppLayout from '@/Layouts/AppLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, router } from '@inertiajs/react';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
 import { useState } from 'react';
@@ -99,8 +99,16 @@ export default function TicketShow({ ticket, replies, canManage }) {
                                         <select
                                             value={status}
                                             onChange={(e) => {
-                                                setStatus(e.target.value);
-                                                window.location.href = route('support.tickets.status', ticket.id) + '?status=' + e.target.value;
+                                                const newStatus = e.target.value;
+                                                setStatus(newStatus);
+                                                router.post(
+                                                    route('support.tickets.status', ticket.id),
+                                                    { status: newStatus },
+                                                    {
+                                                        preserveScroll: true,
+                                                        preserveState: true,
+                                                    }
+                                                );
                                             }}
                                             className="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:border-amber-500 focus:ring-amber-500"
                                         >

@@ -17,8 +17,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string|null $postal_code
  * @property string|null $country
  * @property string|null $phone
- * @property string|null $email
- * @property string|null $currency
+     * @property string|null $email
+     * @property string|null $ecommerce_subdomain
+     * @property bool $ecommerce_is_online
+     * @property string|null $currency
  * @property float|null $default_tax_rate
  * @property array<mixed>|null $ecommerce_storefront_config
  * @property bool $is_active
@@ -44,6 +46,8 @@ class Shop extends Model
         'country',
         'phone',
         'email',
+        'ecommerce_subdomain',
+        'ecommerce_is_online',
         'currency',
         'default_tax_rate',
         'ecommerce_storefront_config',
@@ -58,6 +62,7 @@ class Shop extends Model
     {
         return [
             'is_active' => 'boolean',
+            'ecommerce_is_online' => 'boolean',
             'default_tax_rate' => 'decimal:2',
             'ecommerce_storefront_config' => 'array',
         ];

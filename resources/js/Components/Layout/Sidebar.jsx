@@ -383,6 +383,10 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
 
     // Filtrer les groupes visibles (Général toujours visible ; Pharmacy/Hardware/Commerce/Ecommerce via hasXxxAccess)
     const visibleGroups = navigationGroups.filter((group) => {
+        // Pour le ROOT, masquer les menus de modules métiers (Pharmacy, Hardware, Global Commerce, E-commerce)
+        if (isRoot && ['pharmacy', 'hardware', 'global_commerce', 'ecommerce'].includes(group.key)) {
+            return false;
+        }
         if (group.key === 'general') return true;
         if (group.key === 'pharmacy') return hasPharmacyAccess();
         if (group.key === 'hardware') return hasHardwareAccess();

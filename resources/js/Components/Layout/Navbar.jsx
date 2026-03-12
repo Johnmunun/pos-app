@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import Dropdown from '@/Components/Dropdown';
 import GlobalSearch from '@/Components/GlobalSearch';
@@ -39,8 +39,25 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
     // Vérifier si dark mode est actif
     const isDarkMode = document.documentElement.classList.contains('dark');
 
-    // Nombre de notifications (placeholder)
-    const notificationCount = 3;
+    const [notificationCount, setNotificationCount] = useState(0);
+
+    // Charger les notifications pour ROOT / admins
+    useEffect(() => {
+        const isRoot = user?.type === 'ROOT' || permissions.includes('admin.dashboard.view');
+        if (!isRoot) return;
+
+        const fetchNotifications = async () => {
+            try {
+                const response = await window.axios.get(route('api.notifications.index'));
+                setNotificationCount(response.data?.unread_count ?? 0);
+            } catch (e) {
+                // eslint-disable-next-line no-console
+                console.warn('Erreur chargement notifications', e);
+            }
+        };
+
+        fetchNotifications();
+    }, [user, permissions]);
 
     return (
         <nav className="sticky top-0 z-40 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">

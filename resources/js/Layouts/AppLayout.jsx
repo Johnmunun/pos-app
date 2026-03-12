@@ -86,6 +86,29 @@ export default function AppLayout({ children, header, fullWidth = false }) {
     // État pour le drawer mobile
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
+    // Notifications ROOT temps réel (inscriptions, etc.)
+    useEffect(() => {
+        const user = auth?.user;
+        const permissions = Array.isArray(auth?.permissions) ? auth.permissions : [];
+        const isRoot = user?.type === 'ROOT' || permissions.includes('admin.dashboard.view');
+
+        if (!isRoot || typeof window === 'undefined' || !window.Echo) {
+            return;
+        }
+
+        const channel = window.Echo.private('root.notifications')
+            .listen('.user.registered', (event) => {
+                // Pour l'instant, simple log console. On branchera plus tard la cloche UI.
+                // event.notification contient la ligne AppNotification créée côté backend.
+                // eslint-disable-next-line no-console
+                console.log('Nouvelle inscription (realtime)', event.notification);
+            });
+
+        return () => {
+            channel.stopListening('.user.registered');
+        };
+    }, [auth?.user, auth?.permissions]);
+
     // Fermer le sidebar sur mobile quand on change de page
     useEffect(() => {
         setSidebarOpen(false);
