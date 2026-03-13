@@ -280,7 +280,7 @@ class AdminController
                 ->map(function ($log) {
                     return [
                         'id' => $log->id,
-                        'logged_at' => $log->logged_at?->toDateTimeString(),
+                        'logged_at' => $log->logged_at->toDateTimeString(),
                         'level' => $log->level,
                         'module' => $log->module,
                         'message' => $log->message,
@@ -300,7 +300,7 @@ class AdminController
                     return [
                         'id' => $login->id,
                         'user_id' => $login->user_id,
-                        'logged_in_at' => $login->logged_in_at?->toDateTimeString(),
+                        'logged_in_at' => $login->logged_in_at->toDateTimeString(),
                         'ip_address' => $login->ip_address,
                         'status' => $login->status,
                     ];
@@ -315,7 +315,7 @@ class AdminController
                     return [
                         'id' => $u->id,
                         'user_id' => $u->email,
-                        'logged_in_at' => $u->last_login_at?->toDateTimeString(),
+                        'logged_in_at' => $u->last_login_at->toDateTimeString(),
                         'ip_address' => null,
                         'status' => 'success',
                     ];
@@ -634,6 +634,21 @@ class AdminController
         }
         if (\Illuminate\Support\Facades\Schema::hasTable('sales')) {
             $totalRevenue += $revenueQuery('sales', 'total', 'status', 'completed');
+        }
+
+        // Total produits (tous modules)
+        $totalProducts = 0;
+        if (\Illuminate\Support\Facades\Schema::hasTable('pharmacy_products')) {
+            $totalProducts += \Illuminate\Support\Facades\DB::table('pharmacy_products')->count();
+        }
+        if (\Illuminate\Support\Facades\Schema::hasTable('gc_products')) {
+            $totalProducts += \Illuminate\Support\Facades\DB::table('gc_products')->count();
+        }
+        if (\Illuminate\Support\Facades\Schema::hasTable('quincaillerie_products')) {
+            $totalProducts += \Illuminate\Support\Facades\DB::table('quincaillerie_products')->count();
+        }
+        if (\Illuminate\Support\Facades\Schema::hasTable('products')) {
+            $totalProducts += \Illuminate\Support\Facades\DB::table('products')->count();
         }
 
         $data = [

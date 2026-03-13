@@ -246,7 +246,7 @@ class SupplierController extends Controller
                     'effective_price' => (float) $p->effective_price,
                     'tax_rate' => (float) ($p->tax_rate ?? 0),
                     'price_with_tax' => (float) ($p->price_with_tax ?? $p->effective_price),
-                    'effective_from' => $p->effective_from?->format('Y-m-d'),
+                    'effective_from' => $p->effective_from->format('Y-m-d'),
                 ];
             })
             ->toArray();

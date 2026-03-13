@@ -101,7 +101,6 @@ class SupportTicketController extends Controller
             $query->where('module', $module);
         }
 
-        /** @var \Illuminate\Pagination\LengthAwarePaginator $tickets */
         $tickets = $query->orderByDesc('created_at')->paginate(20);
 
         $tickets = $tickets->through(function (SupportTicketModel $ticket) {

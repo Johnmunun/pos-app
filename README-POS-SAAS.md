@@ -14,7 +14,7 @@ cp .env.example .env && php artisan key:generate
 # Database
 php artisan migrate && php artisan db:seed --class=CreateRootUserSeeder
 
-# Démarrer
+# Démarrer 
 npm run build && php artisan serve
 ```
 

@@ -16,6 +16,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  * @property float|null $discount_percent
  * @property \Carbon\Carbon $created_at
  * @property-read ProductModel $product
+ *
+ * // Champs agrégés pour les rapports
+ * @property-read float|null $qty_sold
+ * @property-read float|null $revenue
  */
 class SaleLineModel extends Model
 {

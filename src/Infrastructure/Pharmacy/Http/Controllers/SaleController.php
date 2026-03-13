@@ -954,7 +954,7 @@ class SaleController
                 if ($this->referralService !== null) {
                     $sourceType = $isHardware ? 'hardware_sale' : 'pharmacy_sale';
                     $buyerUserId = $sale->getCreatedBy();
-                    if ($buyerUserId !== null) {
+                    if ($buyerUserId) {
                         $this->referralService->recordTransaction(
                             (int) $sale->getShopId(),
                             (int) $buyerUserId,

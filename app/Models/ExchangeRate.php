@@ -10,6 +10,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Model Eloquent: ExchangeRate
  *
  * Représentation de la table 'exchange_rates'.
+ *
+ * @property int $tenant_id
+ * @property int $from_currency_id
+ * @property int $to_currency_id
+ * @property float $rate
+ * @property \Carbon\Carbon $effective_date
+ * @property \App\Models\Currency|null $fromCurrency
+ * @property \App\Models\Currency|null $toCurrency
  */
 class ExchangeRate extends Model
 {

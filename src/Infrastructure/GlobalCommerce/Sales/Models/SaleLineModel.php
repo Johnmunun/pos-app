@@ -12,6 +12,10 @@ use Illuminate\Database\Eloquent\Model;
  * @property float $unit_price
  * @property float $subtotal
  * @property string $product_name
+ *
+ * // Champs agrégés pour les rapports
+ * @property-read float|null $qty_sold
+ * @property-read float|null $revenue
  */
 class SaleLineModel extends Model
 {

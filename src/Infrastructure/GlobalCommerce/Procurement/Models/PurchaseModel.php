@@ -16,6 +16,11 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $notes
  * @property \Carbon\Carbon|null $created_at
  * @property \Illuminate\Database\Eloquent\Collection<int, PurchaseLineModel> $lines
+ *
+ * // Champs agrégés utilisés dans les rapports (SELECT ... AS)
+ * @property-read string|null $date
+ * @property-read int|null $count
+ * @property-read float|null $total
  */
 class PurchaseModel extends Model
 {

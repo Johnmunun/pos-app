@@ -17,6 +17,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  * @property \Carbon\Carbon|\DateTimeInterface|null $received_at
  * @property int|null $created_by
  * @property \Carbon\Carbon $created_at
+ *
+ * // Champs agrégés pour les rapports (SELECT ... AS)
+ * @property-read string|null $date
+ * @property-read int|null $count
+ * @property-read float|null $total
  */
 class PurchaseOrderModel extends Model
 {

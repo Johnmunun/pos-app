@@ -1,7 +1,7 @@
 import '../css/app.css';
 import './bootstrap';
 
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, router } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { Toaster } from 'react-hot-toast';
@@ -74,6 +74,60 @@ createInertiaApp({
         ),
     setup({ el, App, props }) {
         const root = createRoot(el);
+
+        // Raccourci global: Ctrl+Shift+V → page de vente
+        if (typeof window !== 'undefined' && !window.__omniposShortcutsInitialized) {
+            window.__omniposShortcutsInitialized = true;
+
+            window.addEventListener('keydown', (event) => {
+                // Ignorer si on est en train de taper dans un champ de saisie
+                const target = event.target;
+                if (
+                    target instanceof HTMLInputElement ||
+                    target instanceof HTMLTextAreaElement ||
+                    target instanceof HTMLSelectElement ||
+                    (target && target.isContentEditable)
+                ) {
+                    return;
+                }
+
+                if (event.ctrlKey && event.shiftKey) {
+                    const key = event.key.toLowerCase();
+
+                    // Commerce: ventes
+                    if (key === 'v') {
+                        event.preventDefault();
+                        try {
+                            router.visit(route('commerce.sales.index'));
+                        } catch (e) {
+                            console.error('Impossible de naviguer vers la page de vente commerce :', e);
+                        }
+                        return;
+                    }
+
+                    // Pharmacy: ventes
+                    if (key === 'p') {
+                        event.preventDefault();
+                        try {
+                            router.visit(route('pharmacy.sales.index'));
+                        } catch (e) {
+                            console.error('Impossible de naviguer vers la page de vente pharmacie :', e);
+                        }
+                        return;
+                    }
+
+                    // Hardware: ventes
+                    if (key === 'h') {
+                        event.preventDefault();
+                        try {
+                            router.visit(route('hardware.sales.index'));
+                        } catch (e) {
+                            console.error('Impossible de naviguer vers la page de vente hardware :', e);
+                        }
+                    }
+                }
+            });
+        }
 
         root.render(
             <>

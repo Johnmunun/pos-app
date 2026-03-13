@@ -29,11 +29,12 @@ class SupportFaqController extends Controller
             $query->where('category_id', (int) $categoryId);
         }
 
-        /** @var \Illuminate\Pagination\LengthAwarePaginator $articles */
         $articles = $query->paginate(20);
 
-        $articles = $articles->through(function (KnowledgeBaseArticleModel $article) {
+        $articles->getCollection()->transform(function (KnowledgeBaseArticleModel $article) {
+            /** @var KnowledgeBaseCategoryModel|null $category */
             $category = $article->category;
+
             return [
                 'id' => $article->id,
                 'title' => $article->title,

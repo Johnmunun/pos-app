@@ -213,14 +213,29 @@ class HandleInertiaRequests extends Middleware
             }
         }
 
-        // Logo global de l'application (OmniPOS) - même pour les invités
+        // Branding global de l'application (OmniPOS) - logo + visuels hero landing (même pour les invités)
+        $heroMainUrl = null;
+        $heroDevicesUrl = null;
         try {
-            $fullPath = 'settings/app/app-logo.png';
-            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($fullPath)) {
-                $appLogoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($fullPath);
+            $disk = \Illuminate\Support\Facades\Storage::disk('public');
+
+            $logoPath = 'settings/app/app-logo.png';
+            $heroMainPath = 'settings/app/hero-pos-main.png';
+            $heroDevicesPath = 'settings/app/hero-pos-devices.png';
+
+            if ($disk->exists($logoPath)) {
+                $appLogoUrl = $disk->url($logoPath);
+            }
+
+            if ($disk->exists($heroMainPath)) {
+                $heroMainUrl = $disk->url($heroMainPath);
+            }
+
+            if ($disk->exists($heroDevicesPath)) {
+                $heroDevicesUrl = $disk->url($heroDevicesPath);
             }
         } catch (\Throwable $e) {
-            Log::debug('Error getting app logo for Inertia', ['error' => $e->getMessage()]);
+            Log::debug('Error getting app branding for Inertia', ['error' => $e->getMessage()]);
         }
 
         return [
@@ -241,6 +256,10 @@ class HandleInertiaRequests extends Middleware
                 'logo_url' => $shopLogoUrl,
             ],
             'appLogoUrl' => $appLogoUrl,
+            'heroImages' => [
+                'main' => $heroMainUrl,
+                'devices' => $heroDevicesUrl,
+            ],
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),

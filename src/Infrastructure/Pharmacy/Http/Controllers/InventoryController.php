@@ -447,7 +447,8 @@ class InventoryController
 
     /**
      * Vérifie si l'utilisateur est ROOT
-     * @param \Illuminate\Contracts\Auth\Authenticatable|null $user
+     *
+     * @param \App\Models\User|null $user
      */
     private function isRoot($user): bool
     {
@@ -461,12 +462,8 @@ class InventoryController
 
     /**
      * Récupère les permissions de l'utilisateur
-     * 
-     * @param mixed $user
-     * @return array<string, bool>
-     */
-    /**
-     * @param \Illuminate\Contracts\Auth\Authenticatable|null $user
+     *
+     * @param \App\Models\User|null $user
      * @return array<string, bool>
      */
     private function getPermissions($user): array

@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  * @property float|null $cost_amount
  * @property string|null $manufacturer
  * @property string|null $category_id
+ * @property \Src\Infrastructure\Pharmacy\Models\CategoryModel|null $category
  * @property bool $is_active
  * @property bool $requires_prescription
  * @property string|null $image_path

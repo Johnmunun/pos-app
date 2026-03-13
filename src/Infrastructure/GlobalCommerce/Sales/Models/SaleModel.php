@@ -16,6 +16,11 @@ use Illuminate\Database\Eloquent\Model;
  * @property \Carbon\Carbon|null $created_at
  * @property \Illuminate\Database\Eloquent\Collection<int, SaleLineModel> $lines
  * @property \App\Models\User|null $creator
+ *
+ * // Champs agrégés utilisés dans les rapports (SELECT ... AS)
+ * @property-read string|null $date
+ * @property-read int|null $count
+ * @property-read float|null $total
  */
 class SaleModel extends Model
 {

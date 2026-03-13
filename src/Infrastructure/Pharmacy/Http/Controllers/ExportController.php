@@ -234,7 +234,7 @@ class ExportController extends Controller
 
         $items = $sales->map(fn($s) => [
             'reference' => 'SALE-' . $s->id,
-            'date' => $s->created_at?->format('d/m/Y H:i') ?? '',
+            'date' => $s->created_at->format('d/m/Y H:i'),
             'customer' => $s->customer?->full_name ?? $s->customer?->name ?? 'Client comptoir',
             'items_count' => (int) ($s->lines_count ?? 0),
             'total' => (float) ($s->total_amount ?? 0),
@@ -303,7 +303,7 @@ class ExportController extends Controller
             $rows[] = [
                 $index++,
                 'SALE-' . $s->id,
-                $s->created_at?->format('d/m/Y H:i') ?? '',
+                $s->created_at->format('d/m/Y H:i'),
                 $s->customer?->full_name ?? $s->customer?->name ?? 'Client comptoir',
                 $s->creator?->name ?? '—',
                 (int) ($s->lines_count ?? 0),
@@ -349,15 +349,20 @@ class ExportController extends Controller
 
         $purchases = $query->get();
 
-        $items = $purchases->map(fn($p) => [
-            'reference' => $p->reference ?? 'PO-' . $p->id,
-            'date' => $p->created_at?->format('d/m/Y') ?? '',
-            'supplier' => $p->supplier?->name ?? '',
-            'items_count' => $p->items_count ?? 0,
-            'total' => (float) ($p->total_amount ?? 0),
-            'status' => $p->status ?? 'draft',
-            'expected_date' => $p->expected_at?->format('d/m/Y') ?? '',
-        ])->toArray();
+        $items = $purchases->map(function ($p) {
+            $createdAt = $p->created_at;
+            $expectedAt = $p->expected_at;
+
+            return [
+                'reference' => $p->reference ?? 'PO-' . $p->id,
+                'date' => $createdAt ? $createdAt->format('d/m/Y') : '',
+                'supplier' => $p->supplier?->name ?? '',
+                'items_count' => $p->items_count ?? 0,
+                'total' => (float) ($p->total_amount ?? 0),
+                'status' => $p->status ?? 'draft',
+                'expected_date' => $expectedAt ? $expectedAt->format('d/m/Y') : '',
+            ];
+        })->toArray();
 
         $summary = [
             'total_orders' => count($items),
@@ -411,7 +416,7 @@ class ExportController extends Controller
             $rows[] = [
                 $index++,
                 $p->reference ?? 'PO-' . $p->id,
-                $p->created_at?->format('d/m/Y') ?? '',
+                $p->created_at->format('d/m/Y'),
                 $p->supplier?->name ?? '',
                 $p->items_count ?? 0,
                 number_format((float) ($p->total_amount ?? 0), 2) . ' ' . $currency,
@@ -633,7 +638,7 @@ class ExportController extends Controller
                 'product_code' => $b->product?->code ?? '',
                 'batch_number' => $b->batch_number ?? '',
                 'quantity' => (int) ($b->quantity ?? 0),
-                'expiration_date' => $expirationDate?->format('d/m/Y') ?? '',
+                'expiration_date' => $expirationDate ? $expirationDate->format('d/m/Y') : '',
                 'days_until_expiry' => $daysUntilExpiry,
                 'status' => $status,
                 'value' => $value,
@@ -695,13 +700,13 @@ class ExportController extends Controller
                 $status = 'expiring_soon';
             }
 
-            $rows[] = [
+                $rows[] = [
                 $index++,
                 $b->product?->name ?? '',
                 $b->product?->code ?? '',
                 $b->batch_number ?? '',
                 (int) ($b->quantity ?? 0),
-                $expirationDate?->format('d/m/Y') ?? '',
+                $expirationDate ? $expirationDate->format('d/m/Y') : '',
                 $daysUntilExpiry < 0 ? abs($daysUntilExpiry) . 'j dépassé' : $daysUntilExpiry . 'j',
                 $statusLabels[$status] ?? $status,
                 number_format($value, 2) . ' ' . $currency,
@@ -743,8 +748,11 @@ class ExportController extends Controller
 
         $movements = $query->get();
 
-        $items = $movements->map(fn($m) => [
-            'date' => $m->created_at?->format('d/m/Y H:i') ?? '',
+        $items = $movements->map(function ($m) {
+            $createdAt = $m->created_at;
+
+            return [
+            'date' => $createdAt ? $createdAt->format('d/m/Y H:i') : '',
             'product_name' => $m->product?->name ?? '',
             'product_code' => $m->product?->code ?? '',
             'type' => $m->type ?? 'adjustment',
@@ -752,7 +760,7 @@ class ExportController extends Controller
             'stock_before' => (int) ($m->stock_before ?? 0),
             'stock_after' => (int) ($m->stock_after ?? 0),
             'reason' => $m->reason ?? '',
-        ])->toArray();
+        ]; })->toArray();
 
         $totalIn = collect($items)->filter(fn($i) => $i['quantity'] > 0)->sum('quantity');
         $totalOut = collect($items)->filter(fn($i) => $i['quantity'] < 0)->sum(fn($i) => abs($i['quantity']));
@@ -807,7 +815,7 @@ class ExportController extends Controller
             $qty = (int) ($m->quantity ?? 0);
             $rows[] = [
                 $index++,
-                $m->created_at?->format('d/m/Y H:i') ?? '',
+                $m->created_at->format('d/m/Y H:i'),
                 $m->product?->name ?? '',
                 $m->product?->code ?? '',
                 $typeLabels[$m->type ?? 'adjustment'] ?? $m->type,

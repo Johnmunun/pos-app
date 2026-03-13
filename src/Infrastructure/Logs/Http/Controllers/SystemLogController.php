@@ -30,16 +30,16 @@ class SystemLogController extends Controller
         $logs = $query->orderByDesc('logged_at')->paginate(50);
 
         $logs = $logs->through(function (SystemLogModel $log) {
-                return [
-                    'id' => $log->id,
-                    'logged_at' => $log->logged_at?->toDateTimeString(),
-                    'level' => $log->level,
-                    'message' => $log->message,
-                    'module' => $log->module,
-                    'user_id' => $log->user_id,
-                    'ip_address' => $log->ip_address,
-                ];
-            });
+            return [
+                'id' => $log->id,
+                'logged_at' => $log->logged_at->toDateTimeString(),
+                'level' => $log->level,
+                'message' => $log->message,
+                'module' => $log->module,
+                'user_id' => $log->user_id,
+                'ip_address' => $log->ip_address,
+            ];
+        });
 
         return Inertia::render('Logs/SystemLogs', [
             'logs' => $logs,
@@ -72,7 +72,7 @@ class SystemLogController extends Controller
         foreach ($logs as $log) {
             $lines[] = sprintf(
                 '"%s","%s","%s","%s","%s","%s"',
-                $log->logged_at?->toDateTimeString(),
+                $log->logged_at->toDateTimeString(),
                 $log->level,
                 $log->module,
                 $log->user_id,

@@ -22,6 +22,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  * @property int|null $cash_register_session_id
  * @property string|null $sale_type
  * @property int|null $depot_id
+ *
+ * // Champs agrégés pour les rapports (SELECT ... AS)
+ * @property-read string|null $date
+ * @property-read int|null $count
+ * @property-read float|null $total
  */
 class SaleModel extends Model
 {

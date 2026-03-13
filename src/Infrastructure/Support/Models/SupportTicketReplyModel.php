@@ -5,6 +5,14 @@ namespace Src\Infrastructure\Support\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $ticket_id
+ * @property int $user_id
+ * @property string $message
+ * @property string|null $attachment_path
+ * @property \App\Models\User|null $user
+ */
 class SupportTicketReplyModel extends Model
 {
     protected $table = 'support_ticket_replies';
