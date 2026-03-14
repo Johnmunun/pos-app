@@ -246,6 +246,14 @@ class GcProductController
         );
         $product = $this->createProductUseCase->execute($dto);
 
+        app(\App\Services\AppNotificationService::class)->notifyProductCreated(
+            'Commerce',
+            $product->getName(),
+            $product->getSku(),
+            $shopId,
+            $request->user()?->tenant_id ? (int) $request->user()->tenant_id : null
+        );
+
         // Enregistrer les champs avancés (image, prix de gros, remise, non négociable)
         /** @var ProductModel|null $model */
         $model = ProductModel::find($product->getId());

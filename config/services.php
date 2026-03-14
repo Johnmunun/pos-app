@@ -47,4 +47,15 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | E-commerce storefront domain (production)
+    |--------------------------------------------------------------------------
+    | Domaine de base pour les boutiques en ligne (sous-domaines).
+    | Ex: ECOMmerce_BASE_DOMAIN=omnisolution.shop => kasashop.omnisolution.shop
+    */
+    'ecommerce' => [
+        'base_domain' => env('ECOMmerce_BASE_DOMAIN', 'omnisolution.shop'),
+    ],
+
 ];

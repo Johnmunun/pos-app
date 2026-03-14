@@ -3,10 +3,10 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Settings, Truck, CreditCard, Sparkles, Globe2 } from 'lucide-react';
 
-export default function EcommerceSettingsIndex({ shop }) {
+export default function EcommerceSettingsIndex({ shop, ecommerce_base_domain }) {
     const { props } = usePage();
     const globalCurrency = props?.shop?.currency || shop?.currency || 'USD';
-    const baseDomain = 'omnisolution.shop'; // TODO: éventuellement lire depuis une config backend
+    const baseDomain = ecommerce_base_domain || 'omnisolution.shop';
 
     const { data, setData, put, processing, errors } = useForm({
         subdomain: shop?.ecommerce_subdomain || '',
@@ -60,16 +60,16 @@ export default function EcommerceSettingsIndex({ shop }) {
                     <CardContent className="space-y-2">
                         <Link
                             href={route('ecommerce.shipping.index')}
-                            className="flex items-center gap-2 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition"
+                            className="flex items-center gap-2 p-3 rounded-lg text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition"
                         >
-                            <Truck className="h-5 w-5 text-gray-500" />
+                            <Truck className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                             Méthodes de livraison
                         </Link>
                         <Link
                             href={route('ecommerce.payments.index')}
-                            className="flex items-center gap-2 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition"
+                            className="flex items-center gap-2 p-3 rounded-lg text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition"
                         >
-                            <CreditCard className="h-5 w-5 text-gray-500" />
+                            <CreditCard className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                             Méthodes de paiement
                         </Link>
                     </CardContent>

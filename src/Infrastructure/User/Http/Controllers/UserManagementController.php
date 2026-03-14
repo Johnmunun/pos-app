@@ -100,6 +100,17 @@ class UserManagementController extends Controller
                 status: $request->status
             );
 
+            if ($request->status === 'active') {
+                $activatedUser = \App\Models\User::find($userId);
+                if ($activatedUser) {
+                    try {
+                        app(\App\Services\AppNotificationService::class)->notifyAccountActivated($activatedUser);
+                    } catch (\Throwable $e) {
+                        report($e);
+                    }
+                }
+            }
+
             return response()->json([
                 'message' => 'User status updated successfully',
             ]);

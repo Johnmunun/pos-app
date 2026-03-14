@@ -200,6 +200,14 @@ class ProductController
         );
         $product = $this->createProductUseCase->execute($dto);
 
+        app(\App\Services\AppNotificationService::class)->notifyProductCreated(
+            'Ecommerce',
+            $product->getName(),
+            $product->getSku(),
+            $this->getShopId($request),
+            $request->user()?->tenant_id ? (int) $request->user()->tenant_id : null
+        );
+
         /** @var ProductModel|null $model */
         $model = ProductModel::find($product->getId());
         if ($model) {

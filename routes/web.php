@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PwaIconController;
 use Src\Infrastructure\Admin\Http\Controllers\AdminController;
 use Src\Infrastructure\Settings\Http\Controllers\AppBrandingController;
 use Illuminate\Foundation\Application;
@@ -27,6 +28,11 @@ if (file_exists(__DIR__.'/support.php')) {
 if (file_exists(__DIR__.'/logs.php')) {
     require __DIR__.'/logs.php';
 }
+
+// Icônes PWA (manifest) – générées à la volée pour éviter 404
+Route::get('/icons/{filename}', PwaIconController::class)
+    ->where('filename', 'icon-[0-9]+x[0-9]+\\.png')
+    ->name('pwa.icon');
 
 /**
  * Currency Management Routes (DDD Architecture)
@@ -276,6 +282,8 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth'])->prefix('api')->group(function () {
     Route::get('/notifications', [\App\Http\Controllers\Api\NotificationController::class, 'index'])
         ->name('api.notifications.index');
+    Route::patch('/notifications/{id}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead'])
+        ->name('api.notifications.mark-read');
 
     Route::post('/push-subscriptions', [\App\Http\Controllers\Api\WebPushSubscriptionController::class, 'store'])
         ->name('api.push-subscriptions.store');

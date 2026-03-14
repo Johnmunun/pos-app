@@ -6,7 +6,6 @@ import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import InputError from '@/Components/InputError';
 import PrimaryButton from '@/Components/PrimaryButton';
-import FlashMessages from '@/Components/FlashMessages';
 import Swal from 'sweetalert2';
 import { Plus, Edit, Trash2, DollarSign } from 'lucide-react';
 
@@ -160,8 +159,6 @@ export default function Currencies({ currencies, exchangeRates }) {
 
             <div className="py-6">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <FlashMessages />
-
                     {/* Currencies List */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
                         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">

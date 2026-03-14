@@ -315,6 +315,16 @@ class GcSaleController
         try {
             $sale = $this->createSaleUseCase->execute($dto);
 
+            if (!$isDraft) {
+                app(\App\Services\AppNotificationService::class)->notifySaleCompleted(
+                    $sale->getTotalAmount(),
+                    $sale->getCurrency(),
+                    $sale->getId(),
+                    $sale->getCustomerName(),
+                    $request->user()?->tenant_id ? (int) $request->user()->tenant_id : null
+                );
+            }
+
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => true,
@@ -367,6 +377,14 @@ class GcSaleController
 
         $model->status = 'completed';
         $model->save();
+
+        app(\App\Services\AppNotificationService::class)->notifySaleCompleted(
+            (float) $model->total_amount,
+            (string) ($model->currency ?? 'USD'),
+            (string) $model->id,
+            $model->customer_name,
+            $request->user()?->tenant_id ? (int) $request->user()->tenant_id : null
+        );
 
         return response()->json([
             'success' => true,

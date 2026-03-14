@@ -1,10 +1,16 @@
-import { Head } from '@inertiajs/react';
-import { Link } from '@inertiajs/react';
-import { usePage } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
+import AppLayout from '@/Layouts/AppLayout';
 
 export default function Pending({ auth }) {
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+        <AppLayout
+            header={
+                <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+                    Compte en attente
+                </h2>
+            }
+        >
+        <div className="py-6">
             <Head title="Compte en attente de validation" />
             
             <div className="py-12">
@@ -35,7 +41,7 @@ export default function Pending({ auth }) {
                                         Validation en cours
                                     </h2>
                                     <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md">
-                                        Notre équipe examine vos informations. Vous recevrez un email de confirmation dès que votre compte sera activé.
+                                        Notre équipe examine vos informations. Acceptez les notifications dans votre navigateur pour être averti par push dès que votre compte sera activé.
                                     </p>
 
                                     {/* Statut */}
@@ -142,5 +148,6 @@ export default function Pending({ auth }) {
                 </div>
             </div>
         </div>
+        </AppLayout>
     );
 }

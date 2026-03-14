@@ -41,5 +41,29 @@ class NotificationController extends Controller
             'unread_count' => $unreadCount,
         ]);
     }
+
+    /**
+     * Marquer une notification comme lue (au clic par le root).
+     */
+    public function markAsRead(Request $request, int $id): JsonResponse
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['success' => false], 401);
+        }
+
+        $notification = AppNotification::find($id);
+        if (!$notification) {
+            return response()->json(['success' => false, 'message' => 'Notification introuvable.'], 404);
+        }
+
+        $notification->read_at = $notification->read_at ?? now();
+        $notification->save();
+
+        return response()->json([
+            'success' => true,
+            'read_at' => $notification->read_at?->toDateTimeString(),
+        ]);
+    }
 }
 

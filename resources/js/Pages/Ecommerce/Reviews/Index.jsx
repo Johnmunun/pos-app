@@ -52,15 +52,15 @@ export default function EcommerceReviewsIndex({ reviews }) {
                             <tbody>
                                 {!reviews.data?.length ? (
                                     <tr>
-                                        <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                                            Aucun avis. <Link href={route('ecommerce.reviews.create')} className="text-blue-600 hover:underline">Créer un avis</Link>
+                                        <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                                            Aucun avis. <Link href={route('ecommerce.reviews.create')} className="text-blue-600 dark:text-blue-400 hover:underline">Créer un avis</Link>
                                         </td>
                                     </tr>
                                 ) : (
                                     reviews.data.map((r) => (
                                         <tr key={r.id} className="border-b border-gray-100 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-700/30">
-                                            <td className="px-4 py-3 font-medium">{r.product_name}</td>
-                                            <td className="px-4 py-3">{r.customer_name}</td>
+                                            <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{r.product_name}</td>
+                                            <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{r.customer_name}</td>
                                             <td className="px-4 py-3">{renderStars(r.rating)}</td>
                                             <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate">
                                                 {r.title && <strong>{r.title} </strong>}

@@ -43,24 +43,52 @@ class StorefrontController
         private readonly GlobalCommerceProductRepositoryInterface $productRepository
     ) {
     }
-    private function getShopId(Request $request): string
+    /**
+     * Résout la boutique (Shop) pour l'utilisateur connecté.
+     * - Utilisateur avec shop_id ou tenant_id : boutique liée au tenant.
+     * - ROOT sans boutique sélectionnée : première boutique (prévisualisation en local).
+     */
+    private function resolveShop(Request $request): Shop
     {
         $user = $request->user();
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
 
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
         $userModel = \App\Models\User::find($user->id);
         $isRoot = $userModel ? $userModel->isRoot() : false;
 
-        if (!$shopId && !$isRoot) {
-            abort(403, 'Shop ID not found. Please contact administrator.');
+        $shop = null;
+
+        // 1) Si l'utilisateur a un shop_id (clé primaire shops), l'utiliser
+        $candidateId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        if ($candidateId !== null && $candidateId !== '') {
+            $shop = Shop::find($candidateId);
         }
-        if ($isRoot && !$shopId) {
-            abort(403, 'Please select a shop first.');
+
+        // 2) Sinon, trouver une boutique par tenant_id (shops.tenant_id = user.tenant_id)
+        if (!$shop && $user->tenant_id) {
+            $shop = Shop::where('tenant_id', $user->tenant_id)->first();
         }
-        return (string) $shopId;
+
+        // 3) ROOT ou utilisateur avec module e-commerce sans boutique : première boutique (prévisualisation)
+        if (!$shop && ($isRoot || ($userModel && $userModel->hasPermission('module.ecommerce')))) {
+            $shop = Shop::orderBy('id')->first();
+        }
+
+        if (!$shop && $isRoot) {
+            abort(404, 'Aucune boutique. Créez au moins une boutique (tenant) pour prévisualiser la vitrine.');
+        }
+        if (!$shop) {
+            abort(403, 'Boutique introuvable. Contactez l\'administrateur.');
+        }
+
+        return $shop;
+    }
+
+    private function getShopId(Request $request): string
+    {
+        return (string) $this->resolveShop($request)->id;
     }
 
     /**
@@ -91,20 +119,11 @@ class StorefrontController
 
     public function index(Request $request): Response
     {
-        $shopId = $this->getShopId($request);
-        $shop = Shop::find($shopId);
-
-        if (!$shop) {
-            abort(404, 'Shop not found');
-        }
-
-        // Si la boutique n'est pas en ligne, seuls ROOT et le propriétaire peuvent la prévisualiser
         $user = $request->user();
-        $isRoot = $user ? (\App\Models\User::find($user->id)?->isRoot() ?? false) : false;
-        if (!$shop->ecommerce_is_online && !$isRoot) {
-            abort(403, 'La boutique en ligne n\'est pas encore publiée.');
-        }
+        $shop = $this->resolveShop($request);
+        $shopId = (string) $shop->id;
 
+        // La prévisualisation est autorisée pour tout utilisateur ayant accès au storefront (même si la boutique n'est pas "en ligne")
         $config = $this->getStorefrontConfig($shop);
 
         // Produits en vedette (limités pour éviter les requêtes lourdes)

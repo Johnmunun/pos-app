@@ -68,7 +68,7 @@ export default function CmsMediaIndex({ media = [] }) {
                 <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
                     <CardContent className="p-4">
                         {media.length === 0 ? (
-                            <div className="text-center py-12 text-gray-500">
+                            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                                 <Upload className="h-12 w-12 mx-auto mb-3 opacity-50" />
                                 <p className="mb-2">Aucun média. Uploadez des images ou documents.</p>
                                 <p className="text-sm text-gray-400 mb-3">Utilisez les chemins dans Pages, Bannières et Blog.</p>
@@ -87,8 +87,8 @@ export default function CmsMediaIndex({ media = [] }) {
                                                 <FileText className="h-12 w-12 text-gray-400" />
                                             )}
                                         </div>
-                                        <div className="p-2 text-xs truncate" title={m.name}>{m.name}</div>
-                                        <div className="px-2 pb-2 text-xs text-gray-500">{formatSize(m.file_size)}</div>
+                                        <div className="p-2 text-xs truncate text-gray-900 dark:text-gray-100" title={m.name}>{m.name}</div>
+                                        <div className="px-2 pb-2 text-xs text-gray-500 dark:text-gray-400">{formatSize(m.file_size)}</div>
 
                                         <div className="absolute left-1 top-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             {m.url ? (

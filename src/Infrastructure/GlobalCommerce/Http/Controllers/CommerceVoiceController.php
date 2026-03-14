@@ -213,12 +213,10 @@ class CommerceVoiceController
     private function resolveShopId(Request $request): ?string
     {
         $user = $request->user();
-        if (!$user) {
+        if (!$user || !\Illuminate\Support\Facades\Schema::hasTable('shops')) {
             return null;
         }
-        if (!\Illuminate\Support\Facades\Schema::hasTable('shops')) {
-            return null;
-        }
+
         $depotId = $request->session()->get('current_depot_id');
         if ($depotId && $user->tenant_id) {
             $shop = \App\Models\Shop::where('depot_id', $depotId)->where('tenant_id', $user->tenant_id)->first();
@@ -226,16 +224,28 @@ class CommerceVoiceController
                 return (string) $shop->id;
             }
         }
-        if ($user->shop_id !== null && $user->shop_id !== '') {
-            return (string) $user->shop_id;
+
+        $candidateId = $user->shop_id ?? null;
+        if ($candidateId !== null && $candidateId !== '') {
+            $shop = \App\Models\Shop::find($candidateId);
+            if ($shop) {
+                return (string) $shop->id;
+            }
         }
-        // Fallback: premier shop du tenant (fréquent quand dépôt non lié à un shop en GlobalCommerce)
+
         if ($user->tenant_id) {
             $shop = \App\Models\Shop::where('tenant_id', $user->tenant_id)->first();
             if ($shop) {
                 return (string) $shop->id;
             }
         }
+
+        // Utilisateur normal ou ROOT : si l'utilisateur a accès à l'assistant (route protégée), utiliser la première boutique pour que la voix fonctionne
+        $shop = \App\Models\Shop::orderBy('id')->first();
+        if ($shop) {
+            return (string) $shop->id;
+        }
+
         return null;
     }
 

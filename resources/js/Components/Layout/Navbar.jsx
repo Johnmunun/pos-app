@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, router, usePage } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
+import { toast } from 'react-hot-toast';
 import Dropdown from '@/Components/Dropdown';
 import GlobalSearch from '@/Components/GlobalSearch';
 import DepotSelector from '@/Components/DepotSelector';
@@ -57,10 +58,62 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
         }
     };
 
+    const markNotificationAsRead = async (n) => {
+        if (n.read_at) return;
+        try {
+            await window.axios.patch(route('api.notifications.mark-read', { id: n.id }));
+            setNotifications((prev) =>
+                prev.map((item) =>
+                    item.id === n.id ? { ...item, read_at: new Date().toISOString().slice(0, 19).replace('T', ' ') } : item
+                )
+            );
+            setNotificationCount((c) => Math.max(0, c - 1));
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn('Erreur marquage notification lu', e);
+        }
+    };
+
     // Charger les notifications pour ROOT / admins au montage
     useEffect(() => {
         fetchNotifications();
         // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isRoot]);
+
+    // Temps réel : écouter les notifications (inscription, produit créé, vente) pour toast + mise à jour liste sans clic sur la cloche
+    useEffect(() => {
+        if (!isRoot || typeof window === 'undefined' || !window.Echo) return;
+
+        const channel = window.Echo.private('root.notifications');
+
+        const normalize = (payload) => {
+            const n = payload?.notification ?? payload;
+            if (!n?.title) return null;
+            return {
+                id: n.id,
+                title: n.title,
+                body: n.body ?? '',
+                type: n.type ?? null,
+                created_at: n.created_at ?? new Date().toISOString().slice(0, 19).replace('T', ' '),
+                read_at: n.read_at ?? null,
+            };
+        };
+
+        const onNotification = (event) => {
+            const notif = normalize(event);
+            if (!notif) return;
+            setNotifications((prev) => [notif, ...prev]);
+            setNotificationCount((c) => c + 1);
+            toast.success(notif.title, { description: notif.body });
+        };
+
+        channel.listen('.user.registered', onNotification);
+        channel.listen('.admin.notification', onNotification);
+
+        return () => {
+            channel.stopListening('.user.registered');
+            channel.stopListening('.admin.notification');
+        };
     }, [isRoot]);
 
     return (
@@ -177,7 +230,12 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
                                             </div>
                                         )}
                                         {notifications.map((n) => (
-                                            <div key={n.id} className="px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700/60">
+                                            <button
+                                                key={n.id}
+                                                type="button"
+                                                onClick={() => markNotificationAsRead(n)}
+                                                className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors ${n.read_at ? 'opacity-70' : ''}`}
+                                            >
                                                 <div className="font-semibold text-gray-800 dark:text-gray-100">
                                                     {n.title}
                                                 </div>
@@ -189,7 +247,7 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
                                                 <div className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">
                                                     {n.created_at}
                                                 </div>
-                                            </div>
+                                            </button>
                                         ))}
                                     </div>
                                 </div>

@@ -84,7 +84,7 @@ export default function CmsPagesIndex({ pages = [], media = [] }) {
                                 <tbody>
                                     {pages.length === 0 ? (
                                         <tr>
-                                            <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                                            <td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                                                 <p className="mb-2">Aucune page.</p>
                                                 <Button size="sm" onClick={handleCreate}>Créer une page</Button>
                                             </td>
@@ -92,9 +92,9 @@ export default function CmsPagesIndex({ pages = [], media = [] }) {
                                     ) : (
                                         pages.map((p) => (
                                             <tr key={p.id} className="border-b border-gray-100 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-700/30">
-                                                <td className="px-4 py-3 font-medium">{p.title}</td>
-                                                <td className="px-4 py-3 text-sm text-gray-500"><code>{p.slug}</code></td>
-                                                <td className="px-4 py-3 text-sm">{formatDate(p.published_at)}</td>
+                                                <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{p.title}</td>
+                                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400"><code className="text-gray-700 dark:text-gray-300">{p.slug}</code></td>
+                                                <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{formatDate(p.published_at)}</td>
                                                 <td className="px-4 py-3">
                                                     <Badge variant={p.is_active ? 'default' : 'secondary'}>{p.is_active ? 'Publié' : 'Brouillon'}</Badge>
                                                 </td>

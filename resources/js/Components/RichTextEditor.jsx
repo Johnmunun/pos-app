@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
-import ReactQuill, { Quill } from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import ReactQuill, { Quill } from 'react-quill-new';
+import 'quill/dist/quill.snow.css';
 
-// Définir explicitement la liste de polices disponibles dans l'éditeur
+// Définir explicitement la liste de polices disponibles dans l'éditeur (Quill 2 compatible)
 const FONT_WHITELIST = [
     'times-new-roman',
     'arial',
@@ -18,9 +18,15 @@ const FONT_WHITELIST = [
     'serif',
 ];
 
-const Font = Quill.import('formats/font');
-Font.whitelist = FONT_WHITELIST;
-Quill.register(Font, true);
+try {
+    const Font = Quill.import('formats/font');
+    if (Font) {
+        Font.whitelist = FONT_WHITELIST;
+        Quill.register(Font, true);
+    }
+} catch {
+    // Quill 2 peut gérer les polices différemment, on garde la toolbar sans erreur
+}
 
 export default function RichTextEditor({ value, onChange, placeholder }) {
     const modules = useMemo(

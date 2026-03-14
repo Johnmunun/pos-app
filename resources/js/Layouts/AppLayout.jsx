@@ -86,39 +86,12 @@ export default function AppLayout({ children, header, fullWidth = false }) {
     // État pour le drawer mobile
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
-    // Notifications ROOT temps réel (inscriptions, etc.)
+    // Web Push - abonnement pour tous les utilisateurs connectés (admins reçoivent les inscriptions, tous peuvent recevoir "compte activé")
     useEffect(() => {
-        const user = auth?.user;
-        const permissions = Array.isArray(auth?.permissions) ? auth.permissions : [];
-        const isRoot = user?.type === 'ROOT' || permissions.includes('admin.dashboard.view');
-
-        if (!isRoot || typeof window === 'undefined' || !window.Echo) {
-            return;
-        }
-
-        const channel = window.Echo.private('root.notifications')
-            .listen('.user.registered', (event) => {
-                // Pour l'instant, simple log console. On branchera plus tard la cloche UI.
-                // event.notification contient la ligne AppNotification créée côté backend.
-                // eslint-disable-next-line no-console
-                console.log('Nouvelle inscription (realtime)', event.notification);
-            });
-
-        return () => {
-            channel.stopListening('.user.registered');
-        };
-    }, [auth?.user, auth?.permissions]);
-
-    // Web Push - abonnement pour ROOT / admins
-    useEffect(() => {
-        const isRootOrAdmin = isRoot || permissions.includes('admin.dashboard.view');
-        if (!isRootOrAdmin) return;
+        if (!auth?.user) return;
         if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) {
             return;
         }
-
-        const alreadyAsked = localStorage.getItem('webPushSubscribed') === '1';
-        if (alreadyAsked) return;
 
         const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
         if (!vapidKey) {
@@ -140,7 +113,10 @@ export default function AppLayout({ children, header, fullWidth = false }) {
 
         (async () => {
             try {
-                const permission = await Notification.requestPermission();
+                let permission = Notification.permission;
+                if (permission === 'default') {
+                    permission = await Notification.requestPermission();
+                }
                 if (permission !== 'granted') {
                     return;
                 }
@@ -174,7 +150,7 @@ export default function AppLayout({ children, header, fullWidth = false }) {
                 console.warn('Erreur abonnement Web Push', e);
             }
         })();
-    }, [isRoot, permissions]);
+    }, [auth?.user]);
 
     // Fermer le sidebar sur mobile quand on change de page
     useEffect(() => {
@@ -219,7 +195,7 @@ export default function AppLayout({ children, header, fullWidth = false }) {
 
                 {/* Header optionnel */}
                 {header && (
-                    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100">
                         <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
                             {header}
                         </div>

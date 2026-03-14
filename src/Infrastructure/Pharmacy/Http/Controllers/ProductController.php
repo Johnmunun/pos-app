@@ -720,6 +720,14 @@ class ProductController
 
             $product = $this->createProductUseCase->execute($dto);
 
+            app(\App\Services\AppNotificationService::class)->notifyProductCreated(
+                'Pharmacy',
+                $product->getName(),
+                $product->getCode()->getValue(),
+                $this->getShopId($request),
+                $request->user()?->tenant_id ? (int) $request->user()->tenant_id : null
+            );
+
             // Gérer l'upload d'image si fourni
             $imagePath = null;
             $imageType = 'upload';

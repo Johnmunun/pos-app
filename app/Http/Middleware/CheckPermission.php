@@ -83,6 +83,15 @@ class CheckPermission
                     }
                 }
             }
+            // Idem pour module E-commerce : avoir une permission ecommerce.* suffit pour accéder au storefront / module
+            if ($perm === 'module.ecommerce' && !empty($userPermissions)) {
+                foreach ($userPermissions as $userPerm) {
+                    if (is_string($userPerm) && str_starts_with($userPerm, 'ecommerce.')) {
+                        $hasPermission = true;
+                        break 2;
+                    }
+                }
+            }
         }
 
         if (!$hasPermission) {

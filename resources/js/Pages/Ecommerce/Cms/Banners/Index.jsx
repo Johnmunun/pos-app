@@ -54,17 +54,17 @@ export default function CmsBannersIndex({ banners = [], positions = [] }) {
                             <table className="w-full">
                                 <thead>
                                     <tr className="border-b border-gray-200 dark:border-slate-700">
-                                        <th className="text-left px-4 py-3 font-medium">Titre</th>
-                                        <th className="text-left px-4 py-3 font-medium">Position</th>
-                                        <th className="text-left px-4 py-3 font-medium">Lien</th>
-                                        <th className="text-left px-4 py-3 font-medium">Statut</th>
-                                        <th className="text-right px-4 py-3 font-medium">Actions</th>
+                                        <th className="text-left px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Titre</th>
+                                        <th className="text-left px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Position</th>
+                                        <th className="text-left px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Lien</th>
+                                        <th className="text-left px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Statut</th>
+                                        <th className="text-right px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {banners.length === 0 ? (
                                         <tr>
-                                            <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                                            <td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                                                 <p className="mb-2">Aucune bannière.</p>
                                                 <Button size="sm" onClick={handleCreate}>Créer une bannière</Button>
                                             </td>
@@ -72,9 +72,9 @@ export default function CmsBannersIndex({ banners = [], positions = [] }) {
                                     ) : (
                                         banners.map((b) => (
                                             <tr key={b.id} className="border-b border-gray-100 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-700/30">
-                                                <td className="px-4 py-3 font-medium">{b.title}</td>
-                                                <td className="px-4 py-3">{positionLabel(b.position)}</td>
-                                                <td className="px-4 py-3 text-sm text-gray-500 truncate max-w-[150px]">{b.link || '-'}</td>
+                                                <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{b.title}</td>
+                                                <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{positionLabel(b.position)}</td>
+                                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[150px]">{b.link || '-'}</td>
                                                 <td className="px-4 py-3">
                                                     <Badge variant={b.is_active ? 'default' : 'secondary'}>{b.is_active ? 'Actif' : 'Inactif'}</Badge>
                                                 </td>

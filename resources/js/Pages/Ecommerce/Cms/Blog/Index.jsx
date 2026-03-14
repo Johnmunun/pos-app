@@ -57,17 +57,17 @@ export default function CmsBlogIndex({ articles = [], categories = [] }) {
                             <table className="w-full">
                                 <thead>
                                     <tr className="border-b border-gray-200 dark:border-slate-700">
-                                        <th className="text-left px-4 py-3 font-medium">Titre</th>
-                                        <th className="text-left px-4 py-3 font-medium">Catégorie</th>
-                                        <th className="text-left px-4 py-3 font-medium">Publication</th>
-                                        <th className="text-left px-4 py-3 font-medium">Statut</th>
-                                        <th className="text-right px-4 py-3 font-medium">Actions</th>
+                                        <th className="text-left px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Titre</th>
+                                        <th className="text-left px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Catégorie</th>
+                                        <th className="text-left px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Publication</th>
+                                        <th className="text-left px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Statut</th>
+                                        <th className="text-right px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {articles.length === 0 ? (
                                         <tr>
-                                            <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                                            <td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                                                 <p className="mb-2">Aucun article.</p>
                                                 <Button size="sm" onClick={handleCreate}>Créer un article</Button>
                                             </td>
@@ -75,9 +75,9 @@ export default function CmsBlogIndex({ articles = [], categories = [] }) {
                                     ) : (
                                         articles.map((a) => (
                                             <tr key={a.id} className="border-b border-gray-100 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-700/30">
-                                                <td className="px-4 py-3 font-medium">{a.title}</td>
-                                                <td className="px-4 py-3 text-sm">{a.category_name || '-'}</td>
-                                                <td className="px-4 py-3 text-sm text-gray-500">{a.published_at || '-'}</td>
+                                                <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{a.title}</td>
+                                                <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{a.category_name || '-'}</td>
+                                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{a.published_at || '-'}</td>
                                                 <td className="px-4 py-3">
                                                     <Badge variant={a.is_active ? 'default' : 'secondary'}>{a.is_active ? 'Actif' : 'Inactif'}</Badge>
                                                 </td>

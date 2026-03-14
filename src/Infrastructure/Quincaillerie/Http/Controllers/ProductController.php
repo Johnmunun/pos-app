@@ -274,6 +274,14 @@ class ProductController
 
             $product = $this->createProductUseCase->execute($dto);
 
+            app(\App\Services\AppNotificationService::class)->notifyProductCreated(
+                'Quincaillerie',
+                $product->getName(),
+                $product->getCode()->getValue(),
+                $shopId,
+                $request->user()?->tenant_id ? (int) $request->user()->tenant_id : null
+            );
+
             // Obtenir le depot_id effectif selon les permissions
             $effectiveDepotId = $this->depotFilterService->getEffectiveDepotId($request);
             // Si le service ne renvoie rien, forcer le dépôt courant de la session

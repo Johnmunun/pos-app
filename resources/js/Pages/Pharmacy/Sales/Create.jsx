@@ -581,7 +581,7 @@ export default function POSCreate({ products = [], categories = [], customers = 
         <AppLayout fullWidth>
             <Head title="Point de Vente" />
             
-            <div className="min-h-[calc(100vh-64px)] flex flex-col lg:flex-row relative">
+            <div className="min-h-[calc(100vh-64px)] flex flex-col md:flex-row relative">
                 {/* Bandeau succès après validation */}
                 {showSuccessBanner && (
                     <div className="absolute top-0 left-0 right-0 z-40 bg-green-600 dark:bg-green-700 text-white py-3 px-4 text-center shadow-lg animate-in fade-in duration-300">
@@ -590,10 +590,10 @@ export default function POSCreate({ products = [], categories = [], customers = 
                     </div>
                 )}
                 {/* Left Panel - Products */}
-                <div className="w-full lg:flex-1 flex flex-col bg-gray-50 dark:bg-slate-950 min-w-0">
+                <div className="w-full md:flex-1 flex flex-col bg-gray-50 dark:bg-slate-950 min-w-0 overflow-hidden">
                     {/* Header with Search and View Toggle */}
-                    <div className="p-3 sm:p-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                    <div className="p-3 sm:p-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 shrink-0">
+                        <div className="flex flex-col md:flex-row md:items-center gap-3 sm:gap-4 md:flex-wrap">
                             <Button 
                                 variant="ghost" 
                                 size="sm" 
@@ -672,8 +672,8 @@ export default function POSCreate({ products = [], categories = [], customers = 
                                 </button>
                             </div>
                             
-                            <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline shrink-0">Raccourcis: <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">1</kbd> ventes · <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">2</kbd> ici · <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">P</kbd> paiement</span>
-                            <div className="w-full sm:flex-1 min-w-0 relative flex items-center gap-2">
+                            <span className="text-xs text-gray-400 dark:text-gray-500 hidden md:inline shrink-0">Raccourcis: <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">1</kbd> ventes · <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">2</kbd> ici · <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">P</kbd> paiement</span>
+                            <div className="w-full md:flex-1 md:min-w-[200px] min-w-0 relative flex items-center gap-2">
                                 <div className="flex-1 relative">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                                     <Input 
@@ -736,8 +736,8 @@ export default function POSCreate({ products = [], categories = [], customers = 
                     </div>
 
                     {/* Categories */}
-                    <div className="p-3 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 overflow-x-auto">
-                        <div className="flex gap-2">
+                    <div className="p-3 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 overflow-x-auto shrink-0 touch-pan-x">
+                        <div className="flex gap-2 min-w-0">
                             <button
                                 onClick={() => setSelectedCategory(null)}
                                 className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
@@ -796,9 +796,9 @@ export default function POSCreate({ products = [], categories = [], customers = 
                     )}
 
                     {/* Products Grid/List */}
-                    <div className="flex-1 overflow-y-auto p-4">
+                    <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 min-h-0">
                         {viewMode === 'thumbnails' ? (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
                                 {filteredProducts.map(product => (
                                     <button
                                         key={product.id}
@@ -896,7 +896,7 @@ export default function POSCreate({ products = [], categories = [], customers = 
                 </div>
 
                 {/* Right Panel - Cart */}
-                <div className="w-full lg:w-96 lg:min-w-[22rem] lg:max-w-md bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-slate-700 flex flex-col flex-shrink-0 lg:flex-shrink-0">
+                <div className="w-full md:w-80 md:min-w-[18rem] md:max-w-sm lg:w-96 lg:min-w-[22rem] lg:max-w-md bg-white dark:bg-slate-900 border-t md:border-t-0 md:border-l border-gray-200 dark:border-slate-700 flex flex-col flex-shrink-0 overflow-hidden">
                     {/* Cart Header */}
                     <div className="p-4 border-b border-gray-200 dark:border-slate-700">
                         <div className="flex items-center gap-2 mb-2">

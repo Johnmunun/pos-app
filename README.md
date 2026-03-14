@@ -57,3 +57,14 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+app-DY35bFR*.js:8 WebSocket connection to 'ws://localhost:8080/app/local?protocol=7&client=js&version=8.4.0&flash=false' failed:
+createWebSocket @ app-DY35bFR*.js:8
+getSocket @ app-DY35bFR*.js:7
+connect @ app-DY35bFR*.js:7
+de @ app-DY35bFR*.js:8
+emit @ app-DY35bFR*.js:7
+changeState @ app-DY35bFR*.js:7
+su @ app-DY35bFR*.js:7
+connect @ app-DY35bFR*.js:8
+tryStrategy @ app-DY35bFR*.js:7
+cd "H:\Projets web\pos-app"; php artisan webpush:generate-keys

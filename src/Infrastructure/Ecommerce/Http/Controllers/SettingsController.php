@@ -10,24 +10,51 @@ use Inertia\Response;
 
 class SettingsController
 {
-    private function getShopId(Request $request): string
+    /** Sous-domaines réservés (ne pas autoriser pour les boutiques). */
+    private const RESERVED_SUBDOMAINS = ['www', 'api', 'app', 'admin', 'mail', 'ftp', 'cdn', 'static', 'shop', 'store', 'boutique', 'ecommerce', 'staging', 'demo', 'test', 'localhost'];
+
+    /**
+     * Résout la boutique pour l'utilisateur (même logique que StorefrontController).
+     */
+    private function resolveShop(Request $request): Shop
     {
         $user = $request->user();
-        if (!$user) abort(403, 'User not authenticated.');
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
-        $isRoot = \App\Models\User::find($user->id)?->isRoot() ?? false;
-        if (!$shopId && !$isRoot) abort(403, 'Shop ID not found.');
-        if ($isRoot && !$shopId) abort(403, 'Please select a shop first.');
-        return (string) $shopId;
+        if (!$user) {
+            abort(403, 'User not authenticated.');
+        }
+
+        $userModel = \App\Models\User::find($user->id);
+        $isRoot = $userModel ? $userModel->isRoot() : false;
+
+        $shop = null;
+        $candidateId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        if ($candidateId !== null && $candidateId !== '') {
+            $shop = Shop::find($candidateId);
+        }
+        if (!$shop && $user->tenant_id) {
+            $shop = Shop::where('tenant_id', $user->tenant_id)->first();
+        }
+        if (!$shop && ($isRoot || ($userModel && $userModel->hasPermission('module.ecommerce')))) {
+            $shop = Shop::orderBy('id')->first();
+        }
+
+        if (!$shop && $isRoot) {
+            abort(404, 'Aucune boutique. Créez au moins une boutique pour configurer le domaine.');
+        }
+        if (!$shop) {
+            abort(403, 'Boutique introuvable. Contactez l\'administrateur.');
+        }
+
+        return $shop;
     }
 
     public function index(Request $request): Response
     {
-        $shopId = $this->getShopId($request);
-        $shop = Shop::find($shopId);
+        $shop = $this->resolveShop($request);
+        $baseDomain = config('services.ecommerce.base_domain', 'omnisolution.shop');
 
         return Inertia::render('Ecommerce/Settings/Index', [
-            'shop' => $shop ? [
+            'shop' => [
                 'id' => $shop->id,
                 'name' => $shop->name,
                 'currency' => $shop->currency ?? 'USD',
@@ -39,29 +66,43 @@ class SettingsController
                 'email' => $shop->email ?? '',
                 'ecommerce_subdomain' => $shop->ecommerce_subdomain,
                 'ecommerce_is_online' => (bool) $shop->ecommerce_is_online,
-            ] : null,
+            ],
+            'ecommerce_base_domain' => $baseDomain,
         ]);
     }
 
     /**
-     * Met à jour le sous-domaine de la boutique (ex: kasashop pour kasashop.omnisolution.shop).
+     * Met à jour le sous-domaine de la boutique (ex: kasashop pour kasashop.{base_domain}).
+     * En production, le domaine de base est lu depuis config (ECOMmerce_BASE_DOMAIN).
      */
     public function updateDomain(Request $request): RedirectResponse
     {
-        $shopId = $this->getShopId($request);
-        $shop = Shop::find($shopId);
-        if (!$shop) {
-            abort(404, 'Shop not found');
-        }
+        $shop = $this->resolveShop($request);
 
         $data = $request->validate([
             'subdomain' => ['required', 'string', 'max:50', 'regex:/^[a-z0-9-]+$/i'],
             'is_online' => ['sometimes', 'boolean'],
         ]);
 
-        // Vérifier l'unicité du sous-domaine
+        // Normaliser en minuscules (DNS insensible à la casse, cohérence en production)
+        $subdomain = strtolower(trim($data['subdomain']));
+
+        if ($subdomain === '') {
+            return redirect()
+                ->route('ecommerce.settings.index')
+                ->withErrors(['subdomain' => 'Le sous-domaine est requis.']);
+        }
+
+        // Sous-domaines réservés (éviter conflits avec l'app en production)
+        if (in_array($subdomain, self::RESERVED_SUBDOMAINS, true)) {
+            return redirect()
+                ->route('ecommerce.settings.index')
+                ->withErrors(['subdomain' => 'Ce sous-domaine est réservé. Choisissez un autre nom.']);
+        }
+
+        // Vérifier l'unicité du sous-domaine (comparaison en minuscules)
         $exists = Shop::where('id', '!=', $shop->id)
-            ->where('ecommerce_subdomain', $data['subdomain'])
+            ->whereRaw('LOWER(ecommerce_subdomain) = ?', [$subdomain])
             ->exists();
 
         if ($exists) {
@@ -70,7 +111,7 @@ class SettingsController
                 ->withErrors(['subdomain' => 'Ce sous-domaine est déjà utilisé par une autre boutique.']);
         }
 
-        $shop->ecommerce_subdomain = $data['subdomain'];
+        $shop->ecommerce_subdomain = $subdomain;
         if (array_key_exists('is_online', $data)) {
             $shop->ecommerce_is_online = (bool) $data['is_online'];
         }
@@ -78,7 +119,7 @@ class SettingsController
 
         return redirect()
             ->route('ecommerce.settings.index')
-            ->with('success', 'Domaine de la boutique mis à jour.');
+            ->with('success', 'Domaine de la boutique mis à jour. En production, configurez un enregistrement DNS (CNAME ou A) pour *.'.config('services.ecommerce.base_domain', 'omnisolution.shop'));
     }
 
     // Plus de mise à jour de devise ici : la devise est gérée globalement via /settings/currencies
