@@ -96,22 +96,36 @@ Route::get('/dashboard', function (\Illuminate\Http\Request $request) {
         return redirect()->route('login');
     }
     if (method_exists($user, 'hasPermission')) {
-        // Détection des modules actifs pour l'utilisateur
-        // Pharmacie : on considère le module actif si l'utilisateur a soit le flag de module,
-        // soit des permissions clés du module (cas où le flag n'a pas été synchronisé).
-        $hasPharmacy = $user->hasPermission('module.pharmacy')
-            || $user->hasPermission('pharmacy.sales.view')
-            || $user->hasPermission('pharmacy.report.view')
-            || $user->hasPermission('pharmacy.product.view');
-
-        $hasHardware = $user->hasPermission('module.hardware');
-        $hasCommerce = $user->hasPermission('module.commerce');
-        $hasEcommerce = $user->hasPermission('module.ecommerce');
         // ROOT user → dashboard ROOT
         if ($user->isRoot()) {
             return redirect()->route('admin.dashboard');
         }
-        // E-commerce a la priorité si l'utilisateur a uniquement e-commerce
+
+        // Détection des modules actifs pour l'utilisateur
+        $hasPharmacy = $user->hasPermission('module.pharmacy')
+            || $user->hasPermission('pharmacy.sales.view')
+            || $user->hasPermission('pharmacy.report.view')
+            || $user->hasPermission('pharmacy.product.view');
+        $hasHardware = $user->hasPermission('module.hardware');
+        $hasCommerce = $user->hasPermission('module.commerce');
+        $hasEcommerce = $user->hasPermission('module.ecommerce');
+
+        // Priorité au secteur du tenant : à la connexion, amener sur le dashboard du module concerné
+        $tenantSector = $user->tenant?->sector;
+        if ($tenantSector === 'pharmacy' && $hasPharmacy) {
+            return redirect()->route('pharmacy.dashboard', $request->only(['period']));
+        }
+        if ($tenantSector === 'hardware' && $hasHardware) {
+            return redirect()->route('hardware.dashboard');
+        }
+        if (in_array($tenantSector, ['commerce', 'global_commerce', 'kiosk', 'supermarket', 'butchery', 'other'], true) && $hasCommerce) {
+            return redirect()->route('commerce.dashboard');
+        }
+        if ($tenantSector === 'ecommerce' && $hasEcommerce) {
+            return redirect()->route('ecommerce.dashboard');
+        }
+
+        // Fallback selon les permissions (secteur non défini ou sans correspondance)
         if ($hasEcommerce && !$hasPharmacy && !$hasHardware && !$hasCommerce) {
             return redirect()->route('ecommerce.dashboard');
         }
@@ -178,6 +192,18 @@ Route::middleware('auth')->group(function () {
     // Global Search API
     Route::get('/api/search', [\Src\Infrastructure\Search\Http\Controllers\GlobalSearchController::class, 'search'])
         ->name('api.search');
+
+    // Module onboarding (tutoriels guidés par module)
+    Route::prefix('api/module-onboarding')->name('module-onboarding.')->group(function () {
+        Route::get('/{module}/status', [\Src\Infrastructure\ModuleOnboarding\Http\Controllers\ModuleOnboardingController::class, 'status'])
+            ->name('status');
+        Route::get('/{module}/steps', [\Src\Infrastructure\ModuleOnboarding\Http\Controllers\ModuleOnboardingController::class, 'steps'])
+            ->name('steps');
+        Route::post('/{module}/steps/complete', [\Src\Infrastructure\ModuleOnboarding\Http\Controllers\ModuleOnboardingController::class, 'completeStep'])
+            ->name('steps.complete');
+        Route::post('/{module}/complete', [\Src\Infrastructure\ModuleOnboarding\Http\Controllers\ModuleOnboardingController::class, 'completeModule'])
+            ->name('complete');
+    });
 
     // Referral / Parrainage
     Route::prefix('referrals')->name('referrals.')->group(function () {

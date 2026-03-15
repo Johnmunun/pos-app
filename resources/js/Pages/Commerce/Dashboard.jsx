@@ -26,6 +26,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
+import ModuleOnboarding from '@/Components/ModuleOnboarding/ModuleOnboarding';
 import {
   LineChart,
   Line,
@@ -285,6 +286,7 @@ export default function Dashboard({
       }
     >
       <Head title="Tableau de bord Commerce" />
+      <ModuleOnboarding moduleName="commerce" />
 
       <div className="py-4 md:py-6 space-y-4 md:space-y-6 lg:space-y-8">
         {/* Filtres compacts avec icônes uniquement */}

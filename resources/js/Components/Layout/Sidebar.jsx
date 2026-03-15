@@ -422,7 +422,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                     </div>
 
                     {/* Navigation Groups */}
-                    <nav className="flex flex-1 flex-col">
+                    <nav data-onboarding="module-sidebar-nav" className="flex flex-1 flex-col" aria-label="Menu principal">
                         <ul role="list" className="flex flex-1 flex-col gap-y-7">
                             {visibleGroups.map((group) => {
                                 const isExpanded = expandedGroups[group.key] ?? true;
@@ -532,7 +532,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                     </div>
 
                     {/* Navigation Groups */}
-                    <nav className="flex flex-1 flex-col">
+                    <nav data-onboarding="module-sidebar-nav" className="flex flex-1 flex-col" aria-label="Menu principal">
                         <ul role="list" className="flex flex-1 flex-col gap-y-7">
                             {visibleGroups.map((group) => {
                                 // Pour Pharmacy, Hardware, Global Commerce et E-commerce : si l'utilisateur a accès au module, afficher tous les items

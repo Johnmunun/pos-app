@@ -17,8 +17,6 @@ class PharmacyVoiceController
     private const DEFAULT_MAX_VOICE_REQUESTS_PER_DAY = 30;
     private const TRANSCRIBE_CACHE_TTL = 60;
     private const MAX_AUDIO_SIZE_MB = 5;
-    private const ALLOWED_MIMES = ['audio/webm', 'audio/wav', 'audio/mpeg', 'audio/mp4', 'audio/mp3'];
-
     public function __construct(
         private PharmacyAssistantContextService $contextService,
         private VoiceSensitiveDetector $sensitiveDetector
@@ -41,15 +39,21 @@ class PharmacyVoiceController
         }
 
         $request->validate([
-            'audio' => 'required|file|max:' . (self::MAX_AUDIO_SIZE_MB * 1024) . '|mimes:webm,wav,mp3,m4a,mpga,mpeg,mp4',
+            'audio' => 'required|file|max:' . (self::MAX_AUDIO_SIZE_MB * 1024),
         ]);
         $file = $request->file('audio');
         if (!$file->isValid()) {
             return response()->json(['message' => 'Fichier audio invalide.'], 422);
         }
         $mime = $file->getMimeType();
-        if (!in_array($mime, self::ALLOWED_MIMES, true) && !str_starts_with($mime, 'audio/')) {
-            return response()->json(['message' => 'Type audio non autorisé (webm, wav, mp3).'], 422);
+        $ext = strtolower($file->getClientOriginalExtension());
+        $isAudioMime = str_starts_with($mime, 'audio/');
+        $isAllowedExtension = in_array($ext, ['webm', 'wav', 'mp3', 'm4a', 'mpga', 'mpeg', 'mp4', 'ogg'], true);
+        if (!$isAudioMime && $mime !== 'application/octet-stream' && !$isAllowedExtension) {
+            return response()->json(['message' => 'Type audio non autorisé. Utilisez un enregistrement micro (webm, wav, mp3).'], 422);
+        }
+        if ($mime === 'application/octet-stream' && !$isAllowedExtension) {
+            return response()->json(['message' => 'Type audio non autorisé. Utilisez un enregistrement micro (webm, wav, mp3).'], 422);
         }
 
         $cacheKey = 'voice_transcribe:' . md5_file($file->getRealPath());
@@ -61,7 +65,9 @@ class PharmacyVoiceController
 
         $apiKey = config('services.openai.api_key');
         if (!$apiKey) {
-            return response()->json(['message' => 'Transcription non configurée (OpenAI).'], 503);
+            return response()->json([
+                'message' => 'La transcription vocale n\'est pas activée. Ajoutez OPENAI_API_KEY dans le fichier .env pour utiliser le micro (API Whisper).',
+            ], 503);
         }
 
         try {

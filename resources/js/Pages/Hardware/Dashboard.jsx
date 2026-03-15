@@ -25,6 +25,7 @@ import {
   ArrowDown,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
+import ModuleOnboarding from '@/Components/ModuleOnboarding/ModuleOnboarding';
 import {
   LineChart,
   Line,
@@ -214,7 +215,7 @@ export default function Dashboard({
   return (
     <AppLayout
       header={
-        <div>
+        <div data-onboarding="hardware-dashboard-welcome">
           <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
             Tableau de bord — Quincaillerie
           </h2>
@@ -224,9 +225,10 @@ export default function Dashboard({
         </div>
       }
     >
-      <Head title="Tableau de bord Quincaillerie" />
-
-      <div className="py-6 space-y-6 sm:space-y-8">
+      <>
+        <Head title="Tableau de bord Quincaillerie" />
+        <ModuleOnboarding moduleName="hardware" />
+        <div className="py-6 space-y-6 sm:space-y-8">
         {/* Filtres compacts avec icônes uniquement */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Période rapide - Icône seulement */}
@@ -284,7 +286,7 @@ export default function Dashboard({
         {/* Stats Cards - Design Visily */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* VENTES DU JOUR */}
-          <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-600 dark:to-emerald-700 border-0 shadow-lg">
+          <Card data-onboarding="hardware-sales-card" className="bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-600 dark:to-emerald-700 border-0 shadow-lg">
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -308,7 +310,7 @@ export default function Dashboard({
           </Card>
 
           {/* VALEUR DU STOCK */}
-          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 border-0 shadow-lg overflow-hidden">
+          <Card data-onboarding="hardware-stock-value" className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 border-0 shadow-lg overflow-hidden">
             <CardContent className="p-6">
               <div className="flex items-start justify-between gap-3 min-w-0">
                 <div className="flex-1 min-w-0">
@@ -687,7 +689,7 @@ export default function Dashboard({
 
         {/* Actions rapides - Design Visily */}
         {visibleActions.length > 0 && (
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+          <Card data-onboarding="hardware-quick-actions" className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
                 ACTIONS RAPIDES
@@ -716,7 +718,8 @@ export default function Dashboard({
             </CardContent>
           </Card>
         )}
-      </div>
+        </div>
+      </>
     </AppLayout>
   );
 }

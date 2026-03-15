@@ -32,6 +32,7 @@ import {
     Legend,
 } from 'recharts';
 import { formatCurrency } from '@/lib/currency';
+import ModuleOnboarding from '@/Components/ModuleOnboarding/ModuleOnboarding';
 
 export default function EcommerceDashboard({ stats = {}, chartOrders = [], chartOrderStatus = [], filters = {} }) {
     const { shop } = usePage().props;
@@ -79,7 +80,7 @@ export default function EcommerceDashboard({ stats = {}, chartOrders = [], chart
     return (
         <AppLayout
             header={
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div data-onboarding="ecommerce-dashboard-welcome" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <h2 className="font-semibold text-lg sm:text-xl text-gray-800 dark:text-gray-100 leading-tight break-words min-w-0">
                         Tableau de bord E-commerce
                     </h2>
@@ -107,6 +108,7 @@ export default function EcommerceDashboard({ stats = {}, chartOrders = [], chart
             }
         >
             <Head title="Dashboard E-commerce" />
+            <ModuleOnboarding moduleName="ecommerce" />
 
             <div className="py-6 space-y-6">
                 {/* Panneau filtre (dates) */}
@@ -166,7 +168,7 @@ export default function EcommerceDashboard({ stats = {}, chartOrders = [], chart
 
                 {/* Cartes KPIs - Style Global Commerce */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                    <Card className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 border-0 shadow-lg">
+                    <Card data-onboarding="ecommerce-orders-card" className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 border-0 shadow-lg">
                         <CardContent className="p-5 md:p-6">
                             <div className="flex items-start justify-between">
                                 <div className="flex-1">
@@ -196,7 +198,7 @@ export default function EcommerceDashboard({ stats = {}, chartOrders = [], chart
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-600 dark:to-emerald-700 border-0 shadow-lg">
+                    <Card data-onboarding="ecommerce-revenue-card" className="bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-600 dark:to-emerald-700 border-0 shadow-lg">
                         <CardContent className="p-5 md:p-6">
                             <div className="flex items-start justify-between">
                                 <div className="flex-1">

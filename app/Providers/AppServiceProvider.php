@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Src\Domains\Admin\Repositories\AdminRepositoryInterface;
 use Src\Infrastructure\Admin\Repositories\AdminEloquentRepository;
+use Src\Domain\ModuleOnboarding\Repositories\ModuleOnboardingStatusRepositoryInterface;
+use Src\Infrastructure\ModuleOnboarding\Persistence\EloquentModuleOnboardingStatusRepository;
+use Src\Application\ModuleOnboarding\ModuleOnboardingService;
 use App\Services\PermissionSyncService;
 use Src\Domains\User\Services\PermissionsSyncService as DomainPermissionsSyncService;
 
@@ -21,6 +24,16 @@ class AppServiceProvider extends ServiceProvider
             AdminRepositoryInterface::class,
             AdminEloquentRepository::class
         );
+
+        $this->app->bind(
+            ModuleOnboardingStatusRepositoryInterface::class,
+            EloquentModuleOnboardingStatusRepository::class
+        );
+        $this->app->bind(ModuleOnboardingService::class, function ($app) {
+            return new ModuleOnboardingService(
+                $app->make(ModuleOnboardingStatusRepositoryInterface::class)
+            );
+        });
 
         // Bind DomainPermissionsSyncService
         $this->app->singleton(DomainPermissionsSyncService::class);
