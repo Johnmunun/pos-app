@@ -190,23 +190,30 @@ class HandleInertiaRequests extends Middleware
             }
         }
 
-        // Thème storefront (couleurs primaire/secondaire) — uniquement sur les routes storefront
-        // Injecté dans le HTML initial pour éviter le flash de couleur au refresh
+        // Thème storefront (couleurs primaire/secondaire) — routes storefront ou vitrine publique (sous-domaine)
         $storefrontTheme = null;
-        if (str_starts_with($request->path(), 'ecommerce/storefront')) {
-            $shopId = $user ? ($user->shop_id ?? $user->tenant_id) : null;
-            if ($shopId) {
-                $shop = \App\Models\Shop::find($shopId);
-                if ($shop) {
-                    $config = $shop->ecommerce_storefront_config ?? [];
-                    if (!is_array($config)) {
-                        $config = [];
-                    }
-                    $storefrontTheme = [
-                        'primary' => $config['theme_primary_color'] ?? '#f59e0b',
-                        'secondary' => $config['theme_secondary_color'] ?? '#d97706',
-                    ];
+        $isStorefrontPath = str_starts_with($request->path(), 'ecommerce/storefront') || $request->attributes->get('storefront_shop') !== null;
+        if ($isStorefrontPath) {
+            $shop = $request->attributes->get('storefront_shop');
+            if (!$shop && $user) {
+                $shopId = null;
+                if (method_exists($user, 'isRoot') && $user->isRoot()) {
+                    $shopId = $request->session()->get('current_storefront_shop_id');
                 }
+                if (!$shopId) {
+                    $shopId = $user->shop_id ?? $user->tenant_id;
+                }
+                $shop = $shopId ? \App\Models\Shop::find($shopId) : null;
+            }
+            if ($shop) {
+                $config = $shop->ecommerce_storefront_config ?? [];
+                if (!is_array($config)) {
+                    $config = [];
+                }
+                $storefrontTheme = [
+                    'primary' => $config['theme_primary_color'] ?? '#f59e0b',
+                    'secondary' => $config['theme_secondary_color'] ?? '#d97706',
+                ];
             }
             if (!$storefrontTheme) {
                 $storefrontTheme = ['primary' => '#f59e0b', 'secondary' => '#d97706'];
@@ -266,6 +273,8 @@ class HandleInertiaRequests extends Middleware
                 'message' => $request->session()->get('message'),
             ],
             'storefrontTheme' => $storefrontTheme,
+            'storefrontIsPublic' => $request->attributes->get('storefront_shop') !== null,
+            'storefrontPublicBaseUrl' => $request->attributes->get('storefront_shop') ? $request->root() : null,
         ];
     }
 

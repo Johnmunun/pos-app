@@ -139,3 +139,45 @@ self.addEventListener('fetch', (event) => {
     );
 });
 
+// Web Push - Affichage des notifications système
+self.addEventListener('push', (event) => {
+    if (!event.data) {
+        return;
+    }
+
+    let data = {};
+    try {
+        data = event.data.json();
+    } catch (e) {
+        data = { title: 'Notification', body: event.data.text() };
+    }
+
+    const title = data.title || 'OmniPOS';
+    const options = {
+        body: data.body || '',
+        icon: '/icons/icon-192x192.png',
+        badge: '/icons/icon-96x96.png',
+        data,
+    };
+
+    event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const urlToOpen = '/admin/dashboard';
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            for (const client of clientList) {
+                if ('focus' in client) {
+                    client.focus();
+                    return;
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow(urlToOpen);
+            }
+        })
+    );
+});

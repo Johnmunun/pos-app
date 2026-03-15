@@ -138,12 +138,10 @@ export default function CommerceCustomersIndex({ customers = [], filters = {} })
                         {canCreate && (
                             <Button 
                                 onClick={handleOpenCreate}
-                                className="inline-flex items-center"
+                                className="inline-flex items-center gap-1.5 sm:gap-2"
                             >
-                                <span className="flex items-center gap-2">
-                                    <Plus className="h-4 w-4" />
-                                    <span>Nouveau client</span>
-                                </span>
+                                <Plus className="h-4 w-4 flex-shrink-0" />
+                                <span className="hidden sm:inline">Nouveau </span>Client
                             </Button>
                         )}
                     </div>
@@ -197,8 +195,9 @@ export default function CommerceCustomersIndex({ customers = [], filters = {} })
                                     <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
                                     <p>Aucun client. Créez-en un pour commencer.</p>
                                     {canCreate && (
-                                        <Button onClick={handleOpenCreate} className="mt-4">
-                                            Nouveau client
+                                        <Button onClick={handleOpenCreate} className="mt-4 inline-flex items-center gap-1.5 sm:gap-2">
+                                            <Plus className="h-4 w-4 flex-shrink-0" />
+                                            <span className="hidden sm:inline">Nouveau </span>Client
                                         </Button>
                                     )}
                                 </div>

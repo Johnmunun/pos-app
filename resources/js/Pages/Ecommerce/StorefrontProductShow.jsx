@@ -19,8 +19,10 @@ import {
     ShieldCheck,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 
 function StorefrontProductHeader({ shop, cmsPages = [] }) {
+    const links = useStorefrontLinks();
     const { shop: sharedShop } = usePage().props;
     const logoUrl = shop?.logo_url || sharedShop?.logo_url || null;
 
@@ -29,7 +31,7 @@ function StorefrontProductHeader({ shop, cmsPages = [] }) {
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <Link
-                        href={route('ecommerce.storefront.index')}
+                        href={links.index()}
                         className="p-2 -ml-2 rounded-2xl text-slate-500 hover:text-amber-700 dark:hover:text-amber-400 hover:bg-amber-50/80 dark:hover:bg-amber-950/25 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/30"
                     >
                         <ArrowLeft className="h-5 w-5" />
@@ -53,7 +55,7 @@ function StorefrontProductHeader({ shop, cmsPages = [] }) {
                             {cmsPages.slice(0, 5).map((p) => (
                                 <Link
                                     key={p.id}
-                                    href={route('ecommerce.storefront.page', p.slug)}
+                                    href={links.page(p.slug)}
                                     className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-amber-700 dark:hover:text-amber-400 hover:bg-amber-50/80 dark:hover:bg-amber-950/25 transition-colors"
                                 >
                                     {p.title}
@@ -62,7 +64,7 @@ function StorefrontProductHeader({ shop, cmsPages = [] }) {
                         </nav>
                     )}
                     <Link
-                        href={route('ecommerce.storefront.catalog')}
+                        href={links.catalog()}
                         className="hidden sm:inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white/60 dark:bg-slate-950/30 border border-slate-200/70 dark:border-slate-800 hover:border-[var(--sf-primary,#f59e0b)] dark:hover:border-[var(--sf-primary,#f59e0b)] hover:text-[var(--sf-primary,#f59e0b)] dark:hover:text-[var(--sf-primary,#f59e0b)] transition-colors"
                     >
                         Catalogue
@@ -129,14 +131,14 @@ function ProductContent({ product, reviews = [], shop, cmsPages, whatsapp = {} }
                     {/* Breadcrumb */}
                     <nav className="mb-6 flex items-center gap-2 text-sm">
                         <Link
-                            href={route('ecommerce.storefront.index')}
+                            href={links.index()}
                             className="text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400"
                         >
                             Accueil
                         </Link>
                         <span className="text-slate-400">/</span>
                         <Link
-                            href={route('ecommerce.storefront.catalog')}
+                            href={links.catalog()}
                             className="text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400"
                         >
                             Catalogue
@@ -353,7 +355,7 @@ function ProductContent({ product, reviews = [], shop, cmsPages, whatsapp = {} }
                                                 Ajouter
                                             </Button>
                                             <Link
-                                                href={route('ecommerce.storefront.cart')}
+                                                href={links.cart()}
                                                 className={`inline-flex items-center justify-center rounded-2xl h-12 text-base font-semibold border transition-colors ${
                                                     product.stock === 0
                                                         ? 'pointer-events-none opacity-50 border-slate-200 dark:border-slate-800 text-slate-400'

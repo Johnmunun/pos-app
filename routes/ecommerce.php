@@ -80,6 +80,9 @@ Route::prefix('ecommerce')
         Route::get('/storefront/cart', [StorefrontController::class, 'cart'])
             ->middleware('permission:ecommerce.cart.view|ecommerce.view|module.ecommerce')
             ->name('storefront.cart');
+        Route::post('/storefront/switch-shop', [StorefrontController::class, 'switchShop'])
+            ->middleware('permission:ecommerce.catalog.view|ecommerce.view|module.ecommerce')
+            ->name('storefront.switch-shop');
 
         // Catalogue
         Route::get('/catalog', [CatalogController::class, 'index'])
@@ -482,4 +485,21 @@ Route::prefix('ecommerce')
         Route::delete('/cms/media/{id}', [CmsMediaController::class, 'destroy'])
             ->middleware('permission:ecommerce.cms.manage|ecommerce.settings.view|module.ecommerce')
             ->name('cms.media.destroy');
+    });
+
+/*
+ * Vitrine publique par sous-domaine (ex: monshop.omnisolution.shop)
+ * Sans authentification ; la boutique est résolue via le middleware.
+ */
+$ecommerceBaseDomain = config('services.ecommerce.base_domain', 'omnisolution.shop');
+Route::domain('{subdomain}.'.$ecommerceBaseDomain)
+    ->middleware(['resolve.storefront.by.subdomain'])
+    ->group(function () {
+        Route::get('/', [StorefrontController::class, 'index'])->name('public.storefront.index');
+        Route::get('/page/{slug}', [StorefrontController::class, 'showPage'])->name('public.storefront.page');
+        Route::get('/blog', [StorefrontController::class, 'blog'])->name('public.storefront.blog');
+        Route::get('/blog/{slug}', [StorefrontController::class, 'blogShow'])->name('public.storefront.blog.show');
+        Route::get('/catalog', [StorefrontController::class, 'catalog'])->name('public.storefront.catalog');
+        Route::get('/product/{id}', [StorefrontController::class, 'showProduct'])->name('public.storefront.product');
+        Route::get('/cart', [StorefrontController::class, 'cart'])->name('public.storefront.cart');
     });

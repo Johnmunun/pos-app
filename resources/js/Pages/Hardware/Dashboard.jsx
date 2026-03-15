@@ -308,20 +308,20 @@ export default function Dashboard({
           </Card>
 
           {/* VALEUR DU STOCK */}
-          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 border-0 shadow-lg">
+          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 border-0 shadow-lg overflow-hidden">
             <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
+              <div className="flex items-start justify-between gap-3 min-w-0">
+                <div className="flex-1 min-w-0">
                   <p className="text-blue-100 text-sm font-medium mb-2">VALEUR DU STOCK</p>
-                  <p className="text-white text-3xl font-bold mb-2">{fmt(stats?.inventory?.total_value ?? 0)}</p>
+                  <p className="text-white text-2xl sm:text-3xl font-bold mb-2 break-all">{fmt(stats?.inventory?.total_value ?? 0)}</p>
                   <div className="flex items-center gap-1 text-blue-100 text-xs mb-2">
-                    <ArrowDown className="h-3 w-3" />
+                    <ArrowDown className="h-3 w-3 flex-shrink-0" />
                     <span>-2.1% Valeur totale</span>
                   </div>
                   <p className="text-blue-100 text-xs">Stock actuel</p>
                 </div>
-                <div className="w-14 h-14 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Database className="h-7 w-7 text-white" />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Database className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
                 </div>
               </div>
             </CardContent>

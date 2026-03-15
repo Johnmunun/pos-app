@@ -23,8 +23,10 @@ import { toast } from 'react-hot-toast';
 import axios from 'axios';
 import { formatCurrency } from '@/lib/currency';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
+import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 
 function StorefrontCartHeader({ shop, cmsPages = [], currency }) {
+    const links = useStorefrontLinks();
     const { shop: sharedShop } = usePage().props;
     const logoUrl = shop?.logo_url || sharedShop?.logo_url || null;
 
@@ -33,7 +35,7 @@ function StorefrontCartHeader({ shop, cmsPages = [], currency }) {
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <Link
-                        href={route('ecommerce.storefront.index')}
+                        href={links.index()}
                         className="p-2 -ml-2 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 dark:hover:text-amber-400 transition-colors"
                     >
                         <ArrowLeft className="h-5 w-5" />
@@ -60,7 +62,7 @@ function StorefrontCartHeader({ shop, cmsPages = [], currency }) {
                             {cmsPages.slice(0, 5).map((p) => (
                                 <Link
                                     key={p.id}
-                                    href={route('ecommerce.storefront.page', p.slug)}
+                                    href={links.page(p.slug)}
                                     className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
                                 >
                                     {p.title}
@@ -69,7 +71,7 @@ function StorefrontCartHeader({ shop, cmsPages = [], currency }) {
                         </nav>
                     )}
                     <Link
-                        href={route('ecommerce.storefront.catalog')}
+                        href={links.catalog()}
                         className="hidden sm:inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
                     >
                         Catalogue
@@ -210,7 +212,7 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
                                 </p>
                             </div>
                             <Link
-                                href={route('ecommerce.storefront.catalog')}
+                                href={links.catalog()}
                                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-sm font-medium backdrop-blur transition-colors"
                             >
                                 <ArrowLeft className="h-4 w-4" />
@@ -230,7 +232,7 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
                             <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm mx-auto">
                                 Découvrez nos produits et ajoutez-les à votre panier pour passer commande
                             </p>
-                            <Link href={route('ecommerce.storefront.catalog')}>
+                            <Link href={links.catalog()}>
                                 <Button size="lg" className="gap-2 rounded-xl h-12 px-8 shadow-lg shadow-[var(--sf-primary,#f59e0b)]/25">
                                     <Package className="h-5 w-5" />
                                     Parcourir le catalogue

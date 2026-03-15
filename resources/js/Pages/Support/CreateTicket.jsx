@@ -20,10 +20,14 @@ export default function CreateTicket({ enums }) {
 
     const submit = (e) => {
         e.preventDefault();
-        setData('description', editorValue);
         post(route('support.tickets.store'), {
             forceFormData: true,
         });
+    };
+
+    const handleDescriptionChange = (value) => {
+        setEditorValue(value);
+        setData('description', value);
     };
 
     const handleFileChange = (e) => {
@@ -119,7 +123,7 @@ export default function CreateTicket({ enums }) {
                             <div className="mt-1">
                                 <RichTextEditor
                                     value={editorValue}
-                                    onChange={setEditorValue}
+                                    onChange={handleDescriptionChange}
                                     placeholder="Expliquez le problème, les étapes pour le reproduire, les messages d'erreur, etc."
                                 />
                             </div>
@@ -141,7 +145,7 @@ export default function CreateTicket({ enums }) {
                             <button
                                 type="submit"
                                 disabled={processing}
-                                className="inline-flex items-center px-4 py-2 bg-amber-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50 transition"
+                                className="inline-flex items-center px-2 py-1.5 sm:px-4 sm:py-2 bg-amber-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50 transition"
                             >
                                 {processing ? 'Envoi en cours...' : 'Envoyer le ticket'}
                             </button>

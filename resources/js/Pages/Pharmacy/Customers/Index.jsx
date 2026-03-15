@@ -258,9 +258,9 @@ export default function CustomersIndex({ customers, filters = {}, routePrefix = 
                             </Button>
                         )}
                         {canCreate && (
-                            <Button onClick={handleOpenCreate}>
-                                <Plus className="h-4 w-4 mr-2" />
-                                Nouveau client
+                            <Button onClick={handleOpenCreate} className="inline-flex items-center gap-1.5 sm:gap-2">
+                                <Plus className="h-4 w-4 flex-shrink-0" />
+                                <span className="hidden sm:inline">Nouveau </span>Client
                             </Button>
                         )}
                     </div>

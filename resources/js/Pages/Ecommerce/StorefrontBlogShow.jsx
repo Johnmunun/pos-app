@@ -3,8 +3,10 @@ import { CartProvider } from '@/Contexts/CartContext';
 import ShoppingCart from '@/Components/Ecommerce/ShoppingCart';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
 import { ArrowLeft, CalendarDays } from 'lucide-react';
+import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 
 function StorefrontBlogShowHeader({ shop, cmsPages = [] }) {
+    const links = useStorefrontLinks();
     const { shop: sharedShop } = usePage().props;
     const logoUrl = shop?.logo_url || sharedShop?.logo_url || null;
 
@@ -13,7 +15,7 @@ function StorefrontBlogShowHeader({ shop, cmsPages = [] }) {
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <Link
-                        href={route('ecommerce.storefront.blog')}
+                        href={links.blog()}
                         className="p-2 -ml-2 rounded-2xl text-slate-500 hover:text-amber-700 dark:hover:text-amber-400 hover:bg-amber-50/80 dark:hover:bg-amber-950/25 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/30"
                     >
                         <ArrowLeft className="h-5 w-5" />
@@ -97,7 +99,7 @@ function BlogShowContent({ shop, article, cmsPages = [], whatsapp = {} }) {
                     {/* Back link */}
                     <div className="mt-12 pt-8 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <Link
-                            href={route('ecommerce.storefront.blog')}
+                            href={links.blog()}
                             className="inline-flex items-center gap-2 text-sm font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
                         >
                             <ArrowLeft className="h-4 w-4" />

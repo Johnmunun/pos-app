@@ -7,6 +7,7 @@ import ShoppingCart from '@/Components/Ecommerce/ShoppingCart';
 import ProductCard from '@/Components/Ecommerce/ProductCard';
 import { Search, Package, Filter, Grid, List, SlidersHorizontal, X, ArrowLeft, Sparkles, ArrowRight } from 'lucide-react';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
+import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 
 function shouldShowPageInNav(page) {
     if (!page) return false;
@@ -25,6 +26,7 @@ function shouldShowPageInNav(page) {
 }
 
 function StorefrontHeader({ shop, cmsPages = [] }) {
+    const links = useStorefrontLinks();
     const { shop: sharedShop } = usePage().props;
     const logoUrl = shop?.logo_url || sharedShop?.logo_url || null;
 
@@ -35,7 +37,7 @@ function StorefrontHeader({ shop, cmsPages = [] }) {
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <Link
-                        href={route('ecommerce.storefront.index')}
+                        href={links.index()}
                         className="p-2 -ml-2 rounded-2xl text-slate-500 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--sf-primary)]/30"
                     >
                         <ArrowLeft className="h-5 w-5" />
@@ -58,21 +60,21 @@ function StorefrontHeader({ shop, cmsPages = [] }) {
                         {navPages.map((p) => (
                             <Link
                                 key={p.id}
-                                href={route('ecommerce.storefront.page', p.slug)}
+                                href={links.page(p.slug)}
                                 className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors"
                             >
                                 {p.title}
                             </Link>
                         ))}
                         <Link
-                            href={route('ecommerce.storefront.blog')}
+                            href={links.blog()}
                             className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors"
                         >
                             Blog
                         </Link>
                     </nav>
                     <Link
-                        href={route('ecommerce.storefront.index')}
+                        href={links.index()}
                         className="hidden sm:inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white/60 dark:bg-slate-950/30 border border-slate-200/70 dark:border-slate-800 hover:border-[var(--sf-primary)] hover:text-[var(--sf-primary)] transition-colors"
                     >
                         Accueil
@@ -85,9 +87,10 @@ function StorefrontHeader({ shop, cmsPages = [] }) {
 }
 
 function CatalogContent({ products = [], categories = [], filters = {}, shop, cmsPages, banners = [], whatsapp = {} }) {
+    const links = useStorefrontLinks();
     const { addToCart } = useCart();
     const currency = shop?.currency || 'USD';
-    const productDetailUrl = (id) => route('ecommerce.storefront.product', id);
+    const productDetailUrl = (id) => links.product(id);
 
     const [search, setSearch] = useState(filters.search || '');
     const [selectedCategory, setSelectedCategory] = useState(filters.category_id || '');
@@ -136,14 +139,14 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
     }, [products, selectedCategory, search, priceRange, sortBy]);
 
     const handleFilter = () => {
-        router.get(route('ecommerce.storefront.catalog'), { search, category_id: selectedCategory }, { preserveState: true, preserveScroll: true });
+        router.get(links.catalog(), { search, category_id: selectedCategory }, { preserveState: true, preserveScroll: true });
     };
 
     const clearFilters = () => {
         setSearch('');
         setSelectedCategory('');
         setPriceRange({ min: '', max: '' });
-        router.get(route('ecommerce.storefront.catalog'), {}, { preserveState: true });
+        router.get(links.catalog(), {}, { preserveState: true });
     };
 
     const selectClass =
@@ -244,7 +247,7 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
                                                     </p>
                                                 </div>
                                                 <Link
-                                                    href={promotionBanner.link || route('ecommerce.storefront.catalog')}
+                                                    href={promotionBanner.link || links.catalog()}
                                                     className="inline-flex items-center gap-1.5 rounded-xl bg-white/90 text-[var(--sf-primary)] text-[11px] sm:text-xs font-semibold px-3 py-1.5 hover:bg-white transition-colors shrink-0"
                                                 >
                                                     Voir

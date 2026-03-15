@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'root' => \App\Http\Middleware\CheckRootUser::class,
             'permission' => \App\Http\Middleware\CheckPermission::class,
             'ensure.user.is.active' => \App\Http\Middleware\EnsureUserIsActive::class,
+            'resolve.storefront.by.subdomain' => \App\Http\Middleware\ResolveStorefrontShopBySubdomain::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

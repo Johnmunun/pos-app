@@ -4,6 +4,7 @@ import { Link } from '@inertiajs/react';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
 import { useCart } from '@/Contexts/CartContext';
+import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 import {
     ShoppingCart as ShoppingCartIcon,
     X,
@@ -16,8 +17,11 @@ import {
 import { formatCurrency } from '@/lib/currency';
 
 export default function ShoppingCart({ buttonClassName, storefrontLinks = false }) {
+    const links = useStorefrontLinks();
     const { cart, updateQuantity, removeFromCart, getCartTotal, getPriceInDisplayCurrency, currency } = useCart();
     const [isMiniCartOpen, setIsMiniCartOpen] = useState(false);
+    const catalogUrl = storefrontLinks ? links.catalog() : route('ecommerce.catalog.index');
+    const cartUrl = storefrontLinks ? links.cart() : route('ecommerce.cart.index');
 
     const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
     const displayCurrency = currency || 'CDF';
@@ -63,7 +67,7 @@ export default function ShoppingCart({ buttonClassName, storefrontLinks = false 
                             <div className="flex flex-col items-center justify-center h-full text-center">
                                 <ShoppingBag className="h-16 w-16 text-gray-300 dark:text-gray-600 mb-4" />
                                 <p className="text-gray-600 dark:text-gray-400 mb-2">Votre panier est vide</p>
-                                <Link href={storefrontLinks ? route('ecommerce.storefront.catalog') : route('ecommerce.catalog.index')}>
+                                <Link href={catalogUrl}>
                                     <Button variant="outline" onClick={() => setIsMiniCartOpen(false)}>
                                         Continuer les achats
                                     </Button>
@@ -133,7 +137,7 @@ export default function ShoppingCart({ buttonClassName, storefrontLinks = false 
                                 {format(getCartTotal())}
                             </span>
                         </div>
-                        <Link href={storefrontLinks ? route('ecommerce.storefront.cart') : route('ecommerce.cart.index')} className="block">
+                        <Link href={cartUrl} className="block">
                             <Button
                                 className="w-full gap-2 bg-[var(--sf-primary)] hover:bg-[var(--sf-primary-hover)]"
                                 onClick={() => setIsMiniCartOpen(false)}

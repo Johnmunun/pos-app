@@ -16,9 +16,9 @@ export default function MyTickets({ tickets }) {
                     </div>
                     <Link
                         href={route('support.tickets.create')}
-                        className="inline-flex items-center px-4 py-2 rounded-md bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 transition"
+                        className="inline-flex items-center px-2 py-1.5 sm:px-4 sm:py-2 rounded-md bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 transition"
                     >
-                        Créer un ticket
+                        Créer<span className="hidden sm:inline"> un ticket</span>
                     </Link>
                 </div>
             }

@@ -44,9 +44,21 @@ class StorefrontController
     ) {
     }
     /**
+     * Boutique courante : soit depuis le sous-domaine (vitrine publique), soit depuis l'utilisateur connecté.
+     */
+    private function getShop(Request $request): Shop
+    {
+        $shop = $request->attributes->get('storefront_shop');
+        if ($shop instanceof Shop) {
+            return $shop;
+        }
+        return $this->resolveShop($request);
+    }
+
+    /**
      * Résout la boutique (Shop) pour l'utilisateur connecté.
      * - Utilisateur avec shop_id ou tenant_id : boutique liée au tenant.
-     * - ROOT sans boutique sélectionnée : première boutique (prévisualisation en local).
+     * - ROOT : boutique en session (current_storefront_shop_id) si définie, sinon première boutique.
      */
     private function resolveShop(Request $request): Shop
     {
@@ -60,18 +72,31 @@ class StorefrontController
 
         $shop = null;
 
-        // 1) Si l'utilisateur a un shop_id (clé primaire shops), l'utiliser
-        $candidateId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
-        if ($candidateId !== null && $candidateId !== '') {
-            $shop = Shop::find($candidateId);
+        // 1) ROOT : boutique sélectionnée en session (évite d'afficher la boutique d'un autre)
+        if ($isRoot) {
+            $sessionShopId = $request->session()->get('current_storefront_shop_id');
+            if ($sessionShopId && is_numeric($sessionShopId)) {
+                $sessionShop = Shop::find((int) $sessionShopId);
+                if ($sessionShop) {
+                    $shop = $sessionShop;
+                }
+            }
         }
 
-        // 2) Sinon, trouver une boutique par tenant_id (shops.tenant_id = user.tenant_id)
+        // 2) Si l'utilisateur a un shop_id (clé primaire shops), l'utiliser
+        if (!$shop) {
+            $candidateId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+            if ($candidateId !== null && $candidateId !== '') {
+                $shop = Shop::find($candidateId);
+            }
+        }
+
+        // 3) Sinon, trouver une boutique par tenant_id (shops.tenant_id = user.tenant_id)
         if (!$shop && $user->tenant_id) {
             $shop = Shop::where('tenant_id', $user->tenant_id)->first();
         }
 
-        // 3) ROOT ou utilisateur avec module e-commerce sans boutique : première boutique (prévisualisation)
+        // 4) ROOT ou utilisateur avec module e-commerce sans boutique : première boutique (prévisualisation)
         if (!$shop && ($isRoot || ($userModel && $userModel->hasPermission('module.ecommerce')))) {
             $shop = Shop::orderBy('id')->first();
         }
@@ -88,7 +113,7 @@ class StorefrontController
 
     private function getShopId(Request $request): string
     {
-        return (string) $this->resolveShop($request)->id;
+        return (string) $this->getShop($request)->id;
     }
 
     /**
@@ -120,7 +145,7 @@ class StorefrontController
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $shop = $this->resolveShop($request);
+        $shop = $this->getShop($request);
         $shopId = (string) $shop->id;
 
         // La prévisualisation est autorisée pour tout utilisateur ayant accès au storefront (même si la boutique n'est pas "en ligne")
@@ -228,7 +253,7 @@ class StorefrontController
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);
 
-        return Inertia::render('Ecommerce/Storefront', [
+        $payload = [
             'shop' => [
                 'id' => $shop->id,
                 'name' => $shop->name,
@@ -244,7 +269,40 @@ class StorefrontController
                 'number' => $storefrontConfig['whatsapp_number'] ?? null,
                 'enabled' => (bool) ($storefrontConfig['whatsapp_support_enabled'] ?? false),
             ],
-        ]);
+        ];
+        // ROOT : liste des boutiques pour le sélecteur (éviter d'afficher la boutique d'un autre par défaut)
+        $userModel = $user ? \App\Models\User::find($user->id) : null;
+        if ($userModel && $userModel->isRoot()) {
+            $payload['storefrontShops'] = Shop::orderBy('name')->get(['id', 'name'])->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->values()->toArray();
+            $payload['currentStorefrontShopId'] = (int) $request->session()->get('current_storefront_shop_id', $shop->id);
+        }
+
+        return Inertia::render('Ecommerce/Storefront', $payload);
+    }
+
+    /**
+     * Change la boutique affichée sur le storefront (ROOT uniquement). Enregistre en session et redirige.
+     */
+    public function switchShop(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $user = $request->user();
+        if (!$user) {
+            abort(403);
+        }
+        $userModel = \App\Models\User::find($user->id);
+        if (!$userModel || !$userModel->isRoot()) {
+            abort(403, 'Réservé à l\'administrateur.');
+        }
+        $shopId = (int) $request->input('shop_id');
+        if ($shopId < 1) {
+            return redirect()->route('ecommerce.storefront.index')->with('error', 'Boutique invalide.');
+        }
+        $shop = Shop::find($shopId);
+        if (!$shop) {
+            return redirect()->route('ecommerce.storefront.index')->with('error', 'Boutique introuvable.');
+        }
+        $request->session()->put('current_storefront_shop_id', $shop->id);
+        return redirect()->route('ecommerce.storefront.index')->with('success', 'Vitrine : '.$shop->name);
     }
 
     public function cms(Request $request): Response

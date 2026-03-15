@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, usePage, router } from '@inertiajs/react';
 import { ShieldCheck, Truck, Clock, Headphones, ArrowRight, Sparkles, Facebook, Instagram, Youtube } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
 import { CartProvider } from '@/Contexts/CartContext';
 import ShoppingCart from '@/Components/Ecommerce/ShoppingCart';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
+import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 
 function shouldShowPageInNav(page) {
     if (!page) return false;
@@ -22,12 +23,12 @@ function shouldShowPageInNav(page) {
     return !isCgv && !isPrivacy;
 }
 
-function ProductCardSimple({ product, currency }) {
+function ProductCardSimple({ product, currency, productUrl }) {
     const price = formatCurrency(product.price_amount ?? 0, product.price_currency || currency);
 
     return (
         <Link
-            href={route('ecommerce.storefront.product', product.id)}
+            href={productUrl(product.id)}
             className="group block h-full"
         >
             <div className="h-full bg-white dark:bg-slate-900/80 rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-700/80 hover:border-[var(--sf-primary)]/80 dark:hover:border-[var(--sf-primary)] hover:shadow-xl hover:shadow-[var(--sf-primary)]/10 transition-all duration-300">
@@ -69,7 +70,8 @@ function ProductCardSimple({ product, currency }) {
     );
 }
 
-export default function EcommerceStorefront({ shop, config, featuredProducts = [], newArrivals = [], banners = [], cmsPages = [] }) {
+export default function EcommerceStorefront({ shop, config, featuredProducts = [], newArrivals = [], banners = [], cmsPages = [], storefrontShops = [], currentStorefrontShopId }) {
+    const links = useStorefrontLinks();
     const { shop: sharedShop } = usePage().props;
     const currency = shop?.currency || sharedShop?.currency || 'CDF';
     const logoUrl = shop?.logo_url || sharedShop?.logo_url || null;
@@ -108,7 +110,7 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
             <header className="sticky top-0 z-50 border-b border-slate-200/70 dark:border-slate-800 bg-white/75 dark:bg-slate-950/60 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-950/50">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                     <Link
-                        href={route('ecommerce.storefront.index')}
+                        href={links.index()}
                         className="flex items-center gap-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--sf-primary)]/30"
                     >
                         {logoUrl ? (
@@ -132,25 +134,36 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
                             {navPages.map((p) => (
                                 <Link
                                     key={p.id}
-                                    href={route('ecommerce.storefront.page', p.slug)}
+                                    href={links.page(p.slug)}
                                     className="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors"
                                 >
                                     {p.title}
                                 </Link>
                             ))}
                             <Link
-                                href={route('ecommerce.storefront.blog')}
+                                href={links.blog()}
                                 className="px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors"
                             >
                                 Blog
                             </Link>
                         </nav>
                         <Link
-                            href={route('ecommerce.storefront.catalog')}
+                            href={links.catalog()}
                             className="hidden sm:inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-[var(--sf-primary)] bg-white/60 dark:bg-slate-950/30 border border-slate-200/70 dark:border-slate-800 hover:border-[var(--sf-primary)] transition-colors"
                         >
                             Catalogue
                         </Link>
+                        {storefrontShops?.length > 1 && (
+                            <select
+                                value={currentStorefrontShopId ?? shop?.id}
+                                onChange={(e) => { const v = e.target.value; if (v) router.post(route('ecommerce.storefront.switch-shop'), { shop_id: v }); }}
+                                className="text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 py-1.5 pl-2 pr-8 focus:ring-[var(--sf-primary)]"
+                            >
+                                {storefrontShops.map((s) => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                            </select>
+                        )}
                         <ShoppingCart
                             buttonClassName="relative inline-flex items-center justify-center h-10 w-10 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-[var(--sf-primary-hover)] transition-colors shadow-sm shadow-slate-900/10 dark:shadow-none ring-1 ring-slate-900/5 dark:ring-white/10"
                             storefrontLinks
@@ -205,14 +218,14 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
 
                                 <div className="flex flex-wrap gap-3 pt-2">
                                     <Link
-                                        href={route('ecommerce.storefront.catalog')}
+                                        href={links.catalog()}
                                         className="inline-flex items-center justify-center px-6 py-3 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold shadow-lg shadow-slate-900/10 dark:shadow-none hover:bg-[var(--sf-primary-hover)] transition-colors"
                                     >
                                         {primaryLabel}
                                         <ArrowRight className="h-4 w-4 ml-2" />
                                     </Link>
                                     <Link
-                                        href={route('ecommerce.storefront.catalog')}
+                                        href={links.catalog()}
                                         className="inline-flex items-center justify-center px-6 py-3 rounded-2xl bg-white/80 dark:bg-slate-950/30 border border-slate-200/70 dark:border-slate-800 text-sm font-semibold text-slate-800 dark:text-slate-100 hover:border-[var(--sf-primary)] hover:text-[var(--sf-primary)] transition-colors backdrop-blur"
                                     >
                                         {secondaryLabel}
@@ -258,7 +271,7 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
                                     <div className="relative rounded-[2rem] overflow-hidden border border-white/40 dark:border-slate-800 bg-slate-900 shadow-2xl shadow-slate-900/20 aspect-[4/3] min-h-[260px]">
                                         {banners.length > 0 && banners[0].image_url ? (
                                             <Link
-                                                href={banners[0].link || route('ecommerce.storefront.catalog')}
+                                                href={banners[0].link || links.catalog()}
                                                 className="block w-full h-full"
                                             >
                                                 <img
@@ -317,7 +330,7 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
                                 </p>
                                 <div className="pt-2">
                                     <Link
-                                        href={promotionBanner.link || route('ecommerce.storefront.catalog')}
+                                        href={promotionBanner.link || links.catalog()}
                                         className="inline-flex items-center px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold hover:bg-[var(--sf-primary-hover)] transition-colors"
                                     >
                                         Voir l&apos;offre
@@ -327,7 +340,7 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
                             </div>
                             {promotionBanner.image_url && (
                                 <Link
-                                    href={promotionBanner.link || route('ecommerce.storefront.catalog')}
+                                    href={promotionBanner.link || links.catalog()}
                                     className="flex-shrink-0 w-full max-w-sm rounded-2xl overflow-hidden border border-[var(--sf-primary)]/70 shadow-md shadow-[var(--sf-primary)]/10"
                                 >
                                     <img
@@ -396,7 +409,7 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
                                 </p>
                             </div>
                             <Link
-                                href={route('ecommerce.storefront.catalog')}
+                                href={links.catalog()}
                                 className="hidden sm:inline-flex items-center text-xs font-medium text-[var(--sf-primary)] hover:text-[var(--sf-secondary)]"
                             >
                                 Voir tout le catalogue
@@ -412,7 +425,7 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
                         ) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
                                 {featuredProducts.map((p) => (
-                                    <ProductCardSimple key={p.id} product={p} currency={currency} />
+                                    <ProductCardSimple key={p.id} product={p} currency={currency} productUrl={links.product} />
                                 ))}
                             </div>
                         )}
@@ -441,7 +454,7 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
                         ) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
                                 {newArrivals.map((p) => (
-                                    <ProductCardSimple key={p.id} product={p} currency={currency} />
+                                    <ProductCardSimple key={p.id} product={p} currency={currency} productUrl={links.product} />
                                 ))}
                             </div>
                         )}
@@ -551,7 +564,7 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
                         <div className="grid gap-10 lg:grid-cols-12">
                             {/* Brand */}
                             <div className="lg:col-span-4">
-                                <Link href={route('ecommerce.storefront.index')} className="inline-flex items-center gap-3">
+                                <Link href={links.index()} className="inline-flex items-center gap-3">
                                     <span className="inline-flex items-center justify-center h-11 w-11 rounded-2xl bg-gradient-to-br from-[var(--sf-primary)] to-[var(--sf-secondary)] text-white font-bold text-sm shadow-lg shadow-[var(--sf-primary)]/20">
                                         {shop?.name?.charAt(0) || 'S'}
                                     </span>
@@ -567,13 +580,13 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
                                 </p>
                                 <div className="mt-5 flex flex-wrap gap-2">
                                     <Link
-                                        href={route('ecommerce.storefront.catalog')}
+                                        href={links.catalog()}
                                         className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold hover:bg-[var(--sf-primary-hover)] transition-colors"
                                     >
                                         Voir le catalogue
                                     </Link>
                                     <Link
-                                        href={route('ecommerce.storefront.cart')}
+                                        href={links.cart()}
                                         className="inline-flex items-center justify-center px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-sm font-semibold hover:border-[var(--sf-primary)] hover:text-[var(--sf-primary)] transition-colors"
                                     >
                                         Panier
@@ -591,7 +604,7 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
                                         <ul className="mt-4 space-y-2">
                                             <li>
                                                 <Link
-                                                    href={route('ecommerce.storefront.catalog')}
+                                                    href={links.catalog()}
                                                     className="text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-[var(--sf-primary)] transition-colors"
                                                 >
                                                     Catalogue
@@ -599,7 +612,7 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
                                             </li>
                                             <li>
                                                 <Link
-                                                    href={route('ecommerce.storefront.cart')}
+                                                    href={links.cart()}
                                                     className="text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-[var(--sf-primary)] transition-colors"
                                                 >
                                                     Panier
@@ -617,7 +630,7 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
                                                 {cmsPages.map((p) => (
                                                     <li key={p.id}>
                                                         <Link
-                                                            href={route('ecommerce.storefront.page', p.slug)}
+                                                            href={links.page(p.slug)}
                                                             className="text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-[var(--sf-primary)] transition-colors"
                                                         >
                                                             {p.title}

@@ -1,8 +1,10 @@
 import { Head, Link } from '@inertiajs/react';
 import { ShoppingCart, ArrowLeft, MapPin, Phone, Mail, Clock } from 'lucide-react';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
+import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 
 export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {} }) {
+    const links = useStorefrontLinks();
     const isContact = page?.template === 'contact';
     const meta = page?.metadata && typeof page.metadata === 'object' ? page.metadata : {};
     const hasContactInfo =
@@ -23,7 +25,7 @@ export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {
                 <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <Link
-                            href={route('ecommerce.storefront.index')}
+                            href={links.index()}
                             className="p-2 -ml-2 rounded-2xl text-slate-500 hover:text-amber-700 dark:hover:text-amber-400 hover:bg-amber-50/80 dark:hover:bg-amber-950/25 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/30"
                         >
                             <ArrowLeft className="h-5 w-5" />
@@ -47,7 +49,7 @@ export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {
                                 {cmsPages.slice(0, 4).map((p) => (
                                     <Link
                                         key={p.id}
-                                        href={route('ecommerce.storefront.page', p.slug)}
+                                        href={links.page(p.slug)}
                                         className={`px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
                                             page?.slug === p.slug
                                                 ? 'text-amber-700 dark:text-amber-400 bg-amber-50/80 dark:bg-amber-950/25'
@@ -60,7 +62,7 @@ export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {
                             </nav>
                         )}
                         <Link
-                            href={route('ecommerce.storefront.cart')}
+                            href={links.cart()}
                             className="relative inline-flex justify-center h-9 w-9 rounded-2xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-amber-600 dark:hover:bg-amber-500 transition-colors shadow-sm shadow-slate-900/10 dark:shadow-none ring-1 ring-slate-900/5 dark:ring-white/10"
                         >
                             <ShoppingCart className="h-4 w-4" />
@@ -162,7 +164,7 @@ export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {
                 {/* Back link */}
                 <div className="mt-12 pt-8 border-t border-slate-200 dark:border-slate-800">
                     <Link
-                        href={route('ecommerce.storefront.index')}
+                        href={links.index()}
                         className="inline-flex items-center gap-2 text-sm font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
                     >
                         <ArrowLeft className="h-4 w-4" /> Retour à l&apos;accueil
@@ -176,7 +178,7 @@ export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {
                     <div className="grid gap-10 lg:grid-cols-12">
                         {/* Brand */}
                         <div className="lg:col-span-4">
-                            <Link href={route('ecommerce.storefront.index')} className="inline-flex items-center gap-3">
+                            <Link href={links.index()} className="inline-flex items-center gap-3">
                                 {shop?.logo_url ? (
                                     <span className="inline-flex items-center justify-center h-11 w-11 rounded-2xl bg-white shadow-lg shadow-slate-900/10 ring-1 ring-slate-200 overflow-hidden">
                                         <img src={shop.logo_url} alt={shop?.name || 'Logo'} className="w-full h-full object-contain" />
@@ -196,13 +198,13 @@ export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {
                             </p>
                             <div className="mt-5 flex flex-wrap gap-2">
                                 <Link
-                                    href={route('ecommerce.storefront.catalog')}
+                                    href={links.catalog()}
                                     className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-sm font-semibold hover:bg-amber-600 dark:hover:bg-amber-500 transition-colors"
                                 >
                                     Catalogue
                                 </Link>
                                 <Link
-                                    href={route('ecommerce.storefront.cart')}
+                                    href={links.cart()}
                                     className="inline-flex items-center justify-center px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-sm font-semibold hover:border-amber-400 hover:text-amber-700 dark:hover:text-amber-400 transition-colors"
                                 >
                                     Panier
@@ -220,7 +222,7 @@ export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {
                                     <ul className="mt-4 space-y-2">
                                         <li>
                                             <Link
-                                                href={route('ecommerce.storefront.catalog')}
+                                                href={links.catalog()}
                                                 className="text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
                                             >
                                                 Catalogue
@@ -228,7 +230,7 @@ export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {
                                         </li>
                                         <li>
                                             <Link
-                                                href={route('ecommerce.storefront.cart')}
+                                                href={links.cart()}
                                                 className="text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
                                             >
                                                 Panier
@@ -246,7 +248,7 @@ export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {
                                             {cmsPages.map((p) => (
                                                 <li key={p.id}>
                                                     <Link
-                                                        href={route('ecommerce.storefront.page', p.slug)}
+                                                        href={links.page(p.slug)}
                                                         className="text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
                                                     >
                                                         {p.title}
