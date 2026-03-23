@@ -27,6 +27,7 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Reader\Csv;
+use Src\Application\Billing\Services\FeatureLimitService;
 
 /**
  * Contrôleur Produits - Module Quincaillerie.
@@ -66,7 +67,8 @@ class ProductController
         private ProductRepositoryInterface $productRepository,
         private CategoryRepositoryInterface $categoryRepository,
         private ProductImageService $imageService,
-        private DepotFilterService $depotFilterService
+        private DepotFilterService $depotFilterService,
+        private FeatureLimitService $featureLimitService
     ) {}
 
     public function generateCode(Request $request): JsonResponse
@@ -235,6 +237,9 @@ class ProductController
             if ($user === null) {
                 abort(403, 'User not authenticated.');
             }
+            $this->featureLimitService->assertCanCreateProduct(
+                $user->tenant_id !== null ? (string) $user->tenant_id : null
+            );
             $shopId = $this->getShopId($request);
             if (!$shopId) {
                 return redirect()->back()->withErrors(['message' => 'Veuillez sélectionner un dépôt en haut.']);

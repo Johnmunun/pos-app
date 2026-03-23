@@ -38,7 +38,8 @@ export default function ProductCard({ product, viewMode = 'grid', onAddToCart, c
         </span>
     );
 
-    const hasPromotion = !!product.has_promotion || (product.discount_percent && Number(product.discount_percent) > 0);
+    const promotionPercent = Number(product.promotion_percent ?? product.discount_percent ?? 0);
+    const hasPromotion = !!product.has_promotion || promotionPercent > 0;
 
     // List view
     if (viewMode === 'list') {
@@ -82,8 +83,7 @@ export default function ProductCard({ product, viewMode = 'grid', onAddToCart, c
                                     {hasPromotion && (
                                         <div className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 px-2 py-0.5 text-[11px] font-semibold">
                                             <Percent className="h-3 w-3" />
-                                            Promo
-                                            {product.discount_percent ? ` -${Number(product.discount_percent)}%` : ''}
+                                            Promo{promotionPercent > 0 ? ` -${promotionPercent}%` : ''}
                                         </div>
                                     )}
                                 </div>
@@ -157,8 +157,7 @@ export default function ProductCard({ product, viewMode = 'grid', onAddToCart, c
                             {hasPromotion && (
                                 <div className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 px-2 py-0.5 text-[11px] font-semibold">
                                     <Percent className="h-3 w-3" />
-                                    Promo
-                                    {product.discount_percent ? ` -${Number(product.discount_percent)}%` : ''}
+                                    Promo{promotionPercent > 0 ? ` -${promotionPercent}%` : ''}
                                 </div>
                             )}
                         </div>

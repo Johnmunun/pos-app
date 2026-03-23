@@ -104,7 +104,17 @@ class EloquentProductRepository implements ProductRepositoryInterface
 
     public function search(string $shopId, string $query, array $filters = []): array
     {
-        $q = ProductModel::where('shop_id', $shopId);
+        $q = ProductModel::query();
+        if (!empty($filters['shop_ids']) && is_array($filters['shop_ids'])) {
+            $shopIds = array_values(array_filter(array_map('strval', $filters['shop_ids']), fn ($id) => $id !== ''));
+            if (!empty($shopIds)) {
+                $q->whereIn('shop_id', $shopIds);
+            } else {
+                $q->where('shop_id', $shopId);
+            }
+        } else {
+            $q->where('shop_id', $shopId);
+        }
         if ($query !== '') {
             $q->where(function ($qb) use ($query) {
                 $qb->where('name', 'like', '%' . $query . '%')

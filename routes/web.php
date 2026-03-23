@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PwaIconController;
 use Src\Infrastructure\Admin\Http\Controllers\AdminController;
 use Src\Infrastructure\Settings\Http\Controllers\AppBrandingController;
+use Src\Infrastructure\Billing\Http\Controllers\BillingAdminController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -267,6 +268,25 @@ Route::middleware(['auth', 'verified', 'root', 'permission'])->group(function ()
     // Actions sur utilisateurs
     Route::post('/admin/user/{id}/toggle', [AdminController::class, 'toggleUser'])
         ->name('admin.users.update');
+
+    Route::get('/admin/billing/plans', [BillingAdminController::class, 'index'])
+        ->middleware('permission:admin.billing.manage')
+        ->name('admin.billing.plans.index');
+    Route::put('/admin/billing/plans/{id}', [BillingAdminController::class, 'updatePlan'])
+        ->middleware('permission:admin.billing.manage')
+        ->name('admin.billing.plans.update');
+    Route::post('/admin/billing/subscriptions/assign', [BillingAdminController::class, 'assignTenantPlan'])
+        ->middleware('permission:admin.billing.manage')
+        ->name('admin.billing.subscriptions.assign');
+    Route::post('/admin/billing/overrides/upsert', [BillingAdminController::class, 'upsertOverride'])
+        ->middleware('permission:admin.billing.manage')
+        ->name('admin.billing.overrides.upsert');
+    Route::delete('/admin/billing/overrides/{id}', [BillingAdminController::class, 'deleteOverride'])
+        ->middleware('permission:admin.billing.manage')
+        ->name('admin.billing.overrides.delete');
+    Route::get('/admin/billing/compliance/export-csv', [BillingAdminController::class, 'exportComplianceCsv'])
+        ->middleware('permission:admin.billing.manage')
+        ->name('admin.billing.compliance.export-csv');
     
     // Gestion complète des utilisateurs
     Route::prefix('admin/users')->name('admin.users.')->group(function () {

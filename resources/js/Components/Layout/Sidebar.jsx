@@ -64,6 +64,8 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
     const page = usePage();
     const url = currentUrl || page.url;
     const appLogoUrl = page.props?.appLogoUrl || null;
+    const featureFlags = page.props?.auth?.featureFlags || {};
+    const billingSummary = page.props?.auth?.billingSummary || null;
     
     // Fonction pour vérifier si une route est active
     const isActiveRoute = (href) => {
@@ -350,11 +352,12 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
             key: 'settings',
             label: 'Paramètres',
             icon: Settings,
-            permissions: ['settings.view', 'settings.update', 'settings.branding', 'settings.ui', 'settings.currency.view', 'settings.settings.currency.view'],
+            permissions: ['settings.view', 'settings.update', 'settings.branding', 'settings.ui', 'settings.currency.view', 'settings.settings.currency.view', 'admin.billing.manage'],
             items: [
                 { label: 'Paramètres boutique', href: '/settings', permission: 'settings.view', icon: Building },
                 { label: 'Gestion des devises', href: '/settings/currencies', permission: 'settings.currency.view|settings.settings.currency.view', icon: DollarSign },
                 { label: 'Branding (logo, couleurs)', href: '/admin/branding', permission: 'settings.branding', icon: Palette },
+                { label: 'Plans & Limitations', href: '/admin/billing/plans', permission: 'admin.billing.manage', icon: CreditCard },
                 { label: 'Préférences UI', href: '#', permission: 'settings.ui', icon: Palette },
                 { label: 'Referral / Parrainage', href: '/referrals/settings', permission: 'referral.settings.view|referral.settings.manage', icon: Users },
             ]
@@ -396,6 +399,23 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
         return hasVisibleItem(group.permissions);
     });
 
+    const filterItemsByFeatures = (group) => {
+        if (!group || !Array.isArray(group.items)) return group;
+        if (group.key !== 'ecommerce') return group;
+        return {
+            ...group,
+            items: group.items.filter((item) => {
+                if (item?.href === '/ecommerce/payments' && featureFlags.api_payments === false) {
+                    return false;
+                }
+                if (item?.href === '/ecommerce/reports' && featureFlags.analytics_advanced === false) {
+                    return false;
+                }
+                return true;
+            }),
+        };
+    };
+
     return (
         <>
             {/* Sidebar Desktop - Fixe */}
@@ -421,10 +441,25 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                         </Link>
                     </div>
 
+                    {billingSummary && !isRoot && (
+                        <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3">
+                            <p className="text-xs text-amber-700 dark:text-amber-300 font-semibold">
+                                Plan: {billingSummary.plan_name}
+                            </p>
+                            <p className="text-[11px] text-amber-700/90 dark:text-amber-300/90 mt-1">
+                                Produits: {billingSummary.products_used}/{billingSummary.products_limit ?? 'illimite'}
+                            </p>
+                            <p className="text-[11px] text-amber-700/90 dark:text-amber-300/90">
+                                Utilisateurs: {billingSummary.users_used}/{billingSummary.users_limit ?? 'illimite'}
+                            </p>
+                        </div>
+                    )}
+
                     {/* Navigation Groups */}
                     <nav data-onboarding="module-sidebar-nav" className="flex flex-1 flex-col" aria-label="Menu principal">
                         <ul role="list" className="flex flex-1 flex-col gap-y-7">
                             {visibleGroups.map((group) => {
+                                group = filterItemsByFeatures(group);
                                 const isExpanded = expandedGroups[group.key] ?? true;
                                 // Pour Pharmacy, Hardware, Global Commerce et E-commerce : si l'utilisateur a accès au module, afficher tous les items
                                 const hasModuleAccess = (group.key === 'pharmacy' && hasPharmacyAccess()) || 
@@ -531,10 +566,25 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                         </button>
                     </div>
 
+                    {billingSummary && !isRoot && (
+                        <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3">
+                            <p className="text-xs text-amber-700 dark:text-amber-300 font-semibold">
+                                Plan: {billingSummary.plan_name}
+                            </p>
+                            <p className="text-[11px] text-amber-700/90 dark:text-amber-300/90 mt-1">
+                                Produits: {billingSummary.products_used}/{billingSummary.products_limit ?? 'illimite'}
+                            </p>
+                            <p className="text-[11px] text-amber-700/90 dark:text-amber-300/90">
+                                Utilisateurs: {billingSummary.users_used}/{billingSummary.users_limit ?? 'illimite'}
+                            </p>
+                        </div>
+                    )}
+
                     {/* Navigation Groups */}
                     <nav data-onboarding="module-sidebar-nav" className="flex flex-1 flex-col" aria-label="Menu principal">
                         <ul role="list" className="flex flex-1 flex-col gap-y-7">
                             {visibleGroups.map((group) => {
+                                group = filterItemsByFeatures(group);
                                 // Pour Pharmacy, Hardware, Global Commerce et E-commerce : si l'utilisateur a accès au module, afficher tous les items
                                 const hasModuleAccess = (group.key === 'pharmacy' && hasPharmacyAccess()) || 
                                                        (group.key === 'hardware' && hasHardwareAccess()) ||

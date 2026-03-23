@@ -19,6 +19,7 @@ use Src\Domains\User\UseCases\AssignUserRoleUseCase;
 use Src\Domains\User\UseCases\ImpersonateSellerUseCase;
 use Src\Domains\User\Services\ModulePermissionService;
 use Illuminate\Support\Facades\Hash;
+use Src\Application\Billing\Services\FeatureLimitService;
 
 /**
  * Controller: SellerController
@@ -32,7 +33,8 @@ class SellerController extends Controller
         private readonly CreateSellerUseCase $createSellerUseCase,
         private readonly AssignUserRoleUseCase $assignRoleUseCase,
         private readonly ImpersonateSellerUseCase $impersonateSellerUseCase,
-        private readonly ModulePermissionService $modulePermissionService
+        private readonly ModulePermissionService $modulePermissionService,
+        private readonly FeatureLimitService $featureLimitService
     ) {
     }
 
@@ -195,6 +197,8 @@ class SellerController extends Controller
         if (!$user->hasPermission('pharmacy.seller.create')) {
             abort(403, 'Vous n\'avez pas la permission de créer des vendeurs.');
         }
+
+        $this->featureLimitService->assertCanCreateUser((string) $tenantId);
 
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',

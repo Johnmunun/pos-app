@@ -25,6 +25,8 @@ function shouldShowPageInNav(page) {
 
 function ProductCardSimple({ product, currency, productUrl }) {
     const price = formatCurrency(product.price_amount ?? 0, product.price_currency || currency);
+    const promotionPercent = Number(product.promotion_percent ?? product.discount_percent ?? 0);
+    const hasPromotion = !!product.has_promotion || promotionPercent > 0;
 
     return (
         <Link
@@ -48,6 +50,11 @@ function ProductCardSimple({ product, currency, productUrl }) {
                     {product.is_new && (
                         <span className="absolute left-3 top-3 inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
                             <Sparkles className="h-3 w-3" /> Nouveau
+                        </span>
+                    )}
+                    {hasPromotion && (
+                        <span className="absolute right-3 top-3 inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-full bg-amber-500 text-white shadow-lg shadow-amber-500/30">
+                            Promo{promotionPercent > 0 ? ` -${promotionPercent}%` : ''}
                         </span>
                     )}
                 </div>

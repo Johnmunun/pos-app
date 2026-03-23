@@ -40,7 +40,7 @@ export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {
                                     {shop?.name?.charAt(0) || 'S'}
                                 </span>
                             )}
-                            <span className="font-semibold text-sm truncate">{shop?.name || 'Boutique'}</span>
+                            <span className="font-semibold text-sm text-slate-900 dark:text-white truncate">{shop?.name || 'Boutique'}</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-2 sm:gap-3">

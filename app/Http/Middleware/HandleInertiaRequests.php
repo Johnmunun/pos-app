@@ -8,6 +8,7 @@ use Inertia\Middleware;
 use Symfony\Component\HttpFoundation\Response;
 use Src\Application\Settings\UseCases\GetStoreSettingsUseCase;
 use Src\Infrastructure\Settings\Services\StoreLogoService;
+use Src\Application\Billing\Services\FeatureLimitService;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -190,6 +191,86 @@ class HandleInertiaRequests extends Middleware
             }
         }
 
+        $featureFlags = [
+            'api_payments' => true,
+            'analytics_advanced' => true,
+        ];
+        $billingSummary = null;
+        if ($user && $user->tenant_id) {
+            try {
+                /** @var FeatureLimitService $featureLimitService */
+                $featureLimitService = app(FeatureLimitService::class);
+                $featureFlags['api_payments'] = $featureLimitService->isFeatureEnabled(
+                    (string) $user->tenant_id,
+                    'api.payments'
+                );
+                $featureFlags['analytics_advanced'] = $featureLimitService->isFeatureEnabled(
+                    (string) $user->tenant_id,
+                    'analytics.advanced'
+                );
+            } catch (\Throwable $e) {
+                Log::debug('Feature flags fallback', ['error' => $e->getMessage()]);
+            }
+
+            try {
+                if (
+                    \Illuminate\Support\Facades\Schema::hasTable('billing_plans')
+                    && \Illuminate\Support\Facades\Schema::hasTable('tenant_plan_subscriptions')
+                ) {
+                    $subscription = \Illuminate\Support\Facades\DB::table('tenant_plan_subscriptions as tps')
+                        ->join('billing_plans as bp', 'bp.id', '=', 'tps.billing_plan_id')
+                        ->where('tps.tenant_id', (string) $user->tenant_id)
+                        ->where('tps.status', 'active')
+                        ->select(['bp.name as plan_name'])
+                        ->orderByDesc('tps.id')
+                        ->first();
+
+                    $productsConfig = $featureLimitService->getTenantFeatureConfig((string) $user->tenant_id, 'products.max');
+                    $usersConfig = $featureLimitService->getTenantFeatureConfig((string) $user->tenant_id, 'users.max');
+
+                    $usersCount = (int) \Illuminate\Support\Facades\DB::table('users')
+                        ->where('tenant_id', (string) $user->tenant_id)
+                        ->where('type', '!=', 'ROOT')
+                        ->count();
+
+                    $shopIds = [];
+                    if (\Illuminate\Support\Facades\Schema::hasTable('shops')) {
+                        $shopIds = \Illuminate\Support\Facades\DB::table('shops')
+                            ->where('tenant_id', (string) $user->tenant_id)
+                            ->pluck('id')
+                            ->toArray();
+                    }
+
+                    $productsCount = 0;
+                    if (\Illuminate\Support\Facades\Schema::hasTable('gc_products')) {
+                        $productsCount += !empty($shopIds)
+                            ? \Illuminate\Support\Facades\DB::table('gc_products')->whereIn('shop_id', $shopIds)->count()
+                            : \Illuminate\Support\Facades\DB::table('gc_products')->where('shop_id', (string) $user->tenant_id)->count();
+                    }
+                    if (\Illuminate\Support\Facades\Schema::hasTable('pharmacy_products')) {
+                        $productsCount += !empty($shopIds)
+                            ? \Illuminate\Support\Facades\DB::table('pharmacy_products')->whereIn('shop_id', $shopIds)->count()
+                            : \Illuminate\Support\Facades\DB::table('pharmacy_products')->where('shop_id', (string) $user->tenant_id)->count();
+                    }
+                    if (\Illuminate\Support\Facades\Schema::hasTable('quincaillerie_products')) {
+                        $productsCount += !empty($shopIds)
+                            ? \Illuminate\Support\Facades\DB::table('quincaillerie_products')->whereIn('shop_id', $shopIds)->count()
+                            : \Illuminate\Support\Facades\DB::table('quincaillerie_products')->where('shop_id', (string) $user->tenant_id)->count();
+                    }
+
+                    $billingSummary = [
+                        'plan_name' => $subscription?->plan_name ?? 'Plan par defaut',
+                        'products_used' => (int) $productsCount,
+                        'products_limit' => $productsConfig['enabled'] ? $productsConfig['limit'] : 0,
+                        'users_used' => (int) $usersCount,
+                        'users_limit' => $usersConfig['enabled'] ? $usersConfig['limit'] : 0,
+                    ];
+                }
+            } catch (\Throwable $e) {
+                Log::debug('Billing summary fallback', ['error' => $e->getMessage()]);
+            }
+        }
+
         // Thème storefront (couleurs primaire/secondaire) — routes storefront ou vitrine publique (sous-domaine)
         $storefrontTheme = null;
         $isStorefrontPath = str_starts_with($request->path(), 'ecommerce/storefront') || $request->attributes->get('storefront_shop') !== null;
@@ -255,6 +336,8 @@ class HandleInertiaRequests extends Middleware
                 'depots' => $depots ?? [],
                 'isImpersonating' => $request->session()->get('impersonate.impersonating', false),
                 'originalUserId' => $request->session()->get('impersonate.original_user_id'),
+                'featureFlags' => $featureFlags,
+                'billingSummary' => $billingSummary,
             ],
             'shop' => [
                 'currency' => $shopCurrency,

@@ -15,6 +15,7 @@ use Src\Application\GlobalCommerce\Inventory\DTO\UpdateProductDTO;
 use Src\Application\GlobalCommerce\Inventory\UseCases\CreateProductUseCase;
 use Src\Application\GlobalCommerce\Inventory\UseCases\UpdateProductUseCase;
 use Src\Application\GlobalCommerce\Inventory\UseCases\DeleteProductUseCase;
+use Src\Application\Billing\Services\FeatureLimitService;
 
 class ProductController
 {
@@ -25,6 +26,7 @@ class ProductController
         private readonly CreateProductUseCase $createProductUseCase,
         private readonly UpdateProductUseCase $updateProductUseCase,
         private readonly DeleteProductUseCase $deleteProductUseCase,
+        private readonly FeatureLimitService $featureLimitService,
     ) {}
 
     private function getShopId(Request $request): string
@@ -141,6 +143,10 @@ class ProductController
                 && !$user->hasPermission('module.ecommerce'))) {
             abort(403, 'Vous n\'avez pas la permission de créer des produits.');
         }
+
+        $this->featureLimitService->assertCanCreateProduct(
+            $user->tenant_id !== null ? (string) $user->tenant_id : null
+        );
 
         $shopId = $this->getShopId($request);
         $validated = $request->validate([

@@ -19,6 +19,7 @@ export default function ModuleOnboarding({ moduleName }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [targetRect, setTargetRect] = useState(null);
   const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
+  const [animateIn, setAnimateIn] = useState(false);
   const overlayRef = useRef(null);
   const popoverRef = useRef(null);
 
@@ -121,6 +122,13 @@ export default function ModuleOnboarding({ moduleName }) {
     setPopoverPosition({ top, left });
   }, [targetRect]);
 
+  useEffect(() => {
+    if (loading || status === STATUS_COMPLETED || !steps.length) return;
+    setAnimateIn(false);
+    const id = requestAnimationFrame(() => setAnimateIn(true));
+    return () => cancelAnimationFrame(id);
+  }, [currentIndex, loading, status, steps.length]);
+
   const completeStep = useCallback(async (stepId) => {
     try {
       await axios.post(route('module-onboarding.steps.complete', { module: moduleName }), { step_id: stepId });
@@ -192,7 +200,7 @@ export default function ModuleOnboarding({ moduleName }) {
       {targetRect && (
         <>
           <div
-            className="absolute rounded-xl ring-2 ring-amber-400/80 ring-offset-4 ring-offset-transparent bg-transparent pointer-events-none shadow-[0_0_24px_rgba(251,191,36,0.25)]"
+            className="absolute rounded-xl ring-2 ring-amber-400/80 ring-offset-4 ring-offset-transparent bg-transparent pointer-events-none shadow-[0_0_24px_rgba(251,191,36,0.25)] motion-safe:animate-pulse"
             style={{
               top: targetRect.top - 6,
               left: targetRect.left - 6,
@@ -208,7 +216,7 @@ export default function ModuleOnboarding({ moduleName }) {
   const popover = (
     <div
       ref={popoverRef}
-      className="fixed z-[9999] w-[calc(100vw-2rem)] max-w-md pointer-events-auto overflow-hidden rounded-2xl border border-amber-200/50 dark:border-amber-500/30 bg-white dark:bg-gray-800 shadow-2xl shadow-amber-900/10 dark:shadow-black/40"
+      className={`fixed z-[9999] w-[calc(100vw-2rem)] max-w-md pointer-events-auto overflow-hidden rounded-2xl border border-amber-200/50 dark:border-amber-500/30 bg-white dark:bg-gray-800 shadow-2xl shadow-amber-900/10 dark:shadow-black/40 transition-all duration-200 ease-out ${animateIn ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-2 scale-[0.98]'}`}
       style={{
         top: popoverPosition.top,
         left: popoverPosition.left,
@@ -241,20 +249,20 @@ export default function ModuleOnboarding({ moduleName }) {
         <p id="onboarding-content" className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-5 pl-12">
           {step.content}
         </p>
-        <div className="flex flex-wrap items-center gap-2 pl-12">
+        <div className="flex flex-nowrap items-center gap-2 pl-12">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={handlePrev}
             disabled={currentIndex === 0}
-            className="gap-1.5 border-gray-300 dark:border-gray-600"
+            className="gap-1.5 border-gray-300 dark:border-gray-600 shrink-0 whitespace-nowrap"
           >
             <ChevronLeft className="h-4 w-4" />
             <span className="hidden xs:inline">Précédent</span>
           </Button>
           {!isLast ? (
-            <Button type="button" size="sm" onClick={handleNext} className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white shadow-sm">
+            <Button type="button" size="sm" onClick={handleNext} className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white shadow-sm shrink-0 whitespace-nowrap">
               <span>Suivant</span>
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -263,7 +271,7 @@ export default function ModuleOnboarding({ moduleName }) {
               type="button"
               size="sm"
               onClick={handleNext}
-              className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white shadow-sm"
+              className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white shadow-sm shrink-0 whitespace-nowrap"
             >
               <CheckCircle className="h-4 w-4" />
               Terminer
@@ -274,7 +282,7 @@ export default function ModuleOnboarding({ moduleName }) {
             variant="ghost"
             size="sm"
             onClick={handleJeComprends}
-            className="ml-auto text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xs"
+            className="ml-auto text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xs shrink-0 whitespace-nowrap"
           >
             Je comprends
           </Button>

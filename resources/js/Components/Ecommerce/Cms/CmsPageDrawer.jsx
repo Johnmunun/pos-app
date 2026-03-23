@@ -102,7 +102,7 @@ export default function CmsPageDrawer({ isOpen, onClose, page = null, media = []
                             value={data.title}
                             onChange={(e) => setData('title', e.target.value)}
                             required
-                            className="mt-1"
+                            className="mt-1 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                             placeholder="Ex : À propos, Contact, Conditions de vente"
                         />
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Le titre affiché en haut de la page et dans le menu.</p>
@@ -114,7 +114,7 @@ export default function CmsPageDrawer({ isOpen, onClose, page = null, media = []
                             id="slug"
                             value={data.slug}
                             onChange={(e) => setData('slug', e.target.value)}
-                            className="mt-1"
+                            className="mt-1 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                             placeholder="Ex : a-propos (généré automatiquement si vide)"
                         />
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Utilisé dans l&apos;URL : /page/a-propos</p>
@@ -125,7 +125,7 @@ export default function CmsPageDrawer({ isOpen, onClose, page = null, media = []
                         <select
                             value={data.template}
                             onChange={(e) => setData('template', e.target.value)}
-                            className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors"
+                            className="mt-1 flex h-9 w-full rounded-md border border-input bg-white dark:bg-slate-800 px-3 py-1 text-sm text-gray-900 dark:text-gray-100 shadow-sm transition-colors"
                         >
                             <option value="standard">Page standard (texte + image)</option>
                             <option value="contact">Page Contact (avec adresse, téléphone, email)</option>
@@ -148,7 +148,7 @@ export default function CmsPageDrawer({ isOpen, onClose, page = null, media = []
                                     value={data.metadata?.address ?? ''}
                                     onChange={(e) => updateMetadata('address', e.target.value)}
                                     placeholder="123 Avenue ..., Ville"
-                                    className="mt-1"
+                                    className="mt-1 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                                 />
                             </div>
                             <div>
@@ -158,7 +158,7 @@ export default function CmsPageDrawer({ isOpen, onClose, page = null, media = []
                                     value={data.metadata?.phone ?? ''}
                                     onChange={(e) => updateMetadata('phone', e.target.value)}
                                     placeholder="+243 XXX XXX XXX"
-                                    className="mt-1"
+                                    className="mt-1 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                                 />
                             </div>
                             <div>
@@ -169,7 +169,7 @@ export default function CmsPageDrawer({ isOpen, onClose, page = null, media = []
                                     value={data.metadata?.email ?? ''}
                                     onChange={(e) => updateMetadata('email', e.target.value)}
                                     placeholder="contact@votreboutique.com"
-                                    className="mt-1"
+                                    className="mt-1 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                                 />
                             </div>
                             <div>
@@ -179,7 +179,7 @@ export default function CmsPageDrawer({ isOpen, onClose, page = null, media = []
                                     value={data.metadata?.hours ?? ''}
                                     onChange={(e) => updateMetadata('hours', e.target.value)}
                                     placeholder="Lun - Ven : 9h - 18h"
-                                    className="mt-1"
+                                    className="mt-1 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                                 />
                             </div>
                         </div>
@@ -243,7 +243,7 @@ export default function CmsPageDrawer({ isOpen, onClose, page = null, media = []
                             id="image_path"
                             value={data.image_path}
                             onChange={(e) => setData('image_path', e.target.value)}
-                            className="mt-2"
+                            className="mt-2 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                             placeholder="Chemin (ecommerce/...) ou URL https://..."
                         />
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">

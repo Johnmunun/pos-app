@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \App\Http\Middleware\CheckPermission::class,
             'ensure.user.is.active' => \App\Http\Middleware\EnsureUserIsActive::class,
             'resolve.storefront.by.subdomain' => \App\Http\Middleware\ResolveStorefrontShopBySubdomain::class,
+            'feature.enabled' => \App\Http\Middleware\EnsureFeatureEnabled::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

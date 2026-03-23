@@ -5,6 +5,7 @@ namespace Src\Infrastructure\Ecommerce\Http\Controllers;
 use App\Models\Currency;
 use App\Models\ExchangeRate;
 use App\Models\Shop;
+use App\Models\Tenant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -14,6 +15,7 @@ use Src\Domain\GlobalCommerce\Inventory\Repositories\ProductRepositoryInterface 
 use Src\Infrastructure\Ecommerce\Models\CmsBannerModel;
 use Src\Infrastructure\Ecommerce\Models\CmsPageModel;
 use Src\Infrastructure\Ecommerce\Models\CmsBlogArticleModel;
+use Src\Infrastructure\Ecommerce\Models\PromotionModel;
 use Src\Application\Settings\UseCases\GetStoreSettingsUseCase;
 use Src\Infrastructure\Settings\Services\StoreLogoService;
 use Src\Infrastructure\Ecommerce\Services\DefaultCmsPagesService;
@@ -23,6 +25,173 @@ use Src\Infrastructure\GlobalCommerce\Inventory\Models\ProductModel;
 
 class StorefrontController
 {
+    /**
+     * @param list<string> $shopIds
+     * @return array{
+     *   product_ids: array<string, bool>,
+     *   category_ids: array<string, bool>,
+     *   has_global: bool,
+     *   product_percent: array<string, float>,
+     *   category_percent: array<string, float>,
+     *   global_percent: float
+     * }
+     */
+    private function getActivePromotionTargets(array $shopIds): array
+    {
+        if (empty($shopIds) || !Schema::hasTable('ecommerce_promotions')) {
+            return [
+                'product_ids' => [],
+                'category_ids' => [],
+                'has_global' => false,
+                'product_percent' => [],
+                'category_percent' => [],
+                'global_percent' => 0.0,
+            ];
+        }
+
+        $now = now();
+        $promotions = PromotionModel::query()
+            ->whereIn('shop_id', $shopIds)
+            ->where('is_active', true)
+            ->where(function ($q) use ($now) {
+                $q->whereNull('starts_at')->orWhere('starts_at', '<=', $now);
+            })
+            ->where(function ($q) use ($now) {
+                $q->whereNull('ends_at')->orWhere('ends_at', '>=', $now);
+            })
+            ->get(['applicable_products', 'applicable_categories']);
+
+        $productIds = [];
+        $categoryIds = [];
+        $productPercent = [];
+        $categoryPercent = [];
+        $hasGlobal = false;
+        $globalPercent = 0.0;
+
+        foreach ($promotions as $promotion) {
+            $applicableProducts = array_values(array_filter(array_map('strval', (array) ($promotion->applicable_products ?? []))));
+            $applicableCategories = array_values(array_filter(array_map('strval', (array) ($promotion->applicable_categories ?? []))));
+            $isGlobal = empty($applicableProducts) && empty($applicableCategories);
+
+            foreach ($applicableProducts as $id) {
+                if ($id !== null && $id !== '') {
+                    $productIds[(string) $id] = true;
+                }
+            }
+            foreach ($applicableCategories as $id) {
+                if ($id !== null && $id !== '') {
+                    $categoryIds[(string) $id] = true;
+                }
+            }
+
+            if ($isGlobal) {
+                $hasGlobal = true;
+            }
+
+            $isPercentage = $promotion->type === 'percentage';
+            $value = (float) ($promotion->discount_value ?? 0);
+            if (!$isPercentage || $value <= 0) {
+                continue;
+            }
+
+            if ($isGlobal) {
+                $globalPercent = max($globalPercent, $value);
+            }
+            foreach ($applicableProducts as $id) {
+                $productPercent[$id] = max((float) ($productPercent[$id] ?? 0), $value);
+            }
+            foreach ($applicableCategories as $id) {
+                $categoryPercent[$id] = max((float) ($categoryPercent[$id] ?? 0), $value);
+            }
+        }
+
+        return [
+            'product_ids' => $productIds,
+            'category_ids' => $categoryIds,
+            'has_global' => $hasGlobal,
+            'product_percent' => $productPercent,
+            'category_percent' => $categoryPercent,
+            'global_percent' => $globalPercent,
+        ];
+    }
+
+    private function hasActivePromotion(ProductModel $model, array $targets): bool
+    {
+        if (($model->discount_percent ?? 0) > 0) {
+            return true;
+        }
+
+        $productId = (string) $model->id;
+        $categoryId = (string) ($model->category_id ?? '');
+
+        return !empty($targets['has_global'])
+            || isset($targets['product_ids'][$productId])
+            || ($categoryId !== '' && isset($targets['category_ids'][$categoryId]));
+    }
+
+    private function getActivePromotionPercent(ProductModel $model, array $targets): ?float
+    {
+        $base = (float) ($model->discount_percent ?? 0);
+        $maxPercent = max(0.0, $base);
+
+        $productId = (string) $model->id;
+        $categoryId = (string) ($model->category_id ?? '');
+
+        $maxPercent = max($maxPercent, (float) ($targets['global_percent'] ?? 0));
+        $maxPercent = max($maxPercent, (float) ($targets['product_percent'][$productId] ?? 0));
+        if ($categoryId !== '') {
+            $maxPercent = max($maxPercent, (float) ($targets['category_percent'][$categoryId] ?? 0));
+        }
+
+        return $maxPercent > 0 ? round($maxPercent, 2) : null;
+    }
+
+    /**
+     * Certains historiques utilisent tenant_id comme shop_id dans gc_products.
+     * On supporte les deux IDs pour ne pas perdre l'affichage en vitrine.
+     *
+     * @return list<string>
+     */
+    private function resolveProductShopIds(Shop $shop, ?string $tenantId): array
+    {
+        $ids = [(string) $shop->id];
+        if ($tenantId !== null && ctype_digit($tenantId) && $tenantId !== (string) $shop->id) {
+            $legacyShopId = (int) $tenantId;
+            if (Schema::hasTable('gc_products') && ProductModel::where('shop_id', $legacyShopId)->exists()) {
+                $ids[] = (string) $legacyShopId;
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    private function buildUniqueShopCode(int|string $tenantId): string
+    {
+        do {
+            $suffix = strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
+            $code = 'SHOP-'.$tenantId.'-'.$suffix;
+        } while (Shop::where('code', $code)->exists());
+
+        return $code;
+    }
+
+    private function ensureTenantShopExists(string $tenantId): ?Shop
+    {
+        $tenant = Tenant::find($tenantId);
+        if (!$tenant) {
+            return null;
+        }
+
+        return Shop::create([
+            'tenant_id' => (int) $tenantId,
+            'name' => ($tenant->name ?: 'Ma Boutique').' - Boutique principale',
+            'code' => $this->buildUniqueShopCode($tenantId),
+            'type' => 'online',
+            'is_active' => true,
+            'currency' => 'XAF',
+        ]);
+    }
+
     private function getPublicImageUrl(?string $path): ?string
     {
         if ($path === null || $path === '') {
@@ -57,8 +226,9 @@ class StorefrontController
 
     /**
      * Résout la boutique (Shop) pour l'utilisateur connecté.
-     * - Utilisateur avec shop_id ou tenant_id : boutique liée au tenant.
-     * - ROOT : boutique en session (current_storefront_shop_id) si définie, sinon première boutique.
+     * - Priorité à la boutique liée au tenant pour éviter les fuites inter-boutiques.
+     * - Le shop_id utilisateur n'est utilisé que s'il est cohérent avec le tenant.
+     * - ROOT : boutique en session uniquement (pas de fallback global).
      */
     private function resolveShop(Request $request): Shop
     {
@@ -71,6 +241,15 @@ class StorefrontController
         $isRoot = $userModel ? $userModel->isRoot() : false;
 
         $shop = null;
+        $tenantId = $user->tenant_id !== null && $user->tenant_id !== '' ? (string) $user->tenant_id : null;
+
+        \Log::info('Storefront resolveShop - start', [
+            'user_id' => $user->id,
+            'tenant_id' => $tenantId,
+            'shop_id' => $user->shop_id,
+            'is_root' => $isRoot,
+            'session_storefront_shop_id' => $request->session()->get('current_storefront_shop_id'),
+        ]);
 
         // 1) ROOT : boutique sélectionnée en session (évite d'afficher la boutique d'un autre)
         if ($isRoot) {
@@ -83,30 +262,80 @@ class StorefrontController
             }
         }
 
-        // 2) Si l'utilisateur a un shop_id (clé primaire shops), l'utiliser
-        if (!$shop) {
-            $candidateId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
-            if ($candidateId !== null && $candidateId !== '') {
-                $shop = Shop::find($candidateId);
+        // 2) Priorité à la boutique du tenant connecté
+        if (!$shop && $tenantId !== null) {
+            $shop = Shop::where('tenant_id', $tenantId)->first();
+        }
+
+        // 3) Si l'utilisateur a un shop_id, le prendre uniquement s'il appartient au même tenant
+        if (!$shop && !empty($user->shop_id)) {
+            $candidateShop = Shop::find($user->shop_id);
+            if ($candidateShop) {
+                $candidateTenantId = $candidateShop->tenant_id !== null ? (string) $candidateShop->tenant_id : null;
+                if ($tenantId === null || $candidateTenantId === $tenantId) {
+                    $shop = $candidateShop;
+                }
             }
         }
 
-        // 3) Sinon, trouver une boutique par tenant_id (shops.tenant_id = user.tenant_id)
-        if (!$shop && $user->tenant_id) {
-            $shop = Shop::where('tenant_id', $user->tenant_id)->first();
+        // 4) Compatibilité legacy : certains tenants utilisent le même identifiant que shops.id
+        if (!$shop && $tenantId !== null) {
+            $legacyShop = Shop::find($tenantId);
+            if ($legacyShop) {
+                $legacyTenantId = $legacyShop->tenant_id !== null ? (string) $legacyShop->tenant_id : null;
+                if ($legacyTenantId === null || $legacyTenantId === $tenantId) {
+                    $shop = $legacyShop;
+                }
+            }
         }
 
-        // 4) ROOT ou utilisateur avec module e-commerce sans boutique : première boutique (prévisualisation)
-        if (!$shop && ($isRoot || ($userModel && $userModel->hasPermission('module.ecommerce')))) {
-            $shop = Shop::orderBy('id')->first();
+        // 5) Fallback métier : boutique du dépôt courant (ou d'un dépôt assigné), limitée au tenant utilisateur
+        if (!$shop) {
+            $currentDepotId = $request->session()->get('current_depot_id');
+            if ($currentDepotId) {
+                $shop = Shop::query()
+                    ->where('depot_id', (int) $currentDepotId)
+                    ->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))
+                    ->first();
+            }
+        }
+        if (!$shop && method_exists($user, 'depots')) {
+            $depotIds = $user->depots()->pluck('depots.id')->map(fn ($id) => (int) $id)->filter()->values();
+            if ($depotIds->isNotEmpty()) {
+                $shop = Shop::query()
+                    ->whereIn('depot_id', $depotIds->all())
+                    ->when($tenantId !== null, fn ($q) => $q->where('tenant_id', $tenantId))
+                    ->orderBy('id')
+                    ->first();
+            }
+        }
+
+        // 6) Auto-provisionnement : créer la boutique du tenant si elle n'existe pas encore
+        if (!$shop && !$isRoot && $tenantId !== null) {
+            $shop = $this->ensureTenantShopExists($tenantId);
         }
 
         if (!$shop && $isRoot) {
             abort(404, 'Aucune boutique. Créez au moins une boutique (tenant) pour prévisualiser la vitrine.');
         }
         if (!$shop) {
+            \Log::warning('Storefront resolveShop - no shop found', [
+                'user_id' => $user->id,
+                'tenant_id' => $tenantId,
+                'shop_id' => $user->shop_id,
+                'is_root' => $isRoot,
+                'current_depot_id' => $request->session()->get('current_depot_id'),
+            ]);
             abort(403, 'Boutique introuvable. Contactez l\'administrateur.');
         }
+
+        \Log::info('Storefront resolveShop - resolved', [
+            'user_id' => $user->id,
+            'tenant_id' => $tenantId,
+            'resolved_shop_id' => $shop->id,
+            'resolved_shop_tenant_id' => $shop->tenant_id,
+            'resolved_shop_name' => $shop->name,
+        ]);
 
         return $shop;
     }
@@ -147,6 +376,16 @@ class StorefrontController
         $user = $request->user();
         $shop = $this->getShop($request);
         $shopId = (string) $shop->id;
+        $tenantId = (string) (($user && $user->tenant_id) ? $user->tenant_id : $shopId);
+        $productShopIds = $this->resolveProductShopIds($shop, $tenantId);
+
+        \Log::info('Storefront index - using shop', [
+            'user_id' => $user?->id,
+            'tenant_id' => $user?->tenant_id,
+            'shop_id' => $shop->id,
+            'shop_tenant_id' => $shop->tenant_id,
+            'shop_name' => $shop->name,
+        ]);
 
         // La prévisualisation est autorisée pour tout utilisateur ayant accès au storefront (même si la boutique n'est pas "en ligne")
         $config = $this->getStorefrontConfig($shop);
@@ -156,11 +395,12 @@ class StorefrontController
         $newArrivals = [];
 
         if (Schema::hasTable('gc_products')) {
+            $promotionTargets = $this->getActivePromotionTargets($productShopIds);
+
             $baseQuery = ProductModel::query()
-                ->where('shop_id', $shopId)
+                ->whereIn('shop_id', $productShopIds)
                 ->where('is_active', true)
-                ->where('is_published_ecommerce', true)
-                ->where('stock', '>', 0);
+                ->where('is_published_ecommerce', true);
 
             $imageService = app(\Src\Infrastructure\GlobalCommerce\Services\ProductImageService::class);
 
@@ -174,7 +414,7 @@ class StorefrontController
                 ->limit(8)
                 ->get();
 
-            $mapModel = function (ProductModel $model) use ($imageService): array {
+            $mapModel = function (ProductModel $model) use ($imageService, $promotionTargets): array {
                 $imageUrl = null;
                 if ($model->image_path) {
                     try {
@@ -191,11 +431,21 @@ class StorefrontController
                     'image_url' => $imageUrl,
                     'is_new' => (bool) ($model->is_new ?? false),
                     'label' => $model->label ?? null,
+                    'discount_percent' => $model->discount_percent ? (float) $model->discount_percent : null,
+                    'has_promotion' => $this->hasActivePromotion($model, $promotionTargets),
+                    'promotion_percent' => $this->getActivePromotionPercent($model, $promotionTargets),
                 ];
             };
 
             $featured = $featuredModels->map($mapModel)->values()->toArray();
             $newArrivals = $newArrivalModels->map($mapModel)->values()->toArray();
+
+            \Log::info('Storefront index - products loaded', [
+                'shop_id' => $shop->id,
+                'product_shop_ids' => $productShopIds,
+                'featured_count' => count($featured),
+                'new_arrivals_count' => count($newArrivals),
+            ]);
         }
 
         // Bannières CMS (homepage, slider, promotion)
@@ -247,7 +497,6 @@ class StorefrontController
             }
         }
 
-        $tenantId = (string) (($user && $user->tenant_id) ? $user->tenant_id : $shopId);
         $displayCurrency = $this->getDefaultCurrencyForTenant($tenantId);
 
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
@@ -450,14 +699,21 @@ class StorefrontController
             abort(404, 'Shop not found');
         }
 
+        $user = $request->user();
+        $tenantId = (string) (($user && $user->tenant_id) ? $user->tenant_id : $shopId);
+        $productShopIds = $this->resolveProductShopIds($shop, $tenantId);
+
         $categoryId = $request->input('category_id');
         $search = $request->input('search');
 
         $products = $this->productRepository->search($shopId, $search ?? '', array_filter([
+            'shop_ids' => $productShopIds,
             'category_id' => $categoryId,
             'is_active' => true,
             'is_published_ecommerce' => true,
         ]));
+
+        $promotionTargets = $this->getActivePromotionTargets($productShopIds);
 
         $productIds = array_map(fn ($p) => $p->getId(), $products);
         $imageMap = [];
@@ -477,7 +733,7 @@ class StorefrontController
         }
 
         $modelsById = $models->keyBy('id');
-        $productsData = array_map(function ($product) use ($imageMap, $modelsById) {
+        $productsData = array_map(function ($product) use ($imageMap, $modelsById, $promotionTargets) {
             $model = $modelsById[$product->getId()] ?? null;
             $productType = $model->product_type ?? 'physical';
             $isDigital = $productType === 'digital';
@@ -506,7 +762,8 @@ class StorefrontController
                 'product_type' => $productType,
                 'is_digital' => $isDigital,
                 'discount_percent' => $model ? $model->discount_percent : null,
-                'has_promotion' => ($model && $model->discount_percent) ? ($model->discount_percent > 0) : false,
+                'has_promotion' => $model ? $this->hasActivePromotion($model, $promotionTargets) : false,
+                'promotion_percent' => $model ? $this->getActivePromotionPercent($model, $promotionTargets) : null,
                 'download_url' => $isDigital && $model ? ($model->download_url ?? $model->download_path ?? null) : null,
                 'requires_shipping' => (bool) ($model ? ($model->requires_shipping ?? true) : true),
             ];
@@ -524,8 +781,6 @@ class StorefrontController
         } catch (\Throwable) {
         }
 
-        $user = $request->user();
-        $tenantId = (string) (($user && $user->tenant_id) ? $user->tenant_id : $shopId);
         $displayCurrency = $this->getDefaultCurrencyForTenant($tenantId);
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
 
@@ -590,6 +845,10 @@ class StorefrontController
         if (!$shop) {
             abort(404, 'Shop not found');
         }
+        $user = $request->user();
+        $tenantId = (string) (($user && $user->tenant_id) ? $user->tenant_id : $shopId);
+        $productShopIds = $this->resolveProductShopIds($shop, $tenantId);
+        $promotionTargets = $this->getActivePromotionTargets($productShopIds);
 
         $product = $this->productRepository->findById($id);
         if (!$product) {
@@ -645,7 +904,8 @@ class StorefrontController
             'download_url' => $downloadUrl,
             'requires_shipping' => (bool) ($productModel->requires_shipping ?? !$isDigital),
             'discount_percent' => $productModel->discount_percent ?? null,
-            'has_promotion' => ($productModel->discount_percent ?? 0) > 0,
+            'has_promotion' => $productModel ? $this->hasActivePromotion($productModel, $promotionTargets) : false,
+            'promotion_percent' => $productModel ? $this->getActivePromotionPercent($productModel, $promotionTargets) : null,
         ];
 
         $reviews = [];
@@ -668,8 +928,6 @@ class StorefrontController
                 ->toArray();
         }
 
-        $user = $request->user();
-        $tenantId = (string) (($user && $user->tenant_id) ? $user->tenant_id : $shopId);
         $displayCurrency = $this->getDefaultCurrencyForTenant($tenantId);
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);

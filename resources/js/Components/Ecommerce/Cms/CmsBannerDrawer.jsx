@@ -54,12 +54,12 @@ export default function CmsBannerDrawer({ isOpen, onClose, banner = null, positi
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <Label>Titre *</Label>
-                        <Input value={data.title} onChange={(e) => setData('title', e.target.value)} required className="mt-1" placeholder="Ex : Soldes d'été -50%" />
+                        <Input value={data.title} onChange={(e) => setData('title', e.target.value)} required className="mt-1 placeholder:text-gray-500 dark:placeholder:text-gray-400" placeholder="Ex : Soldes d'été -50%" />
                         {errors.title && <p className="text-sm text-red-500 mt-1">{errors.title}</p>}
                     </div>
                     <div>
                         <Label>Position</Label>
-                        <select value={data.position} onChange={(e) => setData('position', e.target.value)} className="mt-1 w-full rounded-md border border-gray-300 dark:border-slate-600 dark:bg-slate-800 px-3 py-2">
+                        <select value={data.position} onChange={(e) => setData('position', e.target.value)} className="mt-1 w-full rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-gray-900 dark:text-gray-100">
                             {opts.map((p) => (
                                 <option key={p.value} value={p.value}>{p.label}</option>
                             ))}
@@ -68,12 +68,12 @@ export default function CmsBannerDrawer({ isOpen, onClose, banner = null, positi
                     </div>
                     <div>
                         <Label>Image (chemin ou URL)</Label>
-                        <Input value={data.image_path} onChange={(e) => setData('image_path', e.target.value)} className="mt-1" placeholder="Ex : ecommerce/cms/media/xxx/banner.jpg" />
+                        <Input value={data.image_path} onChange={(e) => setData('image_path', e.target.value)} className="mt-1 placeholder:text-gray-500 dark:placeholder:text-gray-400" placeholder="Ex : ecommerce/cms/media/xxx/banner.jpg" />
                         {errors.image_path && <p className="text-sm text-red-500 mt-1">{errors.image_path}</p>}
                     </div>
                     <div>
                         <Label>Lien (URL au clic)</Label>
-                        <Input value={data.link} onChange={(e) => setData('link', e.target.value)} className="mt-1" placeholder="Ex : https://... ou /ecommerce/catalog" />
+                        <Input value={data.link} onChange={(e) => setData('link', e.target.value)} className="mt-1 placeholder:text-gray-500 dark:placeholder:text-gray-400" placeholder="Ex : https://... ou /ecommerce/catalog" />
                     </div>
                     <label className="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" checked={data.is_active} onChange={(e) => setData('is_active', e.target.checked)} className="rounded" />

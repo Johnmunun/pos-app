@@ -260,22 +260,22 @@ Route::prefix('ecommerce')
 
         // Paiements
         Route::get('/payments', [PaymentMethodController::class, 'index'])
-            ->middleware('permission:ecommerce.payment.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.payment.view|module.ecommerce', 'feature.enabled:api.payments'])
             ->name('payments.index');
         Route::get('/payments/create', [PaymentMethodController::class, 'create'])
-            ->middleware('permission:ecommerce.payment.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.payment.view|module.ecommerce', 'feature.enabled:api.payments'])
             ->name('payments.create');
         Route::post('/payments', [PaymentMethodController::class, 'store'])
-            ->middleware('permission:ecommerce.payment.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.payment.view|module.ecommerce', 'feature.enabled:api.payments'])
             ->name('payments.store');
         Route::get('/payments/{id}/edit', [PaymentMethodController::class, 'edit'])
-            ->middleware('permission:ecommerce.payment.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.payment.view|module.ecommerce', 'feature.enabled:api.payments'])
             ->name('payments.edit');
         Route::put('/payments/{id}', [PaymentMethodController::class, 'update'])
-            ->middleware('permission:ecommerce.payment.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.payment.view|module.ecommerce', 'feature.enabled:api.payments'])
             ->name('payments.update');
         Route::delete('/payments/{id}', [PaymentMethodController::class, 'destroy'])
-            ->middleware('permission:ecommerce.payment.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.payment.view|module.ecommerce', 'feature.enabled:api.payments'])
             ->name('payments.destroy');
 
         // Livraisons
@@ -365,13 +365,13 @@ Route::prefix('ecommerce')
 
         // Rapports
         Route::get('/reports', [ReportController::class, 'index'])
-            ->middleware('permission:ecommerce.report.view|ecommerce.analytics.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.report.view|ecommerce.analytics.view|module.ecommerce', 'feature.enabled:analytics.advanced'])
             ->name('reports.index');
         Route::get('/reports/export-sales-excel', [ReportController::class, 'exportSalesExcel'])
-            ->middleware('permission:ecommerce.report.view|ecommerce.analytics.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.report.view|ecommerce.analytics.view|module.ecommerce', 'feature.enabled:analytics.advanced'])
             ->name('reports.export-sales-excel');
         Route::get('/reports/export-sales-pdf', [ReportController::class, 'exportSalesPdf'])
-            ->middleware('permission:ecommerce.report.view|ecommerce.analytics.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.report.view|ecommerce.analytics.view|module.ecommerce', 'feature.enabled:analytics.advanced'])
             ->name('reports.export-sales-pdf');
 
         // Paramètres

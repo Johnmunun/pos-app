@@ -60,16 +60,16 @@ export default function CmsBlogDrawer({ isOpen, onClose, article = null, categor
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <Label>Titre *</Label>
-                        <Input value={data.title} onChange={(e) => setData('title', e.target.value)} required className="mt-1" placeholder="Ex : Nos 5 conseils pour bien choisir" />
+                        <Input value={data.title} onChange={(e) => setData('title', e.target.value)} required className="mt-1 placeholder:text-gray-500 dark:placeholder:text-gray-400" placeholder="Ex : Nos 5 conseils pour bien choisir" />
                         {errors.title && <p className="text-sm text-red-500 mt-1">{errors.title}</p>}
                     </div>
                     <div>
                         <Label>Slug (URL)</Label>
-                        <Input value={data.slug} onChange={(e) => setData('slug', e.target.value)} className="mt-1" placeholder="Auto si vide" />
+                        <Input value={data.slug} onChange={(e) => setData('slug', e.target.value)} className="mt-1 placeholder:text-gray-500 dark:placeholder:text-gray-400" placeholder="Auto si vide" />
                     </div>
                     <div>
                         <Label>Catégorie</Label>
-                        <select value={data.category_id} onChange={(e) => setData('category_id', e.target.value)} className="mt-1 w-full rounded-md border border-gray-300 dark:border-slate-600 dark:bg-slate-800 px-3 py-2">
+                        <select value={data.category_id} onChange={(e) => setData('category_id', e.target.value)} className="mt-1 w-full rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-gray-900 dark:text-gray-100">
                             <option value="">— Aucune —</option>
                             {categories.map((c) => (
                                 <option key={c.id} value={c.id}>{c.name}</option>
@@ -78,7 +78,7 @@ export default function CmsBlogDrawer({ isOpen, onClose, article = null, categor
                     </div>
                     <div>
                         <Label>Extrait (résumé court)</Label>
-                        <Textarea value={data.excerpt} onChange={(e) => setData('excerpt', e.target.value)} rows={2} className="mt-1" placeholder="Résumé affiché dans la liste des articles" />
+                        <Textarea value={data.excerpt} onChange={(e) => setData('excerpt', e.target.value)} rows={2} className="mt-1 placeholder:text-gray-500 dark:placeholder:text-gray-400" placeholder="Résumé affiché dans la liste des articles" />
                     </div>
                     <div>
                         <Label>Contenu</Label>
@@ -89,7 +89,7 @@ export default function CmsBlogDrawer({ isOpen, onClose, article = null, categor
                     </div>
                     <div>
                         <Label>Image (chemin ou URL)</Label>
-                        <Input value={data.image_path} onChange={(e) => setData('image_path', e.target.value)} className="mt-1" placeholder="Uploadez dans Médias puis copiez le chemin" />
+                        <Input value={data.image_path} onChange={(e) => setData('image_path', e.target.value)} className="mt-1 placeholder:text-gray-500 dark:placeholder:text-gray-400" placeholder="Uploadez dans Médias puis copiez le chemin" />
                     </div>
                     <div>
                         <Label>Date de publication</Label>

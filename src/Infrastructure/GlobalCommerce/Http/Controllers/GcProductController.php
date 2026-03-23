@@ -16,6 +16,7 @@ use Src\Application\GlobalCommerce\Inventory\DTO\UpdateProductDTO;
 use Src\Application\GlobalCommerce\Inventory\UseCases\CreateProductUseCase;
 use Src\Application\GlobalCommerce\Inventory\UseCases\DeleteProductUseCase;
 use Src\Application\GlobalCommerce\Inventory\UseCases\UpdateProductUseCase;
+use Src\Application\Billing\Services\FeatureLimitService;
 use Src\Domain\GlobalCommerce\Inventory\Repositories\CategoryRepositoryInterface;
 use Src\Domain\GlobalCommerce\Inventory\Repositories\ProductRepositoryInterface;
 use Src\Infrastructure\GlobalCommerce\Inventory\Models\CategoryModel;
@@ -61,7 +62,8 @@ class GcProductController
         private CreateProductUseCase $createProductUseCase,
         private UpdateProductUseCase $updateProductUseCase,
         private DeleteProductUseCase $deleteProductUseCase,
-        private ProductImageService $imageService
+        private ProductImageService $imageService,
+        private FeatureLimitService $featureLimitService
     ) {}
 
     public function index(Request $request): Response
@@ -196,6 +198,11 @@ class GcProductController
 
     public function store(Request $request): RedirectResponse
     {
+        $user = $request->user();
+        $this->featureLimitService->assertCanCreateProduct(
+            $user && $user->tenant_id !== null ? (string) $user->tenant_id : null
+        );
+
         $shopId = $this->getShopId($request);
         $validated = $request->validate([
             'sku' => 'required|string|max:100',

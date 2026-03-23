@@ -157,6 +157,24 @@
     }
 }
 
+/* Placeholder de l'éditeur riche (Quill) en dark mode */
+.dark .ql-container.ql-snow .ql-editor.ql-blank::before {
+    color: rgb(148 163 184) !important; /* slate-400 */
+    opacity: 1;
+}
+
+/* Placeholders globaux en dark mode (inputs / textareas) */
+.dark input::placeholder,
+.dark textarea::placeholder {
+    color: rgb(148 163 184) !important; /* slate-400 */
+    opacity: 1;
+}
+
+/* Texte des selects en dark mode (évite le texte noir) */
+.dark select {
+    color: rgb(241 245 249); /* slate-100 */
+}
+
 /* Layout global : empêcher tout débordement horizontal */
 html,
 body {

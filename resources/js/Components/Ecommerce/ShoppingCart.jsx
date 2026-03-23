@@ -101,16 +101,16 @@ export default function ShoppingCart({ buttonClassName, storefrontLinks = false 
                                             <div className="flex items-center gap-2 mt-2">
                                                 <button
                                                     onClick={() => handleQuantityChange(item.product_id, item.quantity - 1)}
-                                                    className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
+                                                    className="p-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
                                                 >
                                                     <Minus className="h-3 w-3" />
                                                 </button>
-                                                <span className="text-sm font-medium w-8 text-center">
+                                                <span className="text-sm font-medium w-8 text-center text-slate-900 dark:text-slate-100">
                                                     {item.quantity}
                                                 </span>
                                                 <button
                                                     onClick={() => handleQuantityChange(item.product_id, item.quantity + 1)}
-                                                    className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
+                                                    className="p-1.5 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
                                                 >
                                                     <Plus className="h-3 w-3" />
                                                 </button>

@@ -11,4 +11,5 @@ return [
     Src\Infrastructure\Search\Providers\SearchServiceProvider::class,
     Src\Infrastructure\Settings\Providers\SettingsServiceProvider::class,
     Src\Infrastructure\Currency\Providers\CurrencyServiceProvider::class,
+    Src\Infrastructure\Billing\Providers\BillingServiceProvider::class,
 ];
