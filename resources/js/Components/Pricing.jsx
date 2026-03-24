@@ -1,11 +1,15 @@
 import { Check, Star } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
+import { Link } from '@inertiajs/react';
 
 /**
  * Component: Pricing
  *
  * Section de tarifs avec plans
  */
-function PricingCard({ name, price, description, features, isPopular }) {
+function PricingCard({ name, currencyCode, monthlyPrice, monthlyEffectivePrice, description, features, isPopular, promoLabel }) {
+    const hasPromo = monthlyEffectivePrice !== null && Number(monthlyEffectivePrice) < Number(monthlyPrice);
     return (
         <div className={`rounded-2xl transition-all duration-300 transform hover:scale-105 relative ${
             isPopular
@@ -42,18 +46,27 @@ function PricingCard({ name, price, description, features, isPopular }) {
 
                 {/* Prix */}
                 <div className="mb-6">
-                    <span className="text-5xl font-bold">${price}</span>
+                    <span className="text-5xl font-bold">{currencyCode} {hasPromo ? monthlyEffectivePrice : monthlyPrice}</span>
                     <span className={isPopular ? 'text-amber-100' : 'text-gray-600'}>/mois</span>
+                    {hasPromo ? (
+                        <div className={`text-xs mt-1 ${isPopular ? 'text-amber-100' : 'text-rose-600 dark:text-rose-400'}`}>
+                            <span className="line-through mr-1">{currencyCode} {monthlyPrice}</span>
+                            {promoLabel || 'Promo en cours'}
+                        </div>
+                    ) : null}
                 </div>
 
                 {/* CTA */}
-                <button className={`w-full py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 mb-8 shadow-lg hover:shadow-xl ${
+                <Link
+                    href={route('register')}
+                    className={`block w-full text-center py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 mb-8 shadow-lg hover:shadow-xl ${
                     isPopular
                         ? 'bg-white text-amber-600 hover:bg-gray-100'
                         : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white'
-                }`}>
+                }`}
+                >
                     Commencer maintenant
-                </button>
+                </Link>
 
                 {/* Features */}
                 <div className="space-y-4">
@@ -70,51 +83,51 @@ function PricingCard({ name, price, description, features, isPopular }) {
 }
 
 export default function Pricing() {
-    const plans = [
-        {
-            name: 'Starter',
-            price: '29',
-            description: 'Parfait pour débuter',
-            isPopular: false,
-            features: [
-                'Jusqu\'à 1 000 produits',
-                'Paiements en ligne',
-                'Dashboard basique',
-                'Support email',
-                'Rapports mensuels',
-            ],
-        },
-        {
-            name: 'Pro',
-            price: '99',
-            description: 'Pour les boutiques en croissance',
-            isPopular: true,
-            features: [
-                'Produits illimités',
-                'Paiements multiples',
-                'Analytics avancés',
-                'Support prioritaire',
-                'Intégrations',
-                'API access',
-                'Emails personnalisés',
-            ],
-        },
-        {
-            name: 'Enterprise',
-            price: '299',
-            description: 'Pour les grandes équipes',
-            isPopular: false,
-            features: [
-                'Tout de Pro +',
-                'Utilisateurs illimités',
-                'Domaine personnalisé',
-                'Support 24/7',
-                'Dédié account manager',
-                'Intégrations custom',
-                'SLA garanti',
-            ],
-        },
-    ];
+    const [plans, setPlans] = useState([]);
+
+    useEffect(() => {
+        let mounted = true;
+        axios
+            .get(route('api.billing.plans.public'))
+            .then(({ data }) => {
+                if (!mounted) return;
+                setPlans(Array.isArray(data?.data) ? data.data : []);
+            })
+            .catch(() => {
+                if (!mounted) return;
+                setPlans([]);
+            });
+        return () => {
+            mounted = false;
+        };
+    }, []);
+
+    const viewPlans = useMemo(() => {
+        const mapped = plans.map((plan) => {
+            const featureEntries = Object.entries(plan.features || {});
+            const features = featureEntries.map(([code, feature]) => {
+                if (!feature?.enabled) return null;
+                if (feature.limit !== null && feature.limit !== undefined) {
+                    return `${feature.label || code}: ${feature.limit}`;
+                }
+                return feature.label || code;
+            }).filter(Boolean);
+
+            return {
+                id: plan.id,
+                name: plan.name,
+                description: plan.description || '',
+                isPopular: String(plan.code || '').toLowerCase() === 'pro',
+                currencyCode: plan.pricing?.currency_code || 'USD',
+                monthlyPrice: plan.pricing?.monthly ?? 0,
+                monthlyEffectivePrice: plan.pricing?.monthly_effective ?? plan.pricing?.monthly ?? 0,
+                promoLabel: plan.promotion?.is_active ? plan.promotion?.label : null,
+                features,
+            };
+        });
+
+        return mapped.sort((a, b) => (a.isPopular === b.isPopular ? 0 : a.isPopular ? -1 : 1));
+    }, [plans]);
 
     return (
         <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-900 transition-colors duration-200">
@@ -136,17 +149,31 @@ export default function Pricing() {
 
                 {/* Cartes de tarifs */}
                 <div className="grid md:grid-cols-3 gap-8 mb-12">
-                    {plans.map((plan, idx) => (
-                        <div key={idx} className="relative">
-                            <PricingCard
-                                name={plan.name}
-                                price={plan.price}
-                                description={plan.description}
-                                features={plan.features}
-                                isPopular={plan.isPopular}
-                            />
+                    {viewPlans.length > 0 ? (
+                        viewPlans.map((plan) => (
+                            <div key={plan.id} className="relative">
+                                <PricingCard
+                                    name={plan.name}
+                                    currencyCode={plan.currencyCode}
+                                    monthlyPrice={plan.monthlyPrice}
+                                    monthlyEffectivePrice={plan.monthlyEffectivePrice}
+                                    description={plan.description}
+                                    features={plan.features}
+                                    isPopular={plan.isPopular}
+                                    promoLabel={plan.promoLabel}
+                                />
+                            </div>
+                        ))
+                    ) : (
+                        <div className="md:col-span-3 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-6 text-center">
+                            <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                                Aucun plan disponible pour le moment.
+                            </p>
+                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                Merci de reessayer un peu plus tard.
+                            </p>
                         </div>
-                    ))}
+                    )}
                 </div>
 
                 {/* CTA final */}

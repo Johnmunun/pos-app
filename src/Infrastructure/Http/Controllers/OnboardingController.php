@@ -10,7 +10,9 @@ use App\Models\User as UserModel;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -217,7 +219,7 @@ class OnboardingController extends Controller
         $session = $this->getOrCreateSession($request);
         
         if ($session->isComplete()) {
-            return redirect()->route('pending');
+            return redirect()->route('billing.onboarding.payment');
         }
 
         try {
@@ -325,6 +327,19 @@ class OnboardingController extends Controller
             return redirect()->route('login');
         }
 
+        $user = Auth::user();
+        if ($user && $user->tenant_id && Schema::hasTable('tenant_plan_subscriptions')) {
+            $activeSubscription = DB::table('tenant_plan_subscriptions')
+                ->where('tenant_id', (string) $user->tenant_id)
+                ->where('status', 'active')
+                ->orderByDesc('id')
+                ->first(['id']);
+
+            if (!$activeSubscription) {
+                return redirect()->route('billing.onboarding.payment');
+            }
+        }
+
         if (Auth::user()->status === 'active') {
             return redirect()->route('dashboard');
         }
@@ -378,14 +393,23 @@ class OnboardingController extends Controller
      */
     private function createUser(array $userData)
     {
-        return UserModel::create([
+        $payload = [
             'name' => $userData['name'],
             'email' => $userData['email'],
             'password' => Hash::make($userData['password']),
-            'type' => $userData['type'],
             'status' => $userData['status'],
-            'is_active' => $userData['is_active'],
-        ]);
+        ];
+
+        // Some local DBs are missing onboarding-era columns.
+        // Build the payload dynamically to avoid SQL errors.
+        if (Schema::hasColumn('users', 'type')) {
+            $payload['type'] = $userData['type'];
+        }
+        if (Schema::hasColumn('users', 'is_active')) {
+            $payload['is_active'] = $userData['is_active'];
+        }
+
+        return UserModel::create($payload);
     }
 
     /**

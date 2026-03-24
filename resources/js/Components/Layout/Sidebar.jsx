@@ -66,6 +66,9 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
     const appLogoUrl = page.props?.appLogoUrl || null;
     const featureFlags = page.props?.auth?.featureFlags || {};
     const billingSummary = page.props?.auth?.billingSummary || null;
+    const planExpiryLabel = billingSummary?.expires_at
+        ? new Date(billingSummary.expires_at).toLocaleDateString()
+        : 'Illimite';
     
     // Fonction pour vérifier si une route est active
     const isActiveRoute = (href) => {
@@ -447,6 +450,9 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                                 Plan: {billingSummary.plan_name}
                             </p>
                             <p className="text-[11px] text-amber-700/90 dark:text-amber-300/90 mt-1">
+                                Expire le: {planExpiryLabel}
+                            </p>
+                            <p className="text-[11px] text-amber-700/90 dark:text-amber-300/90 mt-1">
                                 Produits: {billingSummary.products_used}/{billingSummary.products_limit ?? 'illimite'}
                             </p>
                             <p className="text-[11px] text-amber-700/90 dark:text-amber-300/90">
@@ -570,6 +576,9 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                         <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3">
                             <p className="text-xs text-amber-700 dark:text-amber-300 font-semibold">
                                 Plan: {billingSummary.plan_name}
+                            </p>
+                            <p className="text-[11px] text-amber-700/90 dark:text-amber-300/90 mt-1">
+                                Expire le: {planExpiryLabel}
                             </p>
                             <p className="text-[11px] text-amber-700/90 dark:text-amber-300/90 mt-1">
                                 Produits: {billingSummary.products_used}/{billingSummary.products_limit ?? 'illimite'}

@@ -15,24 +15,30 @@ return new class extends Migration
         Schema::table('sale_items', function (Blueprint $table) {
             // Vérification défensive avant ajout
             if (!Schema::hasColumn('sale_items', 'currency')) {
-                $table->string('currency', 3)
+                $currencyColumn = $table->string('currency', 3)
                     ->nullable()
-                    ->after('unit_price')
                     ->comment('Code devise originale du produit au moment de la vente');
+                if (Schema::hasColumn('sale_items', 'unit_price')) {
+                    $currencyColumn->after('unit_price');
+                }
             }
             
             if (!Schema::hasColumn('sale_items', 'converted_price')) {
-                $table->decimal('converted_price', 10, 2)
+                $convertedPriceColumn = $table->decimal('converted_price', 10, 2)
                     ->nullable()
-                    ->after('currency')
                     ->comment('Prix converti dans la devise de la vente (si différent)');
+                if (Schema::hasColumn('sale_items', 'currency')) {
+                    $convertedPriceColumn->after('currency');
+                }
             }
             
             if (!Schema::hasColumn('sale_items', 'conversion_rate')) {
-                $table->decimal('conversion_rate', 10, 4)
+                $conversionRateColumn = $table->decimal('conversion_rate', 10, 4)
                     ->nullable()
-                    ->after('converted_price')
                     ->comment('Taux de conversion utilisé (ex: 1 USD = 2500 XAF)');
+                if (Schema::hasColumn('sale_items', 'converted_price')) {
+                    $conversionRateColumn->after('converted_price');
+                }
             }
         });
     }

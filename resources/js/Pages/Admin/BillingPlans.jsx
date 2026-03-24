@@ -1,11 +1,21 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Head, router, useForm } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import axios from 'axios';
+import { useEffect, useMemo, useState } from 'react';
 
-export default function BillingPlans({ plans = [], subscriptions = [], overrides = [], tenants = [], compliance = [] }) {
+export default function BillingPlans({ plans = [], subscriptions = [], overrides = [], tenants = [], compliance = [], featureCatalog = {} }) {
     const [complianceSearch, setComplianceSearch] = useState('');
     const [complianceSort, setComplianceSort] = useState('risk');
     const [alertsOnly, setAlertsOnly] = useState(false);
+    const [editablePlans, setEditablePlans] = useState(() => plans.map((plan) => ({ ...plan })));
+    const [savingPlanId, setSavingPlanId] = useState(null);
+    const [templateByPlan, setTemplateByPlan] = useState({});
+    const [previewState, setPreviewState] = useState({ open: false, loading: false, planId: null, templateCode: '', changes: [], changesCount: 0 });
+    const [healthTenantId, setHealthTenantId] = useState(tenants[0]?.id || '');
+    const [healthPlanId, setHealthPlanId] = useState(plans[0]?.id || '');
+    const [healthLoading, setHealthLoading] = useState(false);
+    const [healthError, setHealthError] = useState('');
+    const [fusionHealth, setFusionHealth] = useState(null);
     const assignForm = useForm({
         tenant_id: '',
         billing_plan_id: plans[0]?.id ?? '',
@@ -24,16 +34,104 @@ export default function BillingPlans({ plans = [], subscriptions = [], overrides
         is_enabled: true,
         limit_value: '',
     });
+    const featureCodes = useMemo(() => {
+        const keys = Object.keys(featureCatalog || {});
+        return keys.length > 0 ? keys : ['api.payments', 'products.max', 'users.max'];
+    }, [featureCatalog]);
+
+    useEffect(() => {
+        setEditablePlans(plans.map((plan) => ({ ...plan })));
+        setTemplateByPlan(
+            plans.reduce((acc, plan) => {
+                acc[plan.id] = plan.code || 'starter';
+                return acc;
+            }, {})
+        );
+    }, [plans]);
+
+    useEffect(() => {
+        if (!healthTenantId || !healthPlanId) {
+            setFusionHealth(null);
+            return;
+        }
+
+        let cancelled = false;
+        const loadHealth = async () => {
+            setHealthLoading(true);
+            setHealthError('');
+            try {
+                const { data } = await axios.get(route('admin.billing.fusionpay.health'), {
+                    params: {
+                        tenant_id: healthTenantId,
+                        billing_plan_id: healthPlanId,
+                    },
+                });
+                if (!cancelled) {
+                    setFusionHealth(data);
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    setFusionHealth(null);
+                    setHealthError(error?.response?.data?.message || 'Impossible de charger le diagnostic FusionPay.');
+                }
+            } finally {
+                if (!cancelled) {
+                    setHealthLoading(false);
+                }
+            }
+        };
+
+        loadHealth();
+        return () => {
+            cancelled = true;
+        };
+    }, [healthTenantId, healthPlanId]);
+
+    const updatePlanField = (planId, field, value) => {
+        setEditablePlans((current) => current.map((plan) => (
+            plan.id === planId ? { ...plan, [field]: value } : plan
+        )));
+    };
 
     const savePlan = (plan) => {
+        setSavingPlanId(plan.id);
         router.put(route('admin.billing.plans.update', plan.id), {
             name: plan.name,
             description: plan.description || '',
-            monthly_price: plan.monthly_price ?? 0,
-            annual_price: plan.annual_price ?? null,
+            monthly_price: Number(plan.monthly_price ?? 0),
+            annual_price: plan.annual_price === '' || plan.annual_price === null ? null : Number(plan.annual_price),
+            currency_code: (plan.currency_code || 'USD').toString().toUpperCase(),
+            promo_type: plan.promo_type || null,
+            promo_value: plan.promo_value === '' || plan.promo_value === null ? null : Number(plan.promo_value),
+            promo_starts_at: plan.promo_starts_at || null,
+            promo_ends_at: plan.promo_ends_at || null,
+            promo_label: plan.promo_label || null,
             is_active: !!plan.is_active,
             features: plan.features || {},
+        }, {
+            preserveScroll: true,
+            onFinish: () => setSavingPlanId(null),
         });
+    };
+
+    const openTemplatePreview = async (planId) => {
+        const templateCode = templateByPlan[planId] || 'starter';
+        setPreviewState({ open: true, loading: true, planId, templateCode, changes: [], changesCount: 0 });
+        try {
+            const { data } = await axios.get(route('admin.billing.plans.preview-template', planId), {
+                params: { template_code: templateCode },
+            });
+            setPreviewState({
+                open: true,
+                loading: false,
+                planId,
+                templateCode,
+                changes: data?.changes || [],
+                changesCount: data?.changes_count || 0,
+            });
+        } catch {
+            setPreviewState({ open: true, loading: false, planId, templateCode, changes: [], changesCount: 0 });
+        }
     };
 
     const filteredCompliance = useMemo(() => {
@@ -83,6 +181,44 @@ export default function BillingPlans({ plans = [], subscriptions = [], overrides
         return `${usage} utilise sur ${limit}`;
     };
 
+    const renderFeatureState = (feature) => {
+        if (!feature) return <span className="text-slate-400">-</span>;
+        const enabled = !!feature.enabled;
+        const limit = feature.limit;
+        return (
+            <div className="flex flex-wrap items-center gap-1">
+                <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                    enabled
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                        : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
+                }`}>
+                    {enabled ? 'Actif' : 'Inactif'}
+                </span>
+                <span className="inline-flex rounded-full bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200 px-2 py-0.5 text-[11px] font-medium">
+                    {limit === null || limit === undefined ? 'Illimite' : `Limite ${limit}`}
+                </span>
+            </div>
+        );
+    };
+
+    const previewRowClass = (from, to) => {
+        const fromEnabled = from ? !!from.enabled : false;
+        const toEnabled = to ? !!to.enabled : false;
+        const fromLimit = from?.limit ?? null;
+        const toLimit = to?.limit ?? null;
+
+        if (!fromEnabled && toEnabled) {
+            return 'bg-emerald-50/70 dark:bg-emerald-900/10';
+        }
+        if (fromEnabled && !toEnabled) {
+            return 'bg-rose-50/70 dark:bg-rose-900/10';
+        }
+        if (fromEnabled === toEnabled && fromLimit !== toLimit) {
+            return 'bg-amber-50/70 dark:bg-amber-900/10';
+        }
+        return '';
+    };
+
     return (
         <AppLayout fullWidth>
             <Head title="Plans & Limitations" />
@@ -93,43 +229,215 @@ export default function BillingPlans({ plans = [], subscriptions = [], overrides
                     <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
                         Gestion dynamique des packs (Starter, Pro, Enterprise) sans hardcode.
                     </p>
+                    <a
+                        href={route('admin.billing.subscriptions.expired')}
+                        className="inline-flex items-center mt-3 rounded-lg border border-amber-300 dark:border-amber-700 px-3 py-2 text-sm text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                    >
+                        Ouvrir l'interface abonnements expires
+                    </a>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+                    <div className="flex flex-col gap-3">
+                        <div>
+                            <h3 className="text-base font-semibold text-slate-900 dark:text-white">Sante FusionPay</h3>
+                            <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                                Verifie la conversion devise + minimum requis avant paiement.
+                            </p>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                            <select
+                                value={healthTenantId}
+                                onChange={(e) => setHealthTenantId(e.target.value)}
+                                className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm"
+                            >
+                                <option value="">Selectionner un tenant</option>
+                                {tenants.map((tenant) => (
+                                    <option key={tenant.id} value={tenant.id}>{tenant.name}</option>
+                                ))}
+                            </select>
+                            <select
+                                value={healthPlanId}
+                                onChange={(e) => setHealthPlanId(e.target.value)}
+                                className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm"
+                            >
+                                <option value="">Selectionner un plan</option>
+                                {plans.map((plan) => (
+                                    <option key={plan.id} value={plan.id}>{plan.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {healthLoading ? (
+                            <p className="text-sm text-slate-600 dark:text-slate-300">Verification FusionPay...</p>
+                        ) : null}
+                        {healthError ? (
+                            <p className="text-sm text-rose-600 dark:text-rose-400">{healthError}</p>
+                        ) : null}
+
+                        {fusionHealth ? (
+                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 text-sm">
+                                <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">Devise paiement</p>
+                                    <p className="font-semibold text-slate-900 dark:text-white">{fusionHealth.payin_currency}</p>
+                                </div>
+                                <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">Taux utilise</p>
+                                    <p className="font-semibold text-slate-900 dark:text-white">
+                                        {fusionHealth.rate?.value !== null && fusionHealth.rate?.value !== undefined
+                                            ? `${fusionHealth.rate.value} (${fusionHealth.rate.direction})`
+                                            : 'Non defini'}
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">Montant converti</p>
+                                    <p className="font-semibold text-slate-900 dark:text-white">
+                                        {fusionHealth.converted_amount} {fusionHealth.payin_currency}
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">Montant original</p>
+                                    <p className="font-semibold text-slate-900 dark:text-white">
+                                        {fusionHealth.original_amount} {fusionHealth.original_currency}
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">Minimum FusionPay</p>
+                                    <p className="font-semibold text-slate-900 dark:text-white">
+                                        {fusionHealth.minimum_amount} {fusionHealth.payin_currency}
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">Statut</p>
+                                    <p className={`font-semibold ${fusionHealth.status === 'ok' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                                        {fusionHealth.status === 'ok' ? 'OK' : 'Attention'}
+                                    </p>
+                                </div>
+                            </div>
+                        ) : null}
+
+                        {fusionHealth?.issues?.length ? (
+                            <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
+                                {fusionHealth.issues.map((issue) => (
+                                    <li key={issue}>- {issue}</li>
+                                ))}
+                            </ul>
+                        ) : null}
+                    </div>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {plans.map((plan) => (
+                    {editablePlans.map((plan) => (
                         <div key={plan.id} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 space-y-3">
                             <div className="flex items-start justify-between gap-2">
                                 <div>
                                     <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{plan.name}</h2>
                                     <p className="text-xs text-slate-500 dark:text-slate-400">{plan.code}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        {(plan.currency_code || 'USD').toUpperCase()} {plan.monthly_price ?? 0}/mois
+                                    </p>
+                                    {plan.is_promo_active ? (
+                                        <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                                            Promo active: {plan.monthly_price_effective ?? plan.monthly_price}/mois
+                                        </p>
+                                    ) : null}
                                 </div>
                                 <button
                                     type="button"
                                     onClick={() => savePlan(plan)}
+                                    disabled={savingPlanId === plan.id}
                                     className="px-3 py-1.5 text-xs rounded-lg bg-amber-600 text-white hover:bg-amber-700"
                                 >
-                                    Enregistrer
+                                    {savingPlanId === plan.id ? 'Enregistrement...' : 'Enregistrer'}
                                 </button>
                             </div>
 
                             <div className="space-y-2 text-sm">
+                                <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+                                    <select
+                                        value={templateByPlan[plan.id] || 'starter'}
+                                        onChange={(e) => setTemplateByPlan((current) => ({ ...current, [plan.id]: e.target.value }))}
+                                        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2"
+                                    >
+                                        <option value="starter">Template Starter</option>
+                                        <option value="pro">Template Pro</option>
+                                        <option value="enterprise">Template Enterprise</option>
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={() => openTemplatePreview(plan.id)}
+                                        className="px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                    >
+                                        Preview template
+                                    </button>
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-xs text-slate-600 dark:text-slate-300">Devise (ISO)</label>
+                                    <input
+                                        value={plan.currency_code ?? 'USD'}
+                                        onChange={(e) => updatePlanField(plan.id, 'currency_code', e.target.value.toUpperCase().slice(0, 3))}
+                                        className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2"
+                                        placeholder="USD"
+                                        maxLength={3}
+                                    />
+                                </div>
                                 <div className="grid grid-cols-2 gap-2">
                                     <input
                                         value={plan.monthly_price ?? ''}
-                                        onChange={(e) => { plan.monthly_price = e.target.value; }}
+                                        onChange={(e) => updatePlanField(plan.id, 'monthly_price', e.target.value)}
                                         className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2"
                                         placeholder="Mensuel"
                                     />
                                     <input
                                         value={plan.annual_price ?? ''}
-                                        onChange={(e) => { plan.annual_price = e.target.value; }}
+                                        onChange={(e) => updatePlanField(plan.id, 'annual_price', e.target.value)}
                                         className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2"
                                         placeholder="Annuel"
                                     />
                                 </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <select
+                                        value={plan.promo_type ?? ''}
+                                        onChange={(e) => updatePlanField(plan.id, 'promo_type', e.target.value || null)}
+                                        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2"
+                                    >
+                                        <option value="">Aucune promo</option>
+                                        <option value="percentage">% Pourcentage</option>
+                                        <option value="fixed">Montant fixe</option>
+                                    </select>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={plan.promo_value ?? ''}
+                                        onChange={(e) => updatePlanField(plan.id, 'promo_value', e.target.value)}
+                                        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2"
+                                        placeholder="Valeur promo"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <input
+                                        type="datetime-local"
+                                        value={plan.promo_starts_at ? String(plan.promo_starts_at).slice(0, 16) : ''}
+                                        onChange={(e) => updatePlanField(plan.id, 'promo_starts_at', e.target.value || null)}
+                                        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2"
+                                    />
+                                    <input
+                                        type="datetime-local"
+                                        value={plan.promo_ends_at ? String(plan.promo_ends_at).slice(0, 16) : ''}
+                                        onChange={(e) => updatePlanField(plan.id, 'promo_ends_at', e.target.value || null)}
+                                        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2"
+                                    />
+                                </div>
+                                <input
+                                    value={plan.promo_label ?? ''}
+                                    onChange={(e) => updatePlanField(plan.id, 'promo_label', e.target.value)}
+                                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2"
+                                    placeholder="Libelle promo (ex: -20% this month)"
+                                />
                                 <textarea
                                     value={plan.description || ''}
-                                    onChange={(e) => { plan.description = e.target.value; }}
+                                    onChange={(e) => updatePlanField(plan.id, 'description', e.target.value)}
                                     className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2"
                                     rows={2}
                                 />
@@ -177,10 +485,17 @@ export default function BillingPlans({ plans = [], subscriptions = [], overrides
                             <button
                                 type="button"
                                 onClick={() => assignForm.post(route('admin.billing.subscriptions.assign'))}
+                                disabled={!assignForm.data.tenant_id || assignForm.processing}
                                 className="w-full sm:w-auto px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
                             >
-                                Assigner
+                                {assignForm.processing ? 'Assignation...' : 'Assigner'}
                             </button>
+                            {assignForm.errors.tenant_id && (
+                                <p className="text-xs text-rose-600">{assignForm.errors.tenant_id}</p>
+                            )}
+                            {assignForm.errors.billing_plan_id && (
+                                <p className="text-xs text-rose-600">{assignForm.errors.billing_plan_id}</p>
+                            )}
                         </div>
                     </div>
 
@@ -226,9 +541,11 @@ export default function BillingPlans({ plans = [], subscriptions = [], overrides
                                 onChange={(e) => overrideForm.setData('feature_code', e.target.value)}
                                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2"
                             >
-                                <option value="api.payments">api.payments</option>
-                                <option value="products.max">products.max</option>
-                                <option value="users.max">users.max</option>
+                                {featureCodes.map((featureCode) => (
+                                    <option key={featureCode} value={featureCode}>
+                                        {featureCatalog?.[featureCode]?.label || featureCode}
+                                    </option>
+                                ))}
                             </select>
                             <div className="flex items-center gap-3">
                                 <label className="text-sm text-slate-700 dark:text-slate-300">Active</label>
@@ -249,10 +566,20 @@ export default function BillingPlans({ plans = [], subscriptions = [], overrides
                             <button
                                 type="button"
                                 onClick={() => overrideForm.post(route('admin.billing.overrides.upsert'))}
+                                disabled={!overrideForm.data.tenant_id || overrideForm.processing}
                                 className="w-full sm:w-auto px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
                             >
-                                Enregistrer override
+                                {overrideForm.processing ? 'Enregistrement...' : 'Enregistrer override'}
                             </button>
+                            {overrideForm.errors.tenant_id && (
+                                <p className="text-xs text-rose-600">{overrideForm.errors.tenant_id}</p>
+                            )}
+                            {overrideForm.errors.feature_code && (
+                                <p className="text-xs text-rose-600">{overrideForm.errors.feature_code}</p>
+                            )}
+                            {overrideForm.errors.limit_value && (
+                                <p className="text-xs text-rose-600">{overrideForm.errors.limit_value}</p>
+                            )}
                         </div>
                     </div>
 
@@ -387,6 +714,77 @@ export default function BillingPlans({ plans = [], subscriptions = [], overrides
                     </table>
                 </div>
             </div>
+            {previewState.open ? (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                                Preview template "{previewState.templateCode}"
+                            </h3>
+                            <button
+                                type="button"
+                                className="text-sm px-2 py-1 rounded border border-slate-300 dark:border-slate-600"
+                                onClick={() => setPreviewState({ open: false, loading: false, planId: null, templateCode: '', changes: [], changesCount: 0 })}
+                            >
+                                Fermer
+                            </button>
+                        </div>
+                        {previewState.loading ? (
+                            <p className="text-sm text-slate-600 dark:text-slate-300">Chargement...</p>
+                        ) : (
+                            <>
+                                <p className="text-sm text-slate-600 dark:text-slate-300">
+                                    {previewState.changesCount} changement(s) detecte(s)
+                                </p>
+                                <div className="max-h-80 overflow-auto rounded border border-slate-200 dark:border-slate-700">
+                                    <table className="w-full text-xs">
+                                        <thead className="bg-slate-50 dark:bg-slate-900/50">
+                                            <tr>
+                                                <th className="text-left p-2">Feature</th>
+                                                <th className="text-left p-2">Actuel</th>
+                                                <th className="text-left p-2">Template</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {previewState.changes.map((item) => (
+                                                <tr
+                                                    key={item.code}
+                                                    className={`border-t border-slate-200 dark:border-slate-700 ${previewRowClass(item.from, item.to)}`}
+                                                >
+                                                    <td className="p-2 font-medium">{item.code}</td>
+                                                    <td className="p-2">{renderFeatureState(item.from)}</td>
+                                                    <td className="p-2">{renderFeatureState(item.to)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="flex justify-end gap-2">
+                                    <button
+                                        type="button"
+                                        className="px-3 py-2 text-xs rounded border border-slate-300 dark:border-slate-600"
+                                        onClick={() => setPreviewState({ open: false, loading: false, planId: null, templateCode: '', changes: [], changesCount: 0 })}
+                                    >
+                                        Annuler
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="px-3 py-2 text-xs rounded bg-emerald-600 text-white hover:bg-emerald-700"
+                                        onClick={() => {
+                                            router.post(route('admin.billing.plans.apply-template', previewState.planId), {
+                                                template_code: previewState.templateCode,
+                                            });
+                                            setPreviewState({ open: false, loading: false, planId: null, templateCode: '', changes: [], changesCount: 0 });
+                                        }}
+                                    >
+                                        Confirmer l'application
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            ) : null}
         </AppLayout>
     );
 }

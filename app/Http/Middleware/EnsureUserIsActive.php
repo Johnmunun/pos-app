@@ -6,7 +6,9 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 class EnsureUserIsActive
@@ -45,19 +47,61 @@ class EnsureUserIsActive
             return $next($request);
         }
 
+        // Si l'abonnement est expire, desactiver le compte puis deconnecter.
+        if ($this->deactivateIfPlanExpired($user)) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')->withErrors([
+                'email' => "Votre abonnement est expire. Votre compte a ete desactive, contactez l'administrateur.",
+            ]);
+        }
+
+        // Gate billing: obliger la souscription d'un plan actif avant utilisation.
+        // On autorise uniquement les routes necessaires pour payer et sortir.
+        if ($this->mustChoosePlan($user->tenant_id)) {
+            $allowedPlanRoutes = [
+                'billing.onboarding.payment',
+                'billing.payments.show',
+                'api.billing.plans.public',
+                'api.billing.payments.initiate',
+                'api.billing.payments.latest',
+                'api.billing.payments.status',
+                'billing.payments.callback',
+                'logout',
+                'profile.edit',
+                'profile.update',
+                'profile.destroy',
+            ];
+
+            $currentRoute = $request->route()?->getName();
+            if (!in_array($currentRoute, $allowedPlanRoutes, true)) {
+                if ($request->expectsJson() || $request->is('api/*')) {
+                    return response()->json([
+                        'message' => 'Plan requis avant utilisation.',
+                        'redirect_to' => route('billing.onboarding.payment'),
+                    ], 423);
+                }
+                return Inertia::location(route('billing.onboarding.payment'));
+            }
+        }
+
         // Si l'utilisateur est activé, tout est OK
         if ($user->status === 'active') {
             return $next($request);
         }
 
         // Si l'utilisateur est bloqué ou suspendu, refuser l'accès
-        if (in_array($user->status, ['blocked', 'suspended'], true)) {
+        if (in_array($user->status, ['blocked', 'suspended', 'inactive'], true)) {
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
             $status = (string) $user->status;
-            $statusLabel = $status === 'blocked' ? 'bloqué' : 'suspendu';
+            $statusLabel = $status === 'blocked'
+                ? 'bloque'
+                : ($status === 'suspended' ? 'suspendu' : 'desactive');
 
             return redirect()->route('login')->withErrors([
                 'email' => 'Votre compte a été ' . $statusLabel . '. Veuillez contacter l\'administrateur.',
@@ -69,6 +113,13 @@ class EnsureUserIsActive
             // Autoriser l'accès aux routes spécifiques pour users pending
             $allowedRoutes = [
                 'pending',
+                'billing.onboarding.payment',
+                'billing.payments.show',
+                'api.billing.plans.public',
+                'api.billing.payments.initiate',
+                'api.billing.payments.latest',
+                'api.billing.payments.status',
+                'billing.payments.callback',
                 'profile.edit',
                 'profile.update',
                 'profile.destroy',
@@ -87,10 +138,83 @@ class EnsureUserIsActive
             }
 
             // Sinon rediriger vers la page pending
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'message' => 'Compte en attente de validation.',
+                    'redirect_to' => route('pending'),
+                ], 423);
+            }
             return Inertia::location(route('pending'));
         }
 
         // Cas par défaut (ne devrait pas arriver)
         return $next($request);
+    }
+
+    private function mustChoosePlan($tenantId): bool
+    {
+        if (!$tenantId) {
+            return false;
+        }
+
+        if (!Schema::hasTable('tenant_plan_subscriptions')) {
+            return false;
+        }
+
+        $subscription = DB::table('tenant_plan_subscriptions')
+            ->where('tenant_id', (string) $tenantId)
+            ->where('status', 'active')
+            ->orderByDesc('id')
+            ->first(['id', 'ends_at', 'trial_ends_at']);
+
+        if (!$subscription) {
+            return true;
+        }
+
+        // Si une date de fin existe et est passee, considerer qu'il faut choisir un plan.
+        if (!empty($subscription->ends_at) && now()->gt($subscription->ends_at)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function deactivateIfPlanExpired($user): bool
+    {
+        if (!$user || !$user->tenant_id) {
+            return false;
+        }
+
+        if (!Schema::hasTable('tenant_plan_subscriptions')) {
+            return false;
+        }
+
+        $expiredSubscription = DB::table('tenant_plan_subscriptions')
+            ->where('tenant_id', (string) $user->tenant_id)
+            ->where('status', 'active')
+            ->whereNotNull('ends_at')
+            ->where('ends_at', '<', now())
+            ->orderByDesc('id')
+            ->first(['id']);
+
+        if (!$expiredSubscription) {
+            return false;
+        }
+
+        DB::table('tenant_plan_subscriptions')
+            ->where('id', $expiredSubscription->id)
+            ->update([
+                'status' => 'expired',
+                'updated_at' => now(),
+            ]);
+
+        DB::table('users')
+            ->where('id', (int) $user->id)
+            ->update([
+                'status' => 'inactive',
+                'updated_at' => now(),
+            ]);
+
+        return true;
     }
 }

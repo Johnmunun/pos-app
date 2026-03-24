@@ -221,7 +221,7 @@ class HandleInertiaRequests extends Middleware
                         ->join('billing_plans as bp', 'bp.id', '=', 'tps.billing_plan_id')
                         ->where('tps.tenant_id', (string) $user->tenant_id)
                         ->where('tps.status', 'active')
-                        ->select(['bp.name as plan_name'])
+                        ->select(['bp.name as plan_name', 'tps.ends_at', 'tps.trial_ends_at'])
                         ->orderByDesc('tps.id')
                         ->first();
 
@@ -260,6 +260,7 @@ class HandleInertiaRequests extends Middleware
 
                     $billingSummary = [
                         'plan_name' => $subscription?->plan_name ?? 'Plan par defaut',
+                        'expires_at' => $subscription?->ends_at ?? $subscription?->trial_ends_at ?? null,
                         'products_used' => (int) $productsCount,
                         'products_limit' => $productsConfig['enabled'] ? $productsConfig['limit'] : 0,
                         'users_used' => (int) $usersCount,

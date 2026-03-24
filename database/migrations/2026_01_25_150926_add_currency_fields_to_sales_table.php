@@ -15,18 +15,22 @@ return new class extends Migration
         Schema::table('sales', function (Blueprint $table) {
             // Vérification défensive avant ajout
             if (!Schema::hasColumn('sales', 'currency')) {
-                $table->string('currency', 3)
+                $currencyColumn = $table->string('currency', 3)
                     ->nullable()
-                    ->after('total')
                     ->index()
                     ->comment('Code devise de la vente (USD, XAF, EUR, etc.)');
+                if (Schema::hasColumn('sales', 'total')) {
+                    $currencyColumn->after('total');
+                }
             }
             
             if (!Schema::hasColumn('sales', 'exchange_rate_snapshot')) {
-                $table->json('exchange_rate_snapshot')
+                $snapshotColumn = $table->json('exchange_rate_snapshot')
                     ->nullable()
-                    ->after('currency')
                     ->comment('Snapshot JSON des taux de change utilisés au moment de la vente');
+                if (Schema::hasColumn('sales', 'currency')) {
+                    $snapshotColumn->after('currency');
+                }
             }
         });
     }

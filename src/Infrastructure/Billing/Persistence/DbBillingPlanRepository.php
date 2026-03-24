@@ -7,6 +7,30 @@ use Src\Domain\Billing\Repositories\BillingPlanRepositoryInterface;
 
 class DbBillingPlanRepository implements BillingPlanRepositoryInterface
 {
+    private function applyPromotion(?string $promoType, $promoValue, ?string $promoStartsAt, ?string $promoEndsAt, float $amount): array
+    {
+        $now = now();
+        $starts = $promoStartsAt ? now()->parse($promoStartsAt) : null;
+        $ends = $promoEndsAt ? now()->parse($promoEndsAt) : null;
+        $activeWindow = (!$starts || $now->greaterThanOrEqualTo($starts)) && (!$ends || $now->lessThanOrEqualTo($ends));
+        $hasPromo = $promoType !== null && $promoValue !== null && $activeWindow;
+
+        if (!$hasPromo) {
+            return ['amount' => $amount, 'active' => false];
+        }
+
+        $value = (float) $promoValue;
+        if ($promoType === 'percentage') {
+            $discounted = $amount - (($amount * $value) / 100);
+        } elseif ($promoType === 'fixed') {
+            $discounted = $amount - $value;
+        } else {
+            $discounted = $amount;
+        }
+
+        return ['amount' => max(0.0, round($discounted, 2)), 'active' => true];
+    }
+
     public function listPlans(): array
     {
         return DB::table('billing_plans')
@@ -14,13 +38,33 @@ class DbBillingPlanRepository implements BillingPlanRepositoryInterface
             ->orderBy('id')
             ->get()
             ->map(function ($plan) {
+                $monthly = (float) $plan->monthly_price;
+                $annual = $plan->annual_price !== null ? (float) $plan->annual_price : null;
+                $promoType = isset($plan->promo_type) ? $plan->promo_type : null;
+                $promoValue = isset($plan->promo_value) ? $plan->promo_value : null;
+                $promoStartsAt = isset($plan->promo_starts_at) ? (string) $plan->promo_starts_at : null;
+                $promoEndsAt = isset($plan->promo_ends_at) ? (string) $plan->promo_ends_at : null;
+                $monthlyPromo = $this->applyPromotion($promoType, $promoValue, $promoStartsAt, $promoEndsAt, $monthly);
+                $annualPromo = $annual !== null
+                    ? $this->applyPromotion($promoType, $promoValue, $promoStartsAt, $promoEndsAt, $annual)
+                    : ['amount' => null, 'active' => $monthlyPromo['active']];
+
                 return [
                     'id' => (int) $plan->id,
                     'code' => (string) $plan->code,
                     'name' => (string) $plan->name,
                     'description' => $plan->description,
-                    'monthly_price' => (float) $plan->monthly_price,
-                    'annual_price' => $plan->annual_price !== null ? (float) $plan->annual_price : null,
+                    'monthly_price' => $monthly,
+                    'annual_price' => $annual,
+                    'currency_code' => isset($plan->currency_code) && $plan->currency_code ? strtoupper((string) $plan->currency_code) : 'USD',
+                    'promo_type' => $promoType,
+                    'promo_value' => $promoValue !== null ? (float) $promoValue : null,
+                    'promo_starts_at' => $promoStartsAt,
+                    'promo_ends_at' => $promoEndsAt,
+                    'promo_label' => isset($plan->promo_label) ? $plan->promo_label : null,
+                    'monthly_price_effective' => $monthlyPromo['amount'],
+                    'annual_price_effective' => $annualPromo['amount'],
+                    'is_promo_active' => (bool) $monthlyPromo['active'],
                     'features' => is_string($plan->features) ? (json_decode($plan->features, true) ?: []) : [],
                     'is_active' => (bool) $plan->is_active,
                     'is_default' => (bool) $plan->is_default,
@@ -68,6 +112,12 @@ class DbBillingPlanRepository implements BillingPlanRepositoryInterface
                 'description' => $payload['description'] ?? null,
                 'monthly_price' => $payload['monthly_price'] ?? 0,
                 'annual_price' => $payload['annual_price'] ?? null,
+                'currency_code' => strtoupper((string) ($payload['currency_code'] ?? 'USD')),
+                'promo_type' => $payload['promo_type'] ?? null,
+                'promo_value' => $payload['promo_value'] ?? null,
+                'promo_starts_at' => $payload['promo_starts_at'] ?? null,
+                'promo_ends_at' => $payload['promo_ends_at'] ?? null,
+                'promo_label' => $payload['promo_label'] ?? null,
                 'features' => json_encode($payload['features'] ?? [], JSON_THROW_ON_ERROR),
                 'is_active' => (bool) ($payload['is_active'] ?? true),
                 'updated_at' => now(),

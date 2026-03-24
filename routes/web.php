@@ -5,6 +5,7 @@ use App\Http\Controllers\PwaIconController;
 use Src\Infrastructure\Admin\Http\Controllers\AdminController;
 use Src\Infrastructure\Settings\Http\Controllers\AppBrandingController;
 use Src\Infrastructure\Billing\Http\Controllers\BillingAdminController;
+use Src\Infrastructure\Billing\Http\Controllers\BillingPaymentController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -74,6 +75,11 @@ Route::middleware(['auth', 'verified'])->prefix('settings')->name('settings.')->
 Route::get('/', function () {
     return Inertia::render('Landing');
 })->name('landing');
+
+Route::get('/api/billing/plans', [BillingAdminController::class, 'publicPlansApi'])
+    ->name('api.billing.plans.public');
+Route::post('/api/billing/payments/callback', [BillingPaymentController::class, 'callback'])
+    ->name('billing.payments.callback');
 
 /**
  * Public Routes - Login (Welcome page)
@@ -194,6 +200,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/search', [\Src\Infrastructure\Search\Http\Controllers\GlobalSearchController::class, 'search'])
         ->name('api.search');
 
+    Route::post('/api/billing/payments/initiate', [BillingPaymentController::class, 'initiate'])
+        ->name('api.billing.payments.initiate');
+    Route::get('/api/billing/payments/latest', [BillingPaymentController::class, 'latest'])
+        ->name('api.billing.payments.latest');
+    Route::get('/api/billing/payments/{id}/status', [BillingPaymentController::class, 'status'])
+        ->name('api.billing.payments.status');
+    Route::get('/billing/payments/{id}', [BillingPaymentController::class, 'showStatusPage'])
+        ->name('billing.payments.show');
+    Route::get('/onboarding/payment', [BillingPaymentController::class, 'showOnboardingPaymentPage'])
+        ->name('billing.onboarding.payment');
+
     // Module onboarding (tutoriels guidés par module)
     Route::prefix('api/module-onboarding')->name('module-onboarding.')->group(function () {
         Route::get('/{module}/status', [\Src\Infrastructure\ModuleOnboarding\Http\Controllers\ModuleOnboardingController::class, 'status'])
@@ -272,9 +289,24 @@ Route::middleware(['auth', 'verified', 'root', 'permission'])->group(function ()
     Route::get('/admin/billing/plans', [BillingAdminController::class, 'index'])
         ->middleware('permission:admin.billing.manage')
         ->name('admin.billing.plans.index');
+    Route::get('/admin/billing/expired-subscriptions', [BillingAdminController::class, 'expiredSubscriptions'])
+        ->middleware('permission:admin.billing.manage')
+        ->name('admin.billing.subscriptions.expired');
+    Route::post('/admin/billing/subscriptions/reactivate', [BillingAdminController::class, 'reactivateExpiredSubscription'])
+        ->middleware('permission:admin.billing.manage')
+        ->name('admin.billing.subscriptions.reactivate');
+    Route::get('/api/admin/billing/plans', [BillingAdminController::class, 'plansApi'])
+        ->middleware('permission:admin.billing.manage')
+        ->name('api.admin.billing.plans.index');
     Route::put('/admin/billing/plans/{id}', [BillingAdminController::class, 'updatePlan'])
         ->middleware('permission:admin.billing.manage')
         ->name('admin.billing.plans.update');
+    Route::post('/admin/billing/plans/{id}/apply-template', [BillingAdminController::class, 'applyTemplate'])
+        ->middleware('permission:admin.billing.manage')
+        ->name('admin.billing.plans.apply-template');
+    Route::get('/admin/billing/plans/{id}/preview-template', [BillingAdminController::class, 'previewTemplate'])
+        ->middleware('permission:admin.billing.manage')
+        ->name('admin.billing.plans.preview-template');
     Route::post('/admin/billing/subscriptions/assign', [BillingAdminController::class, 'assignTenantPlan'])
         ->middleware('permission:admin.billing.manage')
         ->name('admin.billing.subscriptions.assign');
@@ -287,6 +319,9 @@ Route::middleware(['auth', 'verified', 'root', 'permission'])->group(function ()
     Route::get('/admin/billing/compliance/export-csv', [BillingAdminController::class, 'exportComplianceCsv'])
         ->middleware('permission:admin.billing.manage')
         ->name('admin.billing.compliance.export-csv');
+    Route::get('/admin/billing/fusionpay/health', [BillingAdminController::class, 'fusionPayHealth'])
+        ->middleware('permission:admin.billing.manage')
+        ->name('admin.billing.fusionpay.health');
     
     // Gestion complète des utilisateurs
     Route::prefix('admin/users')->name('admin.users.')->group(function () {
