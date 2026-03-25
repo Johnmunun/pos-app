@@ -68,7 +68,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
     const billingSummary = page.props?.auth?.billingSummary || null;
     const planExpiryLabel = billingSummary?.expires_at
         ? new Date(billingSummary.expires_at).toLocaleDateString()
-        : 'Illimite';
+        : '-';
     
     // Fonction pour vérifier si une route est active
     const isActiveRoute = (href) => {
@@ -361,6 +361,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                 { label: 'Gestion des devises', href: '/settings/currencies', permission: 'settings.currency.view|settings.settings.currency.view', icon: DollarSign },
                 { label: 'Branding (logo, couleurs)', href: '/admin/branding', permission: 'settings.branding', icon: Palette },
                 { label: 'Plans & Limitations', href: '/admin/billing/plans', permission: 'admin.billing.manage', icon: CreditCard },
+                { label: 'Transactions (abonnements)', href: '/admin/billing/transactions', permission: 'admin.billing.manage', icon: Scroll },
                 { label: 'Préférences UI', href: '#', permission: 'settings.ui', icon: Palette },
                 { label: 'Referral / Parrainage', href: '/referrals/settings', permission: 'referral.settings.view|referral.settings.manage', icon: Users },
             ]
@@ -444,23 +445,6 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                         </Link>
                     </div>
 
-                    {billingSummary && !isRoot && (
-                        <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3">
-                            <p className="text-xs text-amber-700 dark:text-amber-300 font-semibold">
-                                Plan: {billingSummary.plan_name}
-                            </p>
-                            <p className="text-[11px] text-amber-700/90 dark:text-amber-300/90 mt-1">
-                                Expire le: {planExpiryLabel}
-                            </p>
-                            <p className="text-[11px] text-amber-700/90 dark:text-amber-300/90 mt-1">
-                                Produits: {billingSummary.products_used}/{billingSummary.products_limit ?? 'illimite'}
-                            </p>
-                            <p className="text-[11px] text-amber-700/90 dark:text-amber-300/90">
-                                Utilisateurs: {billingSummary.users_used}/{billingSummary.users_limit ?? 'illimite'}
-                            </p>
-                        </div>
-                    )}
-
                     {/* Navigation Groups */}
                     <nav data-onboarding="module-sidebar-nav" className="flex flex-1 flex-col" aria-label="Menu principal">
                         <ul role="list" className="flex flex-1 flex-col gap-y-7">
@@ -534,6 +518,20 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                             })}
                         </ul>
                     </nav>
+
+                    {/* Footer plan indicator */}
+                    {billingSummary && (
+                        <div className="mt-auto pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3">
+                                <p className="text-xs text-amber-700 dark:text-amber-300 font-semibold">
+                                    Plan: {billingSummary.plan_name}
+                                </p>
+                                <p className="text-[11px] text-amber-700/90 dark:text-amber-300/90 mt-1">
+                                    Expire le: {planExpiryLabel}
+                                </p>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </aside>
 
@@ -572,7 +570,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                         </button>
                     </div>
 
-                    {billingSummary && !isRoot && (
+                    {billingSummary && (
                         <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3">
                             <p className="text-xs text-amber-700 dark:text-amber-300 font-semibold">
                                 Plan: {billingSummary.plan_name}

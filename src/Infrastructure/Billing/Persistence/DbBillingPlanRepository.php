@@ -124,7 +124,7 @@ class DbBillingPlanRepository implements BillingPlanRepositoryInterface
             ]);
     }
 
-    public function upsertTenantSubscription(string $tenantId, int $planId, string $status): void
+    public function upsertTenantSubscription(string $tenantId, int $planId, string $status, ?string $endsAt = null): void
     {
         DB::table('tenant_plan_subscriptions')->updateOrInsert(
             [
@@ -135,6 +135,8 @@ class DbBillingPlanRepository implements BillingPlanRepositoryInterface
                 'billing_plan_id' => $planId,
                 'status' => $status,
                 'starts_at' => now(),
+                'ends_at' => $endsAt,
+                'trial_ends_at' => null,
                 'updated_at' => now(),
                 'created_at' => now(),
             ]

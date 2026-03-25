@@ -4,9 +4,11 @@ import Sidebar from '@/Components/Layout/Sidebar';
 import Navbar from '@/Components/Layout/Navbar';
 import DepotAlert from '@/Components/DepotAlert';
 import FlashMessages from '@/Components/FlashMessages';
+import BillingPaymentSuccessModal from '@/Components/Billing/BillingPaymentSuccessModal';
 import PharmacyAssistant from '@/Components/Pharmacy/PharmacyAssistant';
 import HardwareAssistant from '@/Components/Hardware/HardwareAssistant';
 import CommerceAssistant from '@/Components/Commerce/CommerceAssistant';
+import { ensureFcmToken, wireForegroundMessages } from '@/lib/firebaseMessaging';
 
 /**
  * Conteneur pour aligner verticalement les boutons des assistants
@@ -86,70 +88,35 @@ export default function AppLayout({ children, header, fullWidth = false }) {
     // État pour le drawer mobile
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
-    // Web Push - abonnement pour tous les utilisateurs connectés (admins reçoivent les inscriptions, tous peuvent recevoir "compte activé")
+    // FCM Web - abonnement (token) pour notifications
     useEffect(() => {
         if (!auth?.user) return;
-        if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) {
-            return;
-        }
-
-        const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-        if (!vapidKey) {
-            // eslint-disable-next-line no-console
-            console.warn('VAPID public key manquante (VITE_VAPID_PUBLIC_KEY)');
-            return;
-        }
-
-        const urlBase64ToUint8Array = (base64String) => {
-            const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-            const rawData = window.atob(base64);
-            const outputArray = new Uint8Array(rawData.length);
-            for (let i = 0; i < rawData.length; ++i) {
-                outputArray[i] = rawData.charCodeAt(i);
-            }
-            return outputArray;
-        };
 
         (async () => {
             try {
-                let permission = Notification.permission;
-                if (permission === 'default') {
-                    permission = await Notification.requestPermission();
-                }
-                if (permission !== 'granted') {
-                    return;
-                }
+                const token = await ensureFcmToken();
+                if (!token) return;
 
-                // S'assurer que le service worker est enregistré
-                let registration = await navigator.serviceWorker.getRegistration();
-                if (!registration) {
-                    registration = await navigator.serviceWorker.register('/sw.js');
-                }
-
-                const existing = await registration.pushManager.getSubscription();
-                let subscription = existing;
-                if (!subscription) {
-                    subscription = await registration.pushManager.subscribe({
-                        userVisibleOnly: true,
-                        applicationServerKey: urlBase64ToUint8Array(vapidKey),
-                    });
-                }
-
-                const { endpoint, keys } = subscription.toJSON();
-                await window.axios.post(route('api.push-subscriptions.store'), {
-                    endpoint,
-                    public_key: keys.p256dh,
-                    auth_token: keys.auth,
-                    content_encoding: 'aesgcm',
+                await window.axios.post(route('api.notifications.tokens.store'), {
+                    token,
+                    platform: 'web',
                 });
 
-                localStorage.setItem('webPushSubscribed', '1');
+                localStorage.setItem('fcmSubscribed', '1');
             } catch (e) {
                 // eslint-disable-next-line no-console
-                console.warn('Erreur abonnement Web Push', e);
+                console.warn('Erreur abonnement FCM', e);
             }
         })();
+    }, [auth?.user]);
+
+    useEffect(() => {
+        if (!auth?.user) return;
+        wireForegroundMessages({
+            onNotification: () => {
+                // optional: integrate in-app toast later
+            },
+        });
     }, [auth?.user]);
 
     // Fermer le sidebar sur mobile quand on change de page
@@ -214,6 +181,9 @@ export default function AppLayout({ children, header, fullWidth = false }) {
 
             {/* Flash Messages */}
             <FlashMessages />
+
+            {/* Modal succès paiement abonnement */}
+            <BillingPaymentSuccessModal />
 
             {/* Assistants intelligents (Pharmacie + Quincaillerie + Commerce) */}
             <AssistantsContainer permissions={permissions} />

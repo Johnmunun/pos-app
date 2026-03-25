@@ -36,10 +36,15 @@ class UserRegisteredNotification implements ShouldBroadcast
             ],
         ]);
 
-        // Optionnel : envoyer aussi une notification Web Push aux admins / ROOT
+        // Optionnel : envoyer aussi une notification FCM aux admins / ROOT (push)
         try {
-            if (class_exists(\App\Services\WebPushService::class)) {
-                app(\App\Services\WebPushService::class)->sendToAdmins($this->notification);
+            if (class_exists(\App\Services\NotificationService::class) && !empty($user->tenant_id)) {
+                app(\App\Services\NotificationService::class)->sendToTenant(
+                    (int) $user->tenant_id,
+                    (string) $this->notification->title,
+                    (string) $this->notification->body,
+                    (array) ($this->notification->data ?? [])
+                );
             }
         } catch (\Throwable $e) {
             // Ne pas casser l'inscription si le push échoue

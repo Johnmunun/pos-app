@@ -36,6 +36,37 @@ Route::get('/icons/{filename}', PwaIconController::class)
     ->where('filename', 'icon-[0-9]+x[0-9]+\\.png')
     ->name('pwa.icon');
 
+// Service worker – rendu dynamique (FCM config)
+Route::get('/sw.js', function () {
+    $cfg = (array) config('fcm.web', []);
+    $enabled = (bool) config('fcm.enabled', false);
+    $vapidPublicKey = (string) (config('fcm.vapid_public_key') ?? '');
+    $iconUrl = (string) (config('fcm.default.icon_url') ?? '/icons/icon-192x192.png');
+    $clickUrl = (string) (config('fcm.default.click_url') ?? '/dashboard');
+
+    $firebaseConfig = [
+        'apiKey' => (string) ($cfg['api_key'] ?? ''),
+        'authDomain' => (string) ($cfg['auth_domain'] ?? ''),
+        'projectId' => (string) ($cfg['project_id'] ?? config('fcm.project_id') ?? ''),
+        'storageBucket' => (string) ($cfg['storage_bucket'] ?? ''),
+        'messagingSenderId' => (string) ($cfg['messaging_sender_id'] ?? ''),
+        'appId' => (string) ($cfg['app_id'] ?? ''),
+    ];
+
+    $js = view('sw', [
+        'enabled' => $enabled,
+        'firebaseConfig' => $firebaseConfig,
+        'vapidPublicKey' => $vapidPublicKey,
+        'iconUrl' => $iconUrl,
+        'clickUrl' => $clickUrl,
+    ])->render();
+
+    return response($js, 200, [
+        'Content-Type' => 'application/javascript; charset=UTF-8',
+        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+    ]);
+})->name('pwa.sw');
+
 /**
  * Currency Management Routes (DDD Architecture)
  */
@@ -200,6 +231,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/search', [\Src\Infrastructure\Search\Http\Controllers\GlobalSearchController::class, 'search'])
         ->name('api.search');
 
+    // Notifications (FCM tokens)
+    Route::post('/api/notifications/tokens', [\App\Http\Controllers\Api\NotificationTokenController::class, 'store'])
+        ->name('api.notifications.tokens.store');
+    Route::delete('/api/notifications/tokens', [\App\Http\Controllers\Api\NotificationTokenController::class, 'destroy'])
+        ->name('api.notifications.tokens.destroy');
+
+    Route::post('/api/notifications/test', [\App\Http\Controllers\Api\FcmTestController::class, 'send'])
+        ->name('api.notifications.test');
+
     Route::post('/api/billing/payments/initiate', [BillingPaymentController::class, 'initiate'])
         ->name('api.billing.payments.initiate');
     Route::get('/api/billing/payments/latest', [BillingPaymentController::class, 'latest'])
@@ -292,6 +332,9 @@ Route::middleware(['auth', 'verified', 'root', 'permission'])->group(function ()
     Route::get('/admin/billing/expired-subscriptions', [BillingAdminController::class, 'expiredSubscriptions'])
         ->middleware('permission:admin.billing.manage')
         ->name('admin.billing.subscriptions.expired');
+    Route::get('/admin/billing/transactions', [BillingAdminController::class, 'transactions'])
+        ->middleware('permission:admin.billing.manage')
+        ->name('admin.billing.transactions.index');
     Route::post('/admin/billing/subscriptions/reactivate', [BillingAdminController::class, 'reactivateExpiredSubscription'])
         ->middleware('permission:admin.billing.manage')
         ->name('admin.billing.subscriptions.reactivate');
@@ -365,11 +408,6 @@ Route::middleware(['auth'])->prefix('api')->group(function () {
         ->name('api.notifications.index');
     Route::patch('/notifications/{id}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead'])
         ->name('api.notifications.mark-read');
-
-    Route::post('/push-subscriptions', [\App\Http\Controllers\Api\WebPushSubscriptionController::class, 'store'])
-        ->name('api.push-subscriptions.store');
-    Route::delete('/push-subscriptions', [\App\Http\Controllers\Api\WebPushSubscriptionController::class, 'destroy'])
-        ->name('api.push-subscriptions.destroy');
 });
 
 /**

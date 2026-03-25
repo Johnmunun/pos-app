@@ -221,7 +221,7 @@ class HandleInertiaRequests extends Middleware
                         ->join('billing_plans as bp', 'bp.id', '=', 'tps.billing_plan_id')
                         ->where('tps.tenant_id', (string) $user->tenant_id)
                         ->where('tps.status', 'active')
-                        ->select(['bp.name as plan_name', 'tps.ends_at', 'tps.trial_ends_at'])
+                        ->select(['bp.name as plan_name', 'tps.starts_at', 'tps.ends_at', 'tps.trial_ends_at'])
                         ->orderByDesc('tps.id')
                         ->first();
 
@@ -258,9 +258,18 @@ class HandleInertiaRequests extends Middleware
                             : \Illuminate\Support\Facades\DB::table('quincaillerie_products')->where('shop_id', (string) $user->tenant_id)->count();
                     }
 
+                    $expiresAt = $subscription?->ends_at ?? $subscription?->trial_ends_at ?? null;
+                    if ($expiresAt === null && !empty($subscription?->starts_at)) {
+                        try {
+                            $expiresAt = \Illuminate\Support\Carbon::parse($subscription->starts_at)->addMonth();
+                        } catch (\Throwable $e) {
+                            $expiresAt = null;
+                        }
+                    }
+
                     $billingSummary = [
                         'plan_name' => $subscription?->plan_name ?? 'Plan par defaut',
-                        'expires_at' => $subscription?->ends_at ?? $subscription?->trial_ends_at ?? null,
+                        'expires_at' => $expiresAt,
                         'products_used' => (int) $productsCount,
                         'products_limit' => $productsConfig['enabled'] ? $productsConfig['limit'] : 0,
                         'users_used' => (int) $usersCount,
@@ -313,14 +322,18 @@ class HandleInertiaRequests extends Middleware
             $heroDevicesPath = 'settings/app/hero-pos-devices.png';
 
             if ($disk->exists($logoPath)) {
+                /** @var \Illuminate\Contracts\Filesystem\Filesystem|\Illuminate\Filesystem\FilesystemAdapter $disk */
+                /** @var string $appLogoUrl */
                 $appLogoUrl = $disk->url($logoPath);
             }
 
             if ($disk->exists($heroMainPath)) {
+                /** @var \Illuminate\Contracts\Filesystem\Filesystem|\Illuminate\Filesystem\FilesystemAdapter $disk */
                 $heroMainUrl = $disk->url($heroMainPath);
             }
 
             if ($disk->exists($heroDevicesPath)) {
+                /** @var \Illuminate\Contracts\Filesystem\Filesystem|\Illuminate\Filesystem\FilesystemAdapter $disk */
                 $heroDevicesUrl = $disk->url($heroDevicesPath);
             }
         } catch (\Throwable $e) {

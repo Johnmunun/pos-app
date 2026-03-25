@@ -2,10 +2,11 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Head, router } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 
-export default function BillingExpiredSubscriptions({ rows = [], plans = [] }) {
+export default function BillingExpiredSubscriptions({ rows = [], activeRows = [], plans = [] }) {
     const [durationByTenant, setDurationByTenant] = useState({});
     const [planByTenant, setPlanByTenant] = useState({});
     const [processingTenantId, setProcessingTenantId] = useState(null);
+    const [tab, setTab] = useState('expired');
 
     const activePlans = useMemo(
         () => plans.filter((p) => p?.is_active !== false),
@@ -38,7 +39,7 @@ export default function BillingExpiredSubscriptions({ rows = [], plans = [] }) {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">
-                            Abonnements expires / comptes inactifs
+                            Abonnements (Actifs / Expirés)
                         </h1>
                         <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
                             Interface dediee pour reactivation manuelle par admin/root.
@@ -52,6 +53,31 @@ export default function BillingExpiredSubscriptions({ rows = [], plans = [] }) {
                     </a>
                 </div>
 
+                <div className="flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setTab('active')}
+                        className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
+                            tab === 'active'
+                                ? 'bg-emerald-600 text-white border-emerald-600'
+                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'
+                        }`}
+                    >
+                        Actifs ({activeRows.length})
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setTab('expired')}
+                        className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
+                            tab === 'expired'
+                                ? 'bg-amber-600 text-white border-amber-600'
+                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'
+                        }`}
+                    >
+                        Expirés ({rows.length})
+                    </button>
+                </div>
+
                 <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 overflow-x-auto">
                     <table className="w-full min-w-[980px] text-sm">
                         <thead>
@@ -60,13 +86,46 @@ export default function BillingExpiredSubscriptions({ rows = [], plans = [] }) {
                                 <th className="pb-2">Utilisateur</th>
                                 <th className="pb-2">Dernier plan</th>
                                 <th className="pb-2">Expire le</th>
-                                <th className="pb-2">Nouveau plan</th>
-                                <th className="pb-2">Duree (jours)</th>
-                                <th className="pb-2 text-right">Action</th>
+                                {tab === 'expired' ? (
+                                    <>
+                                        <th className="pb-2">Nouveau plan</th>
+                                        <th className="pb-2">Duree (jours)</th>
+                                        <th className="pb-2 text-right">Action</th>
+                                    </>
+                                ) : (
+                                    <th className="pb-2 text-right">Statut</th>
+                                )}
                             </tr>
                         </thead>
                         <tbody>
-                            {rows.length === 0 ? (
+                            {tab === 'active' ? (
+                                activeRows.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="py-4 text-center text-slate-500 dark:text-slate-300">
+                                            Aucun abonnement actif.
+                                        </td>
+                                    </tr>
+                                ) : activeRows.map((row) => (
+                                    <tr key={`${row.subscription_id}-${row.tenant_id}`} className="border-t border-slate-200 dark:border-slate-700">
+                                        <td className="py-2 text-slate-900 dark:text-slate-100">{row.tenant_name}</td>
+                                        <td className="py-2">
+                                            <p className="text-slate-900 dark:text-slate-100">{row.user_name}</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">{row.user_email}</p>
+                                        </td>
+                                        <td className="py-2 text-slate-700 dark:text-slate-300">
+                                            {row.plan_name || '-'} {row.subscription_status ? `(${row.subscription_status})` : ''}
+                                        </td>
+                                        <td className="py-2 text-slate-700 dark:text-slate-300">
+                                            {row.expires_at ? new Date(row.expires_at).toLocaleDateString() : '-'}
+                                        </td>
+                                        <td className="py-2 text-right">
+                                            <span className="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+                                                Actif
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : rows.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="py-4 text-center text-slate-500 dark:text-slate-300">
                                         Aucun compte inactif lie a un abonnement expire.

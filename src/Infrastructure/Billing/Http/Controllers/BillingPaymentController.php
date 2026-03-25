@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Client\RequestException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use App\Services\CurrencyConversionService;
@@ -30,6 +31,7 @@ class BillingPaymentController extends Controller
             'billing_plan_id' => ['required', 'integer', 'exists:billing_plans,id'],
             'payment_method' => ['required', 'string', 'in:mobile_money,card'],
             'phone' => ['required', 'string', 'max:30'],
+            'billing_cycle' => ['nullable', 'string', 'in:monthly,annual'],
             'customer_name' => ['required', 'string', 'max:255'],
             'customer_email' => ['nullable', 'email', 'max:255'],
         ]);
@@ -43,19 +45,28 @@ class BillingPaymentController extends Controller
             return response()->json(['message' => 'Plan introuvable ou inactif.'], 422);
         }
 
-        $amount = (float) ($plan->monthly_price ?? 0);
+        $billingCycle = (string) ($validated['billing_cycle'] ?? 'monthly');
+        $amount = $billingCycle === 'annual'
+            ? (float) ($plan->annual_price ?? 0)
+            : (float) ($plan->monthly_price ?? 0);
+
+        if ($billingCycle === 'annual' && ($plan->annual_price === null || (float) $plan->annual_price <= 0)) {
+            return response()->json(['message' => 'Ce plan ne propose pas de paiement annuel.'], 422);
+        }
         if ($amount <= 0) {
             return response()->json(['message' => 'Le plan choisi est gratuit. Aucun paiement requis.'], 422);
         }
 
         $user = Auth::user();
+        $resolvedPhone = $validated['phone'];
+
         $planCurrency = strtoupper((string) ($plan->currency_code ?? 'USD'));
         $fusionCurrency = strtoupper((string) config('fusionpay.payin_currency', 'CDF'));
         $convertedAmount = $this->currencyConversionService->convert(
             $amount,
             $planCurrency,
             $fusionCurrency,
-            (int) ($user->tenant_id ?? 0)
+            0
         );
 
         if ($planCurrency !== $fusionCurrency && $convertedAmount === null) {
@@ -96,9 +107,10 @@ class BillingPaymentController extends Controller
                 'plan_code' => $plan->code ?? null,
                 'plan_price_original' => $amount,
                 'plan_currency_original' => $planCurrency,
+                'billing_cycle' => $billingCycle,
                 'customer_name' => $validated['customer_name'] ?? ($user->name ?? null),
                 'customer_email' => $validated['customer_email'] ?? ($user->email ?? null),
-                'phone' => $validated['phone'] ?? null,
+                'phone' => $resolvedPhone,
             ],
         ]);
 
@@ -120,13 +132,56 @@ class BillingPaymentController extends Controller
                     'planCode' => $plan->code ?? null,
                 ],
             ],
-            'numeroSend' => preg_replace('/\s+/', '', (string) $validated['phone']),
+            'numeroSend' => preg_replace('/\s+/', '', (string) $resolvedPhone),
             'nomclient' => (string) $validated['customer_name'],
             'return_url' => route('billing.payments.show', $transaction->id),
             'webhook_url' => $callbackUrl,
         ];
 
-        $providerResponse = $this->fusionPayClient->initiatePayment($providerPayload);
+        try {
+            $providerResponse = $this->fusionPayClient->initiatePayment($providerPayload);
+        } catch (RequestException $e) {
+            $status = $e->response?->status();
+            $body = $e->response?->json();
+            $rawMessage = is_array($body) ? (string) (data_get($body, 'message') ?? data_get($body, 'error') ?? '') : '';
+            $fallback = 'FusionPay a rejeté la demande de paiement.';
+
+            $transaction->update([
+                'status' => 'failed',
+                'provider_payload' => [
+                    'error' => true,
+                    'http_status' => $status,
+                    'body' => $body,
+                ],
+            ]);
+
+            $payload = [
+                'message' => $rawMessage !== '' ? $rawMessage : $fallback,
+                'provider_http_status' => $status,
+            ];
+            if ((bool) config('app.debug')) {
+                $payload['provider_body'] = $body;
+                $payload['provider_url'] = config('fusionpay.api_link') ?: (rtrim((string) config('fusionpay.base_url'), '/') . (string) config('fusionpay.endpoints.init_payment'));
+                $payload['sent_payload'] = $providerPayload;
+            }
+
+            return response()->json($payload, 422);
+        } catch (\Throwable $e) {
+            $transaction->update([
+                'status' => 'failed',
+                'provider_payload' => [
+                    'error' => true,
+                    'exception' => get_class($e),
+                    'message' => $e->getMessage(),
+                ],
+            ]);
+
+            return response()->json([
+                'message' => (bool) config('app.debug')
+                    ? ('Erreur: ' . $e->getMessage())
+                    : 'Une erreur est survenue pendant l’initiation du paiement.',
+            ], 422);
+        }
         $providerRaw = $providerResponse['raw'] ?? [];
         $providerAccepted = filter_var(data_get($providerRaw, 'statut', false), FILTER_VALIDATE_BOOL);
         $providerMessage = (string) (data_get($providerRaw, 'message') ?? '');
@@ -191,10 +246,15 @@ class BillingPaymentController extends Controller
         ]);
 
         if ($isPaid && !empty($transaction->tenant_id)) {
+            $cycle = strtolower((string) data_get($transaction->metadata, 'billing_cycle', 'monthly'));
+            $endsAt = $cycle === 'annual'
+                ? now()->addYear()
+                : now()->addMonth();
             $this->billingPlanService->assignTenantPlan(
                 (string) $transaction->tenant_id,
                 (int) $transaction->billing_plan_id,
-                'active'
+                'active',
+                $endsAt->toDateTimeString()
             );
         }
 

@@ -28,6 +28,7 @@
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "firebase": "^12.11.0",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.562.0",
     "quill": "^2.0.3",

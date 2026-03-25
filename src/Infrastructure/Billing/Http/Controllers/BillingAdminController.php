@@ -13,6 +13,7 @@ use Inertia\Response;
 use App\Services\CurrencyConversionService;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Src\Application\Billing\Services\BillingPlanService;
+use Src\Infrastructure\Billing\Models\BillingPaymentTransaction;
 
 class BillingAdminController
 {
@@ -99,38 +100,102 @@ class BillingAdminController
     {
         $plans = $this->billingPlanService->dashboardData()['plans'] ?? [];
 
-        $rows = DB::table('users as u')
-            ->join('tenants as t', 't.id', '=', 'u.tenant_id')
-            ->leftJoin('tenant_plan_subscriptions as tps', function ($join) {
-                $join->on('tps.tenant_id', '=', 'u.tenant_id')
-                    ->whereRaw('tps.id = (select max(s2.id) from tenant_plan_subscriptions s2 where s2.tenant_id = u.tenant_id)');
-            })
+        $activeRows = DB::table('tenant_plan_subscriptions as tps')
+            ->join('tenants as t', 't.id', '=', 'tps.tenant_id')
             ->leftJoin('billing_plans as bp', 'bp.id', '=', 'tps.billing_plan_id')
-            ->where('u.status', 'inactive')
+            ->leftJoin('users as u', function ($join) {
+                $join->on('u.tenant_id', '=', 'tps.tenant_id')
+                    ->whereRaw('u.id = (select max(u2.id) from users u2 where u2.tenant_id = tps.tenant_id and u2.type != "ROOT")');
+            })
+            ->where('tps.status', 'active')
+            ->where(function ($q) {
+                $q->whereNull('tps.ends_at')
+                    ->orWhere('tps.ends_at', '>=', now());
+            })
             ->select([
+                'tps.id as subscription_id',
+                'tps.status as subscription_status',
+                'tps.starts_at',
+                'tps.ends_at',
+                'tps.trial_ends_at',
+                'tps.tenant_id',
+                't.name as tenant_name',
+                'bp.id as billing_plan_id',
+                'bp.name as plan_name',
                 'u.id as user_id',
                 'u.name as user_name',
                 'u.email as user_email',
-                'u.tenant_id',
-                't.name as tenant_name',
-                'tps.id as subscription_id',
-                'tps.status as subscription_status',
-                'tps.ends_at',
-                'bp.id as billing_plan_id',
-                'bp.name as plan_name',
             ])
-            ->orderByDesc('u.updated_at')
+            ->orderByDesc('tps.id')
             ->limit(300)
             ->get()
             ->map(static fn ($row) => [
-                'user_id' => (int) $row->user_id,
-                'user_name' => (string) $row->user_name,
-                'user_email' => (string) $row->user_email,
+                'user_id' => $row->user_id !== null ? (int) $row->user_id : 0,
+                'user_name' => $row->user_name ? (string) $row->user_name : '—',
+                'user_email' => $row->user_email ? (string) $row->user_email : '—',
                 'tenant_id' => (int) $row->tenant_id,
                 'tenant_name' => (string) $row->tenant_name,
                 'subscription_id' => $row->subscription_id !== null ? (int) $row->subscription_id : null,
                 'subscription_status' => $row->subscription_status ? (string) $row->subscription_status : null,
-                'expires_at' => $row->ends_at ? (string) $row->ends_at : null,
+                'starts_at' => $row->starts_at ? (string) $row->starts_at : null,
+                'expires_at' => $row->ends_at
+                    ? (string) $row->ends_at
+                    : ($row->trial_ends_at
+                        ? (string) $row->trial_ends_at
+                        : ($row->starts_at ? now()->parse($row->starts_at)->addMonth()->toDateTimeString() : null)),
+                'billing_plan_id' => $row->billing_plan_id !== null ? (int) $row->billing_plan_id : null,
+                'plan_name' => $row->plan_name ? (string) $row->plan_name : null,
+            ])
+            ->toArray();
+
+        $rows = DB::table('tenant_plan_subscriptions as tps')
+            ->join('tenants as t', 't.id', '=', 'tps.tenant_id')
+            ->leftJoin('billing_plans as bp', 'bp.id', '=', 'tps.billing_plan_id')
+            ->leftJoin('users as u', function ($join) {
+                $join->on('u.tenant_id', '=', 'tps.tenant_id')
+                    ->whereRaw('u.id = (select max(u2.id) from users u2 where u2.tenant_id = tps.tenant_id and u2.type != "ROOT")');
+            })
+            ->where(function ($q) {
+                $q->where('tps.status', 'expired')
+                    ->orWhere(function ($q2) {
+                        $q2->where('tps.status', 'active')
+                            ->whereNotNull('tps.ends_at')
+                            ->where('tps.ends_at', '<', now());
+                    })
+                    ->orWhere(function ($q2) {
+                        $q2->where('tps.status', 'active')
+                            ->whereNull('tps.ends_at')
+                            ->whereNotNull('tps.trial_ends_at')
+                            ->where('tps.trial_ends_at', '<', now());
+                    });
+            })
+            ->select([
+                'tps.id as subscription_id',
+                'tps.status as subscription_status',
+                'tps.ends_at',
+                'tps.trial_ends_at',
+                'tps.tenant_id',
+                't.name as tenant_name',
+                'bp.id as billing_plan_id',
+                'bp.name as plan_name',
+                'u.id as user_id',
+                'u.name as user_name',
+                'u.email as user_email',
+            ])
+            ->orderByDesc('tps.id')
+            ->limit(300)
+            ->get()
+            ->map(static fn ($row) => [
+                'user_id' => $row->user_id !== null ? (int) $row->user_id : 0,
+                'user_name' => $row->user_name ? (string) $row->user_name : '—',
+                'user_email' => $row->user_email ? (string) $row->user_email : '—',
+                'tenant_id' => (int) $row->tenant_id,
+                'tenant_name' => (string) $row->tenant_name,
+                'subscription_id' => $row->subscription_id !== null ? (int) $row->subscription_id : null,
+                'subscription_status' => $row->subscription_status ? (string) $row->subscription_status : null,
+                'expires_at' => $row->ends_at
+                    ? (string) $row->ends_at
+                    : ($row->trial_ends_at ? (string) $row->trial_ends_at : null),
                 'billing_plan_id' => $row->billing_plan_id !== null ? (int) $row->billing_plan_id : null,
                 'plan_name' => $row->plan_name ? (string) $row->plan_name : null,
             ])
@@ -138,7 +203,94 @@ class BillingAdminController
 
         return Inertia::render('Admin/BillingExpiredSubscriptions', [
             'rows' => $rows,
+            'activeRows' => $activeRows,
             'plans' => $plans,
+        ]);
+    }
+
+    public function transactions(): Response
+    {
+        $rows = BillingPaymentTransaction::query()
+            ->from('billing_payment_transactions as bpt')
+            ->leftJoin('tenants as t', 't.id', '=', 'bpt.tenant_id')
+            ->leftJoin('users as u', 'u.id', '=', 'bpt.user_id')
+            ->leftJoin('billing_plans as bp', 'bp.id', '=', 'bpt.billing_plan_id')
+            ->select([
+                'bpt.id',
+                'bpt.tenant_id',
+                't.name as tenant_name',
+                'bpt.user_id',
+                'u.name as user_name',
+                'u.email as user_email',
+                'bpt.billing_plan_id',
+                'bp.name as plan_name',
+                'bp.code as plan_code',
+                'bpt.payment_method',
+                'bpt.amount',
+                'bpt.currency_code',
+                'bpt.status',
+                'bpt.provider_reference',
+                'bpt.paid_at',
+                'bpt.created_at',
+            ])
+            ->orderByDesc('bpt.id')
+            ->limit(300)
+            ->get()
+            ->map(static fn ($r) => [
+                'id' => (int) $r->id,
+                'tenant_id' => $r->tenant_id !== null ? (int) $r->tenant_id : null,
+                'tenant_name' => $r->tenant_name ? (string) $r->tenant_name : null,
+                'user_id' => $r->user_id !== null ? (int) $r->user_id : null,
+                'user_name' => $r->user_name ? (string) $r->user_name : null,
+                'user_email' => $r->user_email ? (string) $r->user_email : null,
+                'billing_plan_id' => $r->billing_plan_id !== null ? (int) $r->billing_plan_id : null,
+                'plan_name' => $r->plan_name ? (string) $r->plan_name : null,
+                'plan_code' => $r->plan_code ? (string) $r->plan_code : null,
+                'payment_method' => $r->payment_method ? (string) $r->payment_method : null,
+                'amount' => $r->amount !== null ? (float) $r->amount : null,
+                'currency_code' => $r->currency_code ? (string) $r->currency_code : null,
+                'status' => $r->status ? (string) $r->status : null,
+                'provider_reference' => $r->provider_reference ? (string) $r->provider_reference : null,
+                'paid_at' => $r->paid_at ? (string) $r->paid_at : null,
+                'created_at' => $r->created_at ? (string) $r->created_at : null,
+            ])
+            ->toArray();
+
+        $subscriptions = DB::table('tenant_plan_subscriptions as tps')
+            ->join('tenants as t', 't.id', '=', 'tps.tenant_id')
+            ->join('billing_plans as bp', 'bp.id', '=', 'tps.billing_plan_id')
+            ->where('tps.status', 'active')
+            ->select([
+                'tps.id',
+                'tps.tenant_id',
+                't.name as tenant_name',
+                'tps.billing_plan_id',
+                'bp.name as plan_name',
+                'bp.code as plan_code',
+                'tps.starts_at',
+                'tps.ends_at',
+                'tps.trial_ends_at',
+            ])
+            ->orderByRaw('tps.ends_at is null desc')
+            ->orderBy('tps.ends_at')
+            ->limit(300)
+            ->get()
+            ->map(static fn ($r) => [
+                'id' => (int) $r->id,
+                'tenant_id' => (int) $r->tenant_id,
+                'tenant_name' => (string) $r->tenant_name,
+                'billing_plan_id' => (int) $r->billing_plan_id,
+                'plan_name' => (string) $r->plan_name,
+                'plan_code' => (string) $r->plan_code,
+                'starts_at' => $r->starts_at ? (string) $r->starts_at : null,
+                'ends_at' => $r->ends_at ? (string) $r->ends_at : null,
+                'trial_ends_at' => $r->trial_ends_at ? (string) $r->trial_ends_at : null,
+            ])
+            ->toArray();
+
+        return Inertia::render('Admin/BillingTransactions', [
+            'transactions' => $rows,
+            'subscriptions' => $subscriptions,
         ]);
     }
 
@@ -298,7 +450,8 @@ class BillingAdminController
         $this->billingPlanService->assignTenantPlan(
             (string) $validated['tenant_id'],
             (int) $validated['billing_plan_id'],
-            (string) ($validated['status'] ?? 'active')
+            (string) ($validated['status'] ?? 'active'),
+            null
         );
 
         return back()->with('success', 'Abonnement tenant mis a jour.');

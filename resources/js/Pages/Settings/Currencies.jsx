@@ -1,4 +1,4 @@
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import Drawer from '@/Components/Drawer';
@@ -9,7 +9,17 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import Swal from 'sweetalert2';
 import { Plus, Edit, Trash2, DollarSign } from 'lucide-react';
 
-export default function Currencies({ currencies, exchangeRates }) {
+export default function Currencies({ currencies, exchangeRates, tenants = [], tenant = null, isRoot = false, scope: scopeProp = 'tenant' }) {
+    const page = usePage();
+    const scope = String(scopeProp || 'tenant');
+    const isGlobalScope = isRoot && scope === 'global';
+    const currentTenantId = tenant?.id || '';
+    const currenciesForTenant = isRoot && !isGlobalScope && currentTenantId
+        ? currencies.filter((c) => String(c.tenant_id ?? '') === String(currentTenantId))
+        : currencies;
+    const exchangeRatesForTenant = isRoot && !isGlobalScope && currentTenantId
+        ? exchangeRates.filter((r) => String(r.tenant_id ?? '') === String(currentTenantId))
+        : exchangeRates;
     const [currencyDrawerOpen, setCurrencyDrawerOpen] = useState(false);
     const [rateDrawerOpen, setRateDrawerOpen] = useState(false);
     const [selectedCurrency, setSelectedCurrency] = useState(null);
@@ -17,6 +27,8 @@ export default function Currencies({ currencies, exchangeRates }) {
 
     // Form for currency
     const currencyForm = useForm({
+        tenant_id: isGlobalScope ? '' : (currentTenantId || ''),
+        scope,
         code: '',
         name: '',
         symbol: '',
@@ -25,6 +37,8 @@ export default function Currencies({ currencies, exchangeRates }) {
 
     // Form for exchange rate
     const rateForm = useForm({
+        tenant_id: isGlobalScope ? '' : (currentTenantId || ''),
+        scope,
         from_currency_id: '',
         to_currency_id: '',
         rate: '',
@@ -35,6 +49,8 @@ export default function Currencies({ currencies, exchangeRates }) {
         setSelectedCurrency(currency);
         if (currency) {
             currencyForm.setData({
+                tenant_id: isGlobalScope ? '' : (currentTenantId || ''),
+                scope,
                 code: currency.code,
                 name: currency.name,
                 symbol: currency.symbol,
@@ -42,6 +58,8 @@ export default function Currencies({ currencies, exchangeRates }) {
             });
         } else {
             currencyForm.reset();
+            currencyForm.setData('tenant_id', isGlobalScope ? '' : (currentTenantId || ''));
+            currencyForm.setData('scope', scope);
         }
         setCurrencyDrawerOpen(true);
     };
@@ -50,6 +68,8 @@ export default function Currencies({ currencies, exchangeRates }) {
         setSelectedRate(rate);
         if (rate) {
             rateForm.setData({
+                tenant_id: isGlobalScope ? '' : (currentTenantId || ''),
+                scope,
                 from_currency_id: rate.from_currency_id || '',
                 to_currency_id: rate.to_currency_id || '',
                 rate: rate.rate,
@@ -58,6 +78,8 @@ export default function Currencies({ currencies, exchangeRates }) {
         } else {
             rateForm.reset();
             rateForm.setData('effective_date', new Date().toISOString().split('T')[0]);
+            rateForm.setData('tenant_id', isGlobalScope ? '' : (currentTenantId || ''));
+            rateForm.setData('scope', scope);
         }
         setRateDrawerOpen(true);
     };
@@ -141,11 +163,74 @@ export default function Currencies({ currencies, exchangeRates }) {
         <AppLayout
             header={
                 <div className="flex flex-row justify-between items-center gap-4">
-                    <h2 className="text-2xl font-bold leading-tight text-gray-900 dark:text-white">
-                        Gestion des Devises
-                    </h2>
+                    <div className="flex flex-col gap-2">
+                        <h2 className="text-2xl font-bold leading-tight text-gray-900 dark:text-white">
+                            Gestion des Devises
+                        </h2>
+                        {isRoot ? (
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-600 dark:text-gray-300">Mode:</span>
+                                    <select
+                                        value={scope}
+                                        onChange={(e) => {
+                                            const nextScope = e.target.value;
+                                            if (nextScope === 'global') {
+                                                router.get(route('settings.currencies'), { scope: 'global' }, { preserveScroll: true });
+                                                return;
+                                            }
+                                            if (currentTenantId) {
+                                                router.get(route('settings.currencies'), { tenant_id: currentTenantId, scope: 'tenant' }, { preserveScroll: true });
+                                                return;
+                                            }
+                                            router.get(route('settings.currencies'), { scope: 'tenant' }, { preserveScroll: true });
+                                        }}
+                                        className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-1.5 text-sm"
+                                    >
+                                        <option value="tenant">Par boutique (tenant)</option>
+                                        <option value="global">Global (paiements)</option>
+                                    </select>
+                                </div>
+
+                                {!isGlobalScope ? (
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-gray-600 dark:text-gray-300">Tenant:</span>
+                                        <select
+                                            value={currentTenantId}
+                                            onChange={(e) => {
+                                                const nextTenantId = e.target.value;
+                                                if (!nextTenantId) return;
+                                                router.get(route('settings.currencies'), { tenant_id: nextTenantId, scope: 'tenant' }, { preserveScroll: true });
+                                            }}
+                                            className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-1.5 text-sm"
+                                        >
+                                            <option value="">Choisir un tenant...</option>
+                                            {tenants.map((t) => (
+                                                <option key={t.id} value={t.id}>{t.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                ) : (
+                                    <div className="text-xs text-amber-700 dark:text-amber-300">
+                                        Ces taux sont utilisés pour FusionPay.
+                                    </div>
+                                )}
+                            </div>
+                        ) : null}
+                    </div>
                     <button
-                        onClick={() => openCurrencyDrawer()}
+                        onClick={() => {
+                            if (isRoot && !isGlobalScope && !currentTenantId) {
+                                Swal.fire({
+                                    title: 'Selection requise',
+                                    text: 'Choisissez d’abord un tenant avant d’ajouter une devise.',
+                                    icon: 'info',
+                                });
+                                return;
+                            }
+                            openCurrencyDrawer();
+                        }}
+                        disabled={isRoot && !isGlobalScope && !currentTenantId}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md whitespace-nowrap"
                     >
                         <Plus className="h-4 w-4" />
@@ -168,7 +253,7 @@ export default function Currencies({ currencies, exchangeRates }) {
                             </h2>
                         </div>
                         <div className="p-6">
-                            {currencies.length > 0 ? (
+                            {currenciesForTenant.length > 0 ? (
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                         <thead>
@@ -191,7 +276,7 @@ export default function Currencies({ currencies, exchangeRates }) {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                                            {currencies.map((currency) => (
+                                            {currenciesForTenant.map((currency) => (
                                                 <tr key={currency.id}>
                                                     <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-semibold">
                                                         {currency.code}
@@ -257,7 +342,7 @@ export default function Currencies({ currencies, exchangeRates }) {
                             </button>
                         </div>
                         <div className="p-6">
-                            {exchangeRates.length > 0 ? (
+                            {exchangeRatesForTenant.length > 0 ? (
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                         <thead>
@@ -280,7 +365,7 @@ export default function Currencies({ currencies, exchangeRates }) {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                                            {exchangeRates.map((rate) => (
+                                            {exchangeRatesForTenant.map((rate) => (
                                                 <tr key={rate.id}>
                                                     <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                                                         {rate.from_currency_code}
@@ -295,19 +380,26 @@ export default function Currencies({ currencies, exchangeRates }) {
                                                         {rate.effective_date}
                                                     </td>
                                                     <td className="px-4 py-3 text-sm">
+                                                        {isRoot && !isGlobalScope && currentTenantId && String(rate.tenant_id ?? '') !== String(currentTenantId) ? (
+                                                            <span className="text-xs text-slate-500">Lecture seule</span>
+                                                        ) : null}
                                                         <div className="flex gap-2">
-                                                            <button
-                                                                onClick={() => openRateDrawer(rate)}
-                                                                className="text-amber-600 hover:text-amber-700"
-                                                            >
-                                                                <Edit className="h-4 w-4" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDeleteRate(rate.id)}
-                                                                className="text-red-600 hover:text-red-700"
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </button>
+                                                            {(!isRoot || isGlobalScope || !currentTenantId || String(rate.tenant_id ?? '') === String(currentTenantId)) && (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => openRateDrawer(rate)}
+                                                                        className="text-amber-600 hover:text-amber-700"
+                                                                    >
+                                                                        <Edit className="h-4 w-4" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDeleteRate(rate.id)}
+                                                                        className="text-red-600 hover:text-red-700"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </button>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -439,7 +531,7 @@ export default function Currencies({ currencies, exchangeRates }) {
                             required
                         >
                             <option value="">Sélectionner une devise</option>
-                            {currencies.map((currency) => (
+                            {currenciesForTenant.map((currency) => (
                                 <option key={currency.id} value={currency.id}>
                                     {currency.code} - {currency.name}
                                 </option>
@@ -459,7 +551,7 @@ export default function Currencies({ currencies, exchangeRates }) {
                             required
                         >
                             <option value="">Sélectionner une devise</option>
-                            {currencies.map((currency) => (
+                            {currenciesForTenant.map((currency) => (
                                 <option key={currency.id} value={currency.id}>
                                     {currency.code} - {currency.name}
                                 </option>

@@ -316,6 +316,15 @@ export default function BillingPlans({ plans = [], subscriptions = [], overrides
                             </div>
                         ) : null}
 
+                        {fusionHealth?.status !== 'ok' && (
+                            <a
+                                href={route('settings.currencies')}
+                                className="inline-flex items-center rounded-lg border border-amber-300 dark:border-amber-700 px-3 py-2 text-sm text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                            >
+                                Configurer les devises
+                            </a>
+                        )}
+
                         {fusionHealth?.issues?.length ? (
                             <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
                                 {fusionHealth.issues.map((issue) => (

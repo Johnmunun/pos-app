@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { CheckCircle2, Clock3, ExternalLink, ShieldCheck } from 'lucide-react';
 
 export default function PaymentStatus({ transaction }) {
     const [tx, setTx] = useState(transaction);
@@ -35,9 +36,9 @@ export default function PaymentStatus({ transaction }) {
             setTx((prev) => ({ ...prev, ...data }));
 
             if (data.status === 'paid') {
-                setMessage('Paiement confirme. Votre abonnement est maintenant actif.');
+                setMessage('Paiement confirmé. Redirection vers votre tableau de bord...');
                 window.setTimeout(() => {
-                    window.location.href = route('pending');
+                    window.location.href = route('dashboard', { billing_success: tx.id });
                 }, 900);
                 return;
             }
@@ -63,9 +64,9 @@ export default function PaymentStatus({ transaction }) {
 
                 const nextStatus = String(data?.status || '').toLowerCase();
                 if (nextStatus === 'paid' || nextStatus === 'success' || nextStatus === 'completed') {
-                    setMessage('Paiement confirme automatiquement. Votre abonnement est actif.');
+                    setMessage('Paiement confirmé automatiquement. Redirection...');
                     window.setTimeout(() => {
-                        window.location.href = route('pending');
+                        window.location.href = route('dashboard', { billing_success: tx.id });
                     }, 900);
                 }
             } catch (error) {
@@ -84,66 +85,88 @@ export default function PaymentStatus({ transaction }) {
 
             <div className="py-8">
                 <div className="max-w-3xl mx-auto sm:px-6 lg:px-8">
-                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow p-6">
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Paiement abonnement</h1>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                            Transaction #{tx.id} - Ref: {tx.provider_reference || 'N/A'}
-                        </p>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                            <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Montant</p>
-                                <p className="font-semibold text-gray-900 dark:text-white">
-                                    {tx.currency_code || 'USD'} {tx.amount}
-                                </p>
+                    <div className="relative overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl shadow p-6 sm:p-8">
+                        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-emerald-500/10 to-indigo-500/10" />
+                        <div className="relative">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+                                        Finalisation du paiement
+                                    </h1>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                        Si le paiement est validé sur votre téléphone, clique sur “Vérifier paiement”.
+                                    </p>
+                                </div>
+                                <div className="shrink-0 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-900/30 px-3 py-2">
+                                    <p className="text-[11px] text-gray-500 dark:text-gray-400">Transaction</p>
+                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">#{tx.id}</p>
+                                </div>
                             </div>
-                            <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Statut</p>
-                                <p className={`font-semibold ${statusColorClass}`}>{tx.status}</p>
-                            </div>
-                        </div>
 
-                        <div className="flex flex-wrap gap-3">
-                            {tx.checkout_url && (
-                                <a
-                                    href={tx.checkout_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium"
+                            <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-900/30 p-4">
+                                    <div className="flex items-center gap-2 text-gray-700 dark:text-gray-200">
+                                        <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                                        <span className="text-sm font-semibold">Statut</span>
+                                    </div>
+                                    <p className={`mt-2 text-sm font-bold ${statusColorClass}`}>{tx.status}</p>
+                                </div>
+                                <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-900/30 p-4">
+                                    <div className="flex items-center gap-2 text-gray-700 dark:text-gray-200">
+                                        <Clock3 className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                                        <span className="text-sm font-semibold">Conseil</span>
+                                    </div>
+                                    <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                                        Attends 5–20 secondes puis vérifie.
+                                    </p>
+                                </div>
+                                <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-900/30 p-4">
+                                    <div className="flex items-center gap-2 text-gray-700 dark:text-gray-200">
+                                        <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                                        <span className="text-sm font-semibold">Après succès</span>
+                                    </div>
+                                    <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                                        Tu seras redirigé vers le dashboard.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="mt-6 flex flex-wrap gap-3">
+                                {tx.checkout_url && (
+                                    <a
+                                        href={tx.checkout_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-2 h-11 px-4 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold shadow-sm"
+                                    >
+                                        <ExternalLink className="h-4 w-4" />
+                                        Ouvrir FusionPay
+                                    </a>
+                                )}
+
+                                <button
+                                    type="button"
+                                    onClick={verifyNow}
+                                    disabled={checking}
+                                    className="h-11 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-sm disabled:opacity-60"
                                 >
-                                    Ouvrir le checkout
-                                </a>
-                            )}
+                                    {checking ? 'Vérification...' : 'Vérifier paiement'}
+                                </button>
 
-                            <button
-                                type="button"
-                                onClick={verifyNow}
-                                disabled={checking}
-                                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 disabled:opacity-50"
-                            >
-                                {checking ? 'Verification...' : 'Verifier paiement'}
-                            </button>
-
-                            {!isPaid && (
                                 <Link
                                     href={route('pending')}
-                                    className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300"
+                                    className="h-11 px-4 rounded-2xl border border-gray-300 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-200 inline-flex items-center"
                                 >
-                                    Retour pending
+                                    Retour
                                 </Link>
-                            )}
+                            </div>
 
-                            {isPaid && (
-                                <Link
-                                    href={route('pending')}
-                                    className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium"
-                                >
-                                    Continuer vers pending
-                                </Link>
+                            {message && (
+                                <div className="mt-4 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3">
+                                    <p className="text-sm text-amber-800 dark:text-amber-200">{message}</p>
+                                </div>
                             )}
                         </div>
-
-                        {message && <p className="mt-4 text-sm text-amber-700 dark:text-amber-300">{message}</p>}
                     </div>
                 </div>
             </div>

@@ -32,30 +32,53 @@ class EnsureUserIsActive
 
         // ROOT users bypass toutes les vérifications de statut
         // Log pour debug
+        /** @var bool $isRoot */
+        $isRoot = method_exists($user, 'isRoot')
+            ? (bool) $user->{'isRoot'}()
+            : (strtoupper(trim((string) ($user->type ?? ''))) === 'ROOT');
+
         Log::debug('EnsureUserIsActive middleware', [
             'user_id' => $user->id,
             'user_email' => $user->email,
             'user_type' => $user->type,
             'user_type_trimmed' => strtoupper(trim($user->type ?? '')),
             'user_status' => $user->status,
-            'is_root' => $user->isRoot(),
+            'is_root' => $isRoot,
             'route_name' => $request->route()?->getName(),
         ]);
 
-        if ($user->isRoot()) {
+        if ($isRoot) {
             Log::debug('ROOT user detected, bypassing status check');
             return $next($request);
         }
 
-        // Si l'abonnement est expire, desactiver le compte puis deconnecter.
-        if ($this->deactivateIfPlanExpired($user)) {
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
+        // Si l'abonnement est expire: forcer le paiement avant toute utilisation.
+        // On garde le compte connecté, mais on bloque l'accès (UX: aller directement payer).
+        if ($this->isPlanExpired($user)) {
+            $allowedExpiredRoutes = [
+                'billing.onboarding.payment',
+                'billing.payments.show',
+                'api.billing.plans.public',
+                'api.billing.payments.initiate',
+                'api.billing.payments.latest',
+                'api.billing.payments.status',
+                'billing.payments.callback',
+                'logout',
+                'profile.edit',
+                'profile.update',
+                'profile.destroy',
+            ];
 
-            return redirect()->route('login')->withErrors([
-                'email' => "Votre abonnement est expire. Votre compte a ete desactive, contactez l'administrateur.",
-            ]);
+            $currentRoute = $request->route()?->getName();
+            if (!in_array($currentRoute, $allowedExpiredRoutes, true)) {
+                if ($request->expectsJson() || $request->is('api/*')) {
+                    return response()->json([
+                        'message' => 'Abonnement expiré. Paiement requis.',
+                        'redirect_to' => route('billing.onboarding.payment'),
+                    ], 423);
+                }
+                return Inertia::location(route('billing.onboarding.payment'));
+            }
         }
 
         // Gate billing: obliger la souscription d'un plan actif avant utilisation.
@@ -216,5 +239,35 @@ class EnsureUserIsActive
             ]);
 
         return true;
+    }
+
+    private function isPlanExpired($user): bool
+    {
+        if (!$user || !$user->tenant_id) {
+            return false;
+        }
+        if (!Schema::hasTable('tenant_plan_subscriptions')) {
+            return false;
+        }
+
+        $subscription = DB::table('tenant_plan_subscriptions')
+            ->where('tenant_id', (string) $user->tenant_id)
+            ->where('status', 'active')
+            ->orderByDesc('id')
+            ->first(['ends_at', 'trial_ends_at']);
+
+        if (!$subscription) {
+            return false;
+        }
+
+        if (!empty($subscription->ends_at) && now()->gt($subscription->ends_at)) {
+            return true;
+        }
+
+        if (empty($subscription->ends_at) && !empty($subscription->trial_ends_at) && now()->gt($subscription->trial_ends_at)) {
+            return true;
+        }
+
+        return false;
     }
 }

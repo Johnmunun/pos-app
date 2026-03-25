@@ -1,6 +1,9 @@
 /**
  * Service Worker pour PWA
- * Version basique avec cache et offline support
+ *
+ * NOTE: Ce fichier est conservé pour compatibilité, mais le service worker
+ * est maintenant servi dynamiquement via la route `/sw.js` (FCM + config).
+ * Le contenu ici ne sera plus utilisé tant que la route existe.
  */
 
 const CACHE_NAME = 'pos-saas-v3'; // Incrémenter pour forcer la mise à jour

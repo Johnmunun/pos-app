@@ -25,9 +25,9 @@ class BillingPlanService
         $this->repository->updatePlan($planId, $payload);
     }
 
-    public function assignTenantPlan(string $tenantId, int $planId, string $status = 'active'): void
+    public function assignTenantPlan(string $tenantId, int $planId, string $status = 'active', ?string $endsAt = null): void
     {
-        $this->repository->upsertTenantSubscription($tenantId, $planId, $status);
+        $this->repository->upsertTenantSubscription($tenantId, $planId, $status, $endsAt);
     }
 
     public function saveTenantFeatureOverride(string $tenantId, string $featureCode, ?bool $isEnabled, ?int $limitValue): void

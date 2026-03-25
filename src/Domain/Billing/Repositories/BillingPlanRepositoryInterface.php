@@ -10,7 +10,7 @@ interface BillingPlanRepositoryInterface
 
     public function updatePlan(int $planId, array $payload): void;
 
-    public function upsertTenantSubscription(string $tenantId, int $planId, string $status): void;
+    public function upsertTenantSubscription(string $tenantId, int $planId, string $status, ?string $endsAt = null): void;
 
     public function getTenantFeatureConfig(string $tenantId, string $featureCode): array;
 

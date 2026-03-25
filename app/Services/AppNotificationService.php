@@ -4,11 +4,12 @@ namespace App\Services;
 
 use App\Events\AdminNotificationBroadcast;
 use App\Models\AppNotification;
+use Illuminate\Support\Facades\Auth;
 
 class AppNotificationService
 {
     public function __construct(
-        private readonly WebPushService $webPushService
+        private readonly NotificationService $notificationService
     ) {
     }
 
@@ -31,7 +32,7 @@ class AppNotificationService
         );
 
         $notification = AppNotification::create([
-            'user_id' => auth()->id(),
+            'user_id' => (int) (Auth::id() ?? 0),
             'tenant_id' => $tenantId,
             'type' => 'product.created',
             'title' => $title,
@@ -72,7 +73,7 @@ class AppNotificationService
         }
 
         $notification = AppNotification::create([
-            'user_id' => auth()->id(),
+            'user_id' => (int) (Auth::id() ?? 0),
             'tenant_id' => $tenantId,
             'type' => 'sale.completed',
             'title' => $title,
@@ -113,7 +114,12 @@ class AppNotificationService
         ]);
 
         try {
-            $this->webPushService->sendToUser($user, $notification);
+            $this->notificationService->sendToUser(
+                (int) $user->id,
+                (string) $notification->title,
+                (string) $notification->body,
+                (array) ($notification->data ?? [])
+            );
         } catch (\Throwable $e) {
             report($e);
         }
@@ -124,7 +130,16 @@ class AppNotificationService
     private function sendToAdminsSafe(AppNotification $notification): void
     {
         try {
-            $this->webPushService->sendToAdmins($notification);
+            // ROOT/admins are typically tenant-scoped in data; broadcast + navbar still handle in-app.
+            // For push, send to tenant if available, otherwise skip.
+            if (!empty($notification->tenant_id)) {
+                $this->notificationService->sendToTenant(
+                    (int) $notification->tenant_id,
+                    (string) $notification->title,
+                    (string) $notification->body,
+                    (array) ($notification->data ?? [])
+                );
+            }
         } catch (\Throwable $e) {
             // Ne pas faire échouer la création produit/vente si le push échoue
             report($e);

@@ -430,7 +430,7 @@ class AdminController
     {
         $tenants = $this->getAllTenantsUseCase->execute();
 
-        return Inertia::render('Admin/Tenants/Select', [
+        return Inertia::render('Admin/SelectTenant', [
             'tenants' => $tenants
         ]);
     }
@@ -441,7 +441,7 @@ class AdminController
     public function tenantDashboard($id)
     {
         // For now, we'll just render the view with the ID
-        return Inertia::render('Admin/Tenants/Dashboard', [
+        return Inertia::render('Admin/TenantDashboard', [
             'tenantId' => $id
         ]);
     }
@@ -453,7 +453,7 @@ class AdminController
     {
         $tenants = $this->getAllTenantsUseCase->execute();
 
-        return Inertia::render('Admin/Tenants/Index', [
+        return Inertia::render('Admin/ManageTenants', [
             'tenants' => $tenants
         ]);
     }

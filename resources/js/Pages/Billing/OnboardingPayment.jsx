@@ -11,6 +11,7 @@ export default function OnboardingPayment() {
     const [selectedPlanId, setSelectedPlanId] = useState(null);
     const [paymentMethod, setPaymentMethod] = useState('mobile_money');
     const [phone, setPhone] = useState('');
+    const [billingCycle, setBillingCycle] = useState('monthly');
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const [detailsPlan, setDetailsPlan] = useState(null);
@@ -55,6 +56,7 @@ export default function OnboardingPayment() {
                 billing_plan_id: selectedPlanId,
                 payment_method: paymentMethod,
                 phone: phone || undefined,
+                billing_cycle: billingCycle,
                 customer_name: authUser?.name || 'Client',
                 customer_email: authUser?.email || undefined,
             });
@@ -115,7 +117,11 @@ export default function OnboardingPayment() {
                                                     ) : null}
                                                 </p>
                                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                    {(plan?.pricing?.currency_code || 'USD')} {plan?.pricing?.monthly_effective ?? plan?.pricing?.monthly ?? 0}/mois
+                                                    {(plan?.pricing?.currency_code || 'USD')} {billingCycle === 'annual'
+                                                        ? (plan?.pricing?.annual_effective ?? plan?.pricing?.annual ?? 0)
+                                                        : (plan?.pricing?.monthly_effective ?? plan?.pricing?.monthly ?? 0)
+                                                    }
+                                                    {billingCycle === 'annual' ? '/an' : '/mois'}
                                                 </p>
                                             </div>
                                             <button
@@ -144,6 +150,31 @@ export default function OnboardingPayment() {
                                     Aucun plan actif disponible pour le moment.
                                 </p>
                             )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                            <button
+                                type="button"
+                                onClick={() => setBillingCycle('monthly')}
+                                className={`px-3 py-2 rounded-lg text-sm border ${
+                                    billingCycle === 'monthly'
+                                        ? 'bg-amber-500 text-white border-amber-500'
+                                        : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'
+                                }`}
+                            >
+                                Mensuel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setBillingCycle('annual')}
+                                className={`px-3 py-2 rounded-lg text-sm border ${
+                                    billingCycle === 'annual'
+                                        ? 'bg-amber-500 text-white border-amber-500'
+                                        : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'
+                                }`}
+                            >
+                                Annuel
+                            </button>
                         </div>
 
                         <div className="grid grid-cols-2 gap-2 mb-3">
@@ -181,7 +212,10 @@ export default function OnboardingPayment() {
 
                         {selectedPlan && (
                             <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
-                                Montant: {selectedPlan?.pricing?.currency_code || 'USD'} {selectedPlan?.pricing?.monthly_effective ?? selectedPlan?.pricing?.monthly ?? 0}
+                                Montant: {selectedPlan?.pricing?.currency_code || 'USD'} {billingCycle === 'annual'
+                                    ? (selectedPlan?.pricing?.annual_effective ?? selectedPlan?.pricing?.annual ?? 0)
+                                    : (selectedPlan?.pricing?.monthly_effective ?? selectedPlan?.pricing?.monthly ?? 0)
+                                }
                             </p>
                         )}
 

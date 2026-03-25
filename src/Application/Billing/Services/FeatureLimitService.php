@@ -83,6 +83,11 @@ class FeatureLimitService
         return (bool) ($config['enabled'] ?? true);
     }
 
+    public function getTenantFeatureConfig(string $tenantId, string $featureCode): array
+    {
+        return $this->repository->getTenantFeatureConfig($tenantId, $featureCode);
+    }
+
     public function assertCanCreateUser(?string $tenantId): void
     {
         if ($tenantId === null) {

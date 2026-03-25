@@ -30,8 +30,18 @@ class CurrencyConversionService
         }
 
         $tenantId = (int) $tenantId;
+        // 1) Try tenant-specific currencies first.
         $fromCurrency = Currency::where('tenant_id', $tenantId)->where('code', $fromCode)->first();
         $toCurrency = Currency::where('tenant_id', $tenantId)->where('code', $toCode)->first();
+
+        // 2) Fallback: global currencies (tenant_id NULL) if tenant currencies don't exist.
+        // This makes conversion resilient when ROOT configures global rates/currencies.
+        if (!$fromCurrency) {
+            $fromCurrency = Currency::whereNull('tenant_id')->where('code', $fromCode)->first();
+        }
+        if (!$toCurrency) {
+            $toCurrency = Currency::whereNull('tenant_id')->where('code', $toCode)->first();
+        }
 
         if (!$fromCurrency || !$toCurrency) {
             return null;
@@ -57,6 +67,25 @@ class CurrencyConversionService
 
         if ($inverseRate && (float) $inverseRate->rate > 0) {
             return round((float) $amount / (float) $inverseRate->rate, 2);
+        }
+
+        // 3) Fallback: global rates (tenant_id NULL) for the resolved currency IDs.
+        $globalRate = ExchangeRate::whereNull('tenant_id')
+            ->where('from_currency_id', $fromCurrency->id)
+            ->where('to_currency_id', $toCurrency->id)
+            ->orderByDesc('effective_date')
+            ->first();
+        if ($globalRate) {
+            return round((float) $amount * (float) $globalRate->rate, 2);
+        }
+
+        $globalInverseRate = ExchangeRate::whereNull('tenant_id')
+            ->where('from_currency_id', $toCurrency->id)
+            ->where('to_currency_id', $fromCurrency->id)
+            ->orderByDesc('effective_date')
+            ->first();
+        if ($globalInverseRate && (float) $globalInverseRate->rate > 0) {
+            return round((float) $amount / (float) $globalInverseRate->rate, 2);
         }
 
         return null;

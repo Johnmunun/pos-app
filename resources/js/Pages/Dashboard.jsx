@@ -12,6 +12,7 @@ import {
     Plus,
     Package,
     BarChart,
+    Crown,
 } from 'lucide-react';
 
 /**
@@ -23,6 +24,10 @@ import {
 export default function Dashboard() {
     const { auth, referralStats } = usePage().props;
     const permissions = auth?.permissions ?? [];
+    const billingSummary = auth?.billingSummary ?? null;
+    const expiryLabel = billingSummary?.expires_at
+        ? new Date(billingSummary.expires_at).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })
+        : 'Illimité';
 
     // Widgets généraux (toujours visibles)
     const generalWidgets = [
@@ -121,6 +126,32 @@ export default function Dashboard() {
 
             <div className="py-6">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    {billingSummary ? (
+                        <div className="mb-6 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-5">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-11 w-11 rounded-2xl bg-white/70 dark:bg-gray-900/30 border border-amber-200 dark:border-amber-800 flex items-center justify-center">
+                                        <Crown className="h-6 w-6 text-amber-600 dark:text-amber-300" />
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                                            Abonnement: {billingSummary.plan_name}
+                                        </div>
+                                        <div className="text-xs text-amber-800/90 dark:text-amber-200/90 mt-1">
+                                            Expire le: {expiryLabel}
+                                        </div>
+                                    </div>
+                                </div>
+                                <a
+                                    href="/settings"
+                                    className="text-sm font-semibold text-amber-700 dark:text-amber-200 hover:underline"
+                                >
+                                    Voir détails
+                                </a>
+                            </div>
+                        </div>
+                    ) : null}
+
                     {/* Widgets généraux */}
                     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
                         {generalWidgets.map((widget, index) => (
