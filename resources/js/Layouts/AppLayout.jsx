@@ -8,6 +8,9 @@ import BillingPaymentSuccessModal from '@/Components/Billing/BillingPaymentSucce
 import PharmacyAssistant from '@/Components/Pharmacy/PharmacyAssistant';
 import HardwareAssistant from '@/Components/Hardware/HardwareAssistant';
 import CommerceAssistant from '@/Components/Commerce/CommerceAssistant';
+import SupportFloatingButton from '@/Components/Support/SupportFloatingButton';
+import SupportChatWidget from '@/Components/Support/SupportChatWidget';
+import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
 import { ensureFcmToken, wireForegroundMessages } from '@/lib/firebaseMessaging';
 
 /**
@@ -22,11 +25,20 @@ function AssistantsContainer({ permissions }) {
         || permissions.includes('commerce.assistant.use')
         || permissions.some((p) => typeof p === 'string' && p.startsWith('commerce.'));
 
+    const hasSupport = permissions.includes('*')
+        || permissions.includes('support.tickets.create')
+        || permissions.includes('support.tickets.view')
+        || permissions.includes('support.admin');
+
     // Compter les assistants disponibles
     const assistants = [];
     if (hasPharmacy) assistants.push('pharmacy');
     if (hasHardware) assistants.push('hardware');
     if (hasCommerce) assistants.push('commerce');
+
+    // Baseline: reserve bottom for support button (if enabled)
+    const supportEnabled = hasSupport;
+    const supportBaseIndexOffset = supportEnabled ? 1 : 0;
 
     // Calculer les positions : le premier est en bas, les autres au-dessus
     // Espacement : 64px entre chaque bouton sur mobile, 88px sur desktop
@@ -36,8 +48,8 @@ function AssistantsContainer({ permissions }) {
         // Mobile: bottom-24 (96px), bottom-40 (160px), bottom-56 (224px)
         // Desktop: bottom-6 (24px), bottom-28 (112px), bottom-50 (200px)
         // Espacement: 64px mobile, 88px desktop entre chaque bouton
-        const mobileBottom = 96 + (index * 64); // 96, 160, 224
-        const desktopBottom = 24 + (index * 88); // 24, 112, 200
+        const mobileBottom = 96 + (index * 64); // 96, 160, 224...
+        const desktopBottom = 24 + (index * 88); // 24, 112, 200...
         
         return {
             mobile: `${mobileBottom}px`,
@@ -57,14 +69,17 @@ function AssistantsContainer({ permissions }) {
 
     return (
         <>
+            {supportEnabled && (
+                <SupportFloatingButton enabled bottomOffset={getBottomOffset(0)} />
+            )}
             {hasPharmacy && pharmacyIndex >= 0 && (
-                <PharmacyAssistant bottomOffset={getBottomOffset(pharmacyIndex)} />
+                <PharmacyAssistant bottomOffset={getBottomOffset(pharmacyIndex + supportBaseIndexOffset)} />
             )}
             {hasHardware && hardwareIndex >= 0 && (
-                <HardwareAssistant bottomOffset={getBottomOffset(hardwareIndex)} />
+                <HardwareAssistant bottomOffset={getBottomOffset(hardwareIndex + supportBaseIndexOffset)} />
             )}
             {hasCommerce && commerceIndex >= 0 && (
-                <CommerceAssistant bottomOffset={getBottomOffset(commerceIndex)} />
+                <CommerceAssistant bottomOffset={getBottomOffset(commerceIndex + supportBaseIndexOffset)} />
             )}
         </>
     );
@@ -81,6 +96,8 @@ export default function AppLayout({ children, header, fullWidth = false }) {
     const { auth, url } = usePage().props;
     const user = auth?.user;
     const permissions = Array.isArray(auth?.permissions) ? auth.permissions : [];
+    const whatsappNumber = usePage().props?.shop?.whatsapp?.number || null;
+    const whatsappSupportEnabled = Boolean(usePage().props?.shop?.whatsapp?.enabled);
     const tenantSector = auth?.tenantSector ?? null;
     const isRoot = user?.type === 'ROOT';
     const isImpersonating = auth?.isImpersonating ?? false;
@@ -113,8 +130,12 @@ export default function AppLayout({ children, header, fullWidth = false }) {
     useEffect(() => {
         if (!auth?.user) return;
         wireForegroundMessages({
-            onNotification: () => {
-                // optional: integrate in-app toast later
+            onNotification: (payload) => {
+                try {
+                    window.dispatchEvent(new CustomEvent('fcm-notification', { detail: payload }));
+                } catch {
+                    // ignore
+                }
             },
         });
     }, [auth?.user]);
@@ -187,6 +208,12 @@ export default function AppLayout({ children, header, fullWidth = false }) {
 
             {/* Assistants intelligents (Pharmacie + Quincaillerie + Commerce) */}
             <AssistantsContainer permissions={permissions} />
+
+            {/* WhatsApp support (flottant) */}
+            <WhatsAppFloatingButton phone={whatsappNumber} enabled={whatsappSupportEnabled} />
+
+            {/* Support chat (flottant) */}
+            <SupportChatWidget />
         </div>
     );
 }

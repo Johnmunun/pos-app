@@ -43,6 +43,7 @@ class HandleInertiaRequests extends Middleware
         $receiptAutoPrint = false;
         $shopLogoUrl = null;
         $appLogoUrl = null;
+        $whatsappSupport = ['number' => null, 'enabled' => false];
         
         $tenantSector = null;
         $currentDepot = null;
@@ -143,6 +144,14 @@ class HandleInertiaRequests extends Middleware
                             $shopCurrency = $shop->currency;
                         }
                     }
+                    // WhatsApp support (réutilise la config e-commerce de la boutique)
+                    if (!empty($shop) && is_array($shop->ecommerce_storefront_config)) {
+                        $cfg = $shop->ecommerce_storefront_config;
+                        $whatsappSupport = [
+                            'number' => $cfg['whatsapp_number'] ?? null,
+                            'enabled' => (bool) ($cfg['whatsapp_support_enabled'] ?? false),
+                        ];
+                    }
 
                     // Récupérer les devises configurées pour le tenant
                     $tenantId = $user->tenant_id ?? $shopId;
@@ -195,6 +204,18 @@ class HandleInertiaRequests extends Middleware
             'api_payments' => true,
             'analytics_advanced' => true,
         ];
+        $planFeatures = [
+            'ai_assistant' => true,
+            'multi_depot' => true,
+            'support_priority' => true,
+            'ecommerce_catalog' => true,
+            'ecommerce_orders' => true,
+            'ecommerce_promotions' => true,
+            'ecommerce_module' => true,
+            'pharmacy_module' => true,
+            'commerce_module' => true,
+            'hardware_module' => true,
+        ];
         $billingSummary = null;
         if ($user && $user->tenant_id) {
             try {
@@ -208,6 +229,16 @@ class HandleInertiaRequests extends Middleware
                     (string) $user->tenant_id,
                     'analytics.advanced'
                 );
+                $planFeatures['ai_assistant'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ai.assistant');
+                $planFeatures['multi_depot'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'multi.depot');
+                $planFeatures['support_priority'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'support.priority');
+                $planFeatures['ecommerce_catalog'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.catalog');
+                $planFeatures['ecommerce_orders'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.orders');
+                $planFeatures['ecommerce_promotions'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.promotions');
+                $planFeatures['ecommerce_module'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.module');
+                $planFeatures['pharmacy_module'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'pharmacy.module');
+                $planFeatures['commerce_module'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'commerce.module');
+                $planFeatures['hardware_module'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'hardware.module');
             } catch (\Throwable $e) {
                 Log::debug('Feature flags fallback', ['error' => $e->getMessage()]);
             }
@@ -217,6 +248,9 @@ class HandleInertiaRequests extends Middleware
                     \Illuminate\Support\Facades\Schema::hasTable('billing_plans')
                     && \Illuminate\Support\Facades\Schema::hasTable('tenant_plan_subscriptions')
                 ) {
+                    /** @var FeatureLimitService $featureLimitService */
+                    $featureLimitService = app(FeatureLimitService::class);
+
                     $subscription = \Illuminate\Support\Facades\DB::table('tenant_plan_subscriptions as tps')
                         ->join('billing_plans as bp', 'bp.id', '=', 'tps.billing_plan_id')
                         ->where('tps.tenant_id', (string) $user->tenant_id)
@@ -259,7 +293,7 @@ class HandleInertiaRequests extends Middleware
                     }
 
                     $expiresAt = $subscription?->ends_at ?? $subscription?->trial_ends_at ?? null;
-                    if ($expiresAt === null && !empty($subscription?->starts_at)) {
+                    if ($expiresAt === null && $subscription !== null && !empty($subscription->starts_at)) {
                         try {
                             $expiresAt = \Illuminate\Support\Carbon::parse($subscription->starts_at)->addMonth();
                         } catch (\Throwable $e) {
@@ -351,6 +385,7 @@ class HandleInertiaRequests extends Middleware
                 'isImpersonating' => $request->session()->get('impersonate.impersonating', false),
                 'originalUserId' => $request->session()->get('impersonate.original_user_id'),
                 'featureFlags' => $featureFlags,
+                'planFeatures' => $planFeatures,
                 'billingSummary' => $billingSummary,
             ],
             'shop' => [
@@ -358,6 +393,7 @@ class HandleInertiaRequests extends Middleware
                 'currencies' => $shopCurrencies,
                 'receipt_auto_print' => $receiptAutoPrint,
                 'logo_url' => $shopLogoUrl,
+                'whatsapp' => $whatsappSupport,
             ],
             'appLogoUrl' => $appLogoUrl,
             'heroImages' => [

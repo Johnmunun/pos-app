@@ -53,6 +53,11 @@ class SettingsController
         $shop = $this->resolveShop($request);
         $baseDomain = config('services.ecommerce.base_domain', 'omnisolution.shop');
 
+        $cfg = $shop->ecommerce_storefront_config ?? [];
+        if (!is_array($cfg)) {
+            $cfg = [];
+        }
+
         return Inertia::render('Ecommerce/Settings/Index', [
             'shop' => [
                 'id' => $shop->id,
@@ -68,6 +73,10 @@ class SettingsController
                 'ecommerce_is_online' => (bool) $shop->ecommerce_is_online,
             ],
             'ecommerce_base_domain' => $baseDomain,
+            'storefront_use_flat_shipping' => (bool) ($cfg['storefront_use_flat_shipping'] ?? false),
+            'storefront_flat_shipping_amount' => isset($cfg['storefront_flat_shipping_amount'])
+                ? round((float) $cfg['storefront_flat_shipping_amount'], 2)
+                : 0.0,
         ]);
     }
 
@@ -120,6 +129,38 @@ class SettingsController
         return redirect()
             ->route('ecommerce.settings.index')
             ->with('success', 'Domaine de la boutique mis à jour. En production, configurez un enregistrement DNS (CNAME ou A) pour *.'.config('services.ecommerce.base_domain', 'omnisolution.shop'));
+    }
+
+    /**
+     * Frais de livraison fixes affichés sur la vitrine (panier) — montant dans la devise par défaut du tenant.
+     */
+    public function updateStorefrontShipping(Request $request): RedirectResponse
+    {
+        $shop = $this->resolveShop($request);
+
+        $data = $request->validate([
+            'storefront_use_flat_shipping' => ['required', 'boolean'],
+            'storefront_flat_shipping_amount' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $amount = isset($data['storefront_flat_shipping_amount'])
+            ? round(max(0, (float) $data['storefront_flat_shipping_amount']), 2)
+            : 0.0;
+
+        $current = $shop->ecommerce_storefront_config ?? [];
+        if (!is_array($current)) {
+            $current = [];
+        }
+
+        $current['storefront_use_flat_shipping'] = (bool) $data['storefront_use_flat_shipping'];
+        $current['storefront_flat_shipping_amount'] = $amount;
+
+        $shop->ecommerce_storefront_config = $current;
+        $shop->save();
+
+        return redirect()
+            ->route('ecommerce.settings.index')
+            ->with('success', 'Frais de livraison vitrine enregistrés.');
     }
 
     // Plus de mise à jour de devise ici : la devise est gérée globalement via /settings/currencies

@@ -51,7 +51,7 @@ Route::get('/ecommerce/payment/success/{token}', [PaymentSuccessController::clas
  */
 Route::prefix('ecommerce')
     ->as('ecommerce.')
-    ->middleware(['auth', 'verified', 'permission:module.ecommerce'])
+    ->middleware(['auth', 'verified', 'permission:module.ecommerce', 'feature.enabled:ecommerce.module'])
     ->group(function () {
         // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index'])
@@ -133,27 +133,27 @@ Route::prefix('ecommerce')
             ->middleware('permission:ecommerce.cart.view|ecommerce.view|module.ecommerce')
             ->name('checkout.calculate-shipping');
         Route::post('/checkout/validate-coupon', [CheckoutController::class, 'validateCoupon'])
-            ->middleware('permission:ecommerce.cart.view|ecommerce.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.cart.view|ecommerce.view|module.ecommerce', 'feature.enabled:ecommerce.promotions'])
             ->name('checkout.validate-coupon');
 
-        // Commandes
+        // Commandes (plafond ventes mensuel via billing sales.monthly.max + FeatureLimitService)
         Route::get('/orders', [OrderController::class, 'index'])
-            ->middleware('permission:ecommerce.order.view|ecommerce.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.order.view|ecommerce.view|module.ecommerce', 'feature.enabled:ecommerce.orders'])
             ->name('orders.index');
         Route::get('/orders/{id}', [OrderController::class, 'show'])
-            ->middleware('permission:ecommerce.order.view|ecommerce.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.order.view|ecommerce.view|module.ecommerce', 'feature.enabled:ecommerce.orders'])
             ->name('orders.show');
         Route::post('/orders', [OrderController::class, 'store'])
-            ->middleware('permission:ecommerce.order.create|ecommerce.create|module.ecommerce')
+            ->middleware(['permission:ecommerce.order.create|ecommerce.create|module.ecommerce', 'feature.enabled:ecommerce.orders'])
             ->name('orders.store');
         Route::put('/orders/{id}/status', [OrderController::class, 'updateStatus'])
-            ->middleware('permission:ecommerce.order.status.update|ecommerce.order.update|module.ecommerce')
+            ->middleware(['permission:ecommerce.order.status.update|ecommerce.order.update|module.ecommerce', 'feature.enabled:ecommerce.orders'])
             ->name('orders.update-status');
         Route::put('/orders/{id}/payment-status', [OrderController::class, 'updatePaymentStatus'])
-            ->middleware('permission:ecommerce.order.payment.update|ecommerce.order.update|module.ecommerce')
+            ->middleware(['permission:ecommerce.order.payment.update|ecommerce.order.update|module.ecommerce', 'feature.enabled:ecommerce.orders'])
             ->name('orders.update-payment-status');
         Route::delete('/orders/{id}', [OrderController::class, 'destroy'])
-            ->middleware('permission:ecommerce.order.delete|ecommerce.delete|module.ecommerce')
+            ->middleware(['permission:ecommerce.order.delete|ecommerce.delete|module.ecommerce', 'feature.enabled:ecommerce.orders'])
             ->name('orders.destroy');
 
         // Clients
@@ -243,10 +243,10 @@ Route::prefix('ecommerce')
 
             // Ventes / commandes ecommerce
             Route::get('/orders/pdf', [EcommerceExportController::class, 'ordersPdf'])
-                ->middleware('permission:ecommerce.order.view|ecommerce.view|module.ecommerce')
+                ->middleware(['permission:ecommerce.order.view|ecommerce.view|module.ecommerce', 'feature.enabled:ecommerce.orders'])
                 ->name('orders.pdf');
             Route::get('/orders/excel', [EcommerceExportController::class, 'ordersExcel'])
-                ->middleware('permission:ecommerce.order.view|ecommerce.view|module.ecommerce')
+                ->middleware(['permission:ecommerce.order.view|ecommerce.view|module.ecommerce', 'feature.enabled:ecommerce.orders'])
                 ->name('orders.excel');
 
             // Fournisseurs (données partagées GlobalCommerce)
@@ -298,44 +298,44 @@ Route::prefix('ecommerce')
             ->middleware('permission:ecommerce.shipping.view|module.ecommerce')
             ->name('shipping.destroy');
 
-        // Promotions
+        // Promotions (plan Pro+)
         Route::get('/promotions', [PromotionController::class, 'index'])
-            ->middleware('permission:ecommerce.promotion.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.promotion.view|module.ecommerce', 'feature.enabled:ecommerce.promotions'])
             ->name('promotions.index');
         Route::get('/promotions/create', [PromotionController::class, 'create'])
-            ->middleware('permission:ecommerce.promotion.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.promotion.view|module.ecommerce', 'feature.enabled:ecommerce.promotions'])
             ->name('promotions.create');
         Route::post('/promotions', [PromotionController::class, 'store'])
-            ->middleware('permission:ecommerce.promotion.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.promotion.view|module.ecommerce', 'feature.enabled:ecommerce.promotions'])
             ->name('promotions.store');
         Route::get('/promotions/{id}/edit', [PromotionController::class, 'edit'])
-            ->middleware('permission:ecommerce.promotion.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.promotion.view|module.ecommerce', 'feature.enabled:ecommerce.promotions'])
             ->name('promotions.edit');
         Route::put('/promotions/{id}', [PromotionController::class, 'update'])
-            ->middleware('permission:ecommerce.promotion.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.promotion.view|module.ecommerce', 'feature.enabled:ecommerce.promotions'])
             ->name('promotions.update');
         Route::delete('/promotions/{id}', [PromotionController::class, 'destroy'])
-            ->middleware('permission:ecommerce.promotion.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.promotion.view|module.ecommerce', 'feature.enabled:ecommerce.promotions'])
             ->name('promotions.destroy');
 
-        // Coupons
+        // Coupons (plan Pro+)
         Route::get('/coupons', [CouponController::class, 'index'])
-            ->middleware('permission:ecommerce.coupon.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.coupon.view|module.ecommerce', 'feature.enabled:ecommerce.promotions'])
             ->name('coupons.index');
         Route::get('/coupons/create', [CouponController::class, 'create'])
-            ->middleware('permission:ecommerce.coupon.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.coupon.view|module.ecommerce', 'feature.enabled:ecommerce.promotions'])
             ->name('coupons.create');
         Route::post('/coupons', [CouponController::class, 'store'])
-            ->middleware('permission:ecommerce.coupon.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.coupon.view|module.ecommerce', 'feature.enabled:ecommerce.promotions'])
             ->name('coupons.store');
         Route::get('/coupons/{id}/edit', [CouponController::class, 'edit'])
-            ->middleware('permission:ecommerce.coupon.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.coupon.view|module.ecommerce', 'feature.enabled:ecommerce.promotions'])
             ->name('coupons.edit');
         Route::put('/coupons/{id}', [CouponController::class, 'update'])
-            ->middleware('permission:ecommerce.coupon.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.coupon.view|module.ecommerce', 'feature.enabled:ecommerce.promotions'])
             ->name('coupons.update');
         Route::delete('/coupons/{id}', [CouponController::class, 'destroy'])
-            ->middleware('permission:ecommerce.coupon.view|module.ecommerce')
+            ->middleware(['permission:ecommerce.coupon.view|module.ecommerce', 'feature.enabled:ecommerce.promotions'])
             ->name('coupons.destroy');
 
         // Avis
@@ -381,6 +381,9 @@ Route::prefix('ecommerce')
         Route::put('/settings/domain', [SettingsController::class, 'updateDomain'])
             ->middleware('permission:ecommerce.settings.view|module.ecommerce')
             ->name('settings.domain.update');
+        Route::put('/settings/storefront-shipping', [SettingsController::class, 'updateStorefrontShipping'])
+            ->middleware('permission:ecommerce.settings.view|module.ecommerce')
+            ->name('settings.storefront-shipping.update');
 
         // Marketing (SEO, Pixels, Tracking)
         Route::get('/marketing', [MarketingController::class, 'index'])

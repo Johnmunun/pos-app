@@ -20,6 +20,57 @@ export default function OnboardingPayment() {
         () => plans.find((p) => p.id === selectedPlanId) || null,
         [plans, selectedPlanId]
     );
+    const sortedPlans = useMemo(
+        () => [...plans].sort((a, b) => {
+            const pa = Number(a?.pricing?.monthly_effective ?? a?.pricing?.monthly ?? 0);
+            const pb = Number(b?.pricing?.monthly_effective ?? b?.pricing?.monthly ?? 0);
+            return pa - pb;
+        }),
+        [plans]
+    );
+    const selectedPlanIndex = useMemo(
+        () => sortedPlans.findIndex((p) => p.id === selectedPlanId),
+        [sortedPlans, selectedPlanId]
+    );
+    const nextPlan = useMemo(
+        () => (selectedPlanIndex >= 0 ? sortedPlans[selectedPlanIndex + 1] || null : null),
+        [sortedPlans, selectedPlanIndex]
+    );
+    const selectedFeatureEntries = useMemo(
+        () => Object.entries(selectedPlan?.features || {}),
+        [selectedPlan]
+    );
+    const visibleSelectedFeatures = useMemo(() => {
+        const ordered = selectedFeatureEntries.sort((a, b) => {
+            const al = String(a?.[1]?.label || a?.[0] || '');
+            const bl = String(b?.[1]?.label || b?.[0] || '');
+            return al.localeCompare(bl);
+        });
+        return ordered.slice(0, 6);
+    }, [selectedFeatureEntries]);
+    const upgradeHighlights = useMemo(() => {
+        if (!selectedPlan || !nextPlan) return [];
+        const current = selectedPlan.features || {};
+        const next = nextPlan.features || {};
+        const improvements = [];
+        Object.entries(next).forEach(([code, feature]) => {
+            const cur = current[code] || {};
+            const nextEnabled = Boolean(feature?.enabled);
+            const curEnabled = Boolean(cur?.enabled);
+            const nextLimit = feature?.limit;
+            const curLimit = cur?.limit;
+            const unlocked = nextEnabled && !curEnabled;
+            const betterLimit = nextEnabled && curEnabled && (curLimit !== null && curLimit !== undefined) && (nextLimit === null || nextLimit === undefined || Number(nextLimit) > Number(curLimit));
+            if (unlocked || betterLimit) {
+                improvements.push({
+                    code,
+                    label: feature?.label || code,
+                    limit: nextLimit,
+                });
+            }
+        });
+        return improvements.slice(0, 5);
+    }, [selectedPlan, nextPlan]);
 
     useEffect(() => {
         const loadPlans = async () => {
@@ -152,6 +203,61 @@ export default function OnboardingPayment() {
                             )}
                         </div>
 
+                        {selectedPlan && (
+                            <div className="mb-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30 p-4">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
+                                    Ce plan inclut
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {visibleSelectedFeatures.map(([code, feature]) => (
+                                        <div
+                                            key={code}
+                                            className={`rounded-lg border px-3 py-2 relative ${
+                                                feature?.enabled
+                                                    ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
+                                                    : 'border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/70 pointer-events-none'
+                                            }`}
+                                        >
+                                            {!feature?.enabled ? (
+                                                <span className="absolute top-2 right-2 inline-flex items-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 px-2 py-0.5 text-[10px] font-semibold">
+                                                    Monter de niveau
+                                                </span>
+                                            ) : null}
+                                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                                {feature?.label || code}
+                                            </p>
+                                            <p className={`text-xs mt-0.5 ${feature?.enabled ? 'text-gray-600 dark:text-gray-400' : 'text-gray-500 dark:text-gray-500 blur-[1px]'}`}>
+                                                {!feature?.enabled
+                                                    ? 'Indisponible'
+                                                    : (feature?.limit === null || feature?.limit === undefined ? 'Illimite' : `Limite: ${feature.limit}`)}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                                {selectedFeatureEntries.length > visibleSelectedFeatures.length ? (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                        +{selectedFeatureEntries.length - visibleSelectedFeatures.length} autres fonctionnalites dans le detail du plan.
+                                    </p>
+                                ) : null}
+                            </div>
+                        )}
+
+                        {nextPlan && upgradeHighlights.length > 0 && (
+                            <div className="mb-4 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
+                                <p className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-2">
+                                    Monter vers {nextPlan.name} debloque aussi:
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {upgradeHighlights.map((it) => (
+                                        <div key={it.code} className="text-xs text-amber-900 dark:text-amber-200 bg-white/70 dark:bg-gray-900/30 rounded-md px-2 py-1.5 border border-amber-200/70 dark:border-amber-800/50">
+                                            {it.label}
+                                            {it.limit === null || it.limit === undefined ? ' (illimite)' : ` (jusqu'a ${it.limit})`}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         <div className="grid grid-cols-2 gap-2 mb-3">
                             <button
                                 type="button"
@@ -253,27 +359,29 @@ export default function OnboardingPayment() {
                             Prix: {(detailsPlan?.pricing?.currency_code || 'USD')} {detailsPlan?.pricing?.monthly_effective ?? detailsPlan?.pricing?.monthly ?? 0}/mois
                         </p>
 
-                        <div className="max-h-72 overflow-auto rounded border border-slate-200 dark:border-slate-700">
+                        <div className="max-h-80 overflow-auto rounded border border-slate-200 dark:border-slate-700">
                             <table className="w-full text-sm">
-                                <thead className="bg-slate-50 dark:bg-slate-900/50">
+                                <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0">
                                     <tr>
-                                        <th className="text-left p-2">Fonctionnalite</th>
-                                        <th className="text-left p-2">Etat</th>
-                                        <th className="text-left p-2">Limite</th>
+                                        <th className="text-left p-3">Fonctionnalite</th>
+                                        <th className="text-left p-3">Etat</th>
+                                        <th className="text-left p-3">Limite</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {Object.entries(detailsPlan.features || {}).map(([code, feature]) => (
-                                        <tr key={code} className="border-t border-slate-200 dark:border-slate-700">
-                                            <td className="p-2">{feature?.label || code}</td>
-                                            <td className="p-2">
+                                        <tr key={code} className={`border-t border-slate-200 dark:border-slate-700 ${feature?.enabled ? '' : 'opacity-80'}`}>
+                                            <td className={`p-3 ${feature?.enabled ? '' : 'blur-[1.2px] select-none'}`}>{feature?.label || code}</td>
+                                            <td className="p-3">
                                                 {feature?.enabled ? (
                                                     <span className="text-emerald-600 dark:text-emerald-400">Disponible</span>
                                                 ) : (
-                                                    <span className="text-rose-600 dark:text-rose-400">Indisponible</span>
+                                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 px-2 py-0.5 text-[11px] font-semibold">
+                                                        Indisponible - Monter de niveau
+                                                    </span>
                                                 )}
                                             </td>
-                                            <td className="p-2">
+                                            <td className={`p-3 ${feature?.enabled ? '' : 'blur-[1.2px] select-none'}`}>
                                                 {feature?.limit === null || feature?.limit === undefined ? 'Illimite' : feature.limit}
                                             </td>
                                         </tr>

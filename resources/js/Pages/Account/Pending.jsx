@@ -41,6 +41,15 @@ export default function Pending() {
                                             Paiement recu. Notre equipe examine maintenant vos informations.
                                         </p>
 
+                                        <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4 mb-6 w-full max-w-xl text-left">
+                                            <p className="text-sm text-emerald-800 dark:text-emerald-200 font-semibold mb-1">
+                                                Confirmation par email
+                                            </p>
+                                            <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                                                Un email de confirmation sera envoye a votre adresse apres creation du compte, puis un autre email apres validation du paiement.
+                                            </p>
+                                        </div>
+
                                         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-8 w-full max-w-sm">
                                             <div className="flex items-center justify-between">
                                                 <div>

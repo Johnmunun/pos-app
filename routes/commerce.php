@@ -18,7 +18,7 @@ use Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockController;
  */
 Route::prefix('commerce')
     ->as('commerce.')
-    ->middleware(['auth', 'verified', 'permission:module.commerce'])
+    ->middleware(['auth', 'verified', 'permission:module.commerce', 'feature.enabled:commerce.module'])
     ->group(function () {
         Route::get('/dashboard', [GcDashboardController::class, 'index'])->name('dashboard');
         Route::get('/categories', [GcCategoryController::class, 'index'])->name('categories.index');
@@ -48,25 +48,27 @@ Route::prefix('commerce')
         Route::post('/stock/{id}/adjust', [GcStockController::class, 'adjust'])
             ->name('stock.adjust');
 
-        // Transferts inter-magasins (Commerce)
-        Route::get('/transfers', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockTransferController::class, 'index'])
-            ->name('transfers.index');
-        Route::get('/transfers/create', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockTransferController::class, 'create'])
-            ->name('transfers.create');
-        Route::post('/transfers', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockTransferController::class, 'store'])
-            ->name('transfers.store');
-        Route::get('/transfers/{id}', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockTransferController::class, 'show'])
-            ->name('transfers.show');
-        Route::post('/transfers/{id}/items', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockTransferController::class, 'addItem'])
-            ->name('transfers.items.add');
-        Route::put('/transfers/{id}/items/{itemId}', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockTransferController::class, 'updateItem'])
-            ->name('transfers.items.update');
-        Route::delete('/transfers/{id}/items/{itemId}', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockTransferController::class, 'removeItem'])
-            ->name('transfers.items.remove');
-        Route::post('/transfers/{id}/validate', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockTransferController::class, 'validate'])
-            ->name('transfers.validate');
-        Route::post('/transfers/{id}/cancel', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockTransferController::class, 'cancel'])
-            ->name('transfers.cancel');
+        // Transferts inter-magasins (Commerce) — plan avec multi-dépôt
+        Route::middleware('feature.enabled:multi.depot')->group(function () {
+            Route::get('/transfers', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockTransferController::class, 'index'])
+                ->name('transfers.index');
+            Route::get('/transfers/create', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockTransferController::class, 'create'])
+                ->name('transfers.create');
+            Route::post('/transfers', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockTransferController::class, 'store'])
+                ->name('transfers.store');
+            Route::get('/transfers/{id}', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockTransferController::class, 'show'])
+                ->name('transfers.show');
+            Route::post('/transfers/{id}/items', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockTransferController::class, 'addItem'])
+                ->name('transfers.items.add');
+            Route::put('/transfers/{id}/items/{itemId}', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockTransferController::class, 'updateItem'])
+                ->name('transfers.items.update');
+            Route::delete('/transfers/{id}/items/{itemId}', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockTransferController::class, 'removeItem'])
+                ->name('transfers.items.remove');
+            Route::post('/transfers/{id}/validate', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockTransferController::class, 'validate'])
+                ->name('transfers.validate');
+            Route::post('/transfers/{id}/cancel', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockTransferController::class, 'cancel'])
+                ->name('transfers.cancel');
+        });
 
         Route::get('/inventories', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcInventoryController::class, 'index'])
             ->name('inventories.index');
@@ -105,31 +107,39 @@ Route::prefix('commerce')
 
         // Assistant Commerce (nommé 'code')
         Route::post('/assistant/ask', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\CommerceAssistantController::class, 'ask'])
-            ->middleware('permission:commerce.assistant.use')
+            ->middleware(['permission:commerce.assistant.use', 'feature.enabled:ai.assistant'])
             ->name('assistant.ask');
 
         // API vocale (STT + TTS) – transcription Whisper, synthèse vocale, paramètres
         Route::prefix('api/voice')->name('api.voice.')->group(function () {
             Route::post('/transcribe', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\CommerceVoiceController::class, 'transcribe'])
-                ->middleware('permission:commerce.assistant.voice')
+                ->middleware(['permission:commerce.assistant.voice', 'feature.enabled:ai.assistant'])
                 ->name('transcribe');
             Route::post('/speak', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\CommerceVoiceController::class, 'speak'])
-                ->middleware('permission:commerce.assistant.voice')
+                ->middleware(['permission:commerce.assistant.voice', 'feature.enabled:ai.assistant'])
                 ->name('speak');
             Route::get('/settings', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\CommerceVoiceController::class, 'settings'])
-                ->middleware('permission:commerce.assistant.voice')
+                ->middleware(['permission:commerce.assistant.voice', 'feature.enabled:ai.assistant'])
                 ->name('settings');
             Route::put('/settings', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\CommerceVoiceController::class, 'updateSettings'])
-                ->middleware('permission:commerce.assistant.voice')
+                ->middleware(['permission:commerce.assistant.voice', 'feature.enabled:ai.assistant'])
                 ->name('settings.update');
         });
 
-        // Dépôts (gestion multi-dépôts pour Commerce)
+        // Dépôts (création / édition = multi-dépôt)
         Route::get('/depots', [\App\Http\Controllers\DepotController::class, 'index'])->name('depots.index');
-        Route::post('/depots', [\App\Http\Controllers\DepotController::class, 'store'])->name('depots.store');
-        Route::put('/depots/{id}', [\App\Http\Controllers\DepotController::class, 'update'])->name('depots.update');
-        Route::post('/depots/{id}/activate', [\App\Http\Controllers\DepotController::class, 'activate'])->name('depots.activate');
-        Route::post('/depots/{id}/deactivate', [\App\Http\Controllers\DepotController::class, 'deactivate'])->name('depots.deactivate');
+        Route::post('/depots', [\App\Http\Controllers\DepotController::class, 'store'])
+            ->middleware('feature.enabled:multi.depot')
+            ->name('depots.store');
+        Route::put('/depots/{id}', [\App\Http\Controllers\DepotController::class, 'update'])
+            ->middleware('feature.enabled:multi.depot')
+            ->name('depots.update');
+        Route::post('/depots/{id}/activate', [\App\Http\Controllers\DepotController::class, 'activate'])
+            ->middleware('feature.enabled:multi.depot')
+            ->name('depots.activate');
+        Route::post('/depots/{id}/deactivate', [\App\Http\Controllers\DepotController::class, 'deactivate'])
+            ->middleware('feature.enabled:multi.depot')
+            ->name('depots.deactivate');
 
         // Vendeurs (gestion des vendeurs pour Commerce)
         Route::get('/sellers', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'index'])->name('sellers.index');
@@ -143,10 +153,13 @@ Route::prefix('commerce')
             Route::get('/product-movements', [GcProductMovementController::class, 'index'])
                 ->name('product-movements.index');
             Route::get('/product-movements/export/pdf', [GcProductMovementController::class, 'exportGlobalPdf'])
+                ->middleware('feature.enabled:reports.export.pdf')
                 ->name('product-movements.pdf.global');
             Route::get('/product-movements/export/excel', [GcProductMovementController::class, 'exportExcel'])
+                ->middleware('feature.enabled:reports.export.excel')
                 ->name('product-movements.excel');
             Route::get('/product-movements/{id}/pdf', [GcProductMovementController::class, 'exportSinglePdf'])
+                ->middleware('feature.enabled:reports.export.pdf')
                 ->name('product-movements.pdf.single');
         });
 
@@ -164,30 +177,27 @@ Route::prefix('commerce')
         Route::get('/customers/import/template', [GcCustomerController::class, 'importTemplate'])->name('customers.import.template');
         Route::post('/customers/import', [GcCustomerController::class, 'import'])->name('customers.import');
 
-        // Exports Excel (listes principales Global Commerce)
+        // Exports (PDF / Excel selon le plan)
         Route::prefix('exports')->name('exports.')->group(function () {
-            Route::get('/products/pdf', [GcExportController::class, 'productsPdf'])->name('products.pdf');
-            Route::get('/products/excel', [GcExportController::class, 'productsExcel'])->name('products.excel');
-
-            Route::get('/categories/pdf', [GcExportController::class, 'categoriesPdf'])->name('categories.pdf');
-            Route::get('/categories/excel', [GcExportController::class, 'categoriesExcel'])->name('categories.excel');
-
-            Route::get('/suppliers/pdf', [GcExportController::class, 'suppliersPdf'])->name('suppliers.pdf');
-            Route::get('/suppliers/excel', [GcExportController::class, 'suppliersExcel'])->name('suppliers.excel');
-
-            Route::get('/customers/pdf', [GcExportController::class, 'customersPdf'])->name('customers.pdf');
-            Route::get('/customers/excel', [GcExportController::class, 'customersExcel'])->name('customers.excel');
-
-            Route::get('/sales/pdf', [GcExportController::class, 'salesPdf'])->name('sales.pdf');
-            Route::get('/sales/excel', [GcExportController::class, 'salesExcel'])->name('sales.excel');
-
-            Route::get('/purchases/pdf', [GcExportController::class, 'purchasesPdf'])->name('purchases.pdf');
-            Route::get('/purchases/excel', [GcExportController::class, 'purchasesExcel'])->name('purchases.excel');
-
-            Route::get('/stock/pdf', [GcExportController::class, 'stockPdf'])->name('stock.pdf');
-            Route::get('/stock/excel', [GcExportController::class, 'stockExcel'])->name('stock.excel');
-
-            Route::get('/reports/pdf', [GcExportController::class, 'reportPdf'])->name('reports.pdf');
-            Route::get('/reports/excel', [GcExportController::class, 'reportExcel'])->name('reports.excel');
+            Route::middleware('feature.enabled:reports.export.pdf')->group(function () {
+                Route::get('/products/pdf', [GcExportController::class, 'productsPdf'])->name('products.pdf');
+                Route::get('/categories/pdf', [GcExportController::class, 'categoriesPdf'])->name('categories.pdf');
+                Route::get('/suppliers/pdf', [GcExportController::class, 'suppliersPdf'])->name('suppliers.pdf');
+                Route::get('/customers/pdf', [GcExportController::class, 'customersPdf'])->name('customers.pdf');
+                Route::get('/sales/pdf', [GcExportController::class, 'salesPdf'])->name('sales.pdf');
+                Route::get('/purchases/pdf', [GcExportController::class, 'purchasesPdf'])->name('purchases.pdf');
+                Route::get('/stock/pdf', [GcExportController::class, 'stockPdf'])->name('stock.pdf');
+                Route::get('/reports/pdf', [GcExportController::class, 'reportPdf'])->name('reports.pdf');
+            });
+            Route::middleware('feature.enabled:reports.export.excel')->group(function () {
+                Route::get('/products/excel', [GcExportController::class, 'productsExcel'])->name('products.excel');
+                Route::get('/categories/excel', [GcExportController::class, 'categoriesExcel'])->name('categories.excel');
+                Route::get('/suppliers/excel', [GcExportController::class, 'suppliersExcel'])->name('suppliers.excel');
+                Route::get('/customers/excel', [GcExportController::class, 'customersExcel'])->name('customers.excel');
+                Route::get('/sales/excel', [GcExportController::class, 'salesExcel'])->name('sales.excel');
+                Route::get('/purchases/excel', [GcExportController::class, 'purchasesExcel'])->name('purchases.excel');
+                Route::get('/stock/excel', [GcExportController::class, 'stockExcel'])->name('stock.excel');
+                Route::get('/reports/excel', [GcExportController::class, 'reportExcel'])->name('reports.excel');
+            });
         });
     });

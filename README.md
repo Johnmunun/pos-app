@@ -68,3 +68,4 @@ su @ app-DY35bFR*.js:7
 connect @ app-DY35bFR*.js:8
 tryStrategy @ app-DY35bFR*.js:7
 cd "H:\Projets web\pos-app"; php artisan webpush:generate-keys
+php artisan db:seed --class=Database\\Seeders\\GlobalCurrenciesSeeder

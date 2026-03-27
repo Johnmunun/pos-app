@@ -76,7 +76,7 @@ function StorefrontProductHeader({ shop, cmsPages = [] }) {
     );
 }
 
-function ProductContent({ product, reviews = [], shop, cmsPages, whatsapp = {} }) {
+function ProductContent({ product, reviews = [], shop, cmsPages, whatsapp = {}, links }) {
     const { addToCart } = useCart();
     const currency = shop?.currency || 'USD';
 
@@ -432,10 +432,18 @@ function ProductContent({ product, reviews = [], shop, cmsPages, whatsapp = {} }
 
 export default function StorefrontProductShow({ shop, product, reviews = [], cmsPages = [], whatsapp = {} }) {
     const currency = shop?.currency || 'CDF';
+    const links = useStorefrontLinks();
 
     return (
         <CartProvider currency={currency}>
-            <ProductContent product={product} reviews={reviews} shop={shop} cmsPages={cmsPages} whatsapp={whatsapp} />
+            <ProductContent
+                product={product}
+                reviews={reviews}
+                shop={shop}
+                cmsPages={cmsPages}
+                whatsapp={whatsapp}
+                links={links}
+            />
         </CartProvider>
     );
 }

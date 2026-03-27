@@ -25,7 +25,7 @@ use Src\Infrastructure\Quincaillerie\Http\Controllers\InventoryController as Qui
  */
 Route::prefix('hardware')
     ->as('hardware.')
-    ->middleware(['auth', 'verified', 'permission:module.hardware'])
+    ->middleware(['auth', 'verified', 'permission:module.hardware', 'feature.enabled:hardware.module'])
     ->group(function () {
         Route::get('/dashboard', [HardwareDashboardController::class, 'index'])
             ->name('dashboard');
@@ -34,7 +34,7 @@ Route::prefix('hardware')
         Route::get('/assistant/ask', fn () => redirect()->route('hardware.dashboard'))
             ->middleware('permission:module.hardware');
         Route::post('/assistant/ask', [HardwareAssistantController::class, 'ask'])
-            ->middleware('permission:module.hardware')
+            ->middleware(['permission:module.hardware', 'feature.enabled:ai.assistant'])
             ->name('assistant.ask');
 
         // Produits — Module Quincaillerie (contrôleur et données dédiés)
@@ -73,7 +73,7 @@ Route::prefix('hardware')
             ->middleware('permission:hardware.product.manage')
             ->name('products.destroy');
         Route::post('/products/{id}/duplicate-to-depot', [QuincaillerieProductController::class, 'duplicateToDepot'])
-            ->middleware('permission:hardware.product.manage')
+            ->middleware(['permission:hardware.product.manage', 'feature.enabled:multi.depot'])
             ->name('products.duplicate-to-depot');
         Route::post('/products/{id}/stock', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'updateStock'])
             ->middleware('permission:hardware.stock.manage|hardware.product.manage')
@@ -85,10 +85,10 @@ Route::prefix('hardware')
                 ->middleware('permission:hardware.stock.movement.view|stock.movement.view')
                 ->name('product-movements.index');
             Route::get('/product-movements/export/pdf', [ProductMovementController::class, 'exportGlobalPdf'])
-                ->middleware('permission:stock.movement.view')
+                ->middleware(['permission:stock.movement.view', 'feature.enabled:reports.export.pdf'])
                 ->name('product-movements.pdf.global');
             Route::get('/product-movements/{id}/pdf', [ProductMovementController::class, 'exportSinglePdf'])
-                ->middleware('permission:stock.movement.view')
+                ->middleware(['permission:stock.movement.view', 'feature.enabled:reports.export.pdf'])
                 ->name('product-movements.pdf.single');
         });
 
@@ -339,50 +339,54 @@ Route::prefix('hardware')
             ->middleware('permission:transfer.view')
             ->name('transfers.index');
 
-        // Exports (fournisseurs + bons de commande + ventes)
+        // Exports (PDF / Excel selon le plan)
         Route::prefix('exports')->name('exports.')->group(function () {
-            Route::get('/sales/pdf', [ExportController::class, 'salesPdf'])
-                ->middleware('permission:hardware.sales.view')
-                ->name('sales.pdf');
-            Route::get('/sales/excel', [ExportController::class, 'salesExcel'])
-                ->middleware('permission:hardware.sales.view')
-                ->name('sales.excel');
-            Route::get('/stock/pdf', [ExportController::class, 'stockPdf'])
-                ->middleware('permission:hardware.stock.view')
-                ->name('stock.pdf');
-            Route::get('/stock/excel', [ExportController::class, 'stockExcel'])
-                ->middleware('permission:hardware.stock.view')
-                ->name('stock.excel');
-            Route::get('/suppliers/pdf', [ExportController::class, 'suppliersPdf'])
-                ->middleware('permission:hardware.supplier.view')
-                ->name('suppliers.pdf');
-            Route::get('/suppliers/excel', [ExportController::class, 'suppliersExcel'])
-                ->middleware('permission:hardware.supplier.view')
-                ->name('suppliers.excel');
-            Route::get('/purchases/pdf', [ExportController::class, 'purchasesPdf'])
-                ->middleware('permission:hardware.purchases.view')
-                ->name('purchases.pdf');
-            Route::get('/purchases/excel', [ExportController::class, 'purchasesExcel'])
-                ->middleware('permission:hardware.purchases.view')
-                ->name('purchases.excel');
-            Route::get('/customers/pdf', [ExportController::class, 'customersPdf'])
-                ->middleware('permission:hardware.customer.view')
-                ->name('customers.pdf');
-            Route::get('/customers/excel', [ExportController::class, 'customersExcel'])
-                ->middleware('permission:hardware.customer.view')
-                ->name('customers.excel');
-            Route::get('/movements/pdf', [ExportController::class, 'movementsPdf'])
-                ->middleware('permission:hardware.stock.movement.view')
-                ->name('movements.pdf');
-            Route::get('/movements/excel', [ExportController::class, 'movementsExcel'])
-                ->middleware('permission:hardware.stock.movement.view')
-                ->name('movements.excel');
-            Route::get('/reports/pdf', [ExportController::class, 'reportPdf'])
-                ->middleware('permission:hardware.sales.view|hardware.report.view')
-                ->name('reports.pdf');
-            Route::get('/reports/excel', [ExportController::class, 'reportExcel'])
-                ->middleware('permission:hardware.sales.view|hardware.report.view')
-                ->name('reports.excel');
+            Route::middleware('feature.enabled:reports.export.pdf')->group(function () {
+                Route::get('/sales/pdf', [ExportController::class, 'salesPdf'])
+                    ->middleware('permission:hardware.sales.view')
+                    ->name('sales.pdf');
+                Route::get('/stock/pdf', [ExportController::class, 'stockPdf'])
+                    ->middleware('permission:hardware.stock.view')
+                    ->name('stock.pdf');
+                Route::get('/suppliers/pdf', [ExportController::class, 'suppliersPdf'])
+                    ->middleware('permission:hardware.supplier.view')
+                    ->name('suppliers.pdf');
+                Route::get('/purchases/pdf', [ExportController::class, 'purchasesPdf'])
+                    ->middleware('permission:hardware.purchases.view')
+                    ->name('purchases.pdf');
+                Route::get('/customers/pdf', [ExportController::class, 'customersPdf'])
+                    ->middleware('permission:hardware.customer.view')
+                    ->name('customers.pdf');
+                Route::get('/movements/pdf', [ExportController::class, 'movementsPdf'])
+                    ->middleware('permission:hardware.stock.movement.view')
+                    ->name('movements.pdf');
+                Route::get('/reports/pdf', [ExportController::class, 'reportPdf'])
+                    ->middleware('permission:hardware.sales.view|hardware.report.view')
+                    ->name('reports.pdf');
+            });
+            Route::middleware('feature.enabled:reports.export.excel')->group(function () {
+                Route::get('/sales/excel', [ExportController::class, 'salesExcel'])
+                    ->middleware('permission:hardware.sales.view')
+                    ->name('sales.excel');
+                Route::get('/stock/excel', [ExportController::class, 'stockExcel'])
+                    ->middleware('permission:hardware.stock.view')
+                    ->name('stock.excel');
+                Route::get('/suppliers/excel', [ExportController::class, 'suppliersExcel'])
+                    ->middleware('permission:hardware.supplier.view')
+                    ->name('suppliers.excel');
+                Route::get('/purchases/excel', [ExportController::class, 'purchasesExcel'])
+                    ->middleware('permission:hardware.purchases.view')
+                    ->name('purchases.excel');
+                Route::get('/customers/excel', [ExportController::class, 'customersExcel'])
+                    ->middleware('permission:hardware.customer.view')
+                    ->name('customers.excel');
+                Route::get('/movements/excel', [ExportController::class, 'movementsExcel'])
+                    ->middleware('permission:hardware.stock.movement.view')
+                    ->name('movements.excel');
+                Route::get('/reports/excel', [ExportController::class, 'reportExcel'])
+                    ->middleware('permission:hardware.sales.view|hardware.report.view')
+                    ->name('reports.excel');
+            });
         });
     });
 

@@ -4,10 +4,36 @@ import axios from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 
 export default function BillingPlans({ plans = [], subscriptions = [], overrides = [], tenants = [], compliance = [], featureCatalog = {} }) {
+    const normalizePlanFeatures = (plan) => {
+        const catalogEntries = Object.entries(featureCatalog || {});
+        const currentFeatures = { ...(plan?.features || {}) };
+        catalogEntries.forEach(([code, meta]) => {
+            if (!currentFeatures[code]) {
+                currentFeatures[code] = {
+                    label: meta?.label || code,
+                    enabled: Boolean(meta?.default_enabled),
+                    limit: meta?.default_limit ?? null,
+                };
+                return;
+            }
+            currentFeatures[code] = {
+                label: currentFeatures[code]?.label || meta?.label || code,
+                enabled: Boolean(currentFeatures[code]?.enabled),
+                limit: currentFeatures[code]?.limit ?? null,
+            };
+        });
+        return currentFeatures;
+    };
+
+    const normalizePlan = (plan) => ({
+        ...plan,
+        features: normalizePlanFeatures(plan),
+    });
+
     const [complianceSearch, setComplianceSearch] = useState('');
     const [complianceSort, setComplianceSort] = useState('risk');
     const [alertsOnly, setAlertsOnly] = useState(false);
-    const [editablePlans, setEditablePlans] = useState(() => plans.map((plan) => ({ ...plan })));
+    const [editablePlans, setEditablePlans] = useState(() => plans.map((plan) => normalizePlan(plan)));
     const [savingPlanId, setSavingPlanId] = useState(null);
     const [templateByPlan, setTemplateByPlan] = useState({});
     const [previewState, setPreviewState] = useState({ open: false, loading: false, planId: null, templateCode: '', changes: [], changesCount: 0 });
@@ -26,7 +52,7 @@ export default function BillingPlans({ plans = [], subscriptions = [], overrides
         const map = {};
         plans.forEach((plan) => { map[plan.id] = plan; });
         return map;
-    }, [plans]);
+    }, [plans, featureCatalog]);
 
     const overrideForm = useForm({
         tenant_id: '',
@@ -40,7 +66,7 @@ export default function BillingPlans({ plans = [], subscriptions = [], overrides
     }, [featureCatalog]);
 
     useEffect(() => {
-        setEditablePlans(plans.map((plan) => ({ ...plan })));
+        setEditablePlans(plans.map((plan) => normalizePlan(plan)));
         setTemplateByPlan(
             plans.reduce((acc, plan) => {
                 acc[plan.id] = plan.code || 'starter';
@@ -91,6 +117,17 @@ export default function BillingPlans({ plans = [], subscriptions = [], overrides
         setEditablePlans((current) => current.map((plan) => (
             plan.id === planId ? { ...plan, [field]: value } : plan
         )));
+    };
+
+    const updateFeatureField = (planId, featureCode, field, value) => {
+        setEditablePlans((current) => current.map((plan) => {
+            if (plan.id !== planId) return plan;
+            const features = { ...(plan.features || {}) };
+            const feature = { ...(features[featureCode] || { label: featureCode, enabled: false, limit: null }) };
+            feature[field] = value;
+            features[featureCode] = feature;
+            return { ...plan, features };
+        }));
     };
 
     const savePlan = (plan) => {
@@ -454,15 +491,51 @@ export default function BillingPlans({ plans = [], subscriptions = [], overrides
 
                             <div className="space-y-2">
                                 <p className="text-xs font-medium text-slate-700 dark:text-slate-300">Features</p>
-                                {Object.entries(plan.features || {}).map(([code, feature]) => (
-                                    <div key={code} className="rounded-lg border border-slate-200 dark:border-slate-700 p-2">
-                                        <p className="text-xs text-slate-700 dark:text-slate-200">{feature.label || code}</p>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                                            {feature.enabled ? 'Active' : 'Inactive'}
-                                            {feature.limit !== null && feature.limit !== undefined ? ` - Limite: ${feature.limit}` : ' - Illimite'}
-                                        </p>
-                                    </div>
-                                ))}
+                                {Object.entries(plan.features || {})
+                                    .sort((a, b) => {
+                                        const ga = featureCatalog?.[a[0]]?.group || 'other';
+                                        const gb = featureCatalog?.[b[0]]?.group || 'other';
+                                        if (ga !== gb) return ga.localeCompare(gb);
+                                        const la = a[1]?.label || a[0];
+                                        const lb = b[1]?.label || b[0];
+                                        return String(la).localeCompare(String(lb));
+                                    })
+                                    .map(([code, feature]) => {
+                                        const meta = featureCatalog?.[code] || {};
+                                        const isLimit = meta?.type === 'limit';
+                                        return (
+                                            <div key={code} className="rounded-lg border border-slate-200 dark:border-slate-700 p-2">
+                                                <div className="flex items-start justify-between gap-2 mb-2">
+                                                    <div>
+                                                        <p className="text-xs text-slate-700 dark:text-slate-200 font-medium">{feature.label || code}</p>
+                                                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{meta?.group || 'general'}</p>
+                                                    </div>
+                                                    <label className="inline-flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!!feature.enabled}
+                                                            onChange={(e) => updateFeatureField(plan.id, code, 'enabled', e.target.checked)}
+                                                        />
+                                                        Actif
+                                                    </label>
+                                                </div>
+                                                {isLimit ? (
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        value={feature.limit ?? ''}
+                                                        onChange={(e) => updateFeatureField(plan.id, code, 'limit', e.target.value === '' ? null : Number(e.target.value))}
+                                                        className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-2 py-1.5 text-xs"
+                                                        placeholder="Limite (vide = illimite)"
+                                                    />
+                                                ) : (
+                                                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                                        {feature.enabled ? 'Disponible' : 'Monter de niveau pour activer'}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                             </div>
                         </div>
                     ))}

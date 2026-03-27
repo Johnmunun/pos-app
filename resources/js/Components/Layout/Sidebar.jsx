@@ -49,6 +49,7 @@ import {
     BookOpen as BlogIcon,
     FolderOpen,
     Eye,
+    Mail as MailIcon,
 } from 'lucide-react';
 
 /**
@@ -65,6 +66,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
     const url = currentUrl || page.url;
     const appLogoUrl = page.props?.appLogoUrl || null;
     const featureFlags = page.props?.auth?.featureFlags || {};
+    const planFeatures = page.props?.auth?.planFeatures || {};
     const billingSummary = page.props?.auth?.billingSummary || null;
     const planExpiryLabel = billingSummary?.expires_at
         ? new Date(billingSummary.expires_at).toLocaleDateString()
@@ -139,6 +141,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
     // Module Global Commerce (Kiosque, Supermarché, Boucherie, Autre)
     // IMPORTANT: Ne pas confondre avec module.ecommerce (vente en ligne)
     const hasCommerceModuleAccess = () => {
+        if (typeof url === 'string' && url.startsWith('/ecommerce')) return false;
         if (isRoot || permissions.includes('*')) return true;
         // Si le tenant est explicitement pharmacy, hardware ou ecommerce, ne pas montrer Commerce
         if (tenantSector === 'pharmacy' || tenantSector === 'hardware' || tenantSector === 'ecommerce') return false;
@@ -154,6 +157,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
 
     // Module E-commerce (Vente en ligne) - séparé du module Commerce
     const hasEcommerceModuleAccess = () => {
+        if (typeof url === 'string' && url.startsWith('/commerce')) return false;
         if (isRoot || permissions.includes('*')) return true;
         if (tenantSector === 'ecommerce') return true;
         return permissions.some(
@@ -321,6 +325,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                 { label: 'Créer un ticket', href: '/support/tickets/create', permission: 'support.tickets.create', icon: Plus },
                 { label: 'Mes tickets', href: '/support/tickets', permission: 'support.tickets.view', icon: Ticket },
                 { label: 'Tous les tickets', href: '/support/admin/tickets', permission: 'support.admin', icon: ClipboardList },
+                { label: 'Support Chat', href: '/support/admin/chat', permission: 'support.admin', icon: MessageCircle },
                 { label: 'Incidents', href: '/support/incidents', permission: 'support.admin', icon: AlertCircle },
                 { label: 'FAQ / Base de connaissance', href: '/support/faq', permission: 'support.faq', icon: HelpCircle },
                 { label: 'Contact support', href: '/support/contact', permission: 'support.tickets.create', icon: MessageCircle },
@@ -355,11 +360,12 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
             key: 'settings',
             label: 'Paramètres',
             icon: Settings,
-            permissions: ['settings.view', 'settings.update', 'settings.branding', 'settings.ui', 'settings.currency.view', 'settings.settings.currency.view', 'admin.billing.manage'],
+            permissions: ['settings.view', 'settings.update', 'settings.branding', 'settings.ui', 'settings.currency.view', 'settings.settings.currency.view', 'admin.billing.manage', 'settings.mail.manage'],
             items: [
                 { label: 'Paramètres boutique', href: '/settings', permission: 'settings.view', icon: Building },
                 { label: 'Gestion des devises', href: '/settings/currencies', permission: 'settings.currency.view|settings.settings.currency.view', icon: DollarSign },
                 { label: 'Branding (logo, couleurs)', href: '/admin/branding', permission: 'settings.branding', icon: Palette },
+                { label: 'Configuration Mail', href: '/admin/mail-settings', permission: 'settings.mail.manage', icon: MailIcon },
                 { label: 'Plans & Limitations', href: '/admin/billing/plans', permission: 'admin.billing.manage', icon: CreditCard },
                 { label: 'Transactions (abonnements)', href: '/admin/billing/transactions', permission: 'admin.billing.manage', icon: Scroll },
                 { label: 'Préférences UI', href: '#', permission: 'settings.ui', icon: Palette },
@@ -386,6 +392,16 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                 { label: 'Connexions utilisateurs', href: '/logs/connections', permission: 'logs.connections', icon: Lock },
             ]
         },
+        {
+            key: 'crm',
+            label: 'CRM Admin',
+            icon: BarChart,
+            permissions: ['crm.dashboard.view'],
+            items: [
+                { label: 'Dashboard CRM', href: '/admin/crm', permission: 'crm.dashboard.view', icon: BarChart },
+                { label: 'Support Chat', href: '/support/admin/chat', permission: 'crm.dashboard.view|support.admin', icon: MessageCircle },
+            ]
+        },
     ];
 
     // Filtrer les groupes visibles (Général toujours visible ; Pharmacy/Hardware/Commerce/Ecommerce via hasXxxAccess)
@@ -403,21 +419,26 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
         return hasVisibleItem(group.permissions);
     });
 
-    const filterItemsByFeatures = (group) => {
-        if (!group || !Array.isArray(group.items)) return group;
-        if (group.key !== 'ecommerce') return group;
-        return {
-            ...group,
-            items: group.items.filter((item) => {
-                if (item?.href === '/ecommerce/payments' && featureFlags.api_payments === false) {
-                    return false;
-                }
-                if (item?.href === '/ecommerce/reports' && featureFlags.analytics_advanced === false) {
-                    return false;
-                }
-                return true;
-            }),
-        };
+    const filterItemsByFeatures = (group) => group;
+
+    const isItemPlanLocked = (groupKey, item) => {
+        const href = item?.href || '';
+        if (!href || href === '#') return false;
+
+        if (groupKey === 'ecommerce' && planFeatures.ecommerce_module === false) return true;
+        if (groupKey === 'pharmacy' && planFeatures.pharmacy_module === false) return true;
+        if (groupKey === 'global_commerce' && planFeatures.commerce_module === false) return true;
+        if (groupKey === 'hardware' && planFeatures.hardware_module === false) return true;
+
+        if (href === '/ecommerce/payments' && featureFlags.api_payments === false) return true;
+        if (href === '/ecommerce/reports' && featureFlags.analytics_advanced === false) return true;
+        if (href === '/ecommerce/catalog' && planFeatures.ecommerce_catalog === false) return true;
+        if (href === '/ecommerce/orders' && planFeatures.ecommerce_orders === false) return true;
+        if ((href === '/ecommerce/promotions' || href === '/ecommerce/coupons') && planFeatures.ecommerce_promotions === false) return true;
+
+        if ((href === '/commerce/depots' || href === '/pharmacy/depots' || href === '/hardware/depots') && planFeatures.multi_depot === false) return true;
+
+        return false;
     };
 
     return (
@@ -488,27 +509,45 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                                                 }
                                                 const IconComponent = item.icon;
                                                 const isActive = isActiveRoute(item.href);
+                                                const isLocked = isItemPlanLocked(group.key, item);
                                                 return (
                                                     <li key={item.label}>
-                                                        <Link
-                                                            href={item.href}
-                                                            className={`group flex gap-x-3 rounded-lg p-2 text-sm leading-6 font-medium transition-colors ${
-                                                                isActive
-                                                                    ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'
-                                                                    : 'text-gray-700 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                                        <div
+                                                            className={`group flex items-center justify-between gap-x-2 rounded-lg p-2 text-sm leading-6 font-medium transition-colors ${
+                                                                isLocked
+                                                                    ? 'bg-gray-50 dark:bg-gray-700/40 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                                                                    : (isActive
+                                                                        ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'
+                                                                        : 'text-gray-700 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-700')
                                                             }`}
                                                         >
-                                                            {IconComponent && (
-                                                                <IconComponent 
-                                                                    className={`h-5 w-5 shrink-0 ${
-                                                                        isActive 
-                                                                            ? 'text-amber-600 dark:text-amber-400' 
-                                                                            : 'text-gray-400 dark:text-gray-500 group-hover:text-amber-600 dark:group-hover:text-amber-400'
-                                                                    }`} 
-                                                                />
+                                                            {isLocked ? (
+                                                                <div className="flex items-center gap-x-3 min-w-0 opacity-80">
+                                                                    {IconComponent && (
+                                                                        <IconComponent className="h-5 w-5 shrink-0 text-gray-400 dark:text-gray-500" />
+                                                                    )}
+                                                                    <span className="blur-[1px] select-none">{item.label}</span>
+                                                                </div>
+                                                            ) : (
+                                                                <Link href={item.href} className="flex items-center gap-x-3 min-w-0 w-full">
+                                                                    {IconComponent && (
+                                                                        <IconComponent 
+                                                                            className={`h-5 w-5 shrink-0 ${
+                                                                                isActive 
+                                                                                    ? 'text-amber-600 dark:text-amber-400' 
+                                                                                    : 'text-gray-400 dark:text-gray-500 group-hover:text-amber-600 dark:group-hover:text-amber-400'
+                                                                            }`} 
+                                                                        />
+                                                                    )}
+                                                                    <span>{item.label}</span>
+                                                                </Link>
                                                             )}
-                                                            <span>{item.label}</span>
-                                                        </Link>
+                                                            {isLocked ? (
+                                                                <span className="inline-flex rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 px-2 py-0.5 text-[10px] font-semibold">
+                                                                    Monter niveau
+                                                                </span>
+                                                            ) : null}
+                                                        </div>
                                                     </li>
                                                 );
                                             })}
@@ -629,28 +668,43 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                                                 }
                                                 const IconComponent = item.icon;
                                                 const isActive = isActiveRoute(item.href);
+                                                const isLocked = isItemPlanLocked(group.key, item);
                                                 return (
                                                     <li key={item.label}>
-                                                        <Link
-                                                            href={item.href}
-                                                            onClick={onClose}
-                                                            className={`group flex gap-x-3 rounded-lg p-3 text-sm leading-6 font-medium transition-colors ${
-                                                                isActive
-                                                                    ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'
-                                                                    : 'text-gray-700 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                                        <div
+                                                            className={`group flex items-center justify-between gap-x-2 rounded-lg p-3 text-sm leading-6 font-medium transition-colors ${
+                                                                isLocked
+                                                                    ? 'bg-gray-50 dark:bg-gray-700/40 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                                                                    : (isActive
+                                                                        ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'
+                                                                        : 'text-gray-700 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-700')
                                                             }`}
                                                         >
-                                                            {IconComponent && (
-                                                                <IconComponent 
-                                                                    className={`h-5 w-5 shrink-0 ${
-                                                                        isActive 
-                                                                            ? 'text-amber-600 dark:text-amber-400' 
-                                                                            : 'text-gray-400 dark:text-gray-500 group-hover:text-amber-600 dark:group-hover:text-amber-400'
-                                                                    }`} 
-                                                                />
+                                                            {isLocked ? (
+                                                                <div className="flex items-center gap-x-3 min-w-0 opacity-80">
+                                                                    {IconComponent && <IconComponent className="h-5 w-5 shrink-0 text-gray-400 dark:text-gray-500" />}
+                                                                    <span className="blur-[1px] select-none">{item.label}</span>
+                                                                </div>
+                                                            ) : (
+                                                                <Link href={item.href} onClick={onClose} className="flex items-center gap-x-3 min-w-0 w-full">
+                                                                    {IconComponent && (
+                                                                        <IconComponent 
+                                                                            className={`h-5 w-5 shrink-0 ${
+                                                                                isActive 
+                                                                                    ? 'text-amber-600 dark:text-amber-400' 
+                                                                                    : 'text-gray-400 dark:text-gray-500 group-hover:text-amber-600 dark:group-hover:text-amber-400'
+                                                                            }`} 
+                                                                        />
+                                                                    )}
+                                                                    <span>{item.label}</span>
+                                                                </Link>
                                                             )}
-                                                            <span>{item.label}</span>
-                                                        </Link>
+                                                            {isLocked ? (
+                                                                <span className="inline-flex rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 px-2 py-0.5 text-[10px] font-semibold">
+                                                                    Monter niveau
+                                                                </span>
+                                                            ) : null}
+                                                        </div>
                                                     </li>
                                                 );
                                             })}

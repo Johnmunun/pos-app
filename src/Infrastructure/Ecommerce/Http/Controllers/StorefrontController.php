@@ -361,6 +361,9 @@ class StorefrontController
             'hero_secondary_label' => 'En savoir plus',
             'theme_primary_color' => '#f59e0b',
             'theme_secondary_color' => '#d97706',
+            // Frais fixes vitrine (même devise que la devise par défaut du tenant — voir Paramètres e-commerce)
+            'storefront_use_flat_shipping' => false,
+            'storefront_flat_shipping_amount' => 0.0,
         ];
 
         $config = $shop->ecommerce_storefront_config ?? [];

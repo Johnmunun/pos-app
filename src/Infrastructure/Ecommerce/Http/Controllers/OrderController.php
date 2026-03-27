@@ -16,6 +16,9 @@ use Src\Domain\Ecommerce\Repositories\OrderRepositoryInterface;
 use Src\Domain\Ecommerce\Repositories\OrderItemRepositoryInterface;
 use Carbon\Carbon;
 use Src\Domain\Ecommerce\Entities\Order;
+use Src\Infrastructure\Ecommerce\Models\PaymentMethodModel;
+use Src\Application\Billing\Services\FeatureLimitService;
+use App\Models\Shop;
 
 class OrderController
 {
@@ -24,7 +27,8 @@ class OrderController
         private readonly UpdateOrderStatusUseCase $updateOrderStatusUseCase,
         private readonly UpdatePaymentStatusUseCase $updatePaymentStatusUseCase,
         private readonly OrderRepositoryInterface $orderRepository,
-        private readonly OrderItemRepositoryInterface $orderItemRepository
+        private readonly OrderItemRepositoryInterface $orderItemRepository,
+        private readonly FeatureLimitService $featureLimitService
     ) {
     }
 
@@ -226,6 +230,20 @@ class OrderController
 
         $shopId = $this->getShopId($request);
 
+        $paymentStatusIn = $validated['payment_status'] ?? Order::PAYMENT_STATUS_PENDING;
+        $methodCode = $validated['payment_method'] ?? null;
+        $needsFusionPayment = false;
+        if ($methodCode !== null && $methodCode !== '') {
+            $pm = PaymentMethodModel::query()
+                ->where('shop_id', $shopId)
+                ->where('code', $methodCode)
+                ->first();
+            if ($pm !== null && strtolower((string) $pm->type) === 'fusionpay') {
+                $needsFusionPayment = true;
+                $paymentStatusIn = Order::PAYMENT_STATUS_PENDING;
+            }
+        }
+
         $items = array_map(function ($item) {
             return new OrderItemDTO(
                 $item['product_id'],
@@ -252,13 +270,25 @@ class OrderController
             $validated['currency'],
             $validated['payment_method'] ?? null,
             $validated['notes'] ?? null,
-            $validated['payment_status'] ?? Order::PAYMENT_STATUS_PENDING,
+            $paymentStatusIn,
             $items,
             $user->id
         );
 
+        $tenantId = $user->tenant_id ? (string) $user->tenant_id : null;
+        if ($tenantId === null) {
+            $shopRow = Shop::query()->find($shopId);
+            $tenantId = $shopRow ? (string) $shopRow->tenant_id : null;
+        }
+        $this->featureLimitService->assertCanRecordSale($tenantId);
+
         try {
             $order = $this->createOrderUseCase->execute($dto);
+            app(\App\Services\AppNotificationService::class)->notifyEcommerceOrder(
+                'Nouvelle commande e-commerce',
+                'Commande '.$order->getOrderNumber().' creee pour '.$order->getCustomerName().'.',
+                $request->user()?->tenant_id ? (int) $request->user()->tenant_id : null
+            );
 
             $digitalTokens = \Src\Infrastructure\Ecommerce\Models\OrderItemModel::where('order_id', $order->getId())
                 ->where('is_digital', true)
@@ -279,6 +309,7 @@ class OrderController
                     'id' => $order->getId(),
                     'order_number' => $order->getOrderNumber(),
                 ],
+                'needs_fusion_payment' => $needsFusionPayment,
                 'digital_download_tokens' => $digitalTokens,
                 'redirect_url' => $redirectUrl,
             ]);
@@ -347,6 +378,13 @@ class OrderController
 
         try {
             $order = $this->updatePaymentStatusUseCase->execute($id, $validated['payment_status']);
+            if (($validated['payment_status'] ?? '') === 'paid') {
+                app(\App\Services\AppNotificationService::class)->notifyEcommerceOrder(
+                    'Paiement e-commerce confirme',
+                    'La commande '.$order->getOrderNumber().' est marquee payee.',
+                    $request->user()?->tenant_id ? (int) $request->user()->tenant_id : null
+                );
+            }
 
             return response()->json([
                 'success' => true,

@@ -21,5 +21,9 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        // Seed global currencies/rates (scope=global / FusionPay).
+        // Run explicitly in production with:
+        // php artisan db:seed --class=Database\\Seeders\\GlobalCurrenciesSeeder
     }
 }

@@ -36,6 +36,7 @@ use Src\Infrastructure\Pharmacy\Adapters\HardwareUpdateStockUseCase;
 use Src\Shared\ValueObjects\Money;
 use Src\Domain\Pharmacy\Entities\Sale as SaleEntity;
 use Src\Application\Referral\Services\ReferralService;
+use Src\Application\Billing\Services\FeatureLimitService;
 
 class SaleController
 {
@@ -73,7 +74,8 @@ class SaleController
         private ?DepotFilterService $depotFilterService = null,
         private ?QuincaillerieProductRepositoryInterface $hardwareProductRepository = null,
         private ?ProductRepositoryInterface $pharmacyProductRepository = null,
-        private ?ReferralService $referralService = null
+        private ?ReferralService $referralService = null,
+        private ?FeatureLimitService $featureLimitService = null
     ) {}
 
     /**
@@ -916,6 +918,15 @@ class SaleController
             if ($authUser === null) {
                 abort(403, 'User not authenticated.');
             }
+            if ($sale->getStatus() !== SaleEntity::STATUS_COMPLETED) {
+                $tenantId = $authUser->tenant_id ? (string) $authUser->tenant_id : null;
+                if ($tenantId === null) {
+                    $shopRow = Shop::query()->find($shopId);
+                    $tenantId = $shopRow ? (string) $shopRow->tenant_id : null;
+                }
+                $limitService = $this->featureLimitService ?? app(FeatureLimitService::class);
+                $limitService->assertCanRecordSale($tenantId);
+            }
             // Si module Hardware, utiliser un flux de finalisation adapté (sans lots Pharmacy)
             $isHardware = $this->getModule() === 'Hardware';
             if ($isHardware) {
@@ -964,9 +975,19 @@ class SaleController
                         );
                     }
                 }
+
+                app(\App\Services\AppNotificationService::class)->notifySaleCompleted(
+                    (float) $sale->getTotal()->getAmount(),
+                    (string) $sale->getCurrency(),
+                    (string) $sale->getId(),
+                    null,
+                    $authUser->tenant_id ? (int) $authUser->tenant_id : null
+                );
             }
 
             return response()->json(['message' => 'Sale finalized successfully']);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

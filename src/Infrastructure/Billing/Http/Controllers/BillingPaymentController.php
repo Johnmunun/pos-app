@@ -4,6 +4,7 @@ namespace Src\Infrastructure\Billing\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +15,11 @@ use Inertia\Response as InertiaResponse;
 use App\Services\CurrencyConversionService;
 use Src\Application\Billing\Services\BillingPlanService;
 use Src\Infrastructure\Billing\Models\BillingPaymentTransaction;
+use Src\Infrastructure\Ecommerce\Models\OrderItemModel;
+use Src\Infrastructure\Ecommerce\Models\OrderModel;
 use Src\Infrastructure\Billing\Services\FusionPayClient;
+use Src\Application\Ecommerce\UseCases\UpdatePaymentStatusUseCase;
+use Src\Domain\Ecommerce\Entities\Order as EcommerceOrderEntity;
 
 class BillingPaymentController extends Controller
 {
@@ -22,6 +27,7 @@ class BillingPaymentController extends Controller
         private readonly FusionPayClient $fusionPayClient,
         private readonly BillingPlanService $billingPlanService,
         private readonly CurrencyConversionService $currencyConversionService,
+        private readonly UpdatePaymentStatusUseCase $updateEcommercePaymentStatusUseCase,
     ) {
     }
 
@@ -141,8 +147,8 @@ class BillingPaymentController extends Controller
         try {
             $providerResponse = $this->fusionPayClient->initiatePayment($providerPayload);
         } catch (RequestException $e) {
-            $status = $e->response?->status();
-            $body = $e->response?->json();
+            $status = $e->response->status();
+            $body = $e->response->json();
             $rawMessage = is_array($body) ? (string) (data_get($body, 'message') ?? data_get($body, 'error') ?? '') : '';
             $fallback = 'FusionPay a rejeté la demande de paiement.';
 
@@ -245,7 +251,16 @@ class BillingPaymentController extends Controller
             'provider_payload' => $request->all(),
         ]);
 
-        if ($isPaid && !empty($transaction->tenant_id)) {
+        if ($isPaid && !empty($transaction->ecommerce_order_id)) {
+            try {
+                $this->updateEcommercePaymentStatusUseCase->execute(
+                    (string) $transaction->ecommerce_order_id,
+                    EcommerceOrderEntity::PAYMENT_STATUS_PAID
+                );
+            } catch (\Throwable) {
+                // Ne pas échouer le webhook si la commande est déjà à jour.
+            }
+        } elseif ($isPaid && !empty($transaction->tenant_id) && !empty($transaction->billing_plan_id)) {
             $cycle = strtolower((string) data_get($transaction->metadata, 'billing_cycle', 'monthly'));
             $endsAt = $cycle === 'annual'
                 ? now()->addYear()
@@ -283,7 +298,15 @@ class BillingPaymentController extends Controller
                     $transaction->provider_payload = $verify;
                     if ($mappedStatus === 'paid' && $transaction->paid_at === null) {
                         $transaction->paid_at = Carbon::now();
-                        if (!empty($transaction->tenant_id)) {
+                        if (!empty($transaction->ecommerce_order_id)) {
+                            try {
+                                $this->updateEcommercePaymentStatusUseCase->execute(
+                                    (string) $transaction->ecommerce_order_id,
+                                    EcommerceOrderEntity::PAYMENT_STATUS_PAID
+                                );
+                            } catch (\Throwable) {
+                            }
+                        } elseif (!empty($transaction->tenant_id) && !empty($transaction->billing_plan_id)) {
                             $this->billingPlanService->assignTenantPlan(
                                 (string) $transaction->tenant_id,
                                 (int) $transaction->billing_plan_id,
@@ -298,6 +321,8 @@ class BillingPaymentController extends Controller
             }
         }
 
+        $transaction->refresh();
+
         return response()->json([
             'id' => $transaction->id,
             'status' => $transaction->status,
@@ -308,6 +333,8 @@ class BillingPaymentController extends Controller
             'currency_code' => $transaction->currency_code,
             'paid_at' => $transaction->paid_at,
             'expires_at' => $transaction->expires_at,
+            'ecommerce_success_url' => $this->resolveEcommercePaymentSuccessUrl($transaction),
+            'has_ecommerce_order' => filled($transaction->ecommerce_order_id),
         ]);
     }
 
@@ -339,7 +366,7 @@ class BillingPaymentController extends Controller
         ]);
     }
 
-    public function showStatusPage(int $id): InertiaResponse
+    public function showStatusPage(int $id): InertiaResponse|RedirectResponse
     {
         $user = Auth::user();
 
@@ -347,6 +374,12 @@ class BillingPaymentController extends Controller
             ->where('id', $id)
             ->where('user_id', $user->id)
             ->firstOrFail();
+
+        $ecommerceSuccessUrl = $this->resolveEcommercePaymentSuccessUrl($transaction);
+
+        if ($ecommerceSuccessUrl !== null && $this->isTransactionPaid($transaction)) {
+            return redirect()->to($ecommerceSuccessUrl);
+        }
 
         return Inertia::render('Billing/PaymentStatus', [
             'transaction' => [
@@ -359,6 +392,8 @@ class BillingPaymentController extends Controller
                 'billing_plan_id' => $transaction->billing_plan_id,
                 'paid_at' => $transaction->paid_at,
                 'expires_at' => $transaction->expires_at,
+                'ecommerce_success_url' => $ecommerceSuccessUrl,
+                'has_ecommerce_order' => filled($transaction->ecommerce_order_id),
             ],
         ]);
     }
@@ -366,6 +401,35 @@ class BillingPaymentController extends Controller
     public function showOnboardingPaymentPage(): InertiaResponse
     {
         return Inertia::render('Billing/OnboardingPayment');
+    }
+
+    private function isTransactionPaid(BillingPaymentTransaction $transaction): bool
+    {
+        return in_array(strtolower((string) $transaction->status), ['paid', 'success', 'completed'], true);
+    }
+
+    /**
+     * URL de la page vitrine « paiement réussi » avec liens de téléchargement (FusionPay e-commerce).
+     */
+    private function resolveEcommercePaymentSuccessUrl(BillingPaymentTransaction $transaction): ?string
+    {
+        $orderId = $transaction->ecommerce_order_id;
+        if ($orderId === null || $orderId === '') {
+            return null;
+        }
+
+        $order = OrderModel::find($orderId);
+        if (!$order || strtolower((string) $order->payment_status) !== 'paid') {
+            return null;
+        }
+
+        $token = OrderItemModel::query()
+            ->where('order_id', $order->id)
+            ->whereNotNull('download_token')
+            ->orderBy('id')
+            ->value('download_token');
+
+        return $token ? route('ecommerce.payment.success', ['token' => $token]) : null;
     }
 
     private function isValidWebhook(Request $request): bool

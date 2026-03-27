@@ -12,6 +12,7 @@ class BillingPaymentTransaction extends Model
         'tenant_id',
         'user_id',
         'billing_plan_id',
+        'ecommerce_order_id',
         'provider',
         'payment_method',
         'amount',

@@ -87,6 +87,7 @@ function StorefrontCartHeader({ shop, cmsPages = [], currency }) {
 }
 
 function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop, cmsPages, whatsapp = {}, config = {} }) {
+    const links = useStorefrontLinks();
     const { cart, updateQuantity, removeFromCart, getCartTotal, getPriceInDisplayCurrency, currency, clearCart } = useCart();
     const [orderDrawerOpen, setOrderDrawerOpen] = useState(false);
     const [selectedShippingId, setSelectedShippingId] = useState(shippingMethods?.[0]?.id ?? '');
@@ -100,12 +101,24 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
     const displayCurrency = currency || shop?.currency || 'XAF';
     const format = (amount) => formatCurrency(amount, displayCurrency);
 
+    const useFlatShipping = !!config?.storefront_use_flat_shipping;
+    const flatShippingAmount = Math.max(0, Number(config?.storefront_flat_shipping_amount ?? 0));
+    const hasPhysicalItems = cart.some((i) => !i.is_digital);
+
     const subtotal = getCartTotal();
     const taxAmount = subtotal * (taxRate / 100);
     const total = subtotal + shippingAmount + taxAmount - couponDiscount;
 
     useEffect(() => {
-        if (!selectedShippingId || cart.length === 0) {
+        if (cart.length === 0) {
+            setShippingAmount(0);
+            return;
+        }
+        if (useFlatShipping) {
+            setShippingAmount(hasPhysicalItems ? flatShippingAmount : 0);
+            return;
+        }
+        if (!selectedShippingId) {
             setShippingAmount(0);
             return;
         }
@@ -121,7 +134,7 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
                 }
             })
             .catch(() => setShippingAmount(0));
-    }, [selectedShippingId, subtotal, cart.length]);
+    }, [selectedShippingId, subtotal, cart.length, useFlatShipping, flatShippingAmount, hasPhysicalItems]);
 
     const handleApplyCoupon = () => {
         if (!couponCode.trim()) return;
@@ -173,10 +186,10 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
     const selectedPaymentType = paymentMethods?.find((m) => m.id === selectedPaymentId)?.type ?? '';
 
     const hasDigitalItems = cart.some((i) => !!i.is_digital);
-    const hasPhysicalItems = cart.some((i) => !i.is_digital);
     const isPayOnDelivery = selectedPaymentType === 'cash_on_delivery';
-    // Paiement immédiat: on marque payé automatiquement pour délivrer les produits numériques sans attendre le vendeur.
-    const shouldAutoMarkPaid = hasDigitalItems && !isPayOnDelivery;
+    const isFusionPay = selectedPaymentType === 'fusionpay';
+    // Paiement immédiat auto (hors livraison / FusionPay — celui-ci passe par FusionPay après création de commande).
+    const shouldAutoMarkPaid = hasDigitalItems && !isPayOnDelivery && !isFusionPay;
 
     const whatsappNumber = whatsapp.number || null;
     const whatsappSupportEnabled = !!whatsapp.enabled;
@@ -323,25 +336,45 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
                                         </span>
                                     </div>
 
-                                    {shippingMethods?.length > 0 && (
-                                        <div>
-                                            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    {useFlatShipping ? (
+                                        <div className="rounded-xl border border-slate-200/80 dark:border-slate-600 bg-slate-50/80 dark:bg-slate-900/40 px-3 py-2.5">
+                                            <p className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                                                 <Truck className="h-4 w-4 text-amber-500" />
-                                                Livraison
-                                            </label>
-                                            <select
-                                                value={selectedShippingId}
-                                                onChange={(e) => setSelectedShippingId(e.target.value)}
-                                                className="w-full rounded-xl border border-slate-200 dark:border-slate-600 dark:bg-slate-900 px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-colors"
-                                            >
-                                                {shippingMethods.map((m) => (
-                                                    <option key={m.id} value={m.id}>
-                                                        {m.name} – {m.base_cost > 0 ? format(m.base_cost) : 'Gratuit'}
-                                                        {m.free_shipping_threshold && ` (gratuit dès ${format(m.free_shipping_threshold)})`}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                                Frais de livraison
+                                            </p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                                                Fixés par la boutique ({displayCurrency}) — non modifiables.
+                                            </p>
+                                            <p className="text-base font-semibold text-slate-900 dark:text-white">
+                                                {hasPhysicalItems ? format(flatShippingAmount) : format(0)}
+                                                {!hasPhysicalItems && (
+                                                    <span className="block text-xs font-normal text-slate-500 mt-1">
+                                                        (commande 100 % numérique : pas de livraison)
+                                                    </span>
+                                                )}
+                                            </p>
                                         </div>
+                                    ) : (
+                                        shippingMethods?.length > 0 && (
+                                            <div>
+                                                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                                    <Truck className="h-4 w-4 text-amber-500" />
+                                                    Livraison
+                                                </label>
+                                                <select
+                                                    value={selectedShippingId}
+                                                    onChange={(e) => setSelectedShippingId(e.target.value)}
+                                                    className="w-full rounded-xl border border-slate-200 dark:border-slate-600 dark:bg-slate-900 px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-colors"
+                                                >
+                                                    {shippingMethods.map((m) => (
+                                                        <option key={m.id} value={m.id}>
+                                                            {m.name} – {m.base_cost > 0 ? format(m.base_cost) : 'Gratuit'}
+                                                            {m.free_shipping_threshold && ` (gratuit dès ${format(m.free_shipping_threshold)})`}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )
                                     )}
 
                                     {paymentMethods?.length > 0 && (
@@ -405,7 +438,9 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
                                             <span className="font-medium text-slate-900 dark:text-white">{format(subtotal)}</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
-                                            <span className="text-slate-600 dark:text-slate-400">Livraison</span>
+                                            <span className="text-slate-600 dark:text-slate-400">
+                                                Livraison{useFlatShipping ? ' (fixe)' : ''}
+                                            </span>
                                             <span className="font-medium text-slate-900 dark:text-white">{format(shippingAmount)}</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
@@ -464,7 +499,9 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
                     couponDiscount={couponDiscount}
                     selectedShippingId={selectedShippingId}
                     selectedPaymentCode={selectedPaymentCode}
+                    selectedPaymentType={selectedPaymentType}
                     paymentStatusOnSubmit={shouldAutoMarkPaid ? 'paid' : 'pending'}
+                    readonlyShipping={useFlatShipping}
                     onSuccess={() => {
                         clearCart();
                         setOrderDrawerOpen(false);

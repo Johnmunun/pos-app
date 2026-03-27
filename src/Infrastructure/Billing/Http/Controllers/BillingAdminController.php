@@ -5,6 +5,7 @@ namespace Src\Infrastructure\Billing\Http\Controllers;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -17,8 +18,13 @@ use Src\Infrastructure\Billing\Models\BillingPaymentTransaction;
 
 class BillingAdminController
 {
-    private const FEATURE_CODES = ['products.max', 'users.max', 'api.payments', 'analytics.advanced'];
     private const PUBLIC_PLANS_CACHE_KEY = 'billing.public_plans.v1';
+
+    /** @return list<string> */
+    private function catalogFeatureCodes(): array
+    {
+        return array_keys((array) config('billing_features.catalog', []));
+    }
 
     public function __construct(
         private readonly BillingPlanService $billingPlanService,
@@ -72,23 +78,24 @@ class BillingAdminController
                 return;
             }
 
-            fputcsv($out, ['tenant_id', 'tenant_name', 'products.max', 'users.max', 'api.payments', 'analytics.advanced']);
+            $codes = $this->catalogFeatureCodes();
+            $header = array_merge(['tenant_id', 'tenant_name'], $codes);
+            fputcsv($out, $header);
             foreach ($rows as $row) {
-                $products = $row['features']['products.max']['enabled']
-                    ? ((string) ($row['features']['products.max']['limit'] ?? 'illimite'))
-                    : 'off';
-                $users = $row['features']['users.max']['enabled']
-                    ? ((string) ($row['features']['users.max']['limit'] ?? 'illimite'))
-                    : 'off';
-
-                fputcsv($out, [
-                    $row['tenant_id'],
-                    $row['tenant_name'],
-                    $products,
-                    $users,
-                    $row['features']['api.payments']['enabled'] ? 'on' : 'off',
-                    $row['features']['analytics.advanced']['enabled'] ? 'on' : 'off',
-                ]);
+                $line = [$row['tenant_id'], $row['tenant_name']];
+                foreach ($codes as $code) {
+                    $f = $row['features'][$code] ?? ['enabled' => false, 'limit' => null];
+                    $enabled = (bool) ($f['enabled'] ?? false);
+                    $limit = $f['limit'] ?? null;
+                    if (!$enabled) {
+                        $line[] = 'off';
+                    } elseif ($limit === null || $limit === '') {
+                        $line[] = 'on';
+                    } else {
+                        $line[] = 'limit:' . $limit;
+                    }
+                }
+                fputcsv($out, $line);
             }
             fclose($out);
         };
@@ -210,8 +217,7 @@ class BillingAdminController
 
     public function transactions(): Response
     {
-        $rows = BillingPaymentTransaction::query()
-            ->from('billing_payment_transactions as bpt')
+        $rows = DB::table('billing_payment_transactions as bpt')
             ->leftJoin('tenants as t', 't.id', '=', 'bpt.tenant_id')
             ->leftJoin('users as u', 'u.id', '=', 'bpt.user_id')
             ->leftJoin('billing_plans as bp', 'bp.id', '=', 'bpt.billing_plan_id')
@@ -461,7 +467,7 @@ class BillingAdminController
     {
         $validated = $request->validate([
             'tenant_id' => ['required', 'integer', 'exists:tenants,id'],
-            'feature_code' => ['required', 'string', 'max:120'],
+            'feature_code' => ['required', 'string', Rule::in($this->catalogFeatureCodes())],
             'is_enabled' => ['nullable', 'boolean'],
             'limit_value' => ['nullable', 'integer', 'min:0'],
         ]);
@@ -628,7 +634,7 @@ class BillingAdminController
                 ],
             ];
 
-            foreach (self::FEATURE_CODES as $featureCode) {
+            foreach ($this->catalogFeatureCodes() as $featureCode) {
                 $row['features'][$featureCode] = $this->billingPlanService
                     ->getTenantFeatureConfig($tenantId, $featureCode);
             }

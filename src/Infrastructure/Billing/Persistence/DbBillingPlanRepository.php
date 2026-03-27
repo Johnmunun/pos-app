@@ -105,6 +105,12 @@ class DbBillingPlanRepository implements BillingPlanRepositoryInterface
 
     public function updatePlan(int $planId, array $payload): void
     {
+        $existing = DB::table('billing_plans')->where('id', $planId)->value('features');
+        $existingDecoded = is_string($existing) ? (json_decode($existing, true) ?: []) : [];
+        $incoming = (array) ($payload['features'] ?? []);
+        $merged = array_merge($existingDecoded, $incoming);
+        $features = $this->sanitizePlanFeaturesForCatalog($merged);
+
         DB::table('billing_plans')
             ->where('id', $planId)
             ->update([
@@ -118,10 +124,41 @@ class DbBillingPlanRepository implements BillingPlanRepositoryInterface
                 'promo_starts_at' => $payload['promo_starts_at'] ?? null,
                 'promo_ends_at' => $payload['promo_ends_at'] ?? null,
                 'promo_label' => $payload['promo_label'] ?? null,
-                'features' => json_encode($payload['features'] ?? [], JSON_THROW_ON_ERROR),
+                'features' => json_encode($features, JSON_THROW_ON_ERROR),
                 'is_active' => (bool) ($payload['is_active'] ?? true),
                 'updated_at' => now(),
             ]);
+    }
+
+    /**
+     * Features stockées = uniquement les codes du catalogue (config/billing_features.php).
+     * Clés absentes du payload : défauts du catalogue (default_enabled / default_limit).
+     */
+    private function sanitizePlanFeaturesForCatalog(array $features): array
+    {
+        $catalog = (array) config('billing_features.catalog', []);
+        $out = [];
+        foreach ($catalog as $code => $meta) {
+            if (!is_array($meta)) {
+                continue;
+            }
+            $row = $features[$code] ?? null;
+            if (!is_array($row)) {
+                $out[$code] = [
+                    'label' => $meta['label'] ?? $code,
+                    'enabled' => (bool) ($meta['default_enabled'] ?? false),
+                    'limit' => $meta['default_limit'] ?? null,
+                ];
+                continue;
+            }
+            $out[$code] = [
+                'label' => is_string($row['label'] ?? null) ? $row['label'] : ($meta['label'] ?? $code),
+                'enabled' => (bool) ($row['enabled'] ?? ($meta['default_enabled'] ?? false)),
+                'limit' => array_key_exists('limit', $row) ? $row['limit'] : ($meta['default_limit'] ?? null),
+            ];
+        }
+
+        return $out;
     }
 
     public function upsertTenantSubscription(string $tenantId, int $planId, string $status, ?string $endsAt = null): void

@@ -2,8 +2,10 @@ import Header from '../Components/Header';
 import Hero from '../Components/Hero';
 import Features from '../Components/Features';
 import Testimonials from '../Components/Testimonials';
+import PaymentMethods from '../Components/PaymentMethods';
 import Pricing from '../Components/Pricing';
 import Footer from '../Components/Footer';
+import SupportPublicChatWidget from '../Components/Support/SupportPublicChatWidget';
 
 /**
  * Page: Landing
@@ -46,12 +48,18 @@ export default function Landing() {
                 {/* Testimonials */}
                 <Testimonials />
 
+                {/* Payment methods */}
+                <PaymentMethods />
+
                 {/* Pricing */}
                 <Pricing />
             </main>
 
             {/* Footer */}
             <Footer />
+
+            {/* Public support chat (no login) */}
+            <SupportPublicChatWidget />
         </div>
     );
 }

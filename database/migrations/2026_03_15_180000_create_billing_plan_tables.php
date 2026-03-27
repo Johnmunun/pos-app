@@ -48,19 +48,19 @@ return new class extends Migration
             $table->unique(['tenant_id', 'feature_code']);
         });
 
+        $templates = config('billing_features.plan_templates', []);
+        $starterDesc = 'Caisse, stock et catalogue vitrine. Idéal pour démarrer — la vente en ligne et les outils avancés sont sur le plan Pro.';
+        $proDesc = 'Commandes web, promotions, analytics, API, assistant IA et multi-dépôts pour faire grandir votre activité.';
+        $enterpriseDesc = 'Tout illimité, support prioritaire et intégrations pour les réseaux et grandes équipes.';
+
         DB::table('billing_plans')->insert([
             [
                 'code' => 'starter',
                 'name' => 'Starter',
-                'description' => 'Parfait pour debuter',
+                'description' => $starterDesc,
                 'monthly_price' => 0,
                 'annual_price' => 0,
-                'features' => json_encode([
-                    'products.max' => ['label' => 'Produits max', 'enabled' => true, 'limit' => 100],
-                    'users.max' => ['label' => 'Utilisateurs max', 'enabled' => true, 'limit' => 3],
-                    'analytics.advanced' => ['label' => 'Analytics avancees', 'enabled' => false, 'limit' => null],
-                    'api.payments' => ['label' => 'API paiements', 'enabled' => false, 'limit' => null],
-                ], JSON_THROW_ON_ERROR),
+                'features' => json_encode($templates['starter'] ?? [], JSON_THROW_ON_ERROR),
                 'is_active' => true,
                 'is_default' => true,
                 'sort_order' => 1,
@@ -70,15 +70,10 @@ return new class extends Migration
             [
                 'code' => 'pro',
                 'name' => 'Pro',
-                'description' => 'Pour les boutiques en croissance',
+                'description' => $proDesc,
                 'monthly_price' => 0,
                 'annual_price' => 0,
-                'features' => json_encode([
-                    'products.max' => ['label' => 'Produits max', 'enabled' => true, 'limit' => 1000],
-                    'users.max' => ['label' => 'Utilisateurs max', 'enabled' => true, 'limit' => 15],
-                    'analytics.advanced' => ['label' => 'Analytics avancees', 'enabled' => true, 'limit' => null],
-                    'api.payments' => ['label' => 'API paiements', 'enabled' => true, 'limit' => null],
-                ], JSON_THROW_ON_ERROR),
+                'features' => json_encode($templates['pro'] ?? [], JSON_THROW_ON_ERROR),
                 'is_active' => true,
                 'is_default' => false,
                 'sort_order' => 2,
@@ -88,15 +83,10 @@ return new class extends Migration
             [
                 'code' => 'enterprise',
                 'name' => 'Enterprise',
-                'description' => 'Pour les grandes equipes',
+                'description' => $enterpriseDesc,
                 'monthly_price' => 0,
                 'annual_price' => 0,
-                'features' => json_encode([
-                    'products.max' => ['label' => 'Produits max', 'enabled' => true, 'limit' => null],
-                    'users.max' => ['label' => 'Utilisateurs max', 'enabled' => true, 'limit' => null],
-                    'analytics.advanced' => ['label' => 'Analytics avancees', 'enabled' => true, 'limit' => null],
-                    'api.payments' => ['label' => 'API paiements', 'enabled' => true, 'limit' => null],
-                ], JSON_THROW_ON_ERROR),
+                'features' => json_encode($templates['enterprise'] ?? [], JSON_THROW_ON_ERROR),
                 'is_active' => true,
                 'is_default' => false,
                 'sort_order' => 3,

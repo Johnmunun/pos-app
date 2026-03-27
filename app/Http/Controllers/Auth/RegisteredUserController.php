@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Mail\WelcomeRegistrationMail;
+use App\Services\DynamicMailSettingsService;
 use Src\Infrastructure\Referral\Models\ReferralAccountModel;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -11,6 +13,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
@@ -96,6 +100,19 @@ class RegisteredUserController extends Controller
         }
 
         event(new Registered($user));
+
+        // Email de bienvenue configurable depuis l'UI admin (SMTP dynamique)
+        try {
+            $mailService = app(DynamicMailSettingsService::class);
+            if ($mailService->applyFromStorage()) {
+                Mail::to($user->email)->send(new WelcomeRegistrationMail($user, $request->company_name));
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Welcome email failed after registration', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         Auth::login($user);
 

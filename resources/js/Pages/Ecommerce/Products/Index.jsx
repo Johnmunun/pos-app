@@ -171,7 +171,14 @@ export default function EcommerceProductsIndex({ products = [], categories = [],
             });
             setImportPreview(res.data);
         } catch (err) {
-            const msg = err.response?.data?.message || "Erreur lors de l'aperçu.";
+            const d = err.response?.data;
+            if (d && typeof d === 'object' && (d.sample != null || d.total !== undefined)) {
+                setImportPreview(d);
+            }
+            const validationMsg = d?.errors && typeof d.errors === 'object'
+                ? Object.values(d.errors).flat().find(Boolean)
+                : null;
+            const msg = d?.message || validationMsg || "Erreur lors de l'aperçu.";
             toast.error(msg);
         } finally {
             setPreviewLoading(false);

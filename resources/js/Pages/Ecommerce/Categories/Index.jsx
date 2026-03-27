@@ -55,7 +55,14 @@ export default function EcommerceCategoriesIndex({ categories = [] }) {
             });
             setImportPreview(res.data);
         } catch (err) {
-            toast.error(err.response?.data?.message || "Erreur lors de l'aperçu.");
+            const d = err.response?.data;
+            if (d && typeof d === 'object' && (d.sample != null || d.total !== undefined)) {
+                setImportPreview(d);
+            }
+            const validationMsg = d?.errors && typeof d.errors === 'object'
+                ? Object.values(d.errors).flat().find(Boolean)
+                : null;
+            toast.error(d?.message || validationMsg || "Erreur lors de l'aperçu.");
         } finally {
             setPreviewLoading(false);
         }
@@ -75,7 +82,7 @@ export default function EcommerceCategoriesIndex({ categories = [] }) {
             });
             toast.success(data.message || 'Import catégories terminé.');
             if (data.errors?.length) {
-                console.warn('Erreurs import catégories:', data.errors);
+                toast.error(`${data.errors.length} ligne(s) n’ont pas pu être importées.`);
             }
             setImportOpen(false);
             setImportFile(null);

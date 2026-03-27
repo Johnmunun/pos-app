@@ -202,45 +202,6 @@ class EnsureUserIsActive
         return false;
     }
 
-    private function deactivateIfPlanExpired($user): bool
-    {
-        if (!$user || !$user->tenant_id) {
-            return false;
-        }
-
-        if (!Schema::hasTable('tenant_plan_subscriptions')) {
-            return false;
-        }
-
-        $expiredSubscription = DB::table('tenant_plan_subscriptions')
-            ->where('tenant_id', (string) $user->tenant_id)
-            ->where('status', 'active')
-            ->whereNotNull('ends_at')
-            ->where('ends_at', '<', now())
-            ->orderByDesc('id')
-            ->first(['id']);
-
-        if (!$expiredSubscription) {
-            return false;
-        }
-
-        DB::table('tenant_plan_subscriptions')
-            ->where('id', $expiredSubscription->id)
-            ->update([
-                'status' => 'expired',
-                'updated_at' => now(),
-            ]);
-
-        DB::table('users')
-            ->where('id', (int) $user->id)
-            ->update([
-                'status' => 'inactive',
-                'updated_at' => now(),
-            ]);
-
-        return true;
-    }
-
     private function isPlanExpired($user): bool
     {
         if (!$user || !$user->tenant_id) {

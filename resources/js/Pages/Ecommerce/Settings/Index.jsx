@@ -1,9 +1,14 @@
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Settings, Truck, CreditCard, Sparkles, Globe2 } from 'lucide-react';
 
-export default function EcommerceSettingsIndex({ shop, ecommerce_base_domain }) {
+export default function EcommerceSettingsIndex({
+    shop,
+    ecommerce_base_domain,
+    storefront_use_flat_shipping = false,
+    storefront_flat_shipping_amount = 0,
+}) {
     const { props } = usePage();
     const globalCurrency = props?.shop?.currency || shop?.currency || 'USD';
     const baseDomain = ecommerce_base_domain || 'omnisolution.shop';
@@ -13,11 +18,29 @@ export default function EcommerceSettingsIndex({ shop, ecommerce_base_domain }) 
         is_online: shop?.ecommerce_is_online || false,
     });
 
+    const shippingForm = useForm({
+        storefront_use_flat_shipping: Boolean(storefront_use_flat_shipping),
+        storefront_flat_shipping_amount:
+            storefront_flat_shipping_amount !== undefined && storefront_flat_shipping_amount !== null
+                ? String(storefront_flat_shipping_amount)
+                : '0',
+    });
+
     const handleSubmitDomain = (e) => {
         e.preventDefault();
         put(route('ecommerce.settings.domain.update'), {
             preserveScroll: true,
         });
+    };
+
+    const handleSubmitShipping = (e) => {
+        e.preventDefault();
+        const raw = String(shippingForm.data.storefront_flat_shipping_amount ?? '').replace(',', '.');
+        const n = parseFloat(raw);
+        router.put(route('ecommerce.settings.storefront-shipping.update'), {
+            storefront_use_flat_shipping: Boolean(shippingForm.data.storefront_use_flat_shipping),
+            storefront_flat_shipping_amount: Number.isFinite(n) ? Math.max(0, n) : 0,
+        }, { preserveScroll: true });
     };
 
     return (
@@ -50,6 +73,59 @@ export default function EcommerceSettingsIndex({ shop, ecommerce_base_domain }) 
                                 La devise est gérée dans <strong>Paramètres &gt; Gestion des devises</strong> et partagée avec les autres modules.
                             </p>
                         </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Truck className="h-5 w-5" />
+                            Frais de livraison (vitrine)
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Montant affiché sur le panier public (<code className="text-[11px]">/ecommerce/storefront/cart</code>). Le
+                            client ne peut pas modifier ce montant. Exprimé en <strong>{globalCurrency}</strong> (même devise que
+                            ci-dessus / devises tenant).
+                        </p>
+                        <form onSubmit={handleSubmitShipping} className="space-y-3">
+                            <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                                <input
+                                    type="checkbox"
+                                    checked={Boolean(shippingForm.data.storefront_use_flat_shipping)}
+                                    onChange={(e) =>
+                                        shippingForm.setData('storefront_use_flat_shipping', e.target.checked)
+                                    }
+                                    className="rounded border-gray-300 dark:border-slate-600"
+                                />
+                                Utiliser des frais de livraison fixes sur la vitrine (le choix par méthode de livraison est masqué)
+                            </label>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+                                    Montant ({globalCurrency})
+                                </label>
+                                <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={shippingForm.data.storefront_flat_shipping_amount}
+                                    onChange={(e) => shippingForm.setData('storefront_flat_shipping_amount', e.target.value)}
+                                    disabled={!shippingForm.data.storefront_use_flat_shipping}
+                                    className="w-full max-w-xs rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm px-3 py-2 text-gray-900 dark:text-gray-100 disabled:opacity-50"
+                                    placeholder="0"
+                                />
+                            </div>
+                            {shippingForm.errors.storefront_flat_shipping_amount && (
+                                <p className="text-xs text-red-500">{shippingForm.errors.storefront_flat_shipping_amount}</p>
+                            )}
+                            <button
+                                type="submit"
+                                disabled={shippingForm.processing}
+                                className="inline-flex items-center px-4 py-2 rounded-md bg-amber-600 text-white text-xs font-semibold hover:bg-amber-700 disabled:opacity-50"
+                            >
+                                {shippingForm.processing ? 'Enregistrement...' : 'Enregistrer les frais vitrine'}
+                            </button>
+                        </form>
                     </CardContent>
                 </Card>
 

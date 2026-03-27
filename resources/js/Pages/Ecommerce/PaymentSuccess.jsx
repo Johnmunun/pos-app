@@ -1,17 +1,38 @@
 import { Head } from '@inertiajs/react';
 import { Button } from '@/Components/ui/button';
-import { CheckCircle2, Download } from 'lucide-react';
+import { CheckCircle2, Download, Sparkles } from 'lucide-react';
 
 export default function PaymentSuccess({ title = 'Paiement réussi', order, digital_items = [], has_physical_items = false, support }) {
     return (
         <>
             <Head title={title} />
+            <style>{`
+                @keyframes payment-success-pop {
+                    0% { transform: scale(0.85); opacity: 0; }
+                    55% { transform: scale(1.06); opacity: 1; }
+                    100% { transform: scale(1); opacity: 1; }
+                }
+                @keyframes payment-success-ring {
+                    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+                    70% { box-shadow: 0 0 0 14px rgba(16, 185, 129, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+                }
+                .payment-success-icon {
+                    animation: payment-success-pop 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+                        payment-success-ring 1.4s ease-out 0.35s 1;
+                }
+            `}</style>
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 px-4 py-10">
-                <div className="w-full max-w-2xl rounded-3xl border border-slate-200/70 dark:border-slate-800 bg-white/90 dark:bg-slate-900/70 shadow-2xl shadow-slate-200/60 dark:shadow-slate-950/50 p-7 sm:p-9">
+                <div className="w-full max-w-2xl rounded-3xl border border-slate-200/70 dark:border-slate-800 bg-white/90 dark:bg-slate-900/70 shadow-2xl shadow-slate-200/60 dark:shadow-slate-950/50 p-7 sm:p-9 animate-in fade-in zoom-in-95 duration-500">
                     <div className="flex flex-col items-center text-center gap-3">
-                        <span className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-950/35 ring-1 ring-emerald-200/70 dark:ring-emerald-900/40">
+                        <span className="payment-success-icon inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-950/35 ring-1 ring-emerald-200/70 dark:ring-emerald-900/40">
                             <CheckCircle2 className="h-9 w-9 text-emerald-600 dark:text-emerald-400" />
                         </span>
+
+                        <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 dark:text-emerald-300 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-150">
+                            <Sparkles className="h-4 w-4 shrink-0" />
+                            Félicitations !
+                        </p>
 
                         <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">{title}</h1>
 
@@ -46,7 +67,7 @@ export default function PaymentSuccess({ title = 'Paiement réussi', order, digi
                                             <a href={it.download_url} target="_blank" rel="noopener noreferrer" className="shrink-0">
                                                 <Button className="h-11 rounded-2xl font-semibold gap-2 bg-emerald-600 hover:bg-emerald-700">
                                                     <Download className="h-5 w-5" />
-                                                    Download
+                                                    Télécharger
                                                 </Button>
                                             </a>
                                         </div>
@@ -76,4 +97,3 @@ export default function PaymentSuccess({ title = 'Paiement réussi', order, digi
         </>
     );
 }
-

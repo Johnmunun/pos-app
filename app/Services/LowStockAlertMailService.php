@@ -12,11 +12,21 @@ use Src\Infrastructure\Pharmacy\Models\ProductModel;
 
 class LowStockAlertMailService
 {
+    public function __construct(
+        private readonly DynamicMailSettingsService $dynamicMailSettingsService
+    ) {
+    }
+
     /**
      * Envoie les alertes stock faible par email pour tous les shops concernés.
      */
     public function sendLowStockAlerts(): int
     {
+        $this->dynamicMailSettingsService->applyFromStorage();
+        if (!$this->dynamicMailSettingsService->eventEnabled('stock_low')) {
+            return 0;
+        }
+
         $sent = 0;
         $shops = Shop::where('is_active', true)->get();
 

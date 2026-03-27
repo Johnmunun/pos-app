@@ -107,6 +107,7 @@ function CartContent({
 
     const selectedPaymentName = paymentMethods?.find((m) => m.id === selectedPaymentId)?.name ?? '';
     const selectedPaymentCode = paymentMethods?.find((m) => m.id === selectedPaymentId)?.code ?? '';
+    const selectedPaymentType = paymentMethods?.find((m) => m.id === selectedPaymentId)?.type ?? '';
 
     return (
         <>
@@ -352,6 +353,7 @@ function CartContent({
                     couponDiscount={couponDiscount}
                     selectedShippingId={selectedShippingId}
                     selectedPaymentCode={selectedPaymentCode}
+                    selectedPaymentType={selectedPaymentType}
                 />
             )}
         </>

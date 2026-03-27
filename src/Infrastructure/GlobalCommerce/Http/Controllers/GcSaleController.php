@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Schema;
 use Src\Application\Settings\UseCases\GetStoreSettingsUseCase;
 use Src\Infrastructure\Settings\Services\StoreLogoService;
 use Src\Shared\ValueObjects\Quantity;
+use Src\Application\Billing\Services\FeatureLimitService;
 
 class GcSaleController
 {
@@ -58,7 +59,8 @@ class GcSaleController
         private ProductRepositoryInterface $productRepository,
         private CreateSaleUseCase $createSaleUseCase,
         private GetStoreSettingsUseCase $getStoreSettingsUseCase,
-        private StoreLogoService $storeLogoService
+        private StoreLogoService $storeLogoService,
+        private FeatureLimitService $featureLimitService
     ) {
     }
 
@@ -313,6 +315,14 @@ class GcSaleController
             $isDraft
         );
         try {
+            if (!$isDraft) {
+                $tenantId = $request->user()?->tenant_id ? (string) $request->user()->tenant_id : null;
+                if ($tenantId === null) {
+                    $shopRow = Shop::query()->find($shopId);
+                    $tenantId = $shopRow ? (string) $shopRow->tenant_id : null;
+                }
+                $this->featureLimitService->assertCanRecordSale($tenantId);
+            }
             $sale = $this->createSaleUseCase->execute($dto);
 
             if (!$isDraft) {

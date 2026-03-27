@@ -2,7 +2,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Head, useForm, router } from '@inertiajs/react';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function TicketShow({ ticket, replies, canManage }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -12,6 +12,36 @@ export default function TicketShow({ ticket, replies, canManage }) {
 
     const [status, setStatus] = useState(ticket.status);
     const [assignedTo, setAssignedTo] = useState(ticket.assigned_to?.id || '');
+    const [liveReplies, setLiveReplies] = useState(Array.isArray(replies) ? replies : []);
+
+    // Realtime via Firebase/FCM (foreground): refresh when a support notification arrives.
+    useEffect(() => {
+        const handler = (evt) => {
+            const payload = evt?.detail || {};
+            const data = payload?.data || {};
+            const type = String(data?.type || '');
+            const ticketId = String(data?.ticket_id || '');
+            if (type !== 'support.ticket.reply') return;
+            if (ticketId !== String(ticket.id)) return;
+
+            router.reload({
+                only: ['ticket', 'replies'],
+                preserveScroll: true,
+            });
+        };
+
+        window.addEventListener('fcm-notification', handler);
+        return () => window.removeEventListener('fcm-notification', handler);
+    }, [ticket.id]);
+
+    // Keep UI in sync when Inertia reloads props
+    useEffect(() => {
+        setStatus(ticket.status);
+    }, [ticket.status]);
+
+    useEffect(() => {
+        setLiveReplies(Array.isArray(replies) ? replies : []);
+    }, [replies]);
 
     const submitReply = (e) => {
         e.preventDefault();
@@ -137,7 +167,7 @@ export default function TicketShow({ ticket, replies, canManage }) {
                                     Historique
                                 </h3>
                                 <div className="space-y-3 text-sm">
-                                    {replies.map((reply) => (
+                                    {liveReplies.map((reply) => (
                                         <div key={reply.id} className="border-b border-gray-100 dark:border-gray-700 pb-3 last:border-0">
                                             <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
                                                 <span>{reply.user?.name || 'Utilisateur'}</span>
@@ -158,7 +188,7 @@ export default function TicketShow({ ticket, replies, canManage }) {
                                             )}
                                         </div>
                                     ))}
-                                    {replies.length === 0 && (
+                                    {liveReplies.length === 0 && (
                                         <p className="text-xs text-gray-500 dark:text-gray-400">
                                             Aucun commentaire pour le moment.
                                         </p>

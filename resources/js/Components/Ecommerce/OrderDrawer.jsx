@@ -34,7 +34,9 @@ export default function OrderDrawer({
     couponDiscount = 0,
     selectedShippingId = '',
     selectedPaymentCode = '',
+    selectedPaymentType = '',
     paymentStatusOnSubmit = null,
+    readonlyShipping = false,
     onSuccess = null,
 }) {
     const isEditing = !!order;
@@ -78,6 +80,7 @@ export default function OrderDrawer({
 
     const [errors, setErrors] = useState({});
     const [processing, setProcessing] = useState(false);
+    const [fusionPaymentMethod, setFusionPaymentMethod] = useState('mobile_money');
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [itemQuantity, setItemQuantity] = useState(1);
     const [itemDiscount, setItemDiscount] = useState(0);
@@ -220,6 +223,15 @@ export default function OrderDrawer({
         const subtotal = calculateSubtotal();
         const total = calculateTotal();
 
+        const resolvedPm = paymentMethods?.find((m) => m.code === formData.payment_method);
+        const needsFusionCheckout =
+            fromCart && (selectedPaymentType === 'fusionpay' || resolvedPm?.type === 'fusionpay');
+        if (needsFusionCheckout && !String(formData.customer_phone || '').trim()) {
+            toast.error('Numéro de téléphone requis pour payer avec FusionPay.');
+            setProcessing(false);
+            return;
+        }
+
         const payload = {
             customer_name: formData.customer_name,
             customer_email: formData.customer_email,
@@ -240,6 +252,27 @@ export default function OrderDrawer({
         try {
             const response = await axios.post(route('ecommerce.orders.store'), payload);
             toast.success(response.data.message || 'Commande créée avec succès');
+
+            if (response.data?.needs_fusion_payment && response.data?.order?.id) {
+                try {
+                    const fusionRes = await axios.post(route('api.ecommerce.payments.fusionpay.initiate'), {
+                        order_id: response.data.order.id,
+                        payment_method: fusionPaymentMethod,
+                        phone: String(formData.customer_phone || '').trim(),
+                        customer_name: formData.customer_name,
+                    });
+                    if (fusionRes.data?.checkout_url) {
+                        window.location.href = fusionRes.data.checkout_url;
+                        return;
+                    }
+                    toast.error(fusionRes.data?.message || 'Impossible d’ouvrir la page de paiement FusionPay.');
+                } catch (fusionErr) {
+                    toast.error(fusionErr.response?.data?.message || 'Erreur lors du lancement du paiement FusionPay.');
+                }
+                setProcessing(false);
+                return;
+            }
+
             if (response.data?.redirect_url) {
                 window.location.href = response.data.redirect_url;
                 return;
@@ -311,11 +344,23 @@ export default function OrderDrawer({
                             </div>
 
                             <div>
-                                <Label htmlFor="customer_phone">Téléphone</Label>
+                                <Label htmlFor="customer_phone">
+                                    Téléphone
+                                    {fromCart &&
+                                    (selectedPaymentType === 'fusionpay' ||
+                                        paymentMethods?.find((m) => m.code === formData.payment_method)?.type === 'fusionpay')
+                                        ? ' *'
+                                        : ''}
+                                </Label>
                                 <Input
                                     id="customer_phone"
                                     value={formData.customer_phone}
                                     onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
+                                    required={
+                                        !!fromCart &&
+                                        (selectedPaymentType === 'fusionpay' ||
+                                            paymentMethods?.find((m) => m.code === formData.payment_method)?.type === 'fusionpay')
+                                    }
                                 />
                             </div>
                         </div>
@@ -486,6 +531,25 @@ export default function OrderDrawer({
                                         </option>
                                     ))}
                                 </select>
+                                {fromCart &&
+                                    (selectedPaymentType === 'fusionpay' ||
+                                        paymentMethods?.find((x) => x.code === formData.payment_method)?.type === 'fusionpay') && (
+                                    <div className="mt-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-900/20 p-3 space-y-2">
+                                        <p className="text-xs text-amber-900 dark:text-amber-100">
+                                            Après validation, vous serez redirigé vers FusionPay (comme pour l’abonnement) pour
+                                            finaliser le paiement en ligne.
+                                        </p>
+                                        <Label className="text-xs font-medium">Canal FusionPay</Label>
+                                        <select
+                                            value={fusionPaymentMethod}
+                                            onChange={(e) => setFusionPaymentMethod(e.target.value)}
+                                            className="w-full rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm"
+                                        >
+                                            <option value="mobile_money">Mobile Money</option>
+                                            <option value="card">Carte bancaire</option>
+                                        </select>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -495,9 +559,9 @@ export default function OrderDrawer({
                                 <span className="font-medium">{calculateSubtotal().toFixed(2)} {formData.currency}</span>
                             </div>
 
-                            {fromCart && shippingMethods?.length > 0 ? (
+                            {fromCart && (shippingMethods?.length > 0 || readonlyShipping) ? (
                                 <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                                    <span>Frais de livraison</span>
+                                    <span>Frais de livraison{readonlyShipping ? ' (fixe)' : ''}</span>
                                     <span>{formData.shipping_amount.toFixed(2)} {formData.currency}</span>
                                 </div>
                             ) : (
@@ -606,7 +670,11 @@ export default function OrderDrawer({
                         ) : (
                             <>
                                 <Save className="h-4 w-4" />
-                                Créer la commande
+                                {fromCart &&
+                                (selectedPaymentType === 'fusionpay' ||
+                                    paymentMethods?.find((x) => x.code === formData.payment_method)?.type === 'fusionpay')
+                                    ? 'Créer la commande et payer'
+                                    : 'Créer la commande'}
                             </>
                         )}
                     </Button>

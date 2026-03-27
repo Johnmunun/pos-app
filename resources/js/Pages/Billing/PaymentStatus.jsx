@@ -1,8 +1,13 @@
 import { Head, Link } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { CheckCircle2, Clock3, ExternalLink, ShieldCheck } from 'lucide-react';
+
+function isPaidStatus(status) {
+    const s = String(status || '').toLowerCase();
+    return s === 'paid' || s === 'success' || s === 'completed';
+}
 
 export default function PaymentStatus({ transaction }) {
     const [tx, setTx] = useState(transaction);
@@ -12,7 +17,7 @@ export default function PaymentStatus({ transaction }) {
     const statusColorClass = useMemo(() => {
         const status = String(tx?.status || '').toLowerCase();
 
-        if (status === 'paid' || status === 'success' || status === 'completed') {
+        if (isPaidStatus(status)) {
             return 'text-green-600 dark:text-green-400';
         }
 
@@ -23,10 +28,23 @@ export default function PaymentStatus({ transaction }) {
         return 'text-amber-600 dark:text-amber-400';
     }, [tx?.status]);
 
-    const isPaid = useMemo(() => {
-        const status = String(tx?.status || '').toLowerCase();
-        return status === 'paid' || status === 'success' || status === 'completed';
-    }, [tx?.status]);
+    const isPaid = useMemo(() => isPaidStatus(tx?.status), [tx?.status]);
+
+    const hasEcommerceOrder = Boolean(tx?.has_ecommerce_order);
+
+    const redirectAfterPaid = useCallback((data) => {
+        if (data.ecommerce_success_url) {
+            setMessage('Paiement confirmé. Redirection vers la page de téléchargement...');
+            window.setTimeout(() => {
+                window.location.href = data.ecommerce_success_url;
+            }, 900);
+            return;
+        }
+        setMessage('Paiement confirmé. Redirection vers votre tableau de bord...');
+        window.setTimeout(() => {
+            window.location.href = route('dashboard', { billing_success: data.id });
+        }, 900);
+    }, []);
 
     const verifyNow = async () => {
         setChecking(true);
@@ -35,11 +53,8 @@ export default function PaymentStatus({ transaction }) {
             const { data } = await axios.get(route('api.billing.payments.status', tx.id));
             setTx((prev) => ({ ...prev, ...data }));
 
-            if (data.status === 'paid') {
-                setMessage('Paiement confirmé. Redirection vers votre tableau de bord...');
-                window.setTimeout(() => {
-                    window.location.href = route('dashboard', { billing_success: tx.id });
-                }, 900);
+            if (isPaidStatus(data.status)) {
+                redirectAfterPaid(data);
                 return;
             }
 
@@ -53,7 +68,7 @@ export default function PaymentStatus({ transaction }) {
 
     useEffect(() => {
         const currentStatus = String(tx?.status || '').toLowerCase();
-        if (isPaid) {
+        if (isPaidStatus(currentStatus)) {
             return undefined;
         }
 
@@ -63,11 +78,13 @@ export default function PaymentStatus({ transaction }) {
                 setTx((prev) => ({ ...prev, ...data }));
 
                 const nextStatus = String(data?.status || '').toLowerCase();
-                if (nextStatus === 'paid' || nextStatus === 'success' || nextStatus === 'completed') {
-                    setMessage('Paiement confirmé automatiquement. Redirection...');
-                    window.setTimeout(() => {
-                        window.location.href = route('dashboard', { billing_success: tx.id });
-                    }, 900);
+                if (isPaidStatus(nextStatus)) {
+                    setMessage(
+                        data.ecommerce_success_url
+                            ? 'Paiement confirmé automatiquement. Redirection vers vos téléchargements...'
+                            : 'Paiement confirmé automatiquement. Redirection...'
+                    );
+                    redirectAfterPaid(data);
                 }
             } catch (error) {
                 // Silent retry: polling should not spam errors.
@@ -75,13 +92,21 @@ export default function PaymentStatus({ transaction }) {
         }, 8000);
 
         return () => window.clearInterval(intervalId);
-    }, [isPaid, tx?.id]);
+    }, [isPaid, tx?.id, redirectAfterPaid]);
+
+    const afterSuccessCopy = hasEcommerceOrder
+        ? 'Après succès, vous serez redirigé vers une page avec vos liens de téléchargement (produits numériques).'
+        : 'Tu seras redirige vers le dashboard et tu recevras un email de confirmation.';
+
+    const emailCopy = hasEcommerceOrder
+        ? 'Après paiement confirmé, vous pouvez aussi recevoir un e-mail récapitulatif selon la configuration du magasin.'
+        : "Apres paiement confirme, un email est envoye sur ta boite mail pour confirmer l'operation.";
 
     return (
         <AppLayout
             header={<h2 className="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Suivi paiement</h2>}
         >
-            <Head title="Suivi paiement abonnement" />
+            <Head title={hasEcommerceOrder ? 'Suivi paiement commande' : 'Suivi paiement abonnement'} />
 
             <div className="py-8">
                 <div className="max-w-3xl mx-auto sm:px-6 lg:px-8">
@@ -125,10 +150,12 @@ export default function PaymentStatus({ transaction }) {
                                         <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                                         <span className="text-sm font-semibold">Après succès</span>
                                     </div>
-                                    <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                                        Tu seras redirigé vers le dashboard.
-                                    </p>
+                                    <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">{afterSuccessCopy}</p>
                                 </div>
+                            </div>
+
+                            <div className="mt-4 rounded-2xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-3">
+                                <p className="text-sm text-blue-800 dark:text-blue-200">{emailCopy}</p>
                             </div>
 
                             <div className="mt-6 flex flex-wrap gap-3">

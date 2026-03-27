@@ -192,13 +192,9 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
                                 className="h-full w-full object-cover"
                             />
                         ) : (
-                            <img
-                                src="/images/ecommerce/hero-placeholder.jpg"
-                                alt="Boutique en ligne"
-                                className="h-full w-full object-cover"
-                                onError={(e) => {
-                                    e.currentTarget.style.display = 'none';
-                                }}
+                            <div
+                                className="h-full w-full bg-gradient-to-br from-amber-100 via-white to-slate-200 dark:from-amber-950/40 dark:via-slate-900 dark:to-slate-950"
+                                aria-hidden
                             />
                         )}
                         <div className="absolute inset-0 bg-gradient-to-r from-white via-white/90 to-white/20 dark:from-slate-950 dark:via-slate-950/85 dark:to-slate-950/25" />

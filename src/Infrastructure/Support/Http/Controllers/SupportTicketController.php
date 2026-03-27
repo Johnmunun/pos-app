@@ -5,10 +5,13 @@ namespace Src\Infrastructure\Support\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
+use App\Services\NotificationService;
 use Inertia\Inertia;
 use Inertia\Response;
 use Src\Infrastructure\Support\Models\SupportTicketModel;
 use Src\Infrastructure\Support\Models\SupportTicketReplyModel;
+use Illuminate\Support\Facades\DB;
 
 class SupportTicketController extends Controller
 {
@@ -140,7 +143,7 @@ class SupportTicketController extends Controller
             'priority' => $ticket->priority,
             'category' => $ticket->category,
             'module' => $ticket->module,
-            'attachment_url' => $ticket->attachment_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($ticket->attachment_path) : null,
+            'attachment_url' => $ticket->attachment_path ? \Illuminate\Support\Facades\Storage::url($ticket->attachment_path) : null,
             'created_at' => $ticket->created_at?->toDateTimeString(),
             'user' => [
                 'id' => $ticket->user?->id,
@@ -160,7 +163,7 @@ class SupportTicketController extends Controller
                 return [
                     'id' => $reply->id,
                     'message' => $reply->message,
-                    'attachment_url' => $reply->attachment_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($reply->attachment_path) : null,
+                    'attachment_url' => $reply->attachment_path ? \Illuminate\Support\Facades\Storage::url($reply->attachment_path) : null,
                     'created_at' => $reply->created_at?->toDateTimeString(),
                     'user' => $user ? [
                         'id' => $user->id,
@@ -176,7 +179,51 @@ class SupportTicketController extends Controller
         ]);
     }
 
-    public function reply(Request $request, SupportTicketModel $ticket): RedirectResponse
+    public function repliesJson(Request $request, SupportTicketModel $ticket): JsonResponse
+    {
+        $user = $request->user();
+        if ($user === null) {
+            abort(403);
+        }
+
+        if ($user->id !== $ticket->user_id && !$user->hasPermission('support.admin')) {
+            abort(403);
+        }
+
+        $afterId = (int) ($request->query('after_id') ?? 0);
+
+        $query = $ticket->replies()
+            ->orderBy('created_at');
+
+        if ($afterId > 0) {
+            $query->where('id', '>', $afterId);
+        }
+
+        $replies = $query->limit(200)->get()->map(function (SupportTicketReplyModel $reply) {
+            $u = $reply->user;
+            return [
+                'id' => (int) $reply->id,
+                'message' => (string) $reply->message,
+                'attachment_url' => $reply->attachment_path ? \Illuminate\Support\Facades\Storage::url($reply->attachment_path) : null,
+                'created_at' => $reply->created_at?->toDateTimeString(),
+                'user' => $u ? [
+                    'id' => (int) $u->id,
+                    'name' => (string) $u->name,
+                ] : null,
+            ];
+        })->values();
+
+        return response()->json([
+            'ticket' => [
+                'id' => (int) $ticket->id,
+                'status' => (string) $ticket->status,
+                'updated_at' => $ticket->updated_at?->toDateTimeString(),
+            ],
+            'replies' => $replies,
+        ]);
+    }
+
+    public function reply(Request $request, SupportTicketModel $ticket, NotificationService $notificationService): RedirectResponse
     {
         $user = $request->user();
         if ($user === null) {
@@ -207,6 +254,58 @@ class SupportTicketController extends Controller
         if ($ticket->status === 'open') {
             $ticket->status = 'in_progress';
             $ticket->save();
+        }
+
+        // Realtime notification via Firebase (FCM)
+        try {
+            $clickUrl = '/support/tickets/' . $ticket->id;
+            $data = [
+                'type' => 'support.ticket.reply',
+                'ticket_id' => (string) $ticket->id,
+                'click_url' => $clickUrl,
+            ];
+
+            $senderIsSupport = method_exists($user, 'hasPermission') && $user->hasPermission('support.admin');
+
+            if ($senderIsSupport) {
+                // Admin replied -> notify ticket owner
+                if ((int) $ticket->user_id !== (int) $user->id) {
+                    $notificationService->sendToUser(
+                        (int) $ticket->user_id,
+                        'Réponse du support',
+                        'Vous avez reçu une réponse sur votre ticket #' . $ticket->id . '.',
+                        $data
+                    );
+                }
+            } else {
+                // User replied -> notify assigned support agent if any, otherwise all support admins
+                $targets = [];
+                if (!empty($ticket->assigned_to_user_id)) {
+                    $targets[] = (int) $ticket->assigned_to_user_id;
+                } else {
+                    $targets = DB::table('user_role')
+                        ->join('role_permission', 'user_role.role_id', '=', 'role_permission.role_id')
+                        ->join('permissions', 'permissions.id', '=', 'role_permission.permission_id')
+                        ->where('permissions.code', 'support.admin')
+                        ->distinct()
+                        ->pluck('user_role.user_id')
+                        ->map(fn ($id) => (int) $id)
+                        ->toArray();
+                }
+
+                $targets = array_values(array_unique(array_filter($targets, fn ($id) => (int) $id !== (int) $user->id)));
+
+                foreach ($targets as $adminUserId) {
+                    $notificationService->sendToUser(
+                        (int) $adminUserId,
+                        'Nouveau message support',
+                        'Nouveau message sur le ticket #' . $ticket->id . '.',
+                        $data
+                    );
+                }
+            }
+        } catch (\Throwable $e) {
+            // never break ticket reply
         }
 
         return redirect()->route('support.tickets.show', $ticket->id)

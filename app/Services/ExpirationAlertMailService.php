@@ -14,11 +14,21 @@ class ExpirationAlertMailService
 {
     private const WARNING_DAYS = 30;
 
+    public function __construct(
+        private readonly DynamicMailSettingsService $dynamicMailSettingsService
+    ) {
+    }
+
     /**
      * Envoie les alertes expiration par email pour tous les shops ayant des lots en alerte.
      */
     public function sendExpirationAlerts(): int
     {
+        $this->dynamicMailSettingsService->applyFromStorage();
+        if (!$this->dynamicMailSettingsService->eventEnabled('stock_expiration')) {
+            return 0;
+        }
+
         $sent = 0;
         $shops = Shop::where('is_active', true)->get();
 

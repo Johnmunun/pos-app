@@ -107,6 +107,7 @@ export default function EcommercePaymentsForm({ method }) {
                                     className="w-full rounded-md border-gray-300 dark:border-slate-600 dark:bg-slate-800"
                                 >
                                     <option value="cash_on_delivery">Paiement à la livraison</option>
+                                    <option value="fusionpay">FusionPay — paiement en ligne immédiat</option>
                                     <option value="card">Carte bancaire</option>
                                     <option value="wallet">Portefeuille</option>
                                     <option value="bank_transfer">Virement</option>
