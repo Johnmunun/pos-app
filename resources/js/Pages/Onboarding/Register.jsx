@@ -24,6 +24,7 @@ export default function Register({ currentStep, sectors, businessTypes, sessionD
         idnat: sessionData?.idnat || '',
         rccm: sessionData?.rccm || '',
         tax_id: sessionData?.tax_id || '',
+        start_mode: sessionData?.start_mode || 'empty_store',
     };
 
     // Formulaire multi-étape
@@ -46,18 +47,19 @@ export default function Register({ currentStep, sectors, businessTypes, sessionD
             1: 'onboarding.step1.process',
             2: 'onboarding.step2.process',
             3: 'onboarding.step3.process',
-            4: 'onboarding.step4.process'
+            4: 'onboarding.step4.process',
+            5: 'onboarding.step5.process',
         };
 
         post(route(routes[step]), {
             onSuccess: () => {
-                if (step < 4) nextStep();
-            }
+                if (step < 5) nextStep();
+            },
         });
     };
 
     // Progression
-    const progress = (step / 4) * 100;
+    const progress = (step / 5) * 100;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-amber-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
@@ -79,7 +81,7 @@ export default function Register({ currentStep, sectors, businessTypes, sessionD
                         
                         <div className="hidden md:block">
                             <div className="flex items-center space-x-2">
-                                {[1, 2, 3, 4].map((s) => (
+                                {[1, 2, 3, 4, 5].map((s) => (
                                     <div
                                         key={s}
                                         className={`w-3 h-3 rounded-full transition-all ${
@@ -113,9 +115,10 @@ export default function Register({ currentStep, sectors, businessTypes, sessionD
                             {step === 2 && 'Votre activité'}
                             {step === 3 && 'Informations boutique'}
                             {step === 4 && 'Documents (optionnel)'}
+                            {step === 5 && 'Mode de démarrage boutique'}
                         </h2>
                         <p className="text-gray-600 dark:text-gray-400">
-                            Étape {step} sur 4
+                            Étape {step} sur 5
                         </p>
                     </div>
 
@@ -387,6 +390,50 @@ export default function Register({ currentStep, sectors, businessTypes, sessionD
                                 </div>
                             )}
 
+                            {step === 5 && (
+                                <div className="space-y-6">
+                                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+                                        <p className="text-sm text-amber-800 dark:text-amber-200">
+                                            Choisissez comment initialiser votre catalogue avant la création du compte et le paiement éventuel.
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                                            Mode de démarrage *
+                                        </label>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div
+                                                onClick={() => setData('start_mode', 'empty_store')}
+                                                className={`
+                                                    p-4 rounded-xl border-2 cursor-pointer transition-all
+                                                    ${data.start_mode === 'empty_store'
+                                                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
+                                                        : 'border-gray-200 dark:border-gray-700 hover:border-amber-300'
+                                                    }
+                                                `}
+                                            >
+                                                <h3 className="font-semibold mb-1 text-gray-900 dark:text-gray-100">Boutique vide</h3>
+                                                <p className="text-xs text-gray-600 dark:text-gray-400">Structure minimale, vous ajoutez vos produits.</p>
+                                            </div>
+                                            <div
+                                                onClick={() => setData('start_mode', 'preconfigured_store')}
+                                                className={`
+                                                    p-4 rounded-xl border-2 cursor-pointer transition-all
+                                                    ${data.start_mode === 'preconfigured_store'
+                                                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
+                                                        : 'border-gray-200 dark:border-gray-700 hover:border-amber-300'
+                                                    }
+                                                `}
+                                            >
+                                                <h3 className="font-semibold mb-1 text-gray-900 dark:text-gray-100">Boutique pré-configurée</h3>
+                                                <p className="text-xs text-gray-600 dark:text-gray-400">Pack métier (catégories, produits, stocks).</p>
+                                            </div>
+                                        </div>
+                                        {errors.start_mode && <p className="mt-2 text-sm text-red-600">{errors.start_mode}</p>}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Boutons de navigation */}
                             <div className="flex gap-3 pt-4">
                                 {step > 1 && (
@@ -413,7 +460,7 @@ export default function Register({ currentStep, sectors, businessTypes, sessionD
                                             {step === 4 ? 'Finalisation...' : 'Suivant →'}
                                         </span>
                                     ) : (
-                                        step === 4 ? 'Finaliser l\'inscription' : 'Suivant →'
+                                        step === 5 ? 'Créer mon compte' : step === 4 ? 'Continuer →' : 'Suivant →'
                                     )}
                                 </button>
                             </div>

@@ -152,6 +152,9 @@ class EnsureUserIsActive
                 'onboarding.step2',
                 'onboarding.step3',
                 'onboarding.step4',
+                'onboarding.step4.process',
+                'onboarding.step5',
+                'onboarding.step5.process',
                 'onboarding.complete',
             ];
 

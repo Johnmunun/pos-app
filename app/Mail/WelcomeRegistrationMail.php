@@ -13,13 +13,14 @@ class WelcomeRegistrationMail extends Mailable
 
     public function __construct(
         public User $user,
-        public ?string $companyName = null
+        public ?string $companyName = null,
+        public ?string $storeStartMode = null,
     ) {
     }
 
     public function build(): self
     {
-        return $this->subject('Bienvenue sur OmniPOS')
+        return $this->subject('Bienvenue sur '.config('app.name', 'OmniPOS'))
             ->view('emails.welcome-registration');
     }
 }

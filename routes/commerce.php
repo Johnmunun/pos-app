@@ -112,17 +112,18 @@ Route::prefix('commerce')
 
         // API vocale (STT + TTS) – transcription Whisper, synthèse vocale, paramètres
         Route::prefix('api/voice')->name('api.voice.')->group(function () {
+            // Même niveau d’accès que le chat : la voix fait partie de l’assistant (évite 403 si seul .use est accordé).
             Route::post('/transcribe', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\CommerceVoiceController::class, 'transcribe'])
-                ->middleware(['permission:commerce.assistant.voice', 'feature.enabled:ai.assistant'])
+                ->middleware(['permission:commerce.assistant.use|commerce.assistant.voice', 'feature.enabled:ai.assistant'])
                 ->name('transcribe');
             Route::post('/speak', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\CommerceVoiceController::class, 'speak'])
-                ->middleware(['permission:commerce.assistant.voice', 'feature.enabled:ai.assistant'])
+                ->middleware(['permission:commerce.assistant.use|commerce.assistant.voice', 'feature.enabled:ai.assistant'])
                 ->name('speak');
             Route::get('/settings', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\CommerceVoiceController::class, 'settings'])
-                ->middleware(['permission:commerce.assistant.voice', 'feature.enabled:ai.assistant'])
+                ->middleware(['permission:commerce.assistant.use|commerce.assistant.voice', 'feature.enabled:ai.assistant'])
                 ->name('settings');
             Route::put('/settings', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\CommerceVoiceController::class, 'updateSettings'])
-                ->middleware(['permission:commerce.assistant.voice', 'feature.enabled:ai.assistant'])
+                ->middleware(['permission:commerce.assistant.use|commerce.assistant.voice', 'feature.enabled:ai.assistant'])
                 ->name('settings.update');
         });
 

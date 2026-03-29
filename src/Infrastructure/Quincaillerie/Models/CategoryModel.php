@@ -33,6 +33,7 @@ class CategoryModel extends Model
     protected $fillable = [
         'id',
         'shop_id',
+        'category_code',
         'depot_id',
         'name',
         'description',

@@ -13,14 +13,14 @@ export default function Step4() {
 
     const submit = (e) => {
         e.preventDefault();
-        post(route('onboarding.step4'));
+        post(route('onboarding.step4.process'));
     };
 
     const skipStep = () => {
         setSkipLegal(true);
         // Attendre un peu pour l'animation puis continuer
         setTimeout(() => {
-            post(route('onboarding.step4'));
+            post(route('onboarding.step4.process'));
         }, 300);
     };
 
@@ -51,7 +51,7 @@ export default function Step4() {
                 </div>
 
                 {/* Stepper */}
-                <OnboardingStepper currentStep={4} totalSteps={4} />
+                <OnboardingStepper currentStep={4} totalSteps={5} />
 
                 {/* Formulaire */}
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
@@ -121,7 +121,7 @@ export default function Step4() {
                         <div className="flex flex-col gap-3 pt-4">
                             <OnboardingNavigationButtons
                                 previousRoute={route('onboarding.step3')}
-                                nextRoute={route('onboarding.step4')}
+                                nextRoute={route('onboarding.step4.process')}
                                 nextLabel="Continuer →"
                                 processing={processing}
                             />

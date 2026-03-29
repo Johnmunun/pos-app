@@ -33,6 +33,14 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // CSRF expiré + Inertia : redirection pleine page (évite le HTML « Page Expired » dans une modale).
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, \Illuminate\Http\Request $request) {
+            if ($e->getStatusCode() === 419 && $request->header('X-Inertia')) {
+                return response('', 409)
+                    ->header('X-Inertia-Location', $request->fullUrl());
+            }
+        });
+
         // Handle 403 errors with Inertia
         $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, \Illuminate\Http\Request $request) {
             if ($e->getStatusCode() === 403) {

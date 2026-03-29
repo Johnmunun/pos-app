@@ -2,11 +2,11 @@ import React from 'react';
 
 export default function OnboardingStepper({ currentStep, totalSteps = 5 }) {
     const steps = [
-        { number: 1, title: 'Compte', description: 'Création du compte' },
-        { number: 2, title: 'Entreprise', description: 'Informations boutique' },
-        { number: 3, title: 'Secteur', description: 'Choix activité' },
+        { number: 1, title: 'Compte', description: 'Identifiants' },
+        { number: 2, title: 'Activité', description: 'Secteur & type' },
+        { number: 3, title: 'Boutique', description: 'Coordonnées' },
         { number: 4, title: 'Légal', description: 'Documents (optionnel)' },
-        { number: 5, title: 'Confirmation', description: 'Validation' },
+        { number: 5, title: 'Démarrage', description: 'Vide ou préconfiguré' },
     ];
 
     return (

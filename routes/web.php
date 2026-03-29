@@ -372,7 +372,10 @@ Route::middleware(['auth', 'verified', 'root', 'permission'])->group(function ()
     Route::get('/admin/billing/fusionpay/health', [BillingAdminController::class, 'fusionPayHealth'])
         ->middleware('permission:admin.billing.manage')
         ->name('admin.billing.fusionpay.health');
-    
+    Route::post('/admin/billing/marketing/send', [BillingAdminController::class, 'sendMarketing'])
+        ->middleware(['permission:admin.billing.manage', 'throttle:10,1'])
+        ->name('admin.billing.marketing.send');
+
     // Gestion complète des utilisateurs
     Route::prefix('admin/users')->name('admin.users.')->group(function () {
         Route::get('/{id}', [AdminController::class, 'showUser'])

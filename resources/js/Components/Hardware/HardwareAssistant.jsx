@@ -48,7 +48,9 @@ export default function HardwareAssistant({ bottomOffset = null }) {
     permissions.includes('module.hardware') ||
     permissions.some((p) => typeof p === 'string' && p.startsWith('hardware.'));
   const hasHardwareVoice =
-    permissions.includes('*') || permissions.includes('hardware.assistant.voice');
+    permissions.includes('*') ||
+    permissions.includes('hardware.assistant.voice') ||
+    permissions.includes('hardware.assistant.use');
 
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState(() => loadStoredMessages() || [INITIAL_MESSAGE]);
@@ -130,7 +132,7 @@ export default function HardwareAssistant({ bottomOffset = null }) {
           setSpeaking(true);
           setVoiceStatus("Lecture de la réponse…");
           try {
-            const speakRes = await axios.post(route('pharmacy.api.voice.speak'), {
+            const speakRes = await axios.post(route('hardware.api.voice.speak'), {
               text: answer,
               voice: 'female',
               speed: 1.0,
@@ -233,7 +235,7 @@ export default function HardwareAssistant({ bottomOffset = null }) {
         const form = new FormData();
         form.append('audio', blob, 'recording.webm');
         try {
-          const { data } = await axios.post(route('pharmacy.api.voice.transcribe'), form, {
+          const { data } = await axios.post(route('hardware.api.voice.transcribe'), form, {
             headers: { 'Content-Type': 'multipart/form-data' },
             timeout: 15000,
           });

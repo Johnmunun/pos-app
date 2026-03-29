@@ -67,6 +67,7 @@ export default function RootDashboard() {
   const canViewDashboard = auth?.user?.type === 'ROOT' || permissions.includes('admin.dashboard.view');
   const canExport = auth?.user?.type === 'ROOT' || permissions.includes('admin.dashboard.export');
   const canViewSecurity = auth?.user?.type === 'ROOT' || permissions.includes('logs.system') || permissions.includes('logs.actions') || permissions.includes('logs.connections');
+  const canBilling = auth?.user?.type === 'ROOT' || permissions.includes('admin.billing.manage');
 
   const [selectedPeriod, setSelectedPeriod] = useState(period || '30');
   const [dateFrom, setDateFrom] = useState(from || '');
@@ -220,6 +221,19 @@ export default function RootDashboard() {
 
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {canBilling && (
+            <div className="mb-6 rounded-xl border border-amber-200 dark:border-amber-800 bg-gradient-to-r from-amber-50 to-orange-50/80 dark:from-amber-950/40 dark:to-orange-950/20 px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Abonnements & revenus</p>
+                <p className="text-xs text-amber-800/90 dark:text-amber-300/90 mt-0.5">
+                  Rapport des paiements d&apos;abonnement, filtres actif/inactif et envoi d&apos;emails marketing.
+                </p>
+              </div>
+              <Button variant="outline" size="sm" asChild className="border-amber-300 dark:border-amber-700 shrink-0">
+                <Link href={route('admin.billing.transactions.index')}>Ouvrir Billing</Link>
+              </Button>
+            </div>
+          )}
           {/* 1. KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
             <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">

@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\HasApiTokens;
 
 /**
- * @property-read string|null $tenant_id
- * @property-read string|null $shop_id
+ * @property string|null $tenant_id
+ * @property string|null $shop_id
  * @property-read \App\Models\Tenant|null $tenant
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Role> $roles
  * @property-read int $roles_count

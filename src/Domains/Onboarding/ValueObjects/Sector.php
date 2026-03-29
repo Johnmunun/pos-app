@@ -9,12 +9,13 @@ class Sector
 {
     private const VALID_SECTORS = [
         'pharmacy' => 'Pharmacie',
+        'global_commerce' => 'Commerce général',
         'kiosk' => 'Kiosque',
         'supermarket' => 'Supermarché',
         'butchery' => 'Boucherie',
         'hardware' => 'Quincaillerie',
         'ecommerce' => 'E-commerce',
-        'other' => 'Autre'
+        'other' => 'Autre',
     ];
 
     private string $value;

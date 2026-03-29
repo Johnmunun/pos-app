@@ -6,8 +6,12 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use App\Mail\MarketingBroadcastMail;
+use App\Services\DynamicMailSettingsService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -297,7 +301,264 @@ class BillingAdminController
         return Inertia::render('Admin/BillingTransactions', [
             'transactions' => $rows,
             'subscriptions' => $subscriptions,
+            'subscriptionRevenue' => $this->buildSubscriptionRevenueStats(),
+            'subscriberContacts' => $this->buildSubscriberContacts(),
         ]);
+    }
+
+    public function sendMarketing(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'subject' => ['required', 'string', 'max:200'],
+            'body_html' => ['required', 'string', 'max:50000'],
+            'audience' => ['required', 'in:all,active_subscription,inactive_subscription'],
+            'user_filter' => ['required', 'in:all,active_only,inactive_only'],
+        ]);
+
+        $emails = $this->marketingRecipientEmails($validated['audience'], $validated['user_filter']);
+        if ($emails === []) {
+            return back()->with('error', 'Aucun destinataire pour ces critères.');
+        }
+
+        $mailService = app(DynamicMailSettingsService::class);
+        if (!$mailService->applyFromStorage()) {
+            return back()->with('error', 'SMTP non configuré : activez et renseignez le mail dans les paramètres administrateur.');
+        }
+
+        $sent = 0;
+        $failed = 0;
+        foreach ($emails as $email) {
+            try {
+                Mail::to($email)->send(new MarketingBroadcastMail(
+                    $validated['subject'],
+                    $validated['body_html']
+                ));
+                $sent++;
+            } catch (\Throwable $e) {
+                $failed++;
+                Log::warning('Marketing email send failed', [
+                    'email' => $email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $msg = "Envoi terminé : {$sent} message(s) envoyé(s).";
+        if ($failed > 0) {
+            $msg .= " ({$failed} échec(s), voir les logs.)";
+        }
+
+        return back()->with('success', $msg);
+    }
+
+    /**
+     * @return array{currency_totals: list<array{currency_code: string, total: float}>, monthly: list<array{month: string, currency_code: string, total: float}>, paid_transaction_count: int}
+     */
+    private function buildSubscriptionRevenueStats(): array
+    {
+        if (!Schema::hasTable('billing_payment_transactions')) {
+            return [
+                'currency_totals' => [],
+                'monthly' => [],
+                'paid_transaction_count' => 0,
+            ];
+        }
+
+        $currencyTotals = DB::table('billing_payment_transactions')
+            ->whereRaw('lower(status) in (?,?,?)', ['paid', 'success', 'completed'])
+            ->selectRaw('currency_code, COALESCE(SUM(amount), 0) as total')
+            ->groupBy('currency_code')
+            ->orderBy('currency_code')
+            ->get()
+            ->map(static fn ($r) => [
+                'currency_code' => (string) $r->currency_code,
+                'total' => (float) $r->total,
+            ])
+            ->values()
+            ->all();
+
+        $from = now()->subMonths(12)->startOfMonth();
+        $paidRows = DB::table('billing_payment_transactions')
+            ->whereRaw('lower(status) in (?,?,?)', ['paid', 'success', 'completed'])
+            ->whereNotNull('paid_at')
+            ->where('paid_at', '>=', $from)
+            ->get(['amount', 'currency_code', 'paid_at']);
+
+        $monthlyMap = [];
+        foreach ($paidRows as $row) {
+            $d = $row->paid_at ? \Carbon\Carbon::parse($row->paid_at) : null;
+            if (!$d) {
+                continue;
+            }
+            $month = $d->format('Y-m');
+            $cc = strtoupper((string) $row->currency_code);
+            $key = $month.'|'.$cc;
+            if (!isset($monthlyMap[$key])) {
+                $monthlyMap[$key] = [
+                    'month' => $month,
+                    'currency_code' => $cc,
+                    'total' => 0.0,
+                ];
+            }
+            $monthlyMap[$key]['total'] += (float) $row->amount;
+        }
+        $monthly = array_values($monthlyMap);
+        usort($monthly, static function (array $a, array $b): int {
+            $c = strcmp($a['month'], $b['month']);
+            return $c !== 0 ? $c : strcmp($a['currency_code'], $b['currency_code']);
+        });
+
+        $count = (int) DB::table('billing_payment_transactions')
+            ->whereRaw('lower(status) in (?,?,?)', ['paid', 'success', 'completed'])
+            ->count();
+
+        return [
+            'currency_totals' => $currencyTotals,
+            'monthly' => $monthly,
+            'paid_transaction_count' => $count,
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function buildSubscriberContacts(): array
+    {
+        if (!Schema::hasTable('users') || !Schema::hasTable('tenants')) {
+            return [];
+        }
+
+        if (!Schema::hasTable('tenant_plan_subscriptions')) {
+            return [];
+        }
+
+        $hasIsActive = Schema::hasColumn('users', 'is_active');
+
+        $select = [
+            'u.id as user_id',
+            'u.name as user_name',
+            'u.email as user_email',
+            'u.status as user_status',
+            't.id as tenant_id',
+            't.name as tenant_name',
+        ];
+        if ($hasIsActive) {
+            $select[] = 'u.is_active as user_is_active';
+        }
+
+        $rows = DB::table('users as u')
+            ->join('tenants as t', 't.id', '=', 'u.tenant_id')
+            ->leftJoin('tenant_plan_subscriptions as tps', function ($join) {
+                $join->on('tps.tenant_id', '=', 't.id')
+                    ->whereRaw('tps.id = (select max(tps2.id) from tenant_plan_subscriptions tps2 where tps2.tenant_id = t.id)');
+            })
+            ->leftJoin('billing_plans as bp', 'bp.id', '=', 'tps.billing_plan_id')
+            ->where('u.type', '!=', 'ROOT')
+            ->select(array_merge($select, [
+                'tps.status as subscription_row_status',
+                'tps.ends_at as subscription_ends_at',
+                'tps.starts_at as subscription_starts_at',
+                'bp.name as plan_name',
+                'bp.code as plan_code',
+            ]))
+            ->orderBy('t.name')
+            ->orderBy('u.name')
+            ->limit(500)
+            ->get();
+
+        return $rows->map(function ($row) use ($hasIsActive) {
+            $ends = $row->subscription_ends_at ? \Carbon\Carbon::parse($row->subscription_ends_at) : null;
+            $subStatus = (string) ($row->subscription_row_status ?? '');
+            $subscriptionActive = $subStatus === 'active'
+                && ($ends === null || $ends->isFuture() || $ends->isToday());
+
+            $userActive = ((string) ($row->user_status ?? '')) === 'active';
+            if ($hasIsActive) {
+                $userActive = $userActive && (bool) ($row->user_is_active ?? true);
+            }
+
+            return [
+                'user_id' => (int) $row->user_id,
+                'user_name' => (string) $row->user_name,
+                'user_email' => (string) $row->user_email,
+                'user_status' => (string) ($row->user_status ?? ''),
+                'user_is_active' => $userActive,
+                'tenant_id' => (int) $row->tenant_id,
+                'tenant_name' => (string) $row->tenant_name,
+                'subscription_active' => $subscriptionActive,
+                'subscription_status' => $subStatus !== '' ? $subStatus : 'none',
+                'plan_name' => $row->plan_name ? (string) $row->plan_name : null,
+                'plan_code' => $row->plan_code ? (string) $row->plan_code : null,
+                'subscription_ends_at' => $row->subscription_ends_at ? (string) $row->subscription_ends_at : null,
+            ];
+        })->toArray();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function marketingRecipientEmails(string $audience, string $userFilter): array
+    {
+        if (!Schema::hasTable('users')) {
+            return [];
+        }
+
+        $hasIsActive = Schema::hasColumn('users', 'is_active');
+
+        $q = DB::table('users as u')
+            ->where('u.type', '!=', 'ROOT')
+            ->whereNotNull('u.tenant_id')
+            ->whereNotNull('u.email')
+            ->where('u.email', '!=', '');
+
+        if ($userFilter === 'active_only') {
+            $q->where('u.status', 'active');
+            if ($hasIsActive) {
+                $q->where('u.is_active', true);
+            }
+        } elseif ($userFilter === 'inactive_only') {
+            $q->where(function ($w) use ($hasIsActive) {
+                $w->where('u.status', '!=', 'active');
+                if ($hasIsActive) {
+                    $w->orWhere('u.is_active', false);
+                }
+            });
+        }
+
+        if (($audience === 'active_subscription' || $audience === 'inactive_subscription')
+            && !Schema::hasTable('tenant_plan_subscriptions')) {
+            return [];
+        }
+
+        if ($audience === 'active_subscription') {
+            $q->whereExists(function ($sub) {
+                $sub->select(DB::raw(1))
+                    ->from('tenant_plan_subscriptions as tps')
+                    ->whereColumn('tps.tenant_id', 'u.tenant_id')
+                    ->where('tps.status', 'active')
+                    ->where(function ($w) {
+                        $w->whereNull('tps.ends_at')->orWhere('tps.ends_at', '>=', now());
+                    });
+            });
+        } elseif ($audience === 'inactive_subscription') {
+            $q->whereNotExists(function ($sub) {
+                $sub->select(DB::raw(1))
+                    ->from('tenant_plan_subscriptions as tps')
+                    ->whereColumn('tps.tenant_id', 'u.tenant_id')
+                    ->where('tps.status', 'active')
+                    ->where(function ($w) {
+                        $w->whereNull('tps.ends_at')->orWhere('tps.ends_at', '>=', now());
+                    });
+            });
+        }
+
+        return $q->distinct()
+            ->pluck('u.email')
+            ->map(static fn ($e) => strtolower(trim((string) $e)))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     public function reactivateExpiredSubscription(Request $request): RedirectResponse

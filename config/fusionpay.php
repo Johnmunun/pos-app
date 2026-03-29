@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'enabled' => env('FUSIONPAY_ENABLED', false),
+    'enabled' => env('FUSIONPAY_ENABLED', true),
 
     // "Lien API" fourni dans le dashboard Money Fusion.
     // S'il est défini, il est prioritaire sur base_url + endpoints.

@@ -5,6 +5,7 @@ namespace Src\Domains\Onboarding\Services;
 use Src\Domains\Onboarding\Entities\OnboardingSession;
 use Src\Domains\Onboarding\ValueObjects\Sector;
 use Src\Domains\Onboarding\ValueObjects\BusinessType;
+use Src\Domains\StoreProvisioning\StoreStartMode;
 use Domains\User\Entities\User;
 use Src\Domains\Tenant\Entities\Tenant;
 
@@ -34,13 +35,29 @@ class OnboardingService
         
         $sector = new Sector($data['sector']);
         $businessType = new BusinessType($data['business_type']);
-        
+
         $session->setStepData(2, [
             'sector' => $sector->getValue(),
             'business_type' => $businessType->getValue(),
             'sector_label' => $sector->getLabel(),
-            'business_type_label' => $businessType->getLabel()
+            'business_type_label' => $businessType->getLabel(),
         ]);
+    }
+
+    /**
+     * Dernière étape avant finalisation : mode de démarrage boutique (vide vs préconfigurée).
+     */
+    public function mergeStoreStartMode(OnboardingSession $session, string $startMode): void
+    {
+        StoreStartMode::assertValid($startMode);
+        $step2 = $session->getStepData(2);
+        if (empty($step2['sector']) || empty($step2['business_type'])) {
+            throw new \InvalidArgumentException('Complétez d’abord le secteur et le type de commerce.');
+        }
+
+        $session->setStepData(2, array_merge($step2, [
+            'start_mode' => $startMode,
+        ]));
     }
 
     public function processStep3(OnboardingSession $session, array $data): void
@@ -105,15 +122,14 @@ class OnboardingService
     private function validateStep2Data(array $data): void
     {
         if (empty($data['sector']) || empty($data['business_type'])) {
-            throw new \InvalidArgumentException("Secteur et type de commerce requis");
+            throw new \InvalidArgumentException('Secteur et type de commerce requis');
         }
-        
-        // Valider que les valeurs existent
+
         try {
             new Sector($data['sector']);
             new BusinessType($data['business_type']);
         } catch (\InvalidArgumentException $e) {
-            throw new \InvalidArgumentException("Valeurs invalides: " . $e->getMessage());
+            throw new \InvalidArgumentException('Valeurs invalides: '.$e->getMessage());
         }
     }
 
@@ -132,6 +148,11 @@ class OnboardingService
                 throw new \DomainException("L'étape $i n'est pas complétée");
             }
         }
+
+        if (empty($data[2]['start_mode'])) {
+            throw new \DomainException("Le mode de démarrage de la boutique n'a pas été choisi");
+        }
+        StoreStartMode::assertValid($data[2]['start_mode']);
     }
 
     private function prepareUserData(array $data): array
@@ -153,8 +174,9 @@ class OnboardingService
                 'email' => $data[3]['email'] ?? $data[1]['email'],
                 'business_type' => $data[2]['business_type'],
                 'idnat' => $data[4]['idnat'] ?? null,
-                'rccm' => $data[4]['rccm'] ?? null
-            ]
+                'rccm' => $data[4]['rccm'] ?? null,
+                'store_start_mode' => $data[2]['start_mode'],
+            ],
         ];
     }
 }

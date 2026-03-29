@@ -44,6 +44,10 @@ class Tenant extends Model
         'currency_code',
         'timezone',
         'locale',
+        'store_start_mode',
+        'is_store_initialized',
+        'template_code',
+        'template_applied_at',
     ];
 
     /**
@@ -54,6 +58,8 @@ class Tenant extends Model
     {
         return [
             'status' => 'boolean',
+            'is_store_initialized' => 'boolean',
+            'template_applied_at' => 'datetime',
         ];
     }
 

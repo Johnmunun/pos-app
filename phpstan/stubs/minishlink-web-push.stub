@@ -1,0 +1,27 @@
+<?php
+
+namespace Minishlink\WebPush;
+
+/**
+ * @see vendor/minishlink/web-push (analyse statique uniquement)
+ */
+class WebPush
+{
+    /**
+     * @param array<string, mixed> $auth
+     */
+    public function __construct(array $auth, array $defaultOptions = [], ?int $timeout = 30, array $clientOptions = []) {}
+
+    /**
+     * @return \Generator<int, mixed>
+     */
+    public function sendOneNotification(Subscription $subscription, ?string $payload = null, bool $flush = false): \Generator {}
+}
+
+class Subscription
+{
+    /**
+     * @param array<string, mixed> $associativeArray (keys: endpoint, publicKey, authToken, contentEncoding)
+     */
+    public static function create(array $associativeArray): self {}
+}

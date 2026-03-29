@@ -6,6 +6,9 @@ parameters:
         - app
         - src
         - database/seeders
+    scanFiles:
+        - phpstan/stubs/google-auth.stub
+        - phpstan/stubs/minishlink-web-push.stub
     treatPhpDocTypesAsCertain: false
     excludePaths:
         - vendor

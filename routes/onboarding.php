@@ -40,6 +40,12 @@ Route::middleware(['guest'])->group(function () {
         
     Route::post('/onboarding/step4', [OnboardingController::class, 'processStep4'])
         ->name('onboarding.step4.process');
+
+    Route::get('/onboarding/step5', [OnboardingController::class, 'showStep5'])
+        ->name('onboarding.step5');
+
+    Route::post('/onboarding/step5', [OnboardingController::class, 'processStep5'])
+        ->name('onboarding.step5.process');
         
     Route::post('/onboarding/complete', [OnboardingController::class, 'complete'])
         ->name('onboarding.complete');

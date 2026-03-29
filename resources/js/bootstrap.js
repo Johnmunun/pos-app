@@ -4,10 +4,25 @@ window.axios = axios;
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
 // CSRF for Laravel session-authenticated POST/PUT/DELETE requests
-const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-if (csrfToken) {
-    window.axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
+function syncAxiosCsrfFromDom() {
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (token) {
+        window.axios.defaults.headers.common['X-CSRF-TOKEN'] = token;
+    }
 }
+syncAxiosCsrfFromDom();
+
+window.axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        // 419 = jeton CSRF / session expirée (pas Inertia). Rechargement pour resynchroniser le meta CSRF.
+        if (error.response?.status === 419 && typeof window !== 'undefined') {
+            window.location.reload();
+            return new Promise(() => {});
+        }
+        return Promise.reject(error);
+    },
+);
 
 // Configuration Laravel Echo + Reverb (temps réel)
 // En prod sans Reverb ou sans proxy WebSocket : VITE_REVERB_ENABLED=false pour éviter l'erreur "WebSocket connection failed"

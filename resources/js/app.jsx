@@ -5,6 +5,7 @@ import { createInertiaApp, router } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 const appName = import.meta.env.VITE_APP_NAME || 'OmniPOS';
 
@@ -44,6 +45,22 @@ function initDarkMode() {
 
 // Initialiser le dark mode avant le rendu
 initDarkMode();
+
+// 419 (CSRF / session) ou 409 sans en-tête Inertia : Laravel renvoie du HTML « Page Expired ».
+// Sans ça, Inertia affiche ce HTML dans une modale. On recharge pour obtenir un jeton CSRF à jour.
+router.on('invalid', (event) => {
+    const status = event.detail.response?.status;
+    if (status === 419) {
+        toast.error('Session expirée. Actualisation de la page…', { duration: 2800 });
+        window.setTimeout(() => window.location.reload(), 150);
+        return false;
+    }
+    if (status === 409) {
+        toast.error('Conflit ou page expirée. Actualisation…', { duration: 2800 });
+        window.setTimeout(() => window.location.reload(), 150);
+        return false;
+    }
+});
 
 // PWA: Gérer l'installation
 if ('serviceWorker' in navigator) {

@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Src\Infrastructure\Hardware\Http\Controllers\HardwareDashboardController;
 use Src\Infrastructure\Hardware\Http\Controllers\HardwareAssistantController;
+use Src\Infrastructure\Pharmacy\Http\Controllers\PharmacyVoiceController;
 use Src\Infrastructure\Quincaillerie\Http\Controllers\ProductController as QuincaillerieProductController;
 use Src\Infrastructure\Quincaillerie\Http\Controllers\CategoryController as QuincaillerieCategoryController;
 use Src\Infrastructure\Pharmacy\Http\Controllers\ProductMovementController;
@@ -36,6 +37,22 @@ Route::prefix('hardware')
         Route::post('/assistant/ask', [HardwareAssistantController::class, 'ask'])
             ->middleware(['permission:module.hardware', 'feature.enabled:ai.assistant'])
             ->name('assistant.ask');
+
+        // API vocale (même logique que Pharmacie) — sous /hardware pour les tenants sans module pharmacie activé
+        Route::prefix('api/voice')->name('api.voice.')->group(function () {
+            Route::post('/transcribe', [PharmacyVoiceController::class, 'transcribe'])
+                ->middleware(['feature.enabled:ai.assistant'])
+                ->name('transcribe');
+            Route::post('/speak', [PharmacyVoiceController::class, 'speak'])
+                ->middleware(['feature.enabled:ai.assistant'])
+                ->name('speak');
+            Route::get('/settings', [PharmacyVoiceController::class, 'settings'])
+                ->middleware(['feature.enabled:ai.assistant'])
+                ->name('settings');
+            Route::put('/settings', [PharmacyVoiceController::class, 'updateSettings'])
+                ->middleware(['feature.enabled:ai.assistant'])
+                ->name('settings.update');
+        });
 
         // Produits — Module Quincaillerie (contrôleur et données dédiés)
         Route::get('/products', [QuincaillerieProductController::class, 'index'])

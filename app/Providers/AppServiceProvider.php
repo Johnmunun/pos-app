@@ -11,6 +11,8 @@ use Src\Infrastructure\ModuleOnboarding\Persistence\EloquentModuleOnboardingStat
 use Src\Application\ModuleOnboarding\ModuleOnboardingService;
 use App\Services\PermissionSyncService;
 use Src\Domains\User\Services\PermissionsSyncService as DomainPermissionsSyncService;
+use Src\Domains\StoreProvisioning\Contracts\StoreTemplateProvisionerInterface;
+use Src\Infrastructure\StoreProvisioning\StoreTemplateProvisioner;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -47,6 +49,8 @@ class AppServiceProvider extends ServiceProvider
                 );
             }
         );
+
+        $this->app->singleton(StoreTemplateProvisionerInterface::class, StoreTemplateProvisioner::class);
     }
 
     /**

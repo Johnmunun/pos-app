@@ -59,7 +59,10 @@ export default function CommerceAssistant({ bottomOffset = null }) {
   const hasCommerce = permissions.includes('*') || permissions.includes('module.commerce')
     || permissions.includes('commerce.assistant.use')
     || permissions.some((p) => typeof p === 'string' && p.startsWith('commerce.'));
-  const hasCommerceVoice = permissions.includes('*') || permissions.includes('commerce.assistant.voice');
+  const hasCommerceVoice =
+    permissions.includes('*') ||
+    permissions.includes('commerce.assistant.voice') ||
+    permissions.includes('commerce.assistant.use');
 
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState(() => loadStoredMessages() || [INITIAL_MESSAGE]);

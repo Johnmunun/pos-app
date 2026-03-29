@@ -34,7 +34,7 @@ export default function Step1() {
                 </div>
 
                 {/* Stepper */}
-                <OnboardingStepper currentStep={1} totalSteps={4} />
+                <OnboardingStepper currentStep={1} totalSteps={5} />
 
                 {/* Formulaire */}
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">

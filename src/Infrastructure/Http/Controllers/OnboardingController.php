@@ -3,6 +3,7 @@
 namespace Src\Infrastructure\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Mail\WelcomeRegistrationMail;
 use App\Models\Role;
 use App\Models\Permission;
 use App\Models\Tenant as TenantModel;
@@ -12,6 +13,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use App\Services\DynamicMailSettingsService;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -21,6 +25,8 @@ use Src\Infrastructure\Referral\Models\ReferralAccountModel;
 use Src\Infrastructure\Repositories\EloquentOnboardingRepository;
 use Src\Domains\Onboarding\ValueObjects\Sector;
 use Src\Domains\Onboarding\ValueObjects\BusinessType;
+use Src\Domains\StoreProvisioning\Contracts\StoreTemplateProvisionerInterface;
+use Src\Domains\StoreProvisioning\StoreStartMode;
 
 /**
  * OnboardingController - Infrastructure Layer
@@ -31,10 +37,12 @@ use Src\Domains\Onboarding\ValueObjects\BusinessType;
 class OnboardingController extends Controller
 {
     private OnboardingService $onboardingService;
+
     private EloquentOnboardingRepository $repository;
 
-    public function __construct()
-    {
+    public function __construct(
+        private readonly StoreTemplateProvisionerInterface $storeTemplateProvisioner,
+    ) {
         $this->onboardingService = new OnboardingService();
         $this->repository = new EloquentOnboardingRepository();
     }
@@ -109,10 +117,10 @@ class OnboardingController extends Controller
     public function processStep2(Request $request)
     {
         $session = $this->getOrCreateSession($request);
-        
+
         $validated = $request->validate([
-            'sector' => 'required|in:' . implode(',', array_keys(Sector::getAll())),
-            'business_type' => 'required|in:' . implode(',', array_keys(BusinessType::getAll()))
+            'sector' => 'required|in:'.implode(',', array_keys(Sector::getAll())),
+            'business_type' => 'required|in:'.implode(',', array_keys(BusinessType::getAll())),
         ]);
 
         try {
@@ -203,8 +211,49 @@ class OnboardingController extends Controller
         try {
             $this->onboardingService->processStep4($session, $validated);
             $this->repository->save($session);
-            
-            // Appeler directement la méthode complete au lieu de rediriger
+
+            return redirect()->route('onboarding.step5');
+        } catch (\InvalidArgumentException $e) {
+            return back()->withErrors(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Dernière étape : choix boutique vide ou préconfigurée (avant création du compte).
+     */
+    public function showStep5(Request $request): Response
+    {
+        $this->ensureValidStep($request, 5);
+        $session = $this->getOrCreateSession($request);
+
+        $step1Data = $session->getStepData(1);
+        $step2Data = $session->getStepData(2);
+        $step3Data = $session->getStepData(3);
+        $step4Data = $session->getStepData(4);
+
+        return Inertia::render('Onboarding/Step5', [
+            'currentStep' => 5,
+            'sessionData' => array_merge($step1Data, $step2Data, $step3Data, $step4Data, $session->getStepData(5)),
+        ]);
+    }
+
+    public function processStep5(Request $request)
+    {
+        $session = $this->getOrCreateSession($request);
+
+        $startMode = $request->input('start_mode');
+        if ($startMode === null || $startMode === '') {
+            $request->merge(['start_mode' => StoreStartMode::EMPTY_STORE]);
+        }
+
+        $validated = $request->validate([
+            'start_mode' => 'required|in:'.implode(',', StoreStartMode::values()),
+        ]);
+
+        try {
+            $this->onboardingService->mergeStoreStartMode($session, $validated['start_mode']);
+            $this->repository->save($session);
+
             return $this->complete($request);
         } catch (\InvalidArgumentException $e) {
             return back()->withErrors(['error' => $e->getMessage()]);
@@ -225,17 +274,22 @@ class OnboardingController extends Controller
         try {
             // Obtenir les données prêtes pour la création
             $registrationData = $this->onboardingService->completeRegistration($session);
-            
-            // Créer l'utilisateur et le tenant (infrastructure)
-            $user = $this->createUser($registrationData['user']);
-            $tenant = $this->createTenant($registrationData['tenant']);
-            
-            // Associer le tenant à l'utilisateur
-            $user->tenant_id = $tenant->id;
-            $user->save();
+
+            $user = null;
+            $tenant = null;
+
+            DB::transaction(function () use ($registrationData, &$user, &$tenant) {
+                $user = $this->createUser($registrationData['user']);
+                $tenant = $this->createTenant($registrationData['tenant']);
+
+                $user->tenant_id = $tenant->id;
+                $user->save();
+
+                $this->storeTemplateProvisioner->provisionTenantStore($tenant, $user);
+            });
 
             // Secteurs Kiosque, Supermarché, Boucherie, Autre = module Global Commerce : assigner le rôle Commerçant Commerce
-            $commerceSectors = ['kiosk', 'supermarket', 'butchery', 'other'];
+            $commerceSectors = ['kiosk', 'supermarket', 'butchery', 'other', 'global_commerce'];
             if (in_array($tenant->sector, $commerceSectors, true)) {
                 $commerceRole = Role::where('name', 'Commerçant Commerce')->whereNull('tenant_id')->first();
                 if ($commerceRole) {
@@ -303,11 +357,27 @@ class OnboardingController extends Controller
             try {
                 event(new \App\Events\UserRegisteredNotification($user));
             } catch (\Throwable $e) {
-                \Log::warning('UserRegisteredNotification dispatch failed', [
+                Log::warning('UserRegisteredNotification dispatch failed', [
                     'error' => $e->getMessage(),
                 ]);
             }
-            
+
+            try {
+                $mailService = app(DynamicMailSettingsService::class);
+                if ($mailService->applyFromStorage()) {
+                    Mail::to($user->email)->send(new WelcomeRegistrationMail(
+                        $user,
+                        $tenant->name,
+                        $registrationData['tenant']['store_start_mode'] ?? null,
+                    ));
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Welcome email failed after onboarding', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
             // Ajouter un message de succès
             request()->session()->flash('success', 'Votre compte a été créé avec succès ! Il est en attente de validation par notre équipe.');
             
@@ -315,6 +385,13 @@ class OnboardingController extends Controller
             
         } catch (\DomainException|\InvalidArgumentException $e) {
             return back()->withErrors(['error' => $e->getMessage()]);
+        } catch (\Throwable $e) {
+            Log::error('Onboarding complete failed', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return back()->withErrors(['error' => 'Impossible de finaliser l’inscription. Réessayez dans quelques instants.']);
         }
     }
 
@@ -384,7 +461,7 @@ class OnboardingController extends Controller
         $session = $this->getOrCreateSession($request);
         
         if ($session->getCurrentStep() < ($requiredStep - 1)) {
-            redirect()->route('onboarding.step' . $session->getCurrentStep() + 1)->throwResponse();
+            redirect()->route('onboarding.step'.($session->getCurrentStep() + 1))->throwResponse();
         }
     }
 
@@ -428,6 +505,7 @@ class OnboardingController extends Controller
             'rccm' => $tenantData['rccm'],
             'is_active' => true,
             'code' => strtoupper(Str::random(8)),
+            'store_start_mode' => $tenantData['store_start_mode'] ?? StoreStartMode::EMPTY_STORE,
         ]);
     }
 }

@@ -340,54 +340,99 @@ export default function OnboardingPayment() {
             </div>
 
             {detailsPlan && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-2xl rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                                {detailsPlan.name} - avantages et limites
-                            </h3>
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 dark:bg-black/70 backdrop-blur-sm p-4"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="plan-details-title"
+                >
+                    <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-2xl overflow-hidden">
+                        <div className="bg-gradient-to-r from-amber-500 to-orange-600 px-5 py-4 flex items-start justify-between gap-3">
+                            <div>
+                                <h3
+                                    id="plan-details-title"
+                                    className="text-lg font-bold text-white tracking-tight"
+                                >
+                                    {detailsPlan.name}
+                                </h3>
+                                <p className="text-sm text-amber-50/95 mt-0.5">
+                                    Avantages et limites du plan
+                                </p>
+                            </div>
                             <button
                                 type="button"
                                 onClick={() => setDetailsPlan(null)}
-                                className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-sm"
+                                className="shrink-0 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm font-medium px-3 py-1.5 transition-colors"
                             >
                                 Fermer
                             </button>
                         </div>
 
-                        <p className="text-sm text-slate-600 dark:text-slate-300">
-                            Prix: {(detailsPlan?.pricing?.currency_code || 'USD')} {detailsPlan?.pricing?.monthly_effective ?? detailsPlan?.pricing?.monthly ?? 0}/mois
-                        </p>
+                        <div className="px-5 pt-4 pb-2">
+                            <span className="inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border border-amber-200/80 dark:border-amber-700/50 px-3 py-1 text-sm font-medium">
+                                Prix :{' '}
+                                <span className="ml-1 font-semibold tabular-nums">
+                                    {(detailsPlan?.pricing?.currency_code || 'USD')}{' '}
+                                    {detailsPlan?.pricing?.monthly_effective ?? detailsPlan?.pricing?.monthly ?? 0}
+                                    /mois
+                                </span>
+                            </span>
+                        </div>
 
-                        <div className="max-h-80 overflow-auto rounded border border-slate-200 dark:border-slate-700">
-                            <table className="w-full text-sm">
-                                <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0">
-                                    <tr>
-                                        <th className="text-left p-3">Fonctionnalite</th>
-                                        <th className="text-left p-3">Etat</th>
-                                        <th className="text-left p-3">Limite</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {Object.entries(detailsPlan.features || {}).map(([code, feature]) => (
-                                        <tr key={code} className={`border-t border-slate-200 dark:border-slate-700 ${feature?.enabled ? '' : 'opacity-80'}`}>
-                                            <td className={`p-3 ${feature?.enabled ? '' : 'blur-[1.2px] select-none'}`}>{feature?.label || code}</td>
-                                            <td className="p-3">
-                                                {feature?.enabled ? (
-                                                    <span className="text-emerald-600 dark:text-emerald-400">Disponible</span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 px-2 py-0.5 text-[11px] font-semibold">
-                                                        Indisponible - Monter de niveau
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className={`p-3 ${feature?.enabled ? '' : 'blur-[1.2px] select-none'}`}>
-                                                {feature?.limit === null || feature?.limit === undefined ? 'Illimite' : feature.limit}
-                                            </td>
+                        <div className="px-5 pb-5">
+                            <div className="max-h-80 overflow-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/40">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-100/90 dark:bg-gray-900/80 sticky top-0 z-[1] border-b border-gray-200 dark:border-gray-700">
+                                        <tr>
+                                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-200">
+                                                Fonctionnalité
+                                            </th>
+                                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-200">
+                                                État
+                                            </th>
+                                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-200">
+                                                Limite
+                                            </th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800/90">
+                                        {Object.entries(detailsPlan.features || {}).map(([code, feature]) => (
+                                            <tr
+                                                key={code}
+                                                className={
+                                                    feature?.enabled
+                                                        ? 'hover:bg-amber-50/50 dark:hover:bg-amber-950/20'
+                                                        : 'opacity-90 bg-gray-50/50 dark:bg-gray-900/30'
+                                                }
+                                            >
+                                                <td
+                                                    className={`p-3 text-gray-800 dark:text-gray-200 ${feature?.enabled ? '' : 'blur-[1px] select-none'}`}
+                                                >
+                                                    {feature?.label || code}
+                                                </td>
+                                                <td className="p-3">
+                                                    {feature?.enabled ? (
+                                                        <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 px-2.5 py-0.5 text-xs font-semibold">
+                                                            Disponible
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2.5 py-0.5 text-xs font-semibold">
+                                                            Non inclus
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td
+                                                    className={`p-3 text-gray-600 dark:text-gray-400 ${feature?.enabled ? '' : 'blur-[1px] select-none'}`}
+                                                >
+                                                    {feature?.limit === null || feature?.limit === undefined
+                                                        ? 'Illimité'
+                                                        : feature.limit}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>

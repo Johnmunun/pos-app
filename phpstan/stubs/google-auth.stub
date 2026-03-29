@@ -1,0 +1,20 @@
+<?php
+
+namespace Google\Auth\Credentials;
+
+/**
+ * @see vendor/google/auth (analyse statique uniquement)
+ */
+class ServiceAccountCredentials
+{
+    /**
+     * @param string|array<int, string> $scopeOrScopes
+     * @param array<string, mixed>|string $jsonKey
+     */
+    public function __construct($scopeOrScopes, $jsonKey) {}
+
+    /**
+     * @return array<string, mixed>|false
+     */
+    public function fetchAuthToken(?callable $httpHandler = null) {}
+}

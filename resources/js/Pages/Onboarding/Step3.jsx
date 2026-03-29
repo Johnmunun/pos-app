@@ -52,7 +52,7 @@ export default function Step3({ sessionData }) {
                         
                         <div className="hidden md:block">
                             <div className="flex items-center space-x-2">
-                                {[1, 2, 3, 4].map((s) => (
+                                {[1, 2, 3, 4, 5].map((s) => (
                                     <div
                                         key={s}
                                         className={`w-3 h-3 rounded-full transition-all ${
@@ -72,7 +72,7 @@ export default function Step3({ sessionData }) {
             <div className="fixed top-16 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700 z-40">
                 <div 
                     className="h-full bg-amber-500 transition-all duration-500 ease-out"
-                    style={{ width: '75%' }} // 3/4 = 75%
+                    style={{ width: '60%' }}
                 />
             </div>
 
@@ -80,7 +80,7 @@ export default function Step3({ sessionData }) {
             <main className="pt-20 pb-8">
                 <div className="max-w-2xl mx-auto px-4">
                     {/* Stepper */}
-                    <OnboardingStepper currentStep={3} totalSteps={4} />
+                    <OnboardingStepper currentStep={3} totalSteps={5} />
                     
                     {/* Titre */}
                     <div className="text-center mb-8">

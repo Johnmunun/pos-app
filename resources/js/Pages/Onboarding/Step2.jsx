@@ -16,6 +16,7 @@ export default function Step2({ sectors, businessTypes, sessionData }) {
     // Options de secteurs avec icônes
     const sectorOptions = [
         { key: 'pharmacy', name: 'Pharmacie', icon: '💊', description: 'Médicaments, parapharmacie, produits de santé' },
+        { key: 'global_commerce', name: 'Commerce général', icon: '🏬', description: 'Alimentaire, épicerie, produits courants (POS commerce)' },
         { key: 'kiosk', name: 'Kiosque', icon: '🏪', description: 'Petits commerces, snacks, boissons' },
         { key: 'supermarket', name: 'Supermarché', icon: '🛒', description: 'Épicerie, produits alimentaires, ménagers' },
         { key: 'butchery', name: 'Boucherie', icon: '🥩', description: 'Viandes, volailles, produits frais' },
@@ -55,7 +56,7 @@ export default function Step2({ sectors, businessTypes, sessionData }) {
                         
                         <div className="hidden md:block">
                             <div className="flex items-center space-x-2">
-                                {[1, 2, 3, 4].map((s) => (
+                                {[1, 2, 3, 4, 5].map((s) => (
                                     <div
                                         key={s}
                                         className={`w-3 h-3 rounded-full transition-all ${
@@ -75,7 +76,7 @@ export default function Step2({ sectors, businessTypes, sessionData }) {
             <div className="fixed top-16 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700 z-40">
                 <div 
                     className="h-full bg-amber-500 transition-all duration-500 ease-out"
-                    style={{ width: '50%' }} // 2/4 = 50%
+                    style={{ width: '40%' }}
                 />
             </div>
 
@@ -83,7 +84,7 @@ export default function Step2({ sectors, businessTypes, sessionData }) {
             <main className="pt-20 pb-8">
                 <div className="max-w-2xl mx-auto px-4">
                     {/* Stepper */}
-                    <OnboardingStepper currentStep={2} totalSteps={4} />
+                    <OnboardingStepper currentStep={2} totalSteps={5} />
                     
                     {/* Titre */}
                     <div className="text-center mb-8">
@@ -98,7 +99,7 @@ export default function Step2({ sectors, businessTypes, sessionData }) {
                     {/* Formulaire */}
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6">
                         <form onSubmit={submit} className="space-y-8">
-                            
+
                             {/* Sélection du secteur */}
                             <div>
                                 <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
@@ -210,8 +211,8 @@ export default function Step2({ sectors, businessTypes, sessionData }) {
                                             Information importante
                                         </h4>
                                         <p className="text-sm text-blue-700 dark:text-blue-300">
-                                            Ces choix nous aident à personnaliser votre interface mais ne limitent pas vos fonctionnalités. 
-                                            Vous pourrez accéder à tous les modules une fois votre compte activé.
+                                            Ces choix nous aident à personnaliser votre interface mais ne limitent pas vos fonctionnalités.
+                                            Le mode de démarrage de la boutique (vide ou préconfigurée) sera choisi à la dernière étape, juste avant la création du compte.
                                         </p>
                                     </div>
                                 </div>
