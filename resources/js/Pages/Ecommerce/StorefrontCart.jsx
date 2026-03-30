@@ -5,6 +5,7 @@ import { Input } from '@/Components/ui/input';
 import { CartProvider, useCart } from '@/Contexts/CartContext';
 import ShoppingCart from '@/Components/Ecommerce/ShoppingCart';
 import OrderDrawer from '@/Components/Ecommerce/OrderDrawer';
+import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBootstrap';
 import {
     ShoppingBag,
     ArrowLeft,
@@ -200,6 +201,7 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
     return (
         <>
             <Head title="Panier - Boutique" />
+            <StorefrontClientBootstrap />
             <StorefrontCartHeader shop={shop} cmsPages={cmsPages} currency={displayCurrency} />
 
             <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
@@ -309,10 +311,11 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={() => removeFromCart(item.product_id)}
-                                                        className="text-red-600 dark:text-red-400 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                                                        className="h-9 w-9 p-0 text-red-600 dark:text-red-400 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                                                        title="Supprimer"
+                                                        aria-label="Supprimer"
                                                     >
-                                                        <Trash2 className="h-4 w-4 shrink-0 mr-1" />
-                                                        Supprimer
+                                                        <Trash2 className="h-4 w-4 shrink-0" />
                                                     </Button>
                                                 </div>
                                             </div>

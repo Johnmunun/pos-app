@@ -2,6 +2,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { CartProvider } from '@/Contexts/CartContext';
 import ShoppingCart from '@/Components/Ecommerce/ShoppingCart';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
+import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBootstrap';
 import { ArrowLeft, CalendarDays } from 'lucide-react';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 
@@ -53,6 +54,7 @@ function BlogShowContent({ shop, article, cmsPages = [], whatsapp = {} }) {
     return (
         <>
             <Head title={article?.title || 'Article'} />
+            <StorefrontClientBootstrap />
             <StorefrontBlogShowHeader shop={shop} cmsPages={cmsPages} />
 
             <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-50">

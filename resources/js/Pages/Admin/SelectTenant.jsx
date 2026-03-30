@@ -4,7 +4,7 @@
  * Page de sélection du tenant après connexion pour le ROOT user
  * Le ROOT user peut accéder à n'importe quel tenant
  */
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import { Head } from '@inertiajs/react';
 import FlashMessages from '@/Components/FlashMessages';
 
@@ -138,14 +138,13 @@ export default function SelectTenant() {
                 {/* Footer */}
                 <div className="border-t border-gray-200 mt-12">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-sm text-gray-600">
-                        <form method="POST" action={route('logout')} className="inline">
-                            <button
-                                type="submit"
-                                className="text-red-600 hover:text-red-700 font-medium transition-colors"
-                            >
-                                Déconnexion
-                            </button>
-                        </form>
+                        <button
+                            type="button"
+                            onClick={() => router.post(route('logout'))}
+                            className="text-red-600 hover:text-red-700 font-medium transition-colors"
+                        >
+                            Déconnexion
+                        </button>
                     </div>
                 </div>
             </div>

@@ -310,10 +310,11 @@ export default function CatalogIndex({ products = [], categories = [], filters =
                             </div>
                             <Link
                                 href={route('ecommerce.storefront.index')}
-                                className="inline-flex items-center gap-2 rounded-lg border border-amber-500/60 px-3 py-1.5 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                                className="inline-flex items-center justify-center rounded-lg border border-amber-500/60 p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                                title="Prévisualiser la boutique"
+                                aria-label="Prévisualiser la boutique"
                             >
                                 <Eye className="h-4 w-4" />
-                                Prévisualiser la boutique
                             </Link>
                         </div>
                         <div className="flex items-center gap-4">

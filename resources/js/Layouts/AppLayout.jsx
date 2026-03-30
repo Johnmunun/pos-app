@@ -12,11 +12,13 @@ import SupportFloatingButton from '@/Components/Support/SupportFloatingButton';
 import SupportChatWidget from '@/Components/Support/SupportChatWidget';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
 import { ensureFcmToken, wireForegroundMessages } from '@/lib/firebaseMessaging';
+import MobileBottomNav from '@/Components/Layout/MobileBottomNav';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 /**
  * Conteneur pour aligner verticalement les boutons des assistants
  */
-function AssistantsContainer({ permissions }) {
+function AssistantsContainer({ permissions, extraMobileBottomPx = 0 }) {
     const hasPharmacy = permissions.includes('*') || permissions.includes('module.pharmacy')
         || permissions.some((p) => typeof p === 'string' && p.startsWith('pharmacy.'));
     const hasHardware = permissions.includes('*') || permissions.includes('module.hardware')
@@ -48,7 +50,7 @@ function AssistantsContainer({ permissions }) {
         // Mobile: bottom-24 (96px), bottom-40 (160px), bottom-56 (224px)
         // Desktop: bottom-6 (24px), bottom-28 (112px), bottom-50 (200px)
         // Espacement: 64px mobile, 88px desktop entre chaque bouton
-        const mobileBottom = 96 + (index * 64); // 96, 160, 224...
+        const mobileBottom = 96 + (index * 64) + extraMobileBottomPx; // réserve bottom nav <768px
         const desktopBottom = 24 + (index * 88); // 24, 112, 200...
         
         return {
@@ -101,9 +103,13 @@ export default function AppLayout({ children, header, fullWidth = false }) {
     const tenantSector = auth?.tenantSector ?? null;
     const isRoot = user?.type === 'ROOT';
     const isImpersonating = auth?.isImpersonating ?? false;
+    const isMobile = useIsMobile();
 
     // État pour le drawer mobile
     const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    // Décale les FAB au-dessus de la bottom nav (<768px)
+    const mobileBottomNavReservePx = user && isMobile ? 72 : 0;
 
     // FCM Web - abonnement (token) pour notifications
     useEffect(() => {
@@ -146,7 +152,7 @@ export default function AppLayout({ children, header, fullWidth = false }) {
     }, [url]);
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+        <div className="min-h-[100dvh] min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200 flex flex-col">
             {/* Sidebar - Desktop (fixe) / Mobile (drawer) */}
             <Sidebar 
                 permissions={permissions}
@@ -160,13 +166,14 @@ export default function AppLayout({ children, header, fullWidth = false }) {
             {/* Overlay pour mobile quand sidebar est ouvert */}
             {sidebarOpen && (
                 <div 
-                    className="fixed inset-0 bg-gray-900/50 z-40 lg:hidden transition-opacity"
+                    className="fixed inset-0 bg-gray-900/50 z-40 lg:hidden transition-opacity max-md:backdrop-blur-[2px]"
                     onClick={() => setSidebarOpen(false)}
+                    aria-hidden
                 />
             )}
 
             {/* Contenu principal */}
-            <div className="lg:pl-64 flex flex-col min-h-screen">
+            <div className="lg:pl-64 flex flex-col min-h-[100dvh] min-h-screen flex-1 w-full min-w-0 max-md:max-w-[100vw]">
                 {/* Navbar */}
                 <Navbar 
                     user={user}
@@ -183,17 +190,17 @@ export default function AppLayout({ children, header, fullWidth = false }) {
 
                 {/* Header optionnel */}
                 {header && (
-                    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100">
-                        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
+                    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 max-md:pt-[env(safe-area-inset-top,0px)]">
+                        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-3 sm:py-4 max-md:px-4 max-md:py-4">
                             {header}
                         </div>
                     </header>
                 )}
 
-                {/* Contenu principal : container cohérent mobile-first (sauf fullWidth) */}
-                <main className="flex-1 min-w-0">
+                {/* Contenu principal : padding bas pour bottom nav sur petit écran */}
+                <main className="flex-1 min-w-0 max-md:pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))] max-md:overscroll-y-contain">
                     {fullWidth ? children : (
-                        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 max-md:px-4 max-md:py-1">
                             {children}
                         </div>
                     )}
@@ -206,14 +213,21 @@ export default function AppLayout({ children, header, fullWidth = false }) {
             {/* Modal succès paiement abonnement */}
             <BillingPaymentSuccessModal />
 
-            {/* Assistants intelligents (Pharmacie + Quincaillerie + Commerce) */}
-            <AssistantsContainer permissions={permissions} />
+            {/* Bottom nav tactile (md:hidden dans le composant) */}
+            {user ? <MobileBottomNav /> : null}
 
-            {/* WhatsApp support (flottant) */}
-            <WhatsAppFloatingButton phone={whatsappNumber} enabled={whatsappSupportEnabled} />
+            {/* Assistants intelligents (Pharmacie + Quincaillerie + Commerce) */}
+            <AssistantsContainer permissions={permissions} extraMobileBottomPx={mobileBottomNavReservePx} />
+
+            {/* WhatsApp support (flottant) — au-dessus de la bottom nav sur mobile */}
+            <WhatsAppFloatingButton
+                phone={whatsappNumber}
+                enabled={whatsappSupportEnabled}
+                liftForMobileBottomNav={Boolean(user && isMobile)}
+            />
 
             {/* Support chat (flottant) */}
-            <SupportChatWidget />
+            <SupportChatWidget liftForMobileBottomNav={Boolean(user && isMobile)} />
         </div>
     );
 }

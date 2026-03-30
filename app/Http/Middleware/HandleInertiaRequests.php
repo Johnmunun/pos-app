@@ -211,6 +211,7 @@ class HandleInertiaRequests extends Middleware
             'ecommerce_catalog' => true,
             'ecommerce_orders' => true,
             'ecommerce_promotions' => true,
+            'ecommerce_marketing_pro' => true,
             'ecommerce_module' => true,
             'pharmacy_module' => true,
             'commerce_module' => true,
@@ -235,6 +236,7 @@ class HandleInertiaRequests extends Middleware
                 $planFeatures['ecommerce_catalog'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.catalog');
                 $planFeatures['ecommerce_orders'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.orders');
                 $planFeatures['ecommerce_promotions'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.promotions');
+                $planFeatures['ecommerce_marketing_pro'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.marketing.pro');
                 $planFeatures['ecommerce_module'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.module');
                 $planFeatures['pharmacy_module'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'pharmacy.module');
                 $planFeatures['commerce_module'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'commerce.module');

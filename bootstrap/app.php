@@ -14,6 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: [
             'api/billing/payments/callback',
+            // Ping audience vitrine (sous-domaine public, POST sans session CSRF fiable)
+            '_storefront/v',
         ]);
 
         $middleware->web(append: [

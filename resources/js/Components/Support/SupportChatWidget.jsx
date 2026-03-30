@@ -13,7 +13,7 @@ function formatTime(ts) {
     }
 }
 
-export default function SupportChatWidget() {
+export default function SupportChatWidget({ liftForMobileBottomNav = false }) {
     const { auth } = usePage().props;
     const user = auth?.user || null;
     const permissions = Array.isArray(auth?.permissions) ? auth.permissions : [];
@@ -32,6 +32,11 @@ export default function SupportChatWidget() {
     const [sending, setSending] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     const [attachment, setAttachment] = useState(null);
+
+    const openRef = useRef(open);
+    useEffect(() => {
+        openRef.current = open;
+    }, [open]);
 
     const esRef = useRef(null);
     const listRef = useRef(null);
@@ -83,7 +88,7 @@ export default function SupportChatWidget() {
                         return [...prev, payload];
                     });
                     if (incomingFromSupport) {
-                        if (!open) setUnreadCount((n) => n + 1);
+                        if (!openRef.current) setUnreadCount((n) => n + 1);
                         playChatNotificationSound();
                     }
                     setTimeout(scrollToBottom, 50);
@@ -128,21 +133,21 @@ export default function SupportChatWidget() {
                 esRef.current = null;
             }
         };
-    }, [canUse, open]);
+    }, [canUse]);
 
     useEffect(() => {
         if (!canUse) return;
         const onFcm = (event) => {
             const data = event?.detail?.data || event?.detail || {};
             if (String(data?.type || '') !== 'support.chat.message') return;
-            if (!open) {
+            if (!openRef.current) {
                 setUnreadCount((n) => n + 1);
             }
             playChatNotificationSound();
         };
         window.addEventListener('fcm-notification', onFcm);
         return () => window.removeEventListener('fcm-notification', onFcm);
-    }, [open, canUse]);
+    }, [canUse]);
 
     const send = async () => {
         const text = String(draft || '').trim();
@@ -172,27 +177,34 @@ export default function SupportChatWidget() {
         return null;
     }
 
+    const fixedShell =
+        `fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50${
+            liftForMobileBottomNav ? ' max-md:!bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))]' : ''
+        }`;
+
     return (
         <>
             {!open ? (
-                <button
-                    type="button"
-                    onClick={() => {
-                        setOpen(true);
-                        setUnreadCount(0);
-                    }}
-                    className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 inline-flex items-center justify-center h-12 w-12 rounded-full bg-amber-600 hover:bg-amber-700 text-white shadow-xl shadow-amber-600/30 transition-transform hover:translate-y-[-2px]"
-                    aria-label="Besoin d'aide ?"
-                >
-                    <MessageCircle className="h-6 w-6" />
-                    {unreadCount > 0 ? (
-                        <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-[11px] leading-5 text-center font-bold">
-                            {unreadCount > 9 ? '9+' : unreadCount}
-                        </span>
-                    ) : null}
-                </button>
+                <div className={fixedShell}>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setOpen(true);
+                            setUnreadCount(0);
+                        }}
+                        className="relative inline-flex items-center justify-center h-12 w-12 rounded-full bg-amber-600 hover:bg-amber-700 text-white shadow-xl shadow-amber-600/30 transition-transform hover:translate-y-[-2px]"
+                        aria-label="Besoin d'aide ?"
+                    >
+                        <MessageCircle className="h-6 w-6" />
+                        {unreadCount > 0 ? (
+                            <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-[11px] leading-5 text-center font-bold">
+                                {unreadCount > 9 ? '9+' : unreadCount}
+                            </span>
+                        ) : null}
+                    </button>
+                </div>
             ) : (
-                <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-[92vw] max-w-[420px]">
+                <div className={`${fixedShell} w-[92vw] max-w-[420px]`}>
                     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl overflow-hidden">
                         <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                             <div className="flex items-center gap-2">

@@ -1,6 +1,6 @@
 import PrimaryButton from '@/Components/PrimaryButton';
 import GuestLayout from '@/Layouts/GuestLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, useForm, router } from '@inertiajs/react';
 
 export default function VerifyEmail({ status }) {
     const { post, processing } = useForm({});
@@ -35,14 +35,13 @@ export default function VerifyEmail({ status }) {
                         Resend Verification Email
                     </PrimaryButton>
 
-                    <Link
-                        href={route('logout')}
-                        method="post"
-                        as="button"
+                    <button
+                        type="button"
+                        onClick={() => router.post(route('logout'))}
                         className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                     >
                         Log Out
-                    </Link>
+                    </button>
                 </div>
             </form>
         </GuestLayout>

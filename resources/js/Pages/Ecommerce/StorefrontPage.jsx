@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { ShoppingCart, ArrowLeft, MapPin, Phone, Mail, Clock } from 'lucide-react';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
+import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBootstrap';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 
 export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {} }) {
@@ -19,6 +20,7 @@ export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-50">
             <Head title={page?.title || 'Page'} />
+            <StorefrontClientBootstrap />
 
             {/* Header */}
             <header className="sticky top-0 z-40 border-b border-slate-200/70 dark:border-slate-800 bg-white/75 dark:bg-slate-950/60 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-950/50">

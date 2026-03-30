@@ -26,6 +26,8 @@ use Src\Infrastructure\Ecommerce\Http\Controllers\CmsBlogController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\CmsBlogCategoryController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\CmsMediaController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\MarketingController;
+use Src\Infrastructure\Ecommerce\Http\Controllers\EcommerceMarketingAiController;
+use Src\Infrastructure\Ecommerce\Http\Controllers\StorefrontVisitController;
 use Src\Infrastructure\GlobalCommerce\Http\Controllers\GcProductController;
 use Src\Infrastructure\GlobalCommerce\Http\Controllers\GcCategoryController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\SupplierController;
@@ -363,6 +365,11 @@ Route::prefix('ecommerce')
             ->middleware('permission:ecommerce.stock.view|module.ecommerce')
             ->name('stock.index');
 
+        // Compatibilite: ancien lien tuto e-commerce -> tuto global
+        Route::get('/tutorial', function () {
+            return redirect()->route('tutorial.index');
+        })->name('tutorial.index');
+
         // Rapports
         Route::get('/reports', [ReportController::class, 'index'])
             ->middleware(['permission:ecommerce.report.view|ecommerce.analytics.view|module.ecommerce', 'feature.enabled:analytics.advanced'])
@@ -392,6 +399,12 @@ Route::prefix('ecommerce')
         Route::put('/marketing', [MarketingController::class, 'update'])
             ->middleware('permission:ecommerce.marketing.manage|ecommerce.settings.update|module.ecommerce')
             ->name('marketing.update');
+        Route::post('/marketing/ai-suggest', EcommerceMarketingAiController::class)
+            ->middleware([
+                'permission:ecommerce.marketing.manage|ecommerce.settings.update|module.ecommerce',
+                'feature.enabled:ecommerce.marketing.pro',
+            ])
+            ->name('marketing.ai-suggest');
 
         // CMS vitrine e-commerce
         Route::get('/storefront/cms', [StorefrontController::class, 'cms'])
@@ -498,6 +511,9 @@ $ecommerceBaseDomain = config('services.ecommerce.base_domain', 'omnisolution.sh
 Route::domain('{subdomain}.'.$ecommerceBaseDomain)
     ->middleware(['resolve.storefront.by.subdomain'])
     ->group(function () {
+        Route::post('/_storefront/v', StorefrontVisitController::class)
+            ->middleware('throttle:120,1')
+            ->name('public.storefront.visit');
         Route::get('/', [StorefrontController::class, 'index'])->name('public.storefront.index');
         Route::get('/page/{slug}', [StorefrontController::class, 'showPage'])->name('public.storefront.page');
         Route::get('/blog', [StorefrontController::class, 'blog'])->name('public.storefront.blog');

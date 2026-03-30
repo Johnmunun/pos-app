@@ -7,6 +7,7 @@ import ShoppingCart from '@/Components/Ecommerce/ShoppingCart';
 import ProductCard from '@/Components/Ecommerce/ProductCard';
 import { Search, Package, Filter, Grid, List, SlidersHorizontal, X, ArrowLeft, Sparkles, ArrowRight } from 'lucide-react';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
+import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBootstrap';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 
 function shouldShowPageInNav(page) {
@@ -155,6 +156,7 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
     return (
         <>
             <Head title="Catalogue - Boutique" />
+            <StorefrontClientBootstrap />
 
             <StorefrontHeader shop={shop} cmsPages={cmsPages} />
 

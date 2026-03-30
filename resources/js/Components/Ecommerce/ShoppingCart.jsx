@@ -45,10 +45,10 @@ export default function ShoppingCart({ buttonClassName, storefrontLinks = false 
             />
             {/* Mini Cart Sidebar - au-dessus de tout */}
             <div
-                className="fixed top-0 right-0 h-full w-full sm:w-96 bg-white dark:bg-slate-800 shadow-2xl z-[9999] flex flex-col transform transition-transform duration-300 ease-in-out translate-x-0"
+                className="fixed top-0 right-0 h-[100dvh] w-full max-w-[100vw] sm:w-96 bg-white dark:bg-slate-800 shadow-2xl z-[9999] flex flex-col overflow-hidden transform transition-transform duration-300 ease-in-out translate-x-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
             >
                 {/* Header - style vitrine cohérent */}
-                <div className="flex items-center justify-between p-4 bg-[var(--sf-primary)] border-b border-[var(--sf-secondary)]/50">
+                <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-[var(--sf-primary)] border-b border-[var(--sf-secondary)]/50">
                     <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                         <ShoppingCartIcon className="h-5 w-5" />
                         Panier ({itemCount})
@@ -130,7 +130,7 @@ export default function ShoppingCart({ buttonClassName, storefrontLinks = false 
 
                 {/* Footer */}
                 {cart.length > 0 && (
-                    <div className="border-t border-slate-200 dark:border-slate-700 p-4 space-y-3 bg-white dark:bg-slate-800">
+                    <div className="sticky bottom-0 z-10 border-t border-slate-200 dark:border-slate-700 p-4 space-y-3 bg-white dark:bg-slate-800">
                         <div className="flex justify-between items-center">
                             <span className="text-slate-600 dark:text-slate-400">Sous-total</span>
                             <span className="text-lg font-bold text-slate-900 dark:text-white">

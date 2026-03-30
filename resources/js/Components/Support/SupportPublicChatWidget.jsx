@@ -23,6 +23,11 @@ export default function SupportPublicChatWidget() {
     const [unreadCount, setUnreadCount] = useState(0);
     const [attachment, setAttachment] = useState(null);
 
+    const openRef = useRef(open);
+    useEffect(() => {
+        openRef.current = open;
+    }, [open]);
+
     const [guestName, setGuestName] = useState('');
     const [guestPhone, setGuestPhone] = useState('');
     const [identified, setIdentified] = useState(false);
@@ -78,7 +83,7 @@ export default function SupportPublicChatWidget() {
                         return [...prev, payload];
                     });
                     if (incomingFromSupport) {
-                        if (!open) setUnreadCount((n) => n + 1);
+                        if (!openRef.current) setUnreadCount((n) => n + 1);
                         playChatNotificationSound();
                     }
                     setTimeout(scrollToBottom, 50);
@@ -142,20 +147,25 @@ export default function SupportPublicChatWidget() {
     return (
         <>
             {!open ? (
-                <button
-                    type="button"
-                    onClick={() => setOpen(true)}
-                    className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-[70] inline-flex items-center gap-2 h-12 px-4 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-600/30 transition-transform hover:translate-y-[-2px]"
-                    aria-label="Chat support"
-                >
-                    <MessageCircle className="h-6 w-6" />
-                    <span className="text-sm font-semibold whitespace-nowrap">Besoin d'aide ?</span>
-                    {unreadCount > 0 ? (
-                        <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-[11px] leading-5 text-center font-bold">
-                            {unreadCount > 9 ? '9+' : unreadCount}
-                        </span>
-                    ) : null}
-                </button>
+                <div className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-[70]">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setOpen(true);
+                            setUnreadCount(0);
+                        }}
+                        className="relative inline-flex items-center gap-2 h-12 px-4 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-600/30 transition-transform hover:translate-y-[-2px]"
+                        aria-label="Chat support"
+                    >
+                        <MessageCircle className="h-6 w-6" />
+                        <span className="text-sm font-semibold whitespace-nowrap">Besoin d'aide ?</span>
+                        {unreadCount > 0 ? (
+                            <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-[11px] leading-5 text-center font-bold">
+                                {unreadCount > 9 ? '9+' : unreadCount}
+                            </span>
+                        ) : null}
+                    </button>
+                </div>
             ) : (
                 <div className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-[70] w-[92vw] max-w-[420px]">
                     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl overflow-hidden">

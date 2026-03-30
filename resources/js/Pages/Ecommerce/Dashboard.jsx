@@ -15,6 +15,8 @@ import {
     FileDown,
     BarChart3,
     Database,
+    Globe,
+    Lock,
 } from 'lucide-react';
 import {
     LineChart,
@@ -34,7 +36,23 @@ import {
 import { formatCurrency } from '@/lib/currency';
 import ModuleOnboarding from '@/Components/ModuleOnboarding/ModuleOnboarding';
 
-export default function EcommerceDashboard({ stats = {}, chartOrders = [], chartOrderStatus = [], filters = {} }) {
+function countryLabel(code) {
+    if (!code) return 'Inconnu / non résolu';
+    try {
+        const dn = new Intl.DisplayNames(['fr'], { type: 'region' });
+        return dn.of(code) || code;
+    } catch {
+        return code;
+    }
+}
+
+export default function EcommerceDashboard({
+    stats = {},
+    chartOrders = [],
+    chartOrderStatus = [],
+    filters = {},
+    audienceGeo = {},
+}) {
     const { shop } = usePage().props;
     const currency = shop?.currency || 'CDF';
     const fmt = (amount) => formatCurrency(amount, currency);
@@ -77,6 +95,20 @@ export default function EcommerceDashboard({ stats = {}, chartOrders = [], chart
         count: Number(d.count ?? 0),
     }));
 
+    const audienceEnabled = !!audienceGeo?.enabled;
+    const audienceTotal = Number(audienceGeo?.total_visits ?? 0);
+    const audienceByCountry = Array.isArray(audienceGeo?.by_country) ? audienceGeo.by_country : [];
+    const geoChartData = audienceByCountry.map((row) => ({
+        label: countryLabel(row.country_code),
+        visits: Number(row.visits ?? 0),
+    }));
+    const topCities = Array.isArray(audienceGeo?.top_cities) ? audienceGeo.top_cities : [];
+    const audienceByRegion = Array.isArray(audienceGeo?.by_region) ? audienceGeo.by_region : [];
+    const regionChartData = audienceByRegion.map((row) => ({
+        label: `${row.region_name} (${countryLabel(row.country_code)})`,
+        visits: Number(row.visits ?? 0),
+    }));
+
     return (
         <AppLayout
             header={
@@ -116,7 +148,7 @@ export default function EcommerceDashboard({ stats = {}, chartOrders = [], chart
                     <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
                         <CardContent className="pt-6">
                             <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                Filtrer par période (pour le graphique et l&apos;export PDF)
+                                Filtrer par période (graphiques, export PDF et statistiques visiteurs par zone)
                             </p>
                             <div className="flex flex-wrap items-end gap-3">
                                 <div>
@@ -261,6 +293,163 @@ export default function EcommerceDashboard({ stats = {}, chartOrders = [], chart
                             </div>
                         </CardContent>
                     </Card>
+
+                    {audienceEnabled ? (
+                        <Card className="bg-gradient-to-br from-indigo-500 to-indigo-600 dark:from-indigo-600 dark:to-indigo-700 border-0 shadow-lg md:col-span-2 lg:col-span-1">
+                            <CardContent className="p-5 md:p-6">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                        <p className="text-indigo-100 text-sm font-medium mb-2">VISITES VITRINE (PÉRIODE)</p>
+                                        <p className="text-white text-2xl md:text-3xl font-bold mb-1">{audienceTotal}</p>
+                                        <p className="text-indigo-100 text-xs">Sous-domaine public • pays &amp; zones</p>
+                                    </div>
+                                    <div className="w-12 h-12 md:w-14 md:h-14 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                        <Globe className="h-6 w-6 md:h-7 md:w-7 text-white" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : null}
+                </div>
+
+                {/* Visiteurs par zones géographiques (toujours visible) */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                        <Globe className="h-5 w-5 text-indigo-500 shrink-0" />
+                        <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                            Visiteurs par zones géographiques
+                        </h3>
+                    </div>
+                    {!audienceEnabled ? (
+                        <Card className="bg-white dark:bg-slate-900 border border-dashed border-indigo-200 dark:border-indigo-800 p-5">
+                            <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
+                                <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center shrink-0">
+                                    <Lock className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                        Statistiques par pays, région et ville
+                                    </p>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                        Les graphiques d&apos;audience vitrine (trafic sur votre boutique publique) sont inclus avec les
+                                        {' '}
+                                        <strong>analytics avancées</strong>
+                                        {' '}
+                                        (plans Pro et Enterprise). Les données respectent la même plage de dates que le filtre ci-dessus.
+                                    </p>
+                                </div>
+                            </div>
+                        </Card>
+                    ) : (
+                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                            <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-4 xl:col-span-1">
+                                <CardHeader className="pb-3 px-0 pt-0">
+                                    <CardTitle className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <BarChart3 className="h-4 w-4 text-indigo-500" />
+                                        Par pays
+                                    </CardTitle>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Total période :{' '}
+                                        <span className="font-semibold text-indigo-600 dark:text-indigo-400">{audienceTotal}</span>
+                                        {' '}vues
+                                    </p>
+                                </CardHeader>
+                                <CardContent className="h-72 px-0 pb-0">
+                                    {geoChartData.length > 0 ? (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart
+                                                layout="vertical"
+                                                data={geoChartData}
+                                                margin={{ top: 4, right: 8, left: 4, bottom: 4 }}
+                                            >
+                                                <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-600" horizontal />
+                                                <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+                                                <YAxis type="category" dataKey="label" width={100} tick={{ fontSize: 10 }} />
+                                                <Tooltip formatter={(v) => [v, 'Visites']} contentStyle={{ borderRadius: 8 }} />
+                                                <Bar dataKey="visits" fill="#6366f1" radius={[0, 4, 4, 0]} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400 text-sm text-center px-2">
+                                            Aucune donnée sur cette période. Vérifiez le trafic sur votre sous-domaine vitrine public.
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-4 xl:col-span-1">
+                                <CardHeader className="pb-3 px-0 pt-0">
+                                    <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
+                                        Par région / État
+                                    </CardTitle>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Lorsque la géolocalisation fournit une région (approx. IP).
+                                    </p>
+                                </CardHeader>
+                                <CardContent className="h-72 px-0 pb-0">
+                                    {regionChartData.length > 0 ? (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart
+                                                layout="vertical"
+                                                data={regionChartData}
+                                                margin={{ top: 4, right: 8, left: 4, bottom: 4 }}
+                                            >
+                                                <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-600" horizontal />
+                                                <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+                                                <YAxis type="category" dataKey="label" width={108} tick={{ fontSize: 9 }} />
+                                                <Tooltip formatter={(v) => [v, 'Visites']} contentStyle={{ borderRadius: 8 }} />
+                                                <Bar dataKey="visits" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400 text-sm text-center px-2">
+                                            Pas encore de régions résolues (souvent limité à l&apos;indicatif pays).
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-4 xl:col-span-1">
+                                <CardHeader className="pb-3 px-0 pt-0">
+                                    <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
+                                        Top villes
+                                    </CardTitle>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Approximatif (mobile, VPN). Même période que le filtre.
+                                    </p>
+                                </CardHeader>
+                                <CardContent className="px-0 pb-0 max-h-72 overflow-y-auto">
+                                    {topCities.length > 0 ? (
+                                        <ul className="divide-y divide-gray-100 dark:divide-slate-800">
+                                            {topCities.map((c, i) => (
+                                                <li
+                                                    key={`${c.city}-${c.country_code}-${i}`}
+                                                    className="py-2 flex items-center justify-between gap-2 text-sm"
+                                                >
+                                                    <span className="text-gray-800 dark:text-gray-100 min-w-0 truncate">
+                                                        <span className="font-medium">{c.city}</span>
+                                                        {c.region_name ? (
+                                                            <span className="text-gray-500 dark:text-gray-400"> — {c.region_name}</span>
+                                                        ) : null}
+                                                        <span className="text-gray-400 dark:text-gray-500 text-xs ml-1">
+                                                            ({countryLabel(c.country_code)})
+                                                        </span>
+                                                    </span>
+                                                    <span className="tabular-nums font-semibold text-indigo-600 dark:text-indigo-400 shrink-0">
+                                                        {c.visits}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center">
+                                            Aucune ville sur cette période.
+                                        </p>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </div>
+                    )}
                 </div>
 
                 {/* Graphiques Recharts - Style Global Commerce */}
@@ -398,6 +587,7 @@ export default function EcommerceDashboard({ stats = {}, chartOrders = [], chart
                             )}
                         </CardContent>
                     </Card>
+
                 </div>
 
                 {/* Actions rapides - Style Global Commerce */}

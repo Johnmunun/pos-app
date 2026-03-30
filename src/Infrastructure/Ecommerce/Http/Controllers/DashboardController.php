@@ -13,6 +13,7 @@ use Src\Infrastructure\Ecommerce\Models\CustomerModel;
 use Src\Infrastructure\Ecommerce\Models\CmsMediaModel;
 use Src\Infrastructure\GlobalCommerce\Inventory\Models\ProductModel as GcProductModel;
 use Carbon\Carbon;
+use Src\Application\Billing\Services\FeatureLimitService;
 
 class DashboardController
 {
@@ -179,11 +180,91 @@ class DashboardController
             ];
         }
 
+        $audienceGeo = [
+            'enabled' => false,
+            'total_visits' => 0,
+            'by_country' => [],
+            'by_region' => [],
+            'top_cities' => [],
+        ];
+        $user = $request->user();
+        $tenantIdForFeatures = $user && $user->tenant_id ? (string) $user->tenant_id : null;
+        if (
+            $tenantIdForFeatures
+            && Schema::hasTable('ecommerce_storefront_visits')
+            && app(FeatureLimitService::class)->isFeatureEnabled($tenantIdForFeatures, 'analytics.advanced')
+        ) {
+            $audienceGeo['enabled'] = true;
+            $audienceGeo['total_visits'] = (int) DB::table('ecommerce_storefront_visits')
+                ->where('shop_id', $shopId)
+                ->whereBetween('created_at', [$from, $to])
+                ->count();
+
+            $countryRows = DB::table('ecommerce_storefront_visits')
+                ->where('shop_id', $shopId)
+                ->whereBetween('created_at', [$from, $to])
+                ->selectRaw('country_code, COUNT(*) as visits')
+                ->groupBy('country_code')
+                ->orderByDesc('visits')
+                ->limit(24)
+                ->get();
+
+            $audienceGeo['by_country'] = $countryRows
+                ->map(fn ($r) => [
+                    'country_code' => $r->country_code,
+                    'visits' => (int) $r->visits,
+                ])
+                ->values()
+                ->toArray();
+
+            $regionRows = DB::table('ecommerce_storefront_visits')
+                ->where('shop_id', $shopId)
+                ->whereBetween('created_at', [$from, $to])
+                ->whereNotNull('region_name')
+                ->where('region_name', '!=', '')
+                ->selectRaw('region_name, country_code, COUNT(*) as visits')
+                ->groupBy('region_name', 'country_code')
+                ->orderByDesc('visits')
+                ->limit(18)
+                ->get();
+
+            $audienceGeo['by_region'] = $regionRows
+                ->map(fn ($r) => [
+                    'region_name' => (string) $r->region_name,
+                    'country_code' => $r->country_code,
+                    'visits' => (int) $r->visits,
+                ])
+                ->values()
+                ->toArray();
+
+            $cityRows = DB::table('ecommerce_storefront_visits')
+                ->where('shop_id', $shopId)
+                ->whereBetween('created_at', [$from, $to])
+                ->whereNotNull('city')
+                ->where('city', '!=', '')
+                ->selectRaw('city, region_name, country_code, COUNT(*) as visits')
+                ->groupBy('city', 'region_name', 'country_code')
+                ->orderByDesc('visits')
+                ->limit(12)
+                ->get();
+
+            $audienceGeo['top_cities'] = $cityRows
+                ->map(fn ($r) => [
+                    'city' => (string) $r->city,
+                    'region_name' => $r->region_name !== null ? (string) $r->region_name : null,
+                    'country_code' => $r->country_code,
+                    'visits' => (int) $r->visits,
+                ])
+                ->values()
+                ->toArray();
+        }
+
         return Inertia::render('Ecommerce/Dashboard', [
             'filters' => [
                 'from' => $from->format('Y-m-d'),
                 'to' => $to->format('Y-m-d'),
             ],
+            'audienceGeo' => $audienceGeo,
             'stats' => [
                 'orders' => [
                     'total' => $ordersTotal,

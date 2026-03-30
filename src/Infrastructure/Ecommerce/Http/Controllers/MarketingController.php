@@ -7,9 +7,15 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use Src\Application\Billing\Services\FeatureLimitService;
 
 class MarketingController
 {
+    public function __construct(
+        private readonly FeatureLimitService $featureLimitService
+    ) {
+    }
+
     private function getShopId(Request $request): string
     {
         $user = $request->user();
@@ -30,6 +36,11 @@ class MarketingController
         return (string) $shopId;
     }
 
+    private function tenantIdForShop(Shop $shop): string
+    {
+        return $shop->tenant_id !== null ? (string) $shop->tenant_id : (string) $shop->id;
+    }
+
     public function index(Request $request): Response
     {
         $shopId = $this->getShopId($request);
@@ -44,15 +55,20 @@ class MarketingController
             $config = [];
         }
 
+        $tenantId = $this->tenantIdForShop($shop);
+        $marketingPro = $this->featureLimitService->isFeatureEnabled($tenantId, 'ecommerce.marketing.pro');
+        $audienceAnalytics = $this->featureLimitService->isFeatureEnabled($tenantId, 'analytics.advanced');
+
         $marketing = [
             'seo_title' => $config['seo_title'] ?? null,
             'seo_description' => $config['seo_description'] ?? null,
             'seo_keywords' => $config['seo_keywords'] ?? null,
             'seo_indexing_enabled' => (bool) ($config['seo_indexing_enabled'] ?? true),
-            'facebook_pixel_id' => $config['facebook_pixel_id'] ?? null,
-            'tiktok_pixel_id' => $config['tiktok_pixel_id'] ?? null,
-            'google_analytics_id' => $config['google_analytics_id'] ?? null,
-            'meta_verification' => $config['meta_verification'] ?? null,
+            'facebook_pixel_id' => $marketingPro ? ($config['facebook_pixel_id'] ?? null) : null,
+            'tiktok_pixel_id' => $marketingPro ? ($config['tiktok_pixel_id'] ?? null) : null,
+            'google_analytics_id' => $marketingPro ? ($config['google_analytics_id'] ?? null) : null,
+            'google_tag_manager_id' => $marketingPro ? ($config['google_tag_manager_id'] ?? null) : null,
+            'meta_verification' => $marketingPro ? ($config['meta_verification'] ?? null) : null,
             'marketing_notes' => $config['marketing_notes'] ?? null,
         ];
 
@@ -62,6 +78,8 @@ class MarketingController
                 'name' => $shop->name,
             ],
             'marketing' => $marketing,
+            'marketingProEnabled' => $marketingPro,
+            'audienceAnalyticsEnabled' => $audienceAnalytics,
         ]);
     }
 
@@ -74,17 +92,25 @@ class MarketingController
             abort(404, 'Shop not found');
         }
 
-        $data = $request->validate([
+        $tenantId = $this->tenantIdForShop($shop);
+        $marketingPro = $this->featureLimitService->isFeatureEnabled($tenantId, 'ecommerce.marketing.pro');
+
+        $rules = [
             'seo_title' => 'nullable|string|max:150',
             'seo_description' => 'nullable|string|max:255',
             'seo_keywords' => 'nullable|string|max:255',
             'seo_indexing_enabled' => 'sometimes|boolean',
-            'facebook_pixel_id' => 'nullable|string|max:100',
-            'tiktok_pixel_id' => 'nullable|string|max:100',
-            'google_analytics_id' => 'nullable|string|max:100',
-            'meta_verification' => 'nullable|string|max:255',
             'marketing_notes' => 'nullable|string|max:1000',
-        ]);
+        ];
+        if ($marketingPro) {
+            $rules['facebook_pixel_id'] = 'nullable|string|max:100';
+            $rules['tiktok_pixel_id'] = 'nullable|string|max:100';
+            $rules['google_analytics_id'] = 'nullable|string|max:100';
+            $rules['google_tag_manager_id'] = 'nullable|string|max:20';
+            $rules['meta_verification'] = 'nullable|string|max:255';
+        }
+
+        $data = $request->validate($rules);
 
         $current = $shop->ecommerce_storefront_config ?? [];
         if (!is_array($current)) {
@@ -95,6 +121,16 @@ class MarketingController
             $data['seo_indexing_enabled'] = $current['seo_indexing_enabled'] ?? true;
         }
 
+        if (!$marketingPro) {
+            unset(
+                $data['facebook_pixel_id'],
+                $data['tiktok_pixel_id'],
+                $data['google_analytics_id'],
+                $data['google_tag_manager_id'],
+                $data['meta_verification']
+            );
+        }
+
         $shop->ecommerce_storefront_config = array_merge($current, $data);
         $shop->save();
 
@@ -103,4 +139,3 @@ class MarketingController
             ->with('success', 'Paramètres marketing mis à jour.');
     }
 }
-

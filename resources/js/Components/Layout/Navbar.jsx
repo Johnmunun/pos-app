@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { toast } from 'react-hot-toast';
 import Dropdown from '@/Components/Dropdown';
 import GlobalSearch from '@/Components/GlobalSearch';
@@ -117,14 +117,14 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
     }, [isRoot]);
 
     return (
-        <nav className="sticky top-0 z-40 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
-            {/* Ligne principale */}
-            <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 lg:px-8 py-2.5 min-w-0">
+        <nav className="sticky top-0 z-40 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm max-md:pt-[env(safe-area-inset-top,0px)]">
+            {/* Ligne principale — zones tactiles plus grandes sur petit écran */}
+            <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 lg:px-8 py-2.5 min-w-0 max-md:py-3.5 max-md:px-3">
                 {/* Bouton menu mobile */}
                 <button
                     type="button"
                     onClick={onMenuClick}
-                    className="flex-shrink-0 p-2 text-gray-700 dark:text-gray-300 lg:hidden -ml-1"
+                    className="flex-shrink-0 p-2 text-gray-700 dark:text-gray-300 lg:hidden -ml-1 max-md:min-h-11 max-md:min-w-11 max-md:inline-flex max-md:items-center max-md:justify-center max-md:rounded-xl max-md:active:bg-gray-100 dark:max-md:active:bg-slate-700/80"
                 >
                     <span className="sr-only">Ouvrir le menu</span>
                     <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
@@ -335,17 +335,19 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
                             </>
                         )}
                         <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-                        <Dropdown.Link
-                            href="/logout"
-                            method="post"
-                            as="button"
-                            className="flex items-center gap-2 text-red-600 dark:text-red-400"
+                        <button
+                            type="button"
+                            onClick={() => router.post(route('logout'))}
+                            className={
+                                'block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 dark:text-gray-300 transition duration-150 ease-in-out hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700 focus:outline-none ' +
+                                'flex items-center gap-2 text-red-600 dark:text-red-400'
+                            }
                         >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                             </svg>
                             Déconnexion
-                        </Dropdown.Link>
+                        </button>
                         </Dropdown.Content>
                     </Dropdown>
                 </div>

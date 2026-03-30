@@ -1,6 +1,6 @@
 import { MessageCircle } from 'lucide-react';
 
-export default function WhatsAppFloatingButton({ phone, enabled, iconOnly = false }) {
+export default function WhatsAppFloatingButton({ phone, enabled, iconOnly = false, liftForMobileBottomNav = false }) {
     if (!enabled || !phone) {
         return null;
     }
@@ -13,8 +13,13 @@ export default function WhatsAppFloatingButton({ phone, enabled, iconOnly = fals
     const text = encodeURIComponent("Bonjour, je souhaite avoir des informations sur vos produits.");
     const href = `https://wa.me/${normalized}?text=${text}`;
 
+    /** Au-dessus de la bottom nav app (même réserve que AppLayout sur petit écran). */
+    const liftClasses = liftForMobileBottomNav
+        ? 'max-md:!bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))]'
+        : '';
+
     const baseClasses =
-        'fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 inline-flex items-center gap-2 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-xl shadow-emerald-500/40 font-semibold transition-transform hover:translate-y-[-2px]';
+        `fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 inline-flex items-center gap-2 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-xl shadow-emerald-500/40 font-semibold transition-transform hover:translate-y-[-2px] ${liftClasses}`;
 
     const iconWrapperClasses =
         'inline-flex items-center justify-center h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-emerald-400/90';

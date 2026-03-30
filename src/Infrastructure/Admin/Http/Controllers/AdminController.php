@@ -375,6 +375,8 @@ class AdminController
         usort($tenantRevenues, fn($a, $b) => $b['revenue'] <=> $a['revenue']);
         $topTenants = array_slice($tenantRevenues, 0, 10);
 
+        $audienceGeo = $this->buildRootStorefrontAudienceGeo($startDate, $endDate);
+
         return Inertia::render('Admin/RootDashboard', [
             'kpis' => [
                 'total_tenants' => $totalTenants,
@@ -420,7 +422,95 @@ class AdminController
             'period' => $period,
             'from' => $from,
             'to' => $to,
+            'audience_geo' => $audienceGeo,
         ]);
+    }
+
+    /**
+     * Agrégation globale des visites vitrine e-commerce (toutes boutiques), filtrée par la période du dashboard ROOT.
+     *
+     * @return array{enabled: bool, total_visits: int, by_country: array<int, array>, by_region: array<int, array>, top_cities: array<int, array>}
+     */
+    private function buildRootStorefrontAudienceGeo($startDate, $endDate): array
+    {
+        $result = [
+            'enabled' => false,
+            'total_visits' => 0,
+            'by_country' => [],
+            'by_region' => [],
+            'top_cities' => [],
+        ];
+
+        if (!\Illuminate\Support\Facades\Schema::hasTable('ecommerce_storefront_visits')) {
+            return $result;
+        }
+
+        $result['enabled'] = true;
+
+        $scoped = function () use ($startDate, $endDate) {
+            $q = \Illuminate\Support\Facades\DB::table('ecommerce_storefront_visits');
+            if ($startDate && $endDate) {
+                $q->whereBetween('created_at', [$startDate, $endDate]);
+            }
+
+            return $q;
+        };
+
+        $result['total_visits'] = (int) $scoped()->count();
+
+        $countryRows = $scoped()
+            ->selectRaw('country_code, COUNT(*) as visits')
+            ->groupBy('country_code')
+            ->orderByDesc('visits')
+            ->limit(24)
+            ->get();
+
+        $result['by_country'] = $countryRows
+            ->map(fn ($r) => [
+                'country_code' => $r->country_code,
+                'visits' => (int) $r->visits,
+            ])
+            ->values()
+            ->toArray();
+
+        $regionRows = $scoped()
+            ->whereNotNull('region_name')
+            ->where('region_name', '!=', '')
+            ->selectRaw('region_name, country_code, COUNT(*) as visits')
+            ->groupBy('region_name', 'country_code')
+            ->orderByDesc('visits')
+            ->limit(18)
+            ->get();
+
+        $result['by_region'] = $regionRows
+            ->map(fn ($r) => [
+                'region_name' => (string) $r->region_name,
+                'country_code' => $r->country_code,
+                'visits' => (int) $r->visits,
+            ])
+            ->values()
+            ->toArray();
+
+        $cityRows = $scoped()
+            ->whereNotNull('city')
+            ->where('city', '!=', '')
+            ->selectRaw('city, region_name, country_code, COUNT(*) as visits')
+            ->groupBy('city', 'region_name', 'country_code')
+            ->orderByDesc('visits')
+            ->limit(12)
+            ->get();
+
+        $result['top_cities'] = $cityRows
+            ->map(fn ($r) => [
+                'city' => (string) $r->city,
+                'region_name' => $r->region_name !== null ? (string) $r->region_name : null,
+                'country_code' => $r->country_code,
+                'visits' => (int) $r->visits,
+            ])
+            ->values()
+            ->toArray();
+
+        return $result;
     }
 
     /**

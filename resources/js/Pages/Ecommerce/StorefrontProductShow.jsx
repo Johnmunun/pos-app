@@ -6,6 +6,7 @@ import { Input } from '@/Components/ui/input';
 import { CartProvider, useCart } from '@/Contexts/CartContext';
 import ShoppingCart from '@/Components/Ecommerce/ShoppingCart';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
+import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBootstrap';
 import {
     ArrowLeft,
     ShoppingCart as ShoppingCartIcon,
@@ -123,6 +124,7 @@ function ProductContent({ product, reviews = [], shop, cmsPages, whatsapp = {}, 
     return (
         <>
             <Head title={product.name} />
+            <StorefrontClientBootstrap />
 
             <StorefrontProductHeader shop={shop} cmsPages={cmsPages} />
 

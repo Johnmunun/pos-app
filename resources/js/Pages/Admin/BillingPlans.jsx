@@ -62,7 +62,14 @@ export default function BillingPlans({ plans = [], subscriptions = [], overrides
     });
     const featureCodes = useMemo(() => {
         const keys = Object.keys(featureCatalog || {});
-        return keys.length > 0 ? keys : ['api.payments', 'products.max', 'users.max'];
+        if (keys.length === 0) {
+            return ['api.payments', 'products.max', 'users.max'];
+        }
+        return [...keys].sort((a, b) => {
+            const la = featureCatalog[a]?.label || a;
+            const lb = featureCatalog[b]?.label || b;
+            return String(la).localeCompare(String(lb), 'fr', { sensitivity: 'base' });
+        });
     }, [featureCatalog]);
 
     useEffect(() => {
@@ -264,7 +271,11 @@ export default function BillingPlans({ plans = [], subscriptions = [], overrides
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Plans & Limitations</h1>
                     <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
-                        Gestion dynamique des packs (Starter, Pro, Enterprise) sans hardcode.
+                        Gestion dynamique des packs (Starter, Pro, Enterprise) sans hardcode. Les lignes « Features » et les
+                        overrides ci-dessous suivent le catalogue{' '}
+                        <code className="text-xs bg-slate-200 dark:bg-slate-700 px-1 rounded">config/billing_features.php</code>
+                        {' '}(dont <strong>ecommerce.marketing.pro</strong> : pixels Meta/TikTok/Google, GTM/GA4, studio IA
+                        marketing).
                     </p>
                     <a
                         href={route('admin.billing.subscriptions.expired')}

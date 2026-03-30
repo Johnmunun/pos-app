@@ -29,6 +29,7 @@ import {
   Shield,
   ShieldAlert,
   LogIn,
+  Globe,
 } from 'lucide-react';
 import {
   LineChart,
@@ -61,8 +62,18 @@ function formatNumber(num) {
   return new Intl.NumberFormat('fr-FR').format(num);
 }
 
+function countryLabel(code) {
+  if (!code) return 'Inconnu / non résolu';
+  try {
+    const dn = new Intl.DisplayNames(['fr'], { type: 'region' });
+    return dn.of(code) || code;
+  } catch {
+    return code;
+  }
+}
+
 export default function RootDashboard() {
-  const { kpis, module_stats, trends, alerts, recent_activity, top_tenants, governance_security, period, from, to, auth } = usePage().props;
+  const { kpis, module_stats, trends, alerts, recent_activity, top_tenants, governance_security, period, from, to, auth, audience_geo: audienceGeo } = usePage().props;
   const permissions = auth?.permissions ?? [];
   const canViewDashboard = auth?.user?.type === 'ROOT' || permissions.includes('admin.dashboard.view');
   const canExport = auth?.user?.type === 'ROOT' || permissions.includes('admin.dashboard.export');
@@ -98,7 +109,7 @@ export default function RootDashboard() {
   };
 
   const handleRefresh = () => {
-    router.reload({ only: ['kpis', 'module_stats', 'trends', 'alerts', 'recent_activity', 'top_tenants'] });
+    router.reload({ only: ['kpis', 'module_stats', 'trends', 'alerts', 'recent_activity', 'top_tenants', 'audience_geo'] });
   };
 
   // Préparer les données pour les graphiques
@@ -122,6 +133,20 @@ export default function RootDashboard() {
     { name: 'Hardware', value: module_stats?.hardware?.users || 0 },
     { name: 'E-commerce', value: module_stats?.ecommerce?.users || 0 },
   ].filter((m) => m.value > 0);
+
+  const audienceEnabled = !!audienceGeo?.enabled;
+  const audienceTotal = Number(audienceGeo?.total_visits ?? 0);
+  const audienceByCountry = Array.isArray(audienceGeo?.by_country) ? audienceGeo.by_country : [];
+  const geoChartData = audienceByCountry.map((row) => ({
+    label: countryLabel(row.country_code),
+    visits: Number(row.visits ?? 0),
+  }));
+  const audienceByRegion = Array.isArray(audienceGeo?.by_region) ? audienceGeo.by_region : [];
+  const regionChartData = audienceByRegion.map((row) => ({
+    label: `${row.region_name} (${countryLabel(row.country_code)})`,
+    visits: Number(row.visits ?? 0),
+  }));
+  const topCities = Array.isArray(audienceGeo?.top_cities) ? audienceGeo.top_cities : [];
 
   return (
     <AppLayout>
@@ -433,6 +458,123 @@ export default function RootDashboard() {
               </div>
             </CardContent>
           </Card>
+
+          {/* 3b. Trafic vitrine e-commerce par zone (agrégation globale, période sélectionnée) */}
+          {audienceEnabled && (
+            <div className="mb-8 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-5 w-5 text-indigo-500 shrink-0" />
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                    Visites vitrine par zone géographique
+                  </h2>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Total période :{' '}
+                  <span className="font-semibold text-indigo-600 dark:text-indigo-400">{formatNumber(audienceTotal)}</span>
+                  {' '}vues (toutes boutiques)
+                </p>
+              </div>
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-4 xl:col-span-1">
+                  <CardHeader className="pb-3 px-0 pt-0">
+                    <CardTitle className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-indigo-500" />
+                      Par pays
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="h-72 px-0 pb-0">
+                    {geoChartData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          layout="vertical"
+                          data={geoChartData}
+                          margin={{ top: 4, right: 8, left: 4, bottom: 4 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-600" horizontal />
+                          <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+                          <YAxis type="category" dataKey="label" width={100} tick={{ fontSize: 10 }} />
+                          <Tooltip formatter={(v) => [v, 'Visites']} contentStyle={{ borderRadius: 8 }} />
+                          <Bar dataKey="visits" fill="#6366f1" radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400 text-sm text-center px-2">
+                        Aucune visite enregistrée sur cette période.
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-4 xl:col-span-1">
+                  <CardHeader className="pb-3 px-0 pt-0">
+                    <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
+                      Par région / État
+                    </CardTitle>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Lorsque la géolocalisation IP fournit une région.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="h-72 px-0 pb-0">
+                    {regionChartData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          layout="vertical"
+                          data={regionChartData}
+                          margin={{ top: 4, right: 8, left: 4, bottom: 4 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-600" horizontal />
+                          <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+                          <YAxis type="category" dataKey="label" width={108} tick={{ fontSize: 9 }} />
+                          <Tooltip formatter={(v) => [v, 'Visites']} contentStyle={{ borderRadius: 8 }} />
+                          <Bar dataKey="visits" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400 text-sm text-center px-2">
+                        Pas encore de données régionales sur cette période.
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-4 xl:col-span-1">
+                  <CardHeader className="pb-3 px-0 pt-0">
+                    <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
+                      Top villes
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-0 pb-0">
+                    {topCities.length > 0 ? (
+                      <ul className="space-y-2 text-sm max-h-72 overflow-y-auto pr-1">
+                        {topCities.map((c, i) => (
+                          <li
+                            key={`${c.city}-${c.country_code}-${i}`}
+                            className="flex items-center justify-between gap-2 border-b border-gray-100 dark:border-slate-700 pb-2"
+                          >
+                            <span className="text-gray-800 dark:text-gray-200 truncate">
+                              {c.city}
+                              <span className="text-gray-500 dark:text-gray-400 text-xs">
+                                {' '}
+                                ({countryLabel(c.country_code)})
+                              </span>
+                            </span>
+                            <span className="font-semibold text-indigo-600 dark:text-indigo-400 shrink-0">
+                              {formatNumber(c.visits)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="h-48 flex items-center justify-center text-gray-500 dark:text-gray-400 text-sm text-center px-2">
+                        Pas encore de villes renseignées sur cette période.
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
 
           {/* 4. Alertes système */}
           {alerts && alerts.length > 0 && (

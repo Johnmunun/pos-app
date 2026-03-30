@@ -3,7 +3,7 @@ import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import FlashMessages from '@/Components/FlashMessages';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function AuthenticatedLayout({ header, children }) {
@@ -67,13 +67,13 @@ export default function AuthenticatedLayout({ header, children }) {
                                         >
                                             Profile
                                         </Dropdown.Link>
-                                        <Dropdown.Link
-                                            href={route('logout')}
-                                            method="post"
-                                            as="button"
+                                        <button
+                                            type="button"
+                                            onClick={() => router.post(route('logout'))}
+                                            className="block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 dark:text-gray-300 transition duration-150 ease-in-out hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700 focus:outline-none"
                                         >
                                             Log Out
-                                        </Dropdown.Link>
+                                        </button>
                                     </Dropdown.Content>
                                 </Dropdown>
                             </div>
@@ -151,13 +151,13 @@ export default function AuthenticatedLayout({ header, children }) {
                             <ResponsiveNavLink href={route('profile.edit')}>
                                 Profile
                             </ResponsiveNavLink>
-                            <ResponsiveNavLink
-                                method="post"
-                                href={route('logout')}
-                                as="button"
+                            <button
+                                type="button"
+                                onClick={() => router.post(route('logout'))}
+                                className="flex w-full items-start border-l-4 border-transparent py-2 pe-4 ps-3 text-base font-medium text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 focus:border-gray-300 focus:bg-gray-50 focus:text-gray-800 transition duration-150 ease-in-out focus:outline-none"
                             >
                                 Log Out
-                            </ResponsiveNavLink>
+                            </button>
                         </div>
                     </div>
                 </div>

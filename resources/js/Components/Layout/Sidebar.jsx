@@ -1,6 +1,13 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import {
+    hasPharmacyAccess as hasPharmacyAccessFromLib,
+    hasHardwareAccess as hasHardwareAccessFromLib,
+    hasCommerceModuleAccess as hasCommerceModuleAccessFromLib,
+    hasEcommerceModuleAccess as hasEcommerceModuleAccessFromLib,
+    hasItemPermission as hasItemPermissionFromLib,
+} from '@/lib/sidebarModuleAccess';
+import {
     Home,
     LayoutDashboard,
     Bell,
@@ -98,13 +105,8 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
         }));
     };
 
-    // Vérifier si l'utilisateur a au moins une des permissions d'un item (supporte "perm1|perm2")
-    const hasItemPermission = (itemPermission) => {
-        if (isRoot || permissions.includes('*')) return true;
-        if (itemPermission === '*') return true;
-        const perms = String(itemPermission).split('|').map(p => p.trim()).filter(Boolean);
-        return perms.some(p => permissions.includes(p));
-    };
+    const hasItemPermission = (itemPermission) =>
+        hasItemPermissionFromLib(permissions, isRoot, itemPermission);
 
     // Vérifier si un groupe a au moins une permission visible
     const hasVisibleItem = (groupPermissions) => {
@@ -114,56 +116,12 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
         return groupPermissions.some(perm => permissions.includes(perm));
     };
 
-    // Pour le groupe Pharmacy : afficher si l'utilisateur a une permission pharmacy.* ou module.pharmacy
-    // Ne pas inclure stock.* ou inventory.* car ils sont partagés avec Hardware
-    // Si tenantSector est 'hardware', ne jamais montrer Pharmacy
-    const hasPharmacyAccess = () => {
-        if (tenantSector === 'hardware') return false; // Si on est dans Hardware, ne pas montrer Pharmacy
-        if (isRoot || permissions.includes('*')) return true;
-        return permissions.some(
-            (p) =>
-                p === 'module.pharmacy' ||
-                (typeof p === 'string' && p.startsWith('pharmacy.'))
-        );
-    };
-
-    // Pour le groupe Quincaillerie : module.hardware, hardware.* ou tenant secteur "hardware"
-    // Si tenantSector est 'pharmacy', ne jamais montrer Hardware
-    const hasHardwareAccess = () => {
-        if (tenantSector === 'pharmacy') return false; // Si on est dans Pharmacy, ne pas montrer Hardware
-        if (isRoot || permissions.includes('*')) return true;
-        if (tenantSector === 'hardware') return true;
-        return permissions.some(
-            (p) => p === 'module.hardware' || (typeof p === 'string' && p.startsWith('hardware.'))
-        );
-    };
-
-    // Module Global Commerce (Kiosque, Supermarché, Boucherie, Autre)
-    // IMPORTANT: Ne pas confondre avec module.ecommerce (vente en ligne)
-    const hasCommerceModuleAccess = () => {
-        if (typeof url === 'string' && url.startsWith('/ecommerce')) return false;
-        if (isRoot || permissions.includes('*')) return true;
-        // Si le tenant est explicitement pharmacy, hardware ou ecommerce, ne pas montrer Commerce
-        if (tenantSector === 'pharmacy' || tenantSector === 'hardware' || tenantSector === 'ecommerce') return false;
-        // Si le tenant est commerce ou un secteur commerce (kiosk, supermarket, butchery, other)
-        if (tenantSector === 'commerce' || ['kiosk', 'supermarket', 'butchery', 'other'].includes(tenantSector)) return true;
-        // Vérifier les permissions - mais exclure ecommerce
-        if (permissions.includes('module.ecommerce')) return false; // E-commerce est un module séparé
-        // Sinon, vérifier les permissions commerce
-        return permissions.some(
-            (p) => p === 'module.commerce' || (typeof p === 'string' && p.startsWith('commerce.'))
-        );
-    };
-
-    // Module E-commerce (Vente en ligne) - séparé du module Commerce
-    const hasEcommerceModuleAccess = () => {
-        if (typeof url === 'string' && url.startsWith('/commerce')) return false;
-        if (isRoot || permissions.includes('*')) return true;
-        if (tenantSector === 'ecommerce') return true;
-        return permissions.some(
-            (p) => p === 'module.ecommerce' || (typeof p === 'string' && p.startsWith('ecommerce.'))
-        );
-    };
+    const hasPharmacyAccess = () => hasPharmacyAccessFromLib({ permissions, tenantSector, isRoot });
+    const hasHardwareAccess = () => hasHardwareAccessFromLib({ permissions, tenantSector, isRoot });
+    const hasCommerceModuleAccess = () =>
+        hasCommerceModuleAccessFromLib({ permissions, tenantSector, isRoot, url });
+    const hasEcommerceModuleAccess = () =>
+        hasEcommerceModuleAccessFromLib({ permissions, tenantSector, isRoot, url });
 
     // Définition des groupes de navigation
     const navigationGroups = [
@@ -175,6 +133,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
             items: [
                 { label: 'Dashboard', href: '/dashboard', permission: '*', icon: LayoutDashboard, rootOnly: true, excludeSectors: ['ecommerce'] },
                 { label: 'Mon profil', href: '/profile', permission: '*', icon: User },
+                { label: 'Tuto', href: '/tutorial', permission: '*', icon: BookOpen },
                 { label: 'Notifications', href: '#', permission: 'notifications.view', icon: Bell },
                 { label: 'Activité récente', href: '#', permission: 'activity.view', icon: ClipboardList },
             ]
@@ -576,7 +535,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
 
             {/* Sidebar Mobile - Drawer */}
             <aside
-                className={`fixed inset-y-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:hidden ${
+                className={`fixed inset-y-0 z-50 w-[min(20rem,calc(100vw-1rem))] max-w-[100vw] sm:w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:hidden max-md:shadow-2xl max-md:pt-[env(safe-area-inset-top,0px)] max-md:pb-[env(safe-area-inset-bottom,0px)] ${
                     isOpen ? 'translate-x-0' : '-translate-x-full'
                 }`}
             >
@@ -672,7 +631,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                                                 return (
                                                     <li key={item.label}>
                                                         <div
-                                                            className={`group flex items-center justify-between gap-x-2 rounded-lg p-3 text-sm leading-6 font-medium transition-colors ${
+                                                            className={`group flex items-center justify-between gap-x-2 rounded-lg p-3 max-md:min-h-[52px] max-md:py-3.5 text-sm leading-6 font-medium transition-colors active:bg-gray-100/80 dark:active:bg-gray-700/60 ${
                                                                 isLocked
                                                                     ? 'bg-gray-50 dark:bg-gray-700/40 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                                                                     : (isActive
@@ -682,11 +641,11 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                                                         >
                                                             {isLocked ? (
                                                                 <div className="flex items-center gap-x-3 min-w-0 opacity-80">
-                                                                    {IconComponent && <IconComponent className="h-5 w-5 shrink-0 text-gray-400 dark:text-gray-500" />}
+                                                                    {IconComponent && <IconComponent className="h-5 w-5 max-md:h-6 max-md:w-6 shrink-0 text-gray-400 dark:text-gray-500" />}
                                                                     <span className="blur-[1px] select-none">{item.label}</span>
                                                                 </div>
                                                             ) : (
-                                                                <Link href={item.href} onClick={onClose} className="flex items-center gap-x-3 min-w-0 w-full">
+                                                                <Link href={item.href} onClick={onClose} className="flex items-center gap-x-3 min-w-0 w-full touch-manipulation">
                                                                     {IconComponent && (
                                                                         <IconComponent 
                                                                             className={`h-5 w-5 shrink-0 ${

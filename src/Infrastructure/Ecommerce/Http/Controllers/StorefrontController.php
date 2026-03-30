@@ -22,6 +22,7 @@ use Src\Infrastructure\Ecommerce\Services\DefaultCmsPagesService;
 use Src\Infrastructure\Ecommerce\Models\PaymentMethodModel;
 use Src\Infrastructure\Ecommerce\Models\ShippingMethodModel;
 use Src\Infrastructure\GlobalCommerce\Inventory\Models\ProductModel;
+use Src\Application\Billing\Services\FeatureLimitService;
 
 class StorefrontController
 {
@@ -529,7 +530,7 @@ class StorefrontController
             $payload['currentStorefrontShopId'] = (int) $request->session()->get('current_storefront_shop_id', $shop->id);
         }
 
-        return Inertia::render('Ecommerce/Storefront', $payload);
+        return Inertia::render('Ecommerce/Storefront', $this->mergeStorefrontClientProps($request, $shop, $payload));
     }
 
     /**
@@ -667,7 +668,7 @@ class StorefrontController
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);
 
-        return Inertia::render('Ecommerce/StorefrontPage', [
+        $pagePayload = [
             'shop' => [
                 'id' => $shop->id,
                 'name' => $shop->name,
@@ -688,7 +689,9 @@ class StorefrontController
                 'number' => $storefrontConfig['whatsapp_number'] ?? null,
                 'enabled' => (bool) ($storefrontConfig['whatsapp_support_enabled'] ?? false),
             ],
-        ]);
+        ];
+
+        return Inertia::render('Ecommerce/StorefrontPage', $this->mergeStorefrontClientProps($request, $shop, $pagePayload));
     }
 
     /**
@@ -819,7 +822,7 @@ class StorefrontController
 
         $storefrontConfig = $this->getStorefrontConfig($shop);
 
-        return Inertia::render('Ecommerce/StorefrontCatalog', [
+        $catalogPayload = [
             'shop' => [
                 'id' => $shop->id,
                 'name' => $shop->name,
@@ -835,7 +838,9 @@ class StorefrontController
                 'number' => $storefrontConfig['whatsapp_number'] ?? null,
                 'enabled' => (bool) ($storefrontConfig['whatsapp_support_enabled'] ?? false),
             ],
-        ]);
+        ];
+
+        return Inertia::render('Ecommerce/StorefrontCatalog', $this->mergeStorefrontClientProps($request, $shop, $catalogPayload));
     }
 
     /**
@@ -935,7 +940,7 @@ class StorefrontController
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);
 
-        return Inertia::render('Ecommerce/StorefrontProductShow', [
+        $productPayload = [
             'shop' => [
                 'id' => $shop->id,
                 'name' => $shop->name,
@@ -949,7 +954,9 @@ class StorefrontController
                 'number' => $storefrontConfig['whatsapp_number'] ?? null,
                 'enabled' => (bool) ($storefrontConfig['whatsapp_support_enabled'] ?? false),
             ],
-        ]);
+        ];
+
+        return Inertia::render('Ecommerce/StorefrontProductShow', $this->mergeStorefrontClientProps($request, $shop, $productPayload));
     }
 
     /**
@@ -1009,7 +1016,7 @@ class StorefrontController
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);
 
-        return Inertia::render('Ecommerce/StorefrontCart', [
+        $cartPayload = [
             'shop' => [
                 'id' => $shop->id,
                 'name' => $shop->name,
@@ -1028,7 +1035,9 @@ class StorefrontController
                 'number' => $storefrontConfig['whatsapp_number'] ?? null,
                 'enabled' => (bool) ($storefrontConfig['whatsapp_support_enabled'] ?? false),
             ],
-        ]);
+        ];
+
+        return Inertia::render('Ecommerce/StorefrontCart', $this->mergeStorefrontClientProps($request, $shop, $cartPayload));
     }
 
     /**
@@ -1202,7 +1211,7 @@ class StorefrontController
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);
 
-        return Inertia::render('Ecommerce/StorefrontBlog', [
+        $blogPayload = [
             'shop' => [
                 'id' => $shop->id,
                 'name' => $shop->name,
@@ -1215,7 +1224,9 @@ class StorefrontController
                 'number' => $storefrontConfig['whatsapp_number'] ?? null,
                 'enabled' => (bool) ($storefrontConfig['whatsapp_support_enabled'] ?? false),
             ],
-        ]);
+        ];
+
+        return Inertia::render('Ecommerce/StorefrontBlog', $this->mergeStorefrontClientProps($request, $shop, $blogPayload));
     }
 
     public function blogShow(Request $request, string $slug): Response
@@ -1257,7 +1268,7 @@ class StorefrontController
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);
 
-        return Inertia::render('Ecommerce/StorefrontBlogShow', [
+        $blogShowPayload = [
             'shop' => [
                 'id' => $shop->id,
                 'name' => $shop->name,
@@ -1278,7 +1289,55 @@ class StorefrontController
                 'number' => $storefrontConfig['whatsapp_number'] ?? null,
                 'enabled' => (bool) ($storefrontConfig['whatsapp_support_enabled'] ?? false),
             ],
-        ]);
+        ];
+
+        return Inertia::render('Ecommerce/StorefrontBlogShow', $this->mergeStorefrontClientProps($request, $shop, $blogShowPayload));
+    }
+
+    /**
+     * Pixels / tags (plan marketing Pro) et ping audience (analytics avancé + sous-domaine public).
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function mergeStorefrontClientProps(Request $request, Shop $shop, array $payload): array
+    {
+        $tenantId = $shop->tenant_id !== null ? (string) $shop->tenant_id : (string) $shop->id;
+        $features = app(FeatureLimitService::class);
+        $marketingPro = $features->isFeatureEnabled($tenantId, 'ecommerce.marketing.pro');
+        $audience = $features->isFeatureEnabled($tenantId, 'analytics.advanced');
+        $isPublicSubdomain = $request->attributes->get('storefront_shop') instanceof Shop;
+
+        $cfg = $shop->ecommerce_storefront_config ?? [];
+        if (!is_array($cfg)) {
+            $cfg = [];
+        }
+
+        $payload['storefrontClient'] = [
+            'audience' => [
+                'enabled' => $audience && $isPublicSubdomain,
+                'pingPath' => '/_storefront/v',
+            ],
+            'marketingTags' => $marketingPro ? [
+                'facebookPixelId' => $this->nonEmptyString($cfg['facebook_pixel_id'] ?? null),
+                'tiktokPixelId' => $this->nonEmptyString($cfg['tiktok_pixel_id'] ?? null),
+                'googleAnalyticsId' => $this->nonEmptyString($cfg['google_analytics_id'] ?? null),
+                'googleTagManagerId' => $this->nonEmptyString($cfg['google_tag_manager_id'] ?? null),
+                'metaVerification' => $this->nonEmptyString($cfg['meta_verification'] ?? null),
+            ] : null,
+        ];
+
+        return $payload;
+    }
+
+    private function nonEmptyString(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        $s = trim((string) $value);
+
+        return $s === '' ? null : $s;
     }
 }
 

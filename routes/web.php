@@ -404,6 +404,10 @@ Route::middleware(['auth', 'verified', 'root', 'permission'])->group(function ()
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/tutorial', function () {
+        return Inertia::render('Tutorial/Index');
+    })->name('tutorial.index');
+
     Route::get('/admin/mail-settings', [AdminMailSettingsController::class, 'index'])
         ->middleware('permission:settings.mail.manage')
         ->name('admin.mail-settings');
