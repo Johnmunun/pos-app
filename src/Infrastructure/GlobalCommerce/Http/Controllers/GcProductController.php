@@ -34,7 +34,11 @@ class GcProductController
             abort(403);
         }
 
-        $depotId = $request->session()->get('current_depot_id');
+        // Mobile API (token auth) may not have session, allow depot_id input fallback.
+        $depotId = $request->filled('depot_id') ? (int) $request->input('depot_id') : null;
+        if (!$depotId && $request->hasSession()) {
+            $depotId = $request->session()->get('current_depot_id');
+        }
 
         if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
             $shop = \App\Models\Shop::where('depot_id', (int) $depotId)

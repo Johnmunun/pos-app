@@ -39,6 +39,15 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    // Backward compatibility: some legacy links/assets may still hit GET /logout.
+    Route::get('logout', function (\Illuminate\Http\Request $request) {
+        \Illuminate\Support\Facades\Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect('/');
+    })->name('logout.get');
+
     Route::get('verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');
 

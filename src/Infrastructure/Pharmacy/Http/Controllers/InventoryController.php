@@ -125,7 +125,10 @@ class InventoryController
             return redirect()->back()->withErrors(['message' => 'Shop ID not found.']);
         }
 
-        $depotId = $request->session()->get('current_depot_id');
+        $depotId = $request->filled('depot_id') ? (int) $request->input('depot_id') : null;
+        if (!$depotId && $request->hasSession()) {
+            $depotId = $request->session()->get('current_depot_id');
+        }
         $depotId = $depotId !== null ? (int) $depotId : null;
 
         try {

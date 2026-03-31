@@ -63,7 +63,10 @@ class PurchaseController
             abort(403, 'User not authenticated.');
         }
         $shopId = null;
-        $depotId = $request->session()->get('current_depot_id');
+        $depotId = $request->filled('depot_id') ? (int) $request->input('depot_id') : null;
+        if (!$depotId && $request->hasSession()) {
+            $depotId = $request->session()->get('current_depot_id');
+        }
         if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
             $shopByDepot = \App\Models\Shop::where('depot_id', $depotId)->where('tenant_id', $user->tenant_id)->first();
             if ($shopByDepot) {

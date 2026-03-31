@@ -17,6 +17,7 @@ use Src\Infrastructure\GlobalCommerce\Sales\Models\SaleModel;
 use Src\Infrastructure\GlobalCommerce\Services\ProductImageService;
 use App\Models\Customer;
 use App\Models\Shop;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Src\Application\Settings\UseCases\GetStoreSettingsUseCase;
 use Src\Infrastructure\Settings\Services\StoreLogoService;
@@ -32,7 +33,11 @@ class GcSaleController
             abort(403);
         }
 
-        $depotId = $request->session()->get('current_depot_id');
+        // Mobile API (token auth) may not have session, allow depot_id input fallback.
+        $depotId = $request->filled('depot_id') ? (int) $request->input('depot_id') : null;
+        if (!$depotId && $request->hasSession()) {
+            $depotId = $request->session()->get('current_depot_id');
+        }
 
         if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
             $shop = \App\Models\Shop::where('depot_id', (int) $depotId)
@@ -219,7 +224,7 @@ class GcSaleController
         
         // Log pour déboguer
         $linesInput = $request->input('lines', []);
-        \Log::debug('GcSaleController::store - Données reçues', [
+        Log::debug('GcSaleController::store - Données reçues', [
             'lines' => $linesInput,
             'lines_count' => count($linesInput),
             'first_line' => $linesInput[0] ?? null,
@@ -232,19 +237,19 @@ class GcSaleController
         $cleanedLines = [];
         foreach ($linesInput as $index => $line) {
             if (!is_array($line)) {
-                \Log::warning("Ligne {$index} n'est pas un tableau", ['line' => $line]);
+                Log::warning("Ligne {$index} n'est pas un tableau", ['line' => $line]);
                 continue;
             }
             
             // S'assurer que quantity existe et est valide
             if (!isset($line['quantity']) || $line['quantity'] === null || $line['quantity'] === '') {
-                \Log::warning("Ligne {$index} n'a pas de quantity", ['line' => $line]);
+                Log::warning("Ligne {$index} n'a pas de quantity", ['line' => $line]);
                 continue;
             }
             
             $quantity = (float) $line['quantity'];
             if ($quantity <= 0 || is_nan($quantity)) {
-                \Log::warning("Ligne {$index} a une quantity invalide", ['quantity' => $line['quantity'], 'line' => $line]);
+                Log::warning("Ligne {$index} a une quantity invalide", ['quantity' => $line['quantity'], 'line' => $line]);
                 continue;
             }
             

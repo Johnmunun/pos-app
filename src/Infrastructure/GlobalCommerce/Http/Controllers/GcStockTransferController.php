@@ -30,7 +30,10 @@ class GcStockTransferController
             abort(403, 'User not authenticated.');
         }
 
-        $depotId = $request->session()->get('current_depot_id');
+        $depotId = $request->filled('depot_id') ? (int) $request->input('depot_id') : null;
+        if (!$depotId && $request->hasSession()) {
+            $depotId = $request->session()->get('current_depot_id');
+        }
         if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
             $shop = Shop::where('depot_id', (int) $depotId)
                 ->where('tenant_id', $user->tenant_id)
