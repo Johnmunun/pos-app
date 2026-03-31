@@ -1,176 +1,71 @@
-# 📘 POS SaaS - Documentation Complète
+<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
-## Vue d'ensemble
+<p align="center">
+<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
+<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
+<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
+<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+</p>
 
-**POS SaaS** est un système de point de vente professionnel, multi-tenant, destiné au marché africain avec architecture **Domain Driven Design (DDD)**.
+## About Laravel
 
-### Caractéristiques principales
+Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
 
-- ✅ **Multi-tenant** : Plusieurs commerçants/boutiques dans une seule application
-- ✅ **Rôles et permissions dynamiques** : Aucune permission codée en dur
-- ✅ **Architecture DDD** : Séparation claire Domain / Application / Infrastructure
-- ✅ **API REST scalable** : Avec Laravel Sanctum
-- ✅ **Frontend moderne** : React 18 + Inertia.js + Tailwind CSS
-- ✅ **Modèle SaaS** : Système d'abonnement inclus
+- [Simple, fast routing engine](https://laravel.com/docs/routing).
+- [Powerful dependency injection container](https://laravel.com/docs/container).
+- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
+- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
+- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
+- [Robust background job processing](https://laravel.com/docs/queues).
+- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
 
----
+Laravel is accessible, powerful, and provides tools required for large, robust applications.
 
-## Structure du projet
+## Learning Laravel
 
-```
-pos-saas/
-├── app/                    # Code Laravel (Controllers, Models, Requests)
-├── src/
-│   └── Domains/           # Domaines métier (DDD)
-│       ├── Tenant/        # Multi-tenancy
-│       ├── User/          # Gestion des utilisateurs
-│       ├── AccessControl/ # Rôles et permissions
-│       ├── Product/       # Catalogue produits
-│       ├── Inventory/     # Gestion du stock
-│       ├── Sale/          # Ventes
-│       ├── Payment/       # Paiements
-│       ├── Shop/          # Configuration des boutiques
-│       ├── Subscription/  # Plans SaaS
-│       └── Reporting/     # Rapports
-├── resources/
-│   └── js/               # Composants React
-├── database/
-│   └── migrations/       # Migrations Laravel
-├── config/               # Configuration Laravel
-├── routes/               # Définition des routes
-└── docs/                 # Documentation (ce dossier)
-```
+Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
 
----
+If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
 
-## Pile technologique
+## Laravel Sponsors
 
-| Couche       | Technologie     | Version |
-| ------------ | --------------- | ------- |
-| Backend      | Laravel         | 12.x    |
-| PHP          | PHP             | 8.2+    |
-| Database     | SQLite/MySQL    | -       |
-| Frontend     | React           | 18.x    |
-| UI Framework | Tailwind CSS    | 3.x     |
-| Bridge       | Inertia.js      | 2.x     |
-| API Auth     | Laravel Sanctum | 4.x     |
-| Bundler      | Vite            | 7.x     |
+We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
 
----
+### Premium Partners
 
-## Principes fondamentaux
+- **[Vehikl](https://vehikl.com)**
+- **[Tighten Co.](https://tighten.co)**
+- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
+- **[64 Robots](https://64robots.com)**
+- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
+- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
+- **[Redberry](https://redberry.international/laravel-development)**
+- **[Active Logic](https://activelogic.com)**
 
-### 1. Domain Driven Design (DDD)
+## Contributing
 
-Chaque domaine métier est isolé et autonome :
+Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
 
-- **Entities** : Objets métier avec identité
-- **Value Objects** : Objets sans identité propre
-- **Services** : Logique métier complexe
-- **Repositories** : Abstraction d'accès aux données
-- **Use Cases** : Orchestration des opérations
+## Code of Conduct
 
-### 2. Séparation des couches
+In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
 
-```
-┌─────────────────────────────────────────┐
-│           USER INTERFACE (React)        │  Affichage / Interactions
-├─────────────────────────────────────────┤
-│      APPLICATION (Controllers/Routes)   │  Orchestration des cas d'usage
-├─────────────────────────────────────────┤
-│      DOMAIN (Use Cases / Services)      │  Logique métier pure (sans Laravel)
-├─────────────────────────────────────────┤
-│    INFRASTRUCTURE (Laravel / DB)        │  Persistance, ORM, Configuration
-└─────────────────────────────────────────┘
-```
+## Security Vulnerabilities
 
-### 3. Permissions dynamiques
+If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
 
-Les permissions ne sont **jamais codées en dur** :
+## License
 
-1. Un fichier YAML/TXT définit les permissions
-2. Interface admin avec bouton "Générer permissions"
-3. Insertion automatique en base de données
-4. Aucune permission supprimée automatiquement
-5. Les rôles sont créés/modifiés en runtime
-
-### 4. Multi-tenancy
-
-Chaque boutique/commerçant est isolé :
-
-- Les données sont séparées par `tenant_id`
-- Middleware pour contextualiser le tenant courant
-- Aucune fuite de données entre tenants
-
----
-
-## Workflow de développement
-
-### Pour chaque domaine, créer :
-
-1. **Entities** - Objets métier
-2. **Value Objects** - Objets métier simples
-3. **Repositories** - Interfaces d'accès aux données
-4. **Services** - Logique métier
-5. **Use Cases** - Orchestration
-6. **Migrations** - Structure base de données
-7. **Models Eloquent** - Implémentation des repositories
-8. **Controllers** - Points d'entrée HTTP
-9. **Resources** - Sérialization API
-10. **Composants React** - Affichage frontend
-
----
-
-## Documentation par domaine
-
-Voir [DOMAINS.md](./DOMAINS.md) pour le détail de chaque domaine métier.
-
-Voir [ARCHITECTURE.md](./ARCHITECTURE.md) pour les patterns DDD utilisés.
-
----
-
-## Conventions de nommage
-
-```
-Entities:              NomEntity.php
-Value Objects:        NomValueObject.php
-Services:             NomService.php
-Repositories:         NomRepository.php (interface) / EloquentNomRepository.php
-Use Cases:            NomUseCase.php
-Migrations:           create_nom_table.php
-Models:               Nom.php
-Controllers:          NomController.php
-Requests:             StoreNomRequest.php / UpdateNomRequest.php
-Resources:            NomResource.php
-Composants React:     NomComponent.jsx
-```
-
----
-
-## Démarrage rapide
-
-```bash
-# Installation
-composer install
-npm install
-
-# Configuration
-cp .env.example .env
-php artisan key:generate
-php artisan migrate
-
-# Développement
-npm run dev              # Frontend
-php artisan serve        # Backend
-```
-
----
-
-## Prochaines étapes
-
-1. ✅ Créer la structure Tenant domain
-2. ⬜ Créer User & AccessControl domains
-3. ⬜ Implémenter Product domain
-4. ⬜ Implémenter Inventory domain
-5. ⬜ Implémenter Sale domain
-6. ⬜ Implémenter Payment domain
+The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+app-DY35bFR*.js:8 WebSocket connection to 'ws://localhost:8080/app/local?protocol=7&client=js&version=8.4.0&flash=false' failed:
+createWebSocket @ app-DY35bFR*.js:8
+getSocket @ app-DY35bFR*.js:7
+connect @ app-DY35bFR*.js:7
+de @ app-DY35bFR*.js:8
+emit @ app-DY35bFR*.js:7
+changeState @ app-DY35bFR*.js:7
+su @ app-DY35bFR*.js:7
+connect @ app-DY35bFR*.js:8
+tryStrategy @ app-DY35bFR*.js:7
+cd "H:\Projets web\pos-app"; php artisan webpush:generate-keys
+php artisan db:seed --class=Database\\Seeders\\GlobalCurrenciesSeeder

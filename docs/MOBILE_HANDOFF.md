@@ -78,6 +78,7 @@ For exact list and payload details:
 
 - `docs/MOBILE_REFERENCE.md`
 - `docs/MOBILE_CHANGELOG.md`
+- `docs/MOBILE_REACT_NATIVE_GUIDE.md` (guide complet d'utilisation cote React Native)
 
 ---
 

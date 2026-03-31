@@ -12,7 +12,10 @@ use App\Models\Shop;
 use App\Models\User as UserModel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 use Src\Infrastructure\Logs\Models\UserLoginHistoryModel;
 use Src\Infrastructure\Pharmacy\Models\CategoryModel as PharmacyCategoryModel;
 use Src\Infrastructure\Pharmacy\Models\ProductModel as PharmacyProductModel;
@@ -28,7 +31,21 @@ class MobileAuthController extends Controller
     public function login(LoginRequest $request): JsonResponse
     {
         // Validate + attempt credentials using the existing web LoginRequest rules.
-        $request->authenticate();
+        try {
+            $request->authenticate();
+        } catch (ValidationException $e) {
+            $message = (string) (collect($e->errors())->flatten()->first() ?? 'Invalid email or password.');
+            return response()->json([
+                'message' => $message,
+                'code' => 'AUTH_INVALID_CREDENTIALS',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Throwable) {
+            return response()->json([
+                'message' => 'Authentication service unavailable. Please try again.',
+                'code' => 'AUTH_SERVICE_UNAVAILABLE',
+            ], 503);
+        }
 
         /** @var UserModel|null $user */
         $user = Auth::user();
@@ -54,7 +71,26 @@ class MobileAuthController extends Controller
             // Ignore.
         }
 
-        $token = $user->createToken('pos-mobile')->plainTextToken;
+        if (!Schema::hasTable('personal_access_tokens')) {
+            return response()->json([
+                'message' => 'Mobile authentication is not configured on server (Sanctum tokens table missing).',
+                'code' => 'AUTH_TOKEN_STORE_MISSING',
+            ], 503);
+        }
+
+        try {
+            $token = $user->createToken('pos-mobile')->plainTextToken;
+        } catch (\Throwable $e) {
+            Log::error('Mobile login token creation failed', [
+                'user_id' => (int) $user->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Unable to create session token. Please try again later.',
+                'code' => 'AUTH_TOKEN_CREATE_FAILED',
+            ], 503);
+        }
 
         return response()->json([
             'token' => $token,
