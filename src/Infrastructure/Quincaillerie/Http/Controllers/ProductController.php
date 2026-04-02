@@ -220,6 +220,9 @@ class ProductController
             'price_wholesale_normal' => 'nullable|numeric|min:0',
             'price_wholesale_reduced' => 'nullable|numeric|min:0',
             'price_non_negotiable_wholesale' => 'nullable|numeric|min:0',
+            'meta_title' => 'nullable|string|max:60',
+            'meta_description' => 'nullable|string|max:160',
+            'slug' => 'nullable|string|max:180',
         ]);
 
         try {
@@ -333,6 +336,15 @@ class ProductController
                 'price_non_negotiable_wholesale' => $dto->priceNonNegotiableWholesale,
                 'barcode' => $dto->barcode,
             ];
+            if (\Illuminate\Support\Facades\Schema::hasColumn('quincaillerie_products', 'meta_title')) {
+                $additionalData['meta_title'] = $request->input('meta_title') ?: null;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('quincaillerie_products', 'meta_description')) {
+                $additionalData['meta_description'] = $request->input('meta_description') ?: null;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('quincaillerie_products', 'slug')) {
+                $additionalData['slug'] = $request->input('slug') ?: null;
+            }
             
             // Filtrer seulement les valeurs null pour les prix, mais toujours inclure image_path et image_type même si null
             $additionalData = array_filter($additionalData, function($value, $key) {
@@ -522,6 +534,9 @@ class ProductController
                 'price_wholesale_reduced' => 'nullable|numeric|min:0',
                 'price_non_negotiable_wholesale' => 'nullable|numeric|min:0',
                 'barcode' => 'nullable|string|max:255',
+                'meta_title' => 'nullable|string|max:60',
+                'meta_description' => 'nullable|string|max:160',
+                'slug' => 'nullable|string|max:180',
             ]);
 
             // Valeurs de base : utiliser la requête si fournie, sinon garder la valeur existante
@@ -647,6 +662,15 @@ class ProductController
                 'price_non_negotiable_wholesale' => $dto->priceNonNegotiableWholesale,
                 'barcode' => $dto->barcode,
             ];
+            if (\Illuminate\Support\Facades\Schema::hasColumn('quincaillerie_products', 'meta_title')) {
+                $additionalData['meta_title'] = $request->input('meta_title') ?: null;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('quincaillerie_products', 'meta_description')) {
+                $additionalData['meta_description'] = $request->input('meta_description') ?: null;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('quincaillerie_products', 'slug')) {
+                $additionalData['slug'] = $request->input('slug') ?: null;
+            }
             
             // Filtrer seulement les valeurs null pour les prix, mais toujours inclure image_path et image_type même si null (pour permettre la suppression)
             $additionalData = array_filter($additionalData, function($value, $key) {

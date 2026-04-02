@@ -3,19 +3,36 @@ import { useForm, usePage, router } from '@inertiajs/react';
 import Drawer from '@/Components/Drawer';
 import { Label } from '@/Components/ui/label';
 import { Input } from '@/Components/ui/input';
+import { Textarea } from '@/Components/ui/textarea';
 import { Button } from '@/Components/ui/button';
-import { Package, Hash, Image as ImageIcon, Trash2, RefreshCw } from 'lucide-react';
+import { Package, Hash, Image as ImageIcon, Trash2, RefreshCw, Sparkles } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import RichTextEditor from '@/Components/RichTextEditor';
+import axios from 'axios';
 
 export default function EcommerceProductDrawer({ isOpen, onClose, product = null, categories = [] }) {
     const isEditing = !!product;
     const { props } = usePage();
     const shopCurrency = props.shop?.currency || 'USD';
     const shop = props.shop || {};
+    const canAiVision = props.auth?.planFeatures?.ecommerce_product_ai_vision === true;
+    const canAiGenerate = props.auth?.planFeatures?.ai_product_image_generate === true;
+    const canAiSeoGenerate = props.auth?.planFeatures?.ai_product_seo_generate === true;
+    const aiProductUsage = props.auth?.planUsage?.ai_product_image_generate || { used: 0, limit: null, remaining: null };
 
     const [imagePreview, setImagePreview] = useState(product?.image_url || null);
     const [galleryPreviews, setGalleryPreviews] = useState(product?.gallery_urls || []);
+    const [aiImageCandidates, setAiImageCandidates] = useState([]);
+    const [aiAnalyzing, setAiAnalyzing] = useState(false);
+    const [aiImageGenerating, setAiImageGenerating] = useState(false);
+    const [aiSeoGenerating, setAiSeoGenerating] = useState(false);
+    const [aiFill, setAiFill] = useState({
+        name: true,
+        description: true,
+        tailleCouleur: true,
+        dimensions: true,
+        unit: true,
+    });
 
     const { data, setData, post, processing, errors, reset } = useForm({
         _method: isEditing ? 'put' : undefined,
@@ -58,6 +75,9 @@ export default function EcommerceProductDrawer({ isOpen, onClose, product = null
         type_produit: product?.type_produit ?? 'physique',
         mode_paiement: product?.mode_paiement ?? 'paiement_immediat',
         lien_telechargement: product?.lien_telechargement ?? product?.download_url ?? '',
+        meta_title: product?.meta_title ?? '',
+        meta_description: product?.meta_description ?? '',
+        slug: product?.slug ?? '',
     });
 
     useEffect(() => {
@@ -104,9 +124,13 @@ export default function EcommerceProductDrawer({ isOpen, onClose, product = null
                 type_produit: product.type_produit ?? 'physique',
                 mode_paiement: product.mode_paiement ?? 'paiement_immediat',
                 lien_telechargement: product.lien_telechargement ?? product.download_url ?? '',
+                meta_title: product.meta_title ?? '',
+                meta_description: product.meta_description ?? '',
+                slug: product.slug ?? '',
             }));
             setImagePreview(product.image_url || null);
             setGalleryPreviews(product.gallery_urls || []);
+            setAiImageCandidates([]);
         } else if (isOpen && !product) {
             setData((prev) => ({
                 ...prev,
@@ -150,13 +174,18 @@ export default function EcommerceProductDrawer({ isOpen, onClose, product = null
                 type_produit: 'physique',
                 mode_paiement: 'paiement_immediat',
                 lien_telechargement: '',
+                meta_title: '',
+                meta_description: '',
+                slug: '',
             }));
             setImagePreview(null);
             setGalleryPreviews([]);
+            setAiImageCandidates([]);
         } else if (!isOpen) {
             reset();
             setImagePreview(null);
             setGalleryPreviews([]);
+            setAiImageCandidates([]);
         }
     }, [product?.id, product?.category_id, isEditing, isOpen]);
 
@@ -176,6 +205,7 @@ export default function EcommerceProductDrawer({ isOpen, onClose, product = null
 
         setData('image', file);
         setData('remove_image', false);
+        setAiImageCandidates([]);
 
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -188,6 +218,161 @@ export default function EcommerceProductDrawer({ isOpen, onClose, product = null
         setData('image', null);
         setData('remove_image', true);
         setImagePreview(null);
+        setAiImageCandidates([]);
+    };
+
+    const toFileFromDataUrl = async (img, idx) => {
+        const blob = await (await fetch(img.image_data_url)).blob();
+        return new File([blob], img.file_name || `ai-product-${idx + 1}.png`, { type: blob.type || 'image/png' });
+    };
+
+    const applyAiSelection = async (candidates, selectedIndex) => {
+        const picked = candidates[selectedIndex];
+        if (!picked?.image_data_url) return;
+        const ordered = [picked, ...candidates.filter((_, idx) => idx !== selectedIndex)].slice(0, 4);
+        const files = await Promise.all(ordered.map((img, idx) => toFileFromDataUrl(img, idx)));
+        setData('image', files[0]);
+        setData('remove_image', false);
+        setImagePreview(ordered[0].image_data_url);
+        setData('gallery', files.slice(1, 4));
+        setData('remove_gallery', false);
+        setGalleryPreviews(ordered.slice(1, 4).map((img) => img.image_data_url));
+    };
+
+    const handleAnalyzeImageWithAi = async () => {
+        if (!data.image || !(data.image instanceof File)) {
+            toast.error('Sélectionnez d’abord une image locale (JPG, PNG ou WebP) à analyser.');
+            return;
+        }
+        setAiAnalyzing(true);
+        try {
+            const formData = new FormData();
+            formData.append('image', data.image);
+            const res = await axios.post(route('ecommerce.products.ai.analyze-image'), formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            const s = res.data?.suggestion;
+            if (!s || typeof s !== 'object') {
+                toast.error('Réponse inattendue du service.');
+                return;
+            }
+            if (aiFill.name && s.name) {
+                setData('name', String(s.name));
+            }
+            if (aiFill.description && s.description) {
+                setData('description', String(s.description));
+            }
+            if (aiFill.tailleCouleur) {
+                if (s.taille) {
+                    setData('taille', String(s.taille));
+                }
+                if (s.couleur) {
+                    setData('couleur', String(s.couleur));
+                }
+            }
+            if (aiFill.dimensions) {
+                if (s.weight != null && s.weight !== '') {
+                    setData('weight', String(s.weight));
+                }
+                if (s.length != null && s.length !== '') {
+                    setData('length', String(s.length));
+                }
+                if (s.width != null && s.width !== '') {
+                    setData('width', String(s.width));
+                }
+                if (s.height != null && s.height !== '') {
+                    setData('height', String(s.height));
+                }
+            }
+            if (aiFill.unit && s.unit) {
+                setData('unit', String(s.unit));
+            }
+            toast.success('Suggestions appliquées. Vérifiez et ajustez avant d’enregistrer.');
+        } catch (err) {
+            const msg = err.response?.data?.message || err.message || 'Analyse impossible.';
+            toast.error(msg);
+        } finally {
+            setAiAnalyzing(false);
+        }
+    };
+
+    const handleGenerateImageWithAi = async () => {
+        if (!canAiGenerate) return;
+        if (!String(data.name || '').trim()) {
+            toast.error('Saisissez d’abord le nom du produit.');
+            return;
+        }
+        setAiImageGenerating(true);
+        try {
+            const res = await axios.post(route('ecommerce.products.ai.generate-image'), {
+                title: data.name,
+                description: data.description || '',
+                count: 4,
+                async: true,
+            });
+            const requestId = res.data?.request_id;
+            if (!requestId) {
+                throw new Error('Requête IA invalide');
+            }
+            const pollStatus = async () => {
+                for (let i = 0; i < 60; i += 1) {
+                    const statusRes = await axios.get(route('ecommerce.products.ai.generate-image.status', requestId));
+                    const st = String(statusRes.data?.status || '').toLowerCase();
+                    if (st === 'completed') return statusRes.data;
+                    if (st === 'failed') throw new Error(statusRes.data?.error_message || 'Génération IA échouée.');
+                    await new Promise((resolve) => setTimeout(resolve, 1000));
+                }
+                throw new Error('Génération IA trop longue, veuillez réessayer.');
+            };
+            const done = await pollStatus();
+            const images = Array.isArray(done?.images) && done.images.length > 0
+                ? done.images
+                : [{ image_data_url: done?.image_data_url, file_name: done?.file_name || 'ai-product.png' }];
+            const validImages = images.filter((img) => !!img?.image_data_url).slice(0, 4);
+            if (validImages.length === 0) {
+                throw new Error('Réponse IA invalide');
+            }
+            setAiImageCandidates(validImages);
+            await applyAiSelection(validImages, 0);
+            toast.success(`${validImages.length} image(s) générée(s) avec succès.`);
+        } catch (err) {
+            const msg = err.response?.data?.message || err.message || 'Génération image IA impossible.';
+            toast.error(msg);
+        } finally {
+            setAiImageGenerating(false);
+        }
+    };
+
+    const handleGenerateSeoWithAi = async () => {
+        if (!canAiSeoGenerate) return;
+        if (!String(data.name || '').trim()) {
+            toast.error('Saisissez d’abord le nom du produit.');
+            return;
+        }
+        setAiSeoGenerating(true);
+        try {
+            const res = await axios.post(route('ecommerce.products.ai.generate-seo'), {
+                name: data.name,
+                description: data.description || '',
+                language: 'fr',
+            });
+            const seo = res.data?.seo || {};
+            if (seo.meta_title) {
+                setData('meta_title', String(seo.meta_title));
+            }
+            if (seo.meta_description) {
+                setData('meta_description', String(seo.meta_description));
+            }
+            if (seo.slug) {
+                setData('slug', String(seo.slug));
+            }
+            toast.success('SEO généré avec succès.');
+        } catch (err) {
+            const msg = err.response?.data?.message || err.message || 'Génération SEO IA impossible.';
+            toast.error(msg);
+        } finally {
+            setAiSeoGenerating(false);
+        }
     };
 
     const handleGalleryChange = (e) => {
@@ -213,6 +398,7 @@ export default function EcommerceProductDrawer({ isOpen, onClose, product = null
 
         setData('gallery', validFiles);
         setData('remove_gallery', false);
+        setAiImageCandidates([]);
 
         validFiles.forEach((file, index) => {
             const reader = new FileReader();
@@ -231,6 +417,7 @@ export default function EcommerceProductDrawer({ isOpen, onClose, product = null
         setData('gallery', []);
         setData('remove_gallery', true);
         setGalleryPreviews([]);
+        setAiImageCandidates([]);
     };
 
     const handleGenerateSku = () => {
@@ -364,6 +551,39 @@ export default function EcommerceProductDrawer({ isOpen, onClose, product = null
                                 {errors.description}
                             </p>
                         )}
+                    </div>
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <Label className="mb-0">SEO produit</Label>
+                            {canAiSeoGenerate && (
+                                <Button type="button" variant="secondary" size="sm" disabled={aiSeoGenerating} onClick={handleGenerateSeoWithAi}>
+                                    <Sparkles className="h-4 w-4 mr-2" />
+                                    {aiSeoGenerating ? 'Génération SEO…' : 'Générer SEO IA'}
+                                </Button>
+                            )}
+                        </div>
+                        <Input
+                            id="meta_title"
+                            value={data.meta_title || ''}
+                            onChange={(e) => setData('meta_title', e.target.value)}
+                            placeholder="Meta title (max 60)"
+                            className="bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+                            maxLength={60}
+                        />
+                        <Textarea
+                            id="meta_description"
+                            value={data.meta_description || ''}
+                            onChange={(e) => setData('meta_description', e.target.value)}
+                            placeholder="Meta description (max 160)"
+                            rows={2}
+                        />
+                        <Input
+                            id="slug"
+                            value={data.slug || ''}
+                            onChange={(e) => setData('slug', e.target.value)}
+                            placeholder="slug-produit"
+                            className="bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+                        />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -655,6 +875,111 @@ export default function EcommerceProductDrawer({ isOpen, onClose, product = null
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
                                     JPG, PNG ou WebP, maximum 2 Mo.
                                 </p>
+                                {canAiGenerate && (
+                                    <div className="space-y-1">
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            size="sm"
+                                            className="inline-flex items-center gap-2"
+                                            disabled={aiImageGenerating}
+                                            onClick={handleGenerateImageWithAi}
+                                        >
+                                            <Sparkles className="h-4 w-4" />
+                                            {aiImageGenerating ? 'Génération…' : 'Générer 4 images IA'}
+                                        </Button>
+                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                            Quota image produit IA: {aiProductUsage.limit == null
+                                                ? `utilisé ${aiProductUsage.used} (illimité)`
+                                                : `${aiProductUsage.used}/${aiProductUsage.limit} (reste ${Math.max(0, aiProductUsage.remaining ?? 0)})`}
+                                        </p>
+                                    </div>
+                                )}
+                                {aiImageCandidates.length > 1 && (
+                                    <div className="mt-2">
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                            Choisir l&apos;image principale IA :
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {aiImageCandidates.map((img, idx) => (
+                                                <button
+                                                    key={`${img.file_name || 'ai'}-${idx}`}
+                                                    type="button"
+                                                    onClick={() => applyAiSelection(aiImageCandidates, idx)}
+                                                    className="h-12 w-12 rounded border border-gray-300 dark:border-slate-600 overflow-hidden hover:border-amber-500"
+                                                    title={`Image IA ${idx + 1}`}
+                                                >
+                                                    <img src={img.image_data_url} alt={`IA ${idx + 1}`} className="h-full w-full object-cover" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                {canAiVision && (
+                                    <div className="mt-3 space-y-2 rounded-md border border-amber-200/80 dark:border-amber-900/50 bg-amber-50/80 dark:bg-amber-950/30 p-3">
+                                        <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
+                                            Analyse IA (Pro / Enterprise) — remplissage suggéré
+                                        </p>
+                                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-700 dark:text-gray-300">
+                                            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={aiFill.name}
+                                                    onChange={(e) => setAiFill((f) => ({ ...f, name: e.target.checked }))}
+                                                    className="rounded border-gray-300"
+                                                />
+                                                Titre
+                                            </label>
+                                            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={aiFill.description}
+                                                    onChange={(e) => setAiFill((f) => ({ ...f, description: e.target.checked }))}
+                                                    className="rounded border-gray-300"
+                                                />
+                                                Description
+                                            </label>
+                                            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={aiFill.tailleCouleur}
+                                                    onChange={(e) => setAiFill((f) => ({ ...f, tailleCouleur: e.target.checked }))}
+                                                    className="rounded border-gray-300"
+                                                />
+                                                Taille / couleur
+                                            </label>
+                                            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={aiFill.dimensions}
+                                                    onChange={(e) => setAiFill((f) => ({ ...f, dimensions: e.target.checked }))}
+                                                    className="rounded border-gray-300"
+                                                />
+                                                Poids / dimensions
+                                            </label>
+                                            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={aiFill.unit}
+                                                    onChange={(e) => setAiFill((f) => ({ ...f, unit: e.target.checked }))}
+                                                    className="rounded border-gray-300"
+                                                />
+                                                Unité
+                                            </label>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            size="sm"
+                                            className="inline-flex items-center gap-2"
+                                            disabled={aiAnalyzing || !data.image}
+                                            onClick={handleAnalyzeImageWithAi}
+                                        >
+                                            <Sparkles className="h-4 w-4" />
+                                            {aiAnalyzing ? 'Analyse…' : 'Analyser l’image avec l’IA'}
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         {errors.image && (

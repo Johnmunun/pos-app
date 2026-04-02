@@ -380,7 +380,7 @@ class StorefrontController
         $user = $request->user();
         $shop = $this->getShop($request);
         $shopId = (string) $shop->id;
-        $tenantId = (string) (($user && $user->tenant_id) ? $user->tenant_id : $shopId);
+        $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
         $productShopIds = $this->resolveProductShopIds($shop, $tenantId);
 
         \Log::info('Storefront index - using shop', [
@@ -663,7 +663,7 @@ class StorefrontController
         }
 
         $user = $request->user();
-        $tenantId = (string) (($user && $user->tenant_id) ? $user->tenant_id : $shopId);
+        $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
         $displayCurrency = $this->getDefaultCurrencyForTenant($tenantId);
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);
@@ -706,7 +706,7 @@ class StorefrontController
         }
 
         $user = $request->user();
-        $tenantId = (string) (($user && $user->tenant_id) ? $user->tenant_id : $shopId);
+        $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
         $productShopIds = $this->resolveProductShopIds($shop, $tenantId);
 
         $categoryId = $request->input('category_id');
@@ -854,7 +854,7 @@ class StorefrontController
             abort(404, 'Shop not found');
         }
         $user = $request->user();
-        $tenantId = (string) (($user && $user->tenant_id) ? $user->tenant_id : $shopId);
+        $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
         $productShopIds = $this->resolveProductShopIds($shop, $tenantId);
         $promotionTargets = $this->getActivePromotionTargets($productShopIds);
 
@@ -970,11 +970,10 @@ class StorefrontController
             abort(404, 'Shop not found');
         }
 
-        $user = $request->user();
-        $tenantId = (int) (($user && $user->tenant_id) ? $user->tenant_id : $shopId);
+        $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
         $taxRate = $shop->default_tax_rate ? (float) $shop->default_tax_rate : 0;
 
-        $currencyConfig = $this->getCurrencyAndRates((string) $tenantId);
+        $currencyConfig = $this->getCurrencyAndRates($tenantId, $shop->currency);
         $currency = $currencyConfig['currency'];
         $exchangeRates = $currencyConfig['exchange_rates'];
 
@@ -1055,7 +1054,7 @@ class StorefrontController
         return $default ? strtoupper($default->code) : 'USD';
     }
 
-    private function getCurrencyAndRates(string $tenantId): array
+    private function getCurrencyAndRates(string $tenantId, ?string $fallbackCurrency = null): array
     {
         $currenciesList = Currency::where('tenant_id', $tenantId)
             ->where('is_active', true)
@@ -1063,7 +1062,8 @@ class StorefrontController
             ->orderBy('code')
             ->get();
         $defaultCurrencyModel = $currenciesList->firstWhere('is_default', true) ?? $currenciesList->first();
-        $defaultCode = $defaultCurrencyModel ? strtoupper($defaultCurrencyModel->code) : 'USD';
+        $fallbackCode = strtoupper((string) ($fallbackCurrency ?: 'USD'));
+        $defaultCode = $defaultCurrencyModel ? strtoupper($defaultCurrencyModel->code) : $fallbackCode;
 
         $exchangeRatesMap = [$defaultCode => 1.0];
         if ($defaultCurrencyModel) {
@@ -1206,7 +1206,7 @@ class StorefrontController
         }
 
         $user = $request->user();
-        $tenantId = (string) (($user && $user->tenant_id) ? $user->tenant_id : $shopId);
+        $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
         $displayCurrency = $this->getDefaultCurrencyForTenant($tenantId);
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);
@@ -1263,7 +1263,7 @@ class StorefrontController
         }
 
         $user = $request->user();
-        $tenantId = (string) (($user && $user->tenant_id) ? $user->tenant_id : $shopId);
+        $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
         $displayCurrency = $this->getDefaultCurrencyForTenant($tenantId);
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);
@@ -1295,6 +1295,51 @@ class StorefrontController
     }
 
     /**
+     * Identifiant tenant utilisé pour le billing / les features (plans, quotas).
+     * Si la ligne Shop n'a pas tenant_id (legacy), on aligne sur l'utilisateur connecté
+     * pour éviter de lire le mauvais abonnement (shop.id ≠ tenant_id).
+     */
+    private function resolveBillingTenantIdForStorefront(Request $request, Shop $shop): string
+    {
+        if ($shop->tenant_id !== null && (string) $shop->tenant_id !== '') {
+            return (string) $shop->tenant_id;
+        }
+
+        $user = $request->user();
+        if ($user !== null && $user->tenant_id !== null && (string) $user->tenant_id !== '') {
+            return (string) $user->tenant_id;
+        }
+
+        return (string) $shop->id;
+    }
+
+    /**
+     * Lit un booléen depuis la config JSON (évite "false" en chaîne qui est truthy en PHP).
+     *
+     * @param  array<string, mixed>  $cfg
+     */
+    private function storefrontConfigBool(array $cfg, string $key, bool $default = false): bool
+    {
+        if (!array_key_exists($key, $cfg)) {
+            return $default;
+        }
+        $v = $cfg[$key];
+        if (is_bool($v)) {
+            return $v;
+        }
+        if (is_int($v) || is_float($v)) {
+            return (int) round((float) $v) === 1;
+        }
+        if (is_string($v)) {
+            $s = strtolower(trim($v));
+
+            return in_array($s, ['1', 'true', 'yes', 'on'], true);
+        }
+
+        return (bool) $v;
+    }
+
+    /**
      * Pixels / tags (plan marketing Pro) et ping audience (analytics avancé + sous-domaine public).
      *
      * @param  array<string, mixed>  $payload
@@ -1302,7 +1347,7 @@ class StorefrontController
      */
     private function mergeStorefrontClientProps(Request $request, Shop $shop, array $payload): array
     {
-        $tenantId = $shop->tenant_id !== null ? (string) $shop->tenant_id : (string) $shop->id;
+        $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
         $features = app(FeatureLimitService::class);
         $marketingPro = $features->isFeatureEnabled($tenantId, 'ecommerce.marketing.pro');
         $audience = $features->isFeatureEnabled($tenantId, 'analytics.advanced');
@@ -1312,6 +1357,10 @@ class StorefrontController
         if (!is_array($cfg)) {
             $cfg = [];
         }
+
+        $shopAiSupportOn = $this->storefrontConfigBool($cfg, 'ai_support_enabled', false);
+        $planAiSupportOn = $features->isFeatureEnabled($tenantId, 'ai.ecommerce.support');
+        $aiSupportCanUse = $shopAiSupportOn && $planAiSupportOn;
 
         $payload['storefrontClient'] = [
             'audience' => [
@@ -1325,6 +1374,18 @@ class StorefrontController
                 'googleTagManagerId' => $this->nonEmptyString($cfg['google_tag_manager_id'] ?? null),
                 'metaVerification' => $this->nonEmptyString($cfg['meta_verification'] ?? null),
             ] : null,
+            'aiSupport' => [
+                'shopEnabled' => $shopAiSupportOn,
+                'planEnabled' => $planAiSupportOn,
+                'canUse' => $aiSupportCanUse,
+                'enabled' => $aiSupportCanUse,
+                'askPath' => $isPublicSubdomain ? '/support/ai/ask' : '/ecommerce/storefront/support/ai/ask',
+                'tone' => (string) ($cfg['ai_support_tone'] ?? 'friendly'),
+            ],
+            'semanticSearch' => [
+                'enabled' => $features->isFeatureEnabled($tenantId, 'ai.ecommerce.semantic_search') && $this->storefrontConfigBool($cfg, 'ai_semantic_search_enabled', false),
+                'searchPath' => $isPublicSubdomain ? '/search/semantic' : '/ecommerce/storefront/search/semantic',
+            ],
         ];
 
         return $payload;

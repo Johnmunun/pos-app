@@ -7,6 +7,7 @@ use Src\Infrastructure\Admin\Http\Controllers\AdminMailSettingsController;
 use Src\Infrastructure\Settings\Http\Controllers\AppBrandingController;
 use Src\Infrastructure\Billing\Http\Controllers\BillingAdminController;
 use Src\Infrastructure\Billing\Http\Controllers\BillingPaymentController;
+use Src\Infrastructure\Billing\Http\Controllers\MerchantWithdrawalController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\EcommerceFusionPaymentController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -254,6 +255,10 @@ Route::middleware('auth')->group(function () {
         ->name('api.billing.payments.latest');
     Route::get('/api/billing/payments/{id}/status', [BillingPaymentController::class, 'status'])
         ->name('api.billing.payments.status');
+    Route::get('/api/merchant/withdrawals', [MerchantWithdrawalController::class, 'index'])
+        ->name('api.merchant.withdrawals.index');
+    Route::post('/api/merchant/withdrawals', [MerchantWithdrawalController::class, 'store'])
+        ->name('api.merchant.withdrawals.store');
     Route::get('/billing/payments/{id}', [BillingPaymentController::class, 'showStatusPage'])
         ->name('billing.payments.show');
     Route::get('/onboarding/payment', [BillingPaymentController::class, 'showOnboardingPaymentPage'])
@@ -551,6 +556,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/products', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'store'])
             ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage')
             ->name('products.store');
+        Route::post('/products/ai/generate-image', [\Src\Infrastructure\Common\Http\Controllers\ProductAiImageGenerationController::class, 'generate'])
+            ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage|pharmacy.product.create')
+            ->name('products.ai.generate-image');
+        Route::get('/products/ai/generate-image/{id}/status', [\Src\Infrastructure\Common\Http\Controllers\ProductAiImageGenerationController::class, 'status'])
+            ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage|pharmacy.product.create')
+            ->name('products.ai.generate-image.status');
+        Route::post('/products/ai/generate-seo', [\Src\Infrastructure\Common\Http\Controllers\ProductAiSeoController::class, 'generate'])
+            ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage|pharmacy.product.create')
+            ->name('products.ai.generate-seo');
         
         Route::get('/products/{id}', [\Src\Infrastructure\Pharmacy\Http\Controllers\ProductController::class, 'show'])
             ->middleware('permission:pharmacy.pharmacy.product.manage|pharmacy.product.manage')

@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { ShoppingCart, ArrowLeft, MapPin, Phone, Mail, Clock } from 'lucide-react';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
+import AISupportFloatingWidget from '@/Components/Ecommerce/AISupportFloatingWidget';
 import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBootstrap';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 
@@ -287,6 +288,7 @@ export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {
             </footer>
 
             <WhatsAppFloatingButton phone={whatsappNumber} enabled={whatsappSupportEnabled} />
+            <AISupportFloatingWidget />
         </div>
     );
 }

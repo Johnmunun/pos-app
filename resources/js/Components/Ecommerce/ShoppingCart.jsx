@@ -14,11 +14,11 @@ import {
     ShoppingBag,
     ArrowRight,
 } from 'lucide-react';
-import { formatCurrency } from '@/lib/currency';
+import { formatCurrency, normalizeCurrencyCode } from '@/lib/currency';
 
 export default function ShoppingCart({ buttonClassName, storefrontLinks = false }) {
     const links = useStorefrontLinks();
-    const { cart, updateQuantity, removeFromCart, getCartTotal, getPriceInDisplayCurrency, currency } = useCart();
+    const { cart, updateQuantity, removeFromCart, getCartTotal, getPriceInDisplayCurrency, currency, exchangeRates } = useCart();
     const [isMiniCartOpen, setIsMiniCartOpen] = useState(false);
     const catalogUrl = storefrontLinks ? links.catalog() : route('ecommerce.catalog.index');
     const cartUrl = storefrontLinks ? links.cart() : route('ecommerce.cart.index');
@@ -26,6 +26,21 @@ export default function ShoppingCart({ buttonClassName, storefrontLinks = false 
     const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
     const displayCurrency = currency || 'CDF';
     const format = (amount) => formatCurrency(amount, displayCurrency);
+    const normalizedDisplayCurrency = normalizeCurrencyCode(displayCurrency);
+    const hasRateForCurrency = (value) => {
+        const code = normalizeCurrencyCode(value || normalizedDisplayCurrency);
+        return code === normalizedDisplayCurrency || Object.prototype.hasOwnProperty.call(exchangeRates || {}, code);
+    };
+    const canConvertAllItems = cart.every((item) => hasRateForCurrency(item.price_currency));
+    const cartCurrencies = [...new Set(cart.map((item) => normalizeCurrencyCode(item.price_currency || normalizedDisplayCurrency)))];
+    const rawSubtotal = cart.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0);
+
+    const formatItemAmount = (amount, itemCurrency) => {
+        if (!canConvertAllItems) {
+            return formatCurrency(amount, itemCurrency || displayCurrency);
+        }
+        return format(getPriceInDisplayCurrency(amount, itemCurrency));
+    };
 
     const handleQuantityChange = (productId, newQuantity) => {
         if (newQuantity <= 0) {
@@ -96,7 +111,7 @@ export default function ShoppingCart({ buttonClassName, storefrontLinks = false 
                                                 {item.name}
                                             </h3>
                                             <p className="text-sm font-semibold text-[var(--sf-primary)] mt-1">
-                                                {format(getPriceInDisplayCurrency(item.price, item.price_currency))}
+                                                {formatItemAmount(item.price, item.price_currency)}
                                             </p>
                                             <div className="flex items-center gap-2 mt-2">
                                                 <button
@@ -131,10 +146,17 @@ export default function ShoppingCart({ buttonClassName, storefrontLinks = false 
                 {/* Footer */}
                 {cart.length > 0 && (
                     <div className="sticky bottom-0 z-10 border-t border-slate-200 dark:border-slate-700 p-4 space-y-3 bg-white dark:bg-slate-800">
+                        {!canConvertAllItems && (
+                            <div className="rounded-lg border border-amber-200 dark:border-amber-800/60 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+                                Conversion indisponible: affichage des montants dans la devise d'origine des articles.
+                            </div>
+                        )}
                         <div className="flex justify-between items-center">
                             <span className="text-slate-600 dark:text-slate-400">Sous-total</span>
                             <span className="text-lg font-bold text-slate-900 dark:text-white">
-                                {format(getCartTotal())}
+                                {!canConvertAllItems && cartCurrencies.length === 1
+                                    ? formatCurrency(rawSubtotal, cartCurrencies[0])
+                                    : format(getCartTotal())}
                             </span>
                         </div>
                         <Link href={cartUrl} className="block">

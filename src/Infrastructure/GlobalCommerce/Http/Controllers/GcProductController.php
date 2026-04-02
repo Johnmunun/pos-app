@@ -239,6 +239,9 @@ class GcProductController
             'tax_rate' => 'nullable|numeric|min:0|max:100',
             'tax_type' => 'nullable|string|in:included,excluded',
             'status' => 'nullable|string|in:active,inactive,draft',
+            'meta_title' => 'nullable|string|max:60',
+            'meta_description' => 'nullable|string|max:160',
+            'slug' => 'nullable|string|max:180',
         ]);
         $dto = new CreateProductDTO(
             $shopId,
@@ -325,6 +328,15 @@ class GcProductController
             }
             if (array_key_exists('status', $validated)) {
                 $extra['status'] = $validated['status'] ?? 'active';
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('gc_products', 'meta_title') && array_key_exists('meta_title', $validated)) {
+                $extra['meta_title'] = $validated['meta_title'] !== '' ? $validated['meta_title'] : null;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('gc_products', 'meta_description') && array_key_exists('meta_description', $validated)) {
+                $extra['meta_description'] = $validated['meta_description'] !== '' ? $validated['meta_description'] : null;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('gc_products', 'slug') && array_key_exists('slug', $validated)) {
+                $extra['slug'] = $validated['slug'] !== '' ? $validated['slug'] : null;
             }
 
             if ($request->hasFile('image')) {
@@ -490,6 +502,9 @@ class GcProductController
             'tax_rate' => 'nullable|numeric|min:0|max:100',
             'tax_type' => 'nullable|string|in:included,excluded',
             'status' => 'nullable|string|in:active,inactive,draft',
+            'meta_title' => 'nullable|string|max:60',
+            'meta_description' => 'nullable|string|max:160',
+            'slug' => 'nullable|string|max:180',
         ]);
         $status = $validated['status'] ?? 'active';
         $isActive = $status === 'active';
@@ -556,6 +571,15 @@ class GcProductController
             }
             if (array_key_exists('status', $validated)) {
                 $extra['status'] = $validated['status'] ?? 'active';
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('gc_products', 'meta_title') && array_key_exists('meta_title', $validated)) {
+                $extra['meta_title'] = $validated['meta_title'] !== '' ? $validated['meta_title'] : null;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('gc_products', 'meta_description') && array_key_exists('meta_description', $validated)) {
+                $extra['meta_description'] = $validated['meta_description'] !== '' ? $validated['meta_description'] : null;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('gc_products', 'slug') && array_key_exists('slug', $validated)) {
+                $extra['slug'] = $validated['slug'] !== '' ? $validated['slug'] : null;
             }
 
             if (array_key_exists('download_url', $validated) && $validated['download_url']) {

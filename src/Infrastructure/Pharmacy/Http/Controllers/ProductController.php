@@ -694,6 +694,9 @@ class ProductController
                 'type_unite' => 'required|string|in:PLAQUETTE,BOITE,FLACON,TUBE,SACHET,UNITE',
                 'quantite_par_unite' => 'required|integer|min:1',
                 'est_divisible' => 'boolean',
+                'meta_title' => 'nullable|string|max:60',
+                'meta_description' => 'nullable|string|max:160',
+                'slug' => 'nullable|string|max:180',
             ]);
 
             $dto = new CreateProductDTO(
@@ -779,6 +782,15 @@ class ProductController
             }
             if ($request->has('wholesale_min_quantity') && $request->input('wholesale_min_quantity') !== null && $request->input('wholesale_min_quantity') !== '') {
                 $productUpdateData['wholesale_min_quantity'] = (int) $request->input('wholesale_min_quantity');
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('pharmacy_products', 'meta_title')) {
+                $productUpdateData['meta_title'] = $request->input('meta_title') ?: null;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('pharmacy_products', 'meta_description')) {
+                $productUpdateData['meta_description'] = $request->input('meta_description') ?: null;
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('pharmacy_products', 'slug')) {
+                $productUpdateData['slug'] = $request->input('slug') ?: null;
             }
 
             \Src\Infrastructure\Pharmacy\Models\ProductModel::where('id', $product->getId())
@@ -989,6 +1001,9 @@ class ProductController
                 'quantite_par_unite' => 'sometimes|integer|min:1',
                 'est_divisible' => 'nullable|boolean',
                 'barcode' => 'nullable|string|max:255',
+                'meta_title' => 'nullable|string|max:60',
+                'meta_description' => 'nullable|string|max:160',
+                'slug' => 'nullable|string|max:180',
             ]);
 
             $user = $request->user();
@@ -1062,6 +1077,15 @@ class ProductController
                 }
                 if ($request->has('wholesale_min_quantity') && $request->input('wholesale_min_quantity') !== null && $request->input('wholesale_min_quantity') !== '') {
                     $productUpdateData['wholesale_min_quantity'] = (int) $request->input('wholesale_min_quantity');
+                }
+                if (\Illuminate\Support\Facades\Schema::hasColumn('pharmacy_products', 'meta_title')) {
+                    $productUpdateData['meta_title'] = $request->input('meta_title') ?: null;
+                }
+                if (\Illuminate\Support\Facades\Schema::hasColumn('pharmacy_products', 'meta_description')) {
+                    $productUpdateData['meta_description'] = $request->input('meta_description') ?: null;
+                }
+                if (\Illuminate\Support\Facades\Schema::hasColumn('pharmacy_products', 'slug')) {
+                    $productUpdateData['slug'] = $request->input('slug') ?: null;
                 }
 
                 // Supprimer l'image existante si demandé

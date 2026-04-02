@@ -27,8 +27,20 @@ class SettingsController
         $isRoot = $userModel ? $userModel->isRoot() : false;
 
         $shop = null;
+
+        // ROOT: prioriser la boutique storefront choisie en session
+        if ($isRoot) {
+            $sessionShopId = $request->session()->get('current_storefront_shop_id');
+            if ($sessionShopId && is_numeric($sessionShopId)) {
+                $sessionShop = Shop::find((int) $sessionShopId);
+                if ($sessionShop) {
+                    $shop = $sessionShop;
+                }
+            }
+        }
+
         $candidateId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
-        if ($candidateId !== null && $candidateId !== '') {
+        if (!$shop && $candidateId !== null && $candidateId !== '') {
             $shop = Shop::find($candidateId);
         }
         if (!$shop && $user->tenant_id) {
@@ -77,6 +89,11 @@ class SettingsController
             'storefront_flat_shipping_amount' => isset($cfg['storefront_flat_shipping_amount'])
                 ? round((float) $cfg['storefront_flat_shipping_amount'], 2)
                 : 0.0,
+            'ai_support_enabled' => (bool) ($cfg['ai_support_enabled'] ?? false),
+            'ai_support_tone' => (string) ($cfg['ai_support_tone'] ?? 'friendly'),
+            'ai_support_shipping_policy' => (string) ($cfg['ai_support_shipping_policy'] ?? ''),
+            'ai_support_returns_policy' => (string) ($cfg['ai_support_returns_policy'] ?? ''),
+            'ai_semantic_search_enabled' => (bool) ($cfg['ai_semantic_search_enabled'] ?? false),
         ]);
     }
 
@@ -161,6 +178,37 @@ class SettingsController
         return redirect()
             ->route('ecommerce.settings.index')
             ->with('success', 'Frais de livraison vitrine enregistrés.');
+    }
+
+    public function updateAiSupport(Request $request): RedirectResponse
+    {
+        $shop = $this->resolveShop($request);
+
+        $data = $request->validate([
+            'ai_support_enabled' => ['required', 'boolean'],
+            'ai_support_tone' => ['required', 'string', 'in:friendly,professional'],
+            'ai_support_shipping_policy' => ['nullable', 'string', 'max:1500'],
+            'ai_support_returns_policy' => ['nullable', 'string', 'max:1500'],
+            'ai_semantic_search_enabled' => ['required', 'boolean'],
+        ]);
+
+        $current = $shop->ecommerce_storefront_config ?? [];
+        if (!is_array($current)) {
+            $current = [];
+        }
+
+        $current['ai_support_enabled'] = (bool) $data['ai_support_enabled'];
+        $current['ai_support_tone'] = (string) $data['ai_support_tone'];
+        $current['ai_support_shipping_policy'] = trim((string) ($data['ai_support_shipping_policy'] ?? ''));
+        $current['ai_support_returns_policy'] = trim((string) ($data['ai_support_returns_policy'] ?? ''));
+        $current['ai_semantic_search_enabled'] = (bool) $data['ai_semantic_search_enabled'];
+
+        $shop->ecommerce_storefront_config = $current;
+        $shop->save();
+
+        return redirect()
+            ->route('ecommerce.settings.index')
+            ->with('success', 'Support client IA enregistré.');
     }
 
     // Plus de mise à jour de devise ici : la devise est gérée globalement via /settings/currencies

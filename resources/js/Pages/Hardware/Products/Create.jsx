@@ -6,7 +6,7 @@ import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { Textarea } from '@/Components/ui/textarea';
-import { ArrowLeft, Save, Package, Hash, Upload, X, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Save, Package, Hash, Upload, X, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
 
@@ -14,9 +14,15 @@ const TYPE_UNITE_OPTIONS = ['PIECE', 'LOT', 'METRE', 'KG', 'LITRE', 'BOITE', 'CA
 
 export default function HardwareProductCreate({ categories = [] }) {
     const { props } = usePage();
+    const canAiGenerate = props.auth?.planFeatures?.ai_product_image_generate === true;
+    const canAiSeoGenerate = props.auth?.planFeatures?.ai_product_seo_generate === true;
     const currencies = props.shop?.currencies || [];
     const defaultCurrency = props.shop?.currency || (currencies.find(c => c.is_default)?.code || currencies[0]?.code || 'USD');
     const [imagePreview, setImagePreview] = useState(null);
+    const [aiImageCandidates, setAiImageCandidates] = useState([]);
+    const [aiGenerating, setAiGenerating] = useState(false);
+    const [aiSeoGenerating, setAiSeoGenerating] = useState(false);
+    const [seoSuggestion, setSeoSuggestion] = useState({ meta_title: '', meta_description: '', slug: '' });
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         product_code: '',
@@ -39,6 +45,9 @@ export default function HardwareProductCreate({ categories = [] }) {
         price_non_negotiable_1: '',
         price_non_negotiable_2: '',
         price_non_negotiable_3: '',
+        meta_title: '',
+        meta_description: '',
+        slug: '',
     });
 
     const handleGenerateCode = async () => {
@@ -71,6 +80,7 @@ export default function HardwareProductCreate({ categories = [] }) {
         }
         
         setData('image', file);
+        setAiImageCandidates([]);
         
         // Prévisualisation
         const reader = new FileReader();
@@ -83,6 +93,92 @@ export default function HardwareProductCreate({ categories = [] }) {
     const handleRemoveImage = () => {
         setData('image', null);
         setImagePreview(null);
+        setAiImageCandidates([]);
+    };
+
+    const handleSelectAiCandidate = async (candidate) => {
+        if (!candidate?.image_data_url) return;
+        const blob = await (await fetch(candidate.image_data_url)).blob();
+        const file = new File([blob], candidate.file_name || 'ai-product.png', { type: blob.type || 'image/png' });
+        setData('image', file);
+        setImagePreview(candidate.image_data_url);
+    };
+
+    const handleGenerateImage = async () => {
+        if (!canAiGenerate) return;
+        if (!String(data.name || '').trim()) {
+            toast.error('Saisissez d\'abord le nom du produit.');
+            return;
+        }
+        setAiGenerating(true);
+        try {
+            const res = await axios.post(route('hardware.products.ai.generate-image'), {
+                title: data.name,
+                description: data.description || '',
+                count: 4,
+                async: true,
+            });
+            const requestId = res.data?.request_id;
+            if (!requestId) throw new Error('Requête IA invalide');
+            const pollStatus = async () => {
+                for (let i = 0; i < 60; i += 1) {
+                    const statusRes = await axios.get(route('hardware.products.ai.generate-image.status', requestId));
+                    const st = String(statusRes.data?.status || '').toLowerCase();
+                    if (st === 'completed') return statusRes.data;
+                    if (st === 'failed') throw new Error(statusRes.data?.error_message || 'Génération IA échouée.');
+                    await new Promise((resolve) => setTimeout(resolve, 1000));
+                }
+                throw new Error('Génération IA trop longue, veuillez réessayer.');
+            };
+            const done = await pollStatus();
+            const images = Array.isArray(done?.images) && done.images.length > 0
+                ? done.images
+                : [{ image_data_url: done?.image_data_url, file_name: done?.file_name || 'ai-product.png' }];
+            const first = images.find((img) => !!img?.image_data_url);
+            if (!first?.image_data_url) {
+                throw new Error('Réponse IA invalide');
+            }
+            setAiImageCandidates(images.slice(0, 4));
+            const blob = await (await fetch(first.image_data_url)).blob();
+            const file = new File([blob], first.file_name || 'ai-product-1.png', { type: blob.type || 'image/png' });
+            setData('image', file);
+            setImagePreview(first.image_data_url);
+            toast.success(`${Math.min(images.length, 4)} image(s) IA générée(s).`);
+        } catch (err) {
+            toast.error(err.response?.data?.message || err.message || 'Erreur');
+        } finally {
+            setAiGenerating(false);
+        }
+    };
+
+    const handleGenerateSeo = async () => {
+        if (!canAiSeoGenerate) return;
+        if (!String(data.name || '').trim()) {
+            toast.error('Saisissez d\'abord le nom du produit.');
+            return;
+        }
+        setAiSeoGenerating(true);
+        try {
+            const res = await axios.post(route('hardware.products.ai.generate-seo'), {
+                name: data.name,
+                description: data.description || '',
+                language: 'fr',
+            });
+            const seo = res.data?.seo || {};
+            setData('meta_title', seo.meta_title || '');
+            setData('meta_description', seo.meta_description || '');
+            setData('slug', seo.slug || '');
+            setSeoSuggestion({
+                meta_title: seo.meta_title || '',
+                meta_description: seo.meta_description || '',
+                slug: seo.slug || '',
+            });
+            toast.success('SEO généré.');
+        } catch (err) {
+            toast.error(err.response?.data?.message || err.message || 'Erreur');
+        } finally {
+            setAiSeoGenerating(false);
+        }
     };
 
     const calculateReducedPrice = () => {
@@ -174,6 +270,23 @@ export default function HardwareProductCreate({ categories = [] }) {
                                     <Textarea id="description" value={data.description} onChange={(e) => setData('description', e.target.value)} rows={3} placeholder="Description..." />
                                     {errors.description && <p className="text-sm text-red-600">{errors.description}</p>}
                                 </div>
+                                {canAiSeoGenerate && (
+                                    <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/60 p-3">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-sm font-medium">SEO IA (suggestion)</p>
+                                            <Button type="button" variant="secondary" size="sm" onClick={handleGenerateSeo} disabled={aiSeoGenerating}>
+                                                <Sparkles className="h-4 w-4 mr-2" />
+                                                {aiSeoGenerating ? 'Génération SEO...' : 'Générer SEO IA'}
+                                            </Button>
+                                        </div>
+                                        {seoSuggestion.meta_title && <p className="text-xs"><strong>Meta title:</strong> {seoSuggestion.meta_title}</p>}
+                                        {seoSuggestion.meta_description && <p className="text-xs"><strong>Meta description:</strong> {seoSuggestion.meta_description}</p>}
+                                        {seoSuggestion.slug && <p className="text-xs"><strong>Slug:</strong> {seoSuggestion.slug}</p>}
+                                        <Input value={data.meta_title} onChange={(e) => setData('meta_title', e.target.value)} placeholder="Meta title (max 60)" maxLength={60} />
+                                        <Textarea value={data.meta_description} onChange={(e) => setData('meta_description', e.target.value)} placeholder="Meta description (max 160)" rows={2} />
+                                        <Input value={data.slug} onChange={(e) => setData('slug', e.target.value)} placeholder="slug-produit" />
+                                    </div>
+                                )}
                                 
                                 {/* Upload Image */}
                                 <div className="space-y-2">
@@ -209,8 +322,32 @@ export default function HardwareProductCreate({ categories = [] }) {
                                                 className="hidden"
                                             />
                                             <p className="text-xs text-gray-500 mt-2">Formats acceptés : JPG, PNG, WebP (max 2 Mo)</p>
+                                            {canAiGenerate && (
+                                                <Button type="button" variant="secondary" size="sm" className="mt-2" onClick={handleGenerateImage} disabled={aiGenerating}>
+                                                    <Sparkles className="h-4 w-4 mr-2" />
+                                                    {aiGenerating ? 'Génération...' : 'Générer 4 images IA'}
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
+                                    {aiImageCandidates.length > 1 && (
+                                        <div className="mt-2">
+                                            <p className="text-xs text-gray-500 mb-2">Choisir l’image principale :</p>
+                                            <div className="flex gap-2 flex-wrap">
+                                                {aiImageCandidates.map((img, idx) => (
+                                                    <button
+                                                        key={`${img.file_name || 'ai'}-${idx}`}
+                                                        type="button"
+                                                        onClick={() => handleSelectAiCandidate(img)}
+                                                        className="h-14 w-14 rounded border overflow-hidden hover:border-amber-500"
+                                                        title={`Image IA ${idx + 1}`}
+                                                    >
+                                                        <img src={img.image_data_url} alt={`IA ${idx + 1}`} className="h-full w-full object-cover" />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                     {errors.image && <p className="text-sm text-red-600">{errors.image}</p>}
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

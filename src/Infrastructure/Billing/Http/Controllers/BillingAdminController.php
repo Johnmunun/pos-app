@@ -613,6 +613,8 @@ class BillingAdminController
             'description' => ['nullable', 'string'],
             'monthly_price' => ['required', 'numeric', 'min:0'],
             'annual_price' => ['nullable', 'numeric', 'min:0'],
+            'platform_take_rate_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'withdrawal_fee_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'currency_code' => ['required', 'string', 'size:3'],
             'promo_type' => ['nullable', 'in:percentage,fixed'],
             'promo_value' => ['nullable', 'numeric', 'min:0'],
@@ -654,6 +656,8 @@ class BillingAdminController
             'description' => $plan['description'] ?? '',
             'monthly_price' => $plan['monthly_price'] ?? 0,
             'annual_price' => $plan['annual_price'] ?? null,
+            'platform_take_rate_percent' => $plan['platform_take_rate_percent'] ?? 0,
+            'withdrawal_fee_percent' => $plan['withdrawal_fee_percent'] ?? 0,
             'currency_code' => $plan['currency_code'] ?? 'USD',
             'promo_type' => $plan['promo_type'] ?? null,
             'promo_value' => $plan['promo_value'] ?? null,
@@ -767,6 +771,10 @@ class BillingAdminController
                         'monthly_effective' => $plan['monthly_price_effective'] ?? $plan['monthly_price'],
                         'annual_effective' => $plan['annual_price_effective'] ?? $plan['annual_price'],
                     ],
+                    'fees' => [
+                        'platform_take_rate_percent' => (float) ($plan['platform_take_rate_percent'] ?? 0),
+                        'withdrawal_fee_percent' => (float) ($plan['withdrawal_fee_percent'] ?? 0),
+                    ],
                     'promotion' => [
                         'type' => $plan['promo_type'] ?? null,
                         'value' => $plan['promo_value'] ?? null,
@@ -862,6 +870,10 @@ class BillingAdminController
                         'annual' => $plan['annual_price'],
                         'monthly_effective' => $plan['monthly_price_effective'] ?? $plan['monthly_price'],
                         'annual_effective' => $plan['annual_price_effective'] ?? $plan['annual_price'],
+                    ],
+                    'fees' => [
+                        'platform_take_rate_percent' => (float) ($plan['platform_take_rate_percent'] ?? 0),
+                        'withdrawal_fee_percent' => (float) ($plan['withdrawal_fee_percent'] ?? 0),
                     ],
                     'promotion' => [
                         'type' => $plan['promo_type'] ?? null,

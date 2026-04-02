@@ -2,6 +2,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { CartProvider } from '@/Contexts/CartContext';
 import ShoppingCart from '@/Components/Ecommerce/ShoppingCart';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
+import AISupportFloatingWidget from '@/Components/Ecommerce/AISupportFloatingWidget';
 import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBootstrap';
 import { ArrowLeft, CalendarDays, ArrowRight, Sparkles } from 'lucide-react';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
@@ -156,6 +157,7 @@ function BlogContent({ shop, articles = [], cmsPages = [], whatsapp = {} }) {
             </div>
 
             <WhatsAppFloatingButton phone={whatsappNumber} enabled={whatsappSupportEnabled} />
+            <AISupportFloatingWidget />
         </>
     );
 }
@@ -164,7 +166,7 @@ export default function StorefrontBlog({ shop, articles = [], cmsPages = [], wha
     const currency = shop?.currency || 'CDF';
 
     return (
-        <CartProvider currency={currency}>
+        <CartProvider currency={currency} storageKey={`ecommerce_cart_${shop?.id ?? 'default'}`}>
             <BlogContent shop={shop} articles={articles} cmsPages={cmsPages} whatsapp={whatsapp} />
         </CartProvider>
     );

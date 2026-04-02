@@ -27,7 +27,13 @@ use Src\Infrastructure\Ecommerce\Http\Controllers\CmsBlogCategoryController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\CmsMediaController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\MarketingController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\EcommerceMarketingAiController;
+use Src\Infrastructure\Ecommerce\Http\Controllers\EcommerceProductAiImageController;
+use Src\Infrastructure\Common\Http\Controllers\ProductAiImageGenerationController;
+use Src\Infrastructure\Common\Http\Controllers\ProductAiSeoController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\StorefrontVisitController;
+use Src\Infrastructure\Ecommerce\Http\Controllers\StorefrontAiSupportController;
+use Src\Infrastructure\Ecommerce\Http\Controllers\StorefrontAiSemanticSearchController;
+use Src\Infrastructure\Ecommerce\Http\Controllers\CmsMediaAiImageController;
 use Src\Infrastructure\GlobalCommerce\Http\Controllers\GcProductController;
 use Src\Infrastructure\GlobalCommerce\Http\Controllers\GcCategoryController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\SupplierController;
@@ -85,6 +91,12 @@ Route::prefix('ecommerce')
         Route::post('/storefront/switch-shop', [StorefrontController::class, 'switchShop'])
             ->middleware('permission:ecommerce.catalog.view|ecommerce.view|module.ecommerce')
             ->name('storefront.switch-shop');
+        Route::post('/storefront/support/ai/ask', [StorefrontAiSupportController::class, 'ask'])
+            ->middleware('permission:ecommerce.catalog.view|ecommerce.view|module.ecommerce')
+            ->name('storefront.support.ai.ask');
+        Route::post('/storefront/search/semantic', [StorefrontAiSemanticSearchController::class, 'search'])
+            ->middleware('permission:ecommerce.catalog.view|ecommerce.view|module.ecommerce')
+            ->name('storefront.search.semantic');
 
         // Catalogue
         Route::get('/catalog', [CatalogController::class, 'index'])
@@ -101,6 +113,18 @@ Route::prefix('ecommerce')
         Route::post('/products', [ProductController::class, 'store'])
             ->middleware('permission:ecommerce.product.create|ecommerce.product.manage|module.ecommerce')
             ->name('products.store');
+        Route::post('/products/ai/analyze-image', [EcommerceProductAiImageController::class, 'analyze'])
+            ->middleware('permission:ecommerce.product.create|ecommerce.product.manage|module.ecommerce')
+            ->name('products.ai.analyze-image');
+        Route::post('/products/ai/generate-image', [ProductAiImageGenerationController::class, 'generate'])
+            ->middleware('permission:ecommerce.product.create|ecommerce.product.manage|module.ecommerce')
+            ->name('products.ai.generate-image');
+        Route::get('/products/ai/generate-image/{id}/status', [ProductAiImageGenerationController::class, 'status'])
+            ->middleware('permission:ecommerce.product.create|ecommerce.product.manage|module.ecommerce')
+            ->name('products.ai.generate-image.status');
+        Route::post('/products/ai/generate-seo', [ProductAiSeoController::class, 'generate'])
+            ->middleware('permission:ecommerce.product.create|ecommerce.product.manage|module.ecommerce')
+            ->name('products.ai.generate-seo');
         Route::put('/products/{id}', [ProductController::class, 'update'])
             ->middleware('permission:ecommerce.product.update|ecommerce.product.manage|module.ecommerce')
             ->name('products.update');
@@ -391,6 +415,9 @@ Route::prefix('ecommerce')
         Route::put('/settings/storefront-shipping', [SettingsController::class, 'updateStorefrontShipping'])
             ->middleware('permission:ecommerce.settings.view|module.ecommerce')
             ->name('settings.storefront-shipping.update');
+        Route::put('/settings/ai-support', [SettingsController::class, 'updateAiSupport'])
+            ->middleware('permission:ecommerce.settings.view|module.ecommerce')
+            ->name('settings.ai-support.update');
 
         // Marketing (SEO, Pixels, Tracking)
         Route::get('/marketing', [MarketingController::class, 'index'])
@@ -498,6 +525,12 @@ Route::prefix('ecommerce')
         Route::post('/cms/media', [CmsMediaController::class, 'store'])
             ->middleware('permission:ecommerce.cms.manage|ecommerce.settings.view|module.ecommerce')
             ->name('cms.media.store');
+        Route::post('/cms/media/ai/generate-image', [CmsMediaAiImageController::class, 'generate'])
+            ->middleware('permission:ecommerce.cms.manage|ecommerce.settings.view|module.ecommerce')
+            ->name('cms.media.ai.generate-image');
+        Route::get('/cms/media/ai/generate-image/{id}/status', [CmsMediaAiImageController::class, 'status'])
+            ->middleware('permission:ecommerce.cms.manage|ecommerce.settings.view|module.ecommerce')
+            ->name('cms.media.ai.generate-image.status');
         Route::delete('/cms/media/{id}', [CmsMediaController::class, 'destroy'])
             ->middleware('permission:ecommerce.cms.manage|ecommerce.settings.view|module.ecommerce')
             ->name('cms.media.destroy');
@@ -521,4 +554,6 @@ Route::domain('{subdomain}.'.$ecommerceBaseDomain)
         Route::get('/catalog', [StorefrontController::class, 'catalog'])->name('public.storefront.catalog');
         Route::get('/product/{id}', [StorefrontController::class, 'showProduct'])->name('public.storefront.product');
         Route::get('/cart', [StorefrontController::class, 'cart'])->name('public.storefront.cart');
+        Route::post('/support/ai/ask', [StorefrontAiSupportController::class, 'ask'])->name('public.storefront.support.ai.ask');
+        Route::post('/search/semantic', [StorefrontAiSemanticSearchController::class, 'search'])->name('public.storefront.search.semantic');
     });

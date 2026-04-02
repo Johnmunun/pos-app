@@ -144,6 +144,8 @@ export default function BillingPlans({ plans = [], subscriptions = [], overrides
             description: plan.description || '',
             monthly_price: Number(plan.monthly_price ?? 0),
             annual_price: plan.annual_price === '' || plan.annual_price === null ? null : Number(plan.annual_price),
+            platform_take_rate_percent: plan.platform_take_rate_percent === '' || plan.platform_take_rate_percent === null ? 0 : Number(plan.platform_take_rate_percent),
+            withdrawal_fee_percent: plan.withdrawal_fee_percent === '' || plan.withdrawal_fee_percent === null ? 0 : Number(plan.withdrawal_fee_percent),
             currency_code: (plan.currency_code || 'USD').toString().toUpperCase(),
             promo_type: plan.promo_type || null,
             promo_value: plan.promo_value === '' || plan.promo_value === null ? null : Number(plan.promo_value),
@@ -450,6 +452,28 @@ export default function BillingPlans({ plans = [], subscriptions = [], overrides
                                         onChange={(e) => updatePlanField(plan.id, 'annual_price', e.target.value)}
                                         className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2"
                                         placeholder="Annuel"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        value={plan.platform_take_rate_percent ?? 0}
+                                        onChange={(e) => updatePlanField(plan.id, 'platform_take_rate_percent', e.target.value)}
+                                        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2"
+                                        placeholder="% commission plateforme"
+                                    />
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        value={plan.withdrawal_fee_percent ?? 0}
+                                        onChange={(e) => updatePlanField(plan.id, 'withdrawal_fee_percent', e.target.value)}
+                                        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2"
+                                        placeholder="% frais retrait"
                                     />
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">

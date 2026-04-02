@@ -91,6 +91,61 @@ class FeatureLimitService
         return $this->repository->getTenantFeatureConfig($tenantId, $featureCode);
     }
 
+    public function assertCanUseMonthlyFeature(?string $tenantId, string $featureCode, ?string $label = null): void
+    {
+        if ($tenantId === null || $tenantId === '') {
+            return;
+        }
+
+        $config = $this->repository->getTenantFeatureConfig((string) $tenantId, $featureCode);
+        if (!($config['enabled'] ?? false)) {
+            abort(403, 'Cette fonctionnalite n\'est pas incluse dans votre plan actuel.');
+        }
+
+        $limit = $config['limit'] ?? null;
+        if ($limit === null) {
+            return;
+        }
+
+        $used = $this->countMonthlyFeatureUsage((string) $tenantId, $featureCode);
+        if ($used >= (int) $limit) {
+            $name = $label ?? 'cette fonctionnalite';
+            abort(403, "Quota mensuel atteint pour {$name} ({$limit}/mois).");
+        }
+    }
+
+    public function recordFeatureUsage(?string $tenantId, string $featureCode, int $quantity = 1): void
+    {
+        if ($tenantId === null || $tenantId === '' || $quantity <= 0) {
+            return;
+        }
+
+        if (!Schema::hasTable('tenant_feature_usage_events')) {
+            return;
+        }
+
+        DB::table('tenant_feature_usage_events')->insert([
+            'tenant_id' => (string) $tenantId,
+            'feature_code' => $featureCode,
+            'quantity' => $quantity,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    public function countMonthlyFeatureUsage(string $tenantId, string $featureCode): int
+    {
+        if (!Schema::hasTable('tenant_feature_usage_events')) {
+            return 0;
+        }
+
+        return (int) DB::table('tenant_feature_usage_events')
+            ->where('tenant_id', (string) $tenantId)
+            ->where('feature_code', $featureCode)
+            ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->sum('quantity');
+    }
+
     public function assertCanCreateUser(?string $tenantId): void
     {
         if ($tenantId === null) {

@@ -8,8 +8,16 @@ export default function EcommerceSettingsIndex({
     ecommerce_base_domain,
     storefront_use_flat_shipping = false,
     storefront_flat_shipping_amount = 0,
+    ai_support_enabled = false,
+    ai_support_tone = 'friendly',
+    ai_support_shipping_policy = '',
+    ai_support_returns_policy = '',
+    ai_semantic_search_enabled = false,
 }) {
     const { props } = usePage();
+    const planUsage = props?.auth?.planUsage || {};
+    const productAiUsage = planUsage.ai_product_image_generate || { used: 0, limit: null, remaining: null };
+    const mediaAiUsage = planUsage.ai_media_image_generate || { used: 0, limit: null, remaining: null };
     const globalCurrency = props?.shop?.currency || shop?.currency || 'USD';
     const baseDomain = ecommerce_base_domain || 'omnisolution.shop';
 
@@ -24,6 +32,13 @@ export default function EcommerceSettingsIndex({
             storefront_flat_shipping_amount !== undefined && storefront_flat_shipping_amount !== null
                 ? String(storefront_flat_shipping_amount)
                 : '0',
+    });
+    const aiSupportForm = useForm({
+        ai_support_enabled: Boolean(ai_support_enabled),
+        ai_support_tone: ai_support_tone || 'friendly',
+        ai_support_shipping_policy: ai_support_shipping_policy || '',
+        ai_support_returns_policy: ai_support_returns_policy || '',
+        ai_semantic_search_enabled: Boolean(ai_semantic_search_enabled),
     });
 
     const handleSubmitDomain = (e) => {
@@ -40,6 +55,17 @@ export default function EcommerceSettingsIndex({
         router.put(route('ecommerce.settings.storefront-shipping.update'), {
             storefront_use_flat_shipping: Boolean(shippingForm.data.storefront_use_flat_shipping),
             storefront_flat_shipping_amount: Number.isFinite(n) ? Math.max(0, n) : 0,
+        }, { preserveScroll: true });
+    };
+
+    const handleSubmitAiSupport = (e) => {
+        e.preventDefault();
+        router.put(route('ecommerce.settings.ai-support.update'), {
+            ai_support_enabled: Boolean(aiSupportForm.data.ai_support_enabled),
+            ai_support_tone: aiSupportForm.data.ai_support_tone || 'friendly',
+            ai_support_shipping_policy: aiSupportForm.data.ai_support_shipping_policy || '',
+            ai_support_returns_policy: aiSupportForm.data.ai_support_returns_policy || '',
+            ai_semantic_search_enabled: Boolean(aiSupportForm.data.ai_semantic_search_enabled),
         }, { preserveScroll: true });
     };
 
@@ -71,6 +97,113 @@ export default function EcommerceSettingsIndex({
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
                                 La devise est gérée dans <strong>Paramètres &gt; Gestion des devises</strong> et partagée avec les autres modules.
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Sparkles className="h-5 w-5 text-amber-500" />
+                            Support client IA e-commerce
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="rounded-md border border-amber-200/70 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-950/20 p-3">
+                            <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
+                                Boutique actuellement configurée
+                            </p>
+                            <p className="text-xs text-amber-800 dark:text-amber-300 mt-1">
+                                {shop?.name || 'Boutique'}{shop?.id ? ` (ID: ${shop.id})` : ''}
+                            </p>
+                            <p className="text-[11px] text-amber-700/90 dark:text-amber-300/90 mt-1">
+                                L’activation du support IA s’applique à cette boutique.
+                            </p>
+                        </div>
+                        <form onSubmit={handleSubmitAiSupport} className="space-y-3">
+                            <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                                <input
+                                    type="checkbox"
+                                    checked={Boolean(aiSupportForm.data.ai_support_enabled)}
+                                    onChange={(e) => aiSupportForm.setData('ai_support_enabled', e.target.checked)}
+                                    className="rounded border-gray-300 dark:border-slate-600"
+                                />
+                                Activer le support client IA sur la vitrine
+                            </label>
+                            <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                                <input
+                                    type="checkbox"
+                                    checked={Boolean(aiSupportForm.data.ai_semantic_search_enabled)}
+                                    onChange={(e) => aiSupportForm.setData('ai_semantic_search_enabled', e.target.checked)}
+                                    className="rounded border-gray-300 dark:border-slate-600"
+                                />
+                                Activer la recherche sémantique IA produits
+                            </label>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Ton de réponse</label>
+                                <select
+                                    value={aiSupportForm.data.ai_support_tone}
+                                    onChange={(e) => aiSupportForm.setData('ai_support_tone', e.target.value)}
+                                    className="w-full max-w-xs rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm px-3 py-2 text-gray-900 dark:text-gray-100"
+                                >
+                                    <option value="friendly">Chaleureux</option>
+                                    <option value="professional">Professionnel</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Politique livraison</label>
+                                <textarea
+                                    value={aiSupportForm.data.ai_support_shipping_policy}
+                                    onChange={(e) => aiSupportForm.setData('ai_support_shipping_policy', e.target.value)}
+                                    rows={3}
+                                    className="w-full rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm px-3 py-2 text-gray-900 dark:text-gray-100"
+                                    placeholder="Ex: Livraison en 24-72h selon zone, frais fixes, etc."
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Politique retours</label>
+                                <textarea
+                                    value={aiSupportForm.data.ai_support_returns_policy}
+                                    onChange={(e) => aiSupportForm.setData('ai_support_returns_policy', e.target.value)}
+                                    rows={3}
+                                    className="w-full rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm px-3 py-2 text-gray-900 dark:text-gray-100"
+                                    placeholder="Ex: Retours sous 7 jours si produit intact..."
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={aiSupportForm.processing}
+                                className="inline-flex items-center px-4 py-2 rounded-md bg-amber-600 text-white text-xs font-semibold hover:bg-amber-700 disabled:opacity-50"
+                            >
+                                {aiSupportForm.processing ? 'Enregistrement...' : 'Enregistrer support IA'}
+                            </button>
+                        </form>
+                    </CardContent>
+                </Card>
+
+                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Sparkles className="h-5 w-5 text-amber-500" />
+                            Quotas IA du mois
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
+                        <div className="rounded-md border border-amber-200/70 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-950/20 p-3">
+                            <p className="font-medium text-gray-900 dark:text-gray-100">Génération image produit IA</p>
+                            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                                {productAiUsage.limit == null
+                                    ? `Utilisé: ${productAiUsage.used} (illimité)`
+                                    : `Utilisé: ${productAiUsage.used}/${productAiUsage.limit} - Reste: ${Math.max(0, productAiUsage.remaining ?? 0)}`}
+                            </p>
+                        </div>
+                        <div className="rounded-md border border-amber-200/70 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-950/20 p-3">
+                            <p className="font-medium text-gray-900 dark:text-gray-100">Génération image média IA (CMS)</p>
+                            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                                {mediaAiUsage.limit == null
+                                    ? `Utilisé: ${mediaAiUsage.used} (illimité)`
+                                    : `Utilisé: ${mediaAiUsage.used}/${mediaAiUsage.limit} - Reste: ${Math.max(0, mediaAiUsage.remaining ?? 0)}`}
                             </p>
                         </div>
                     </CardContent>

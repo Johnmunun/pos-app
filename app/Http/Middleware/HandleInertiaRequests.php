@@ -212,16 +212,31 @@ class HandleInertiaRequests extends Middleware
             'ecommerce_orders' => true,
             'ecommerce_promotions' => true,
             'ecommerce_marketing_pro' => true,
+            'ecommerce_product_ai_vision' => false,
+            'ai_product_image_generate' => false,
+            'ai_media_image_generate' => false,
+            'ai_product_seo_generate' => false,
             'ecommerce_module' => true,
             'pharmacy_module' => true,
             'commerce_module' => true,
             'hardware_module' => true,
+        ];
+        $planUsage = [
+            'ai_product_image_generate' => ['used' => 0, 'limit' => null, 'remaining' => null],
+            'ai_media_image_generate' => ['used' => 0, 'limit' => null, 'remaining' => null],
         ];
         $billingSummary = null;
         if ($user && $user->tenant_id) {
             try {
                 /** @var FeatureLimitService $featureLimitService */
                 $featureLimitService = app(FeatureLimitService::class);
+                $computeMonthlyUsage = function (string $tenantId, string $featureCode) use ($featureLimitService): array {
+                    $cfg = $featureLimitService->getTenantFeatureConfig($tenantId, $featureCode);
+                    $limit = $cfg['limit'] ?? null;
+                    $used = $featureLimitService->countMonthlyFeatureUsage($tenantId, $featureCode);
+                    $remaining = $limit === null ? null : max(0, (int) $limit - (int) $used);
+                    return ['used' => (int) $used, 'limit' => $limit === null ? null : (int) $limit, 'remaining' => $remaining];
+                };
                 $featureFlags['api_payments'] = $featureLimitService->isFeatureEnabled(
                     (string) $user->tenant_id,
                     'api.payments'
@@ -237,10 +252,16 @@ class HandleInertiaRequests extends Middleware
                 $planFeatures['ecommerce_orders'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.orders');
                 $planFeatures['ecommerce_promotions'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.promotions');
                 $planFeatures['ecommerce_marketing_pro'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.marketing.pro');
+                $planFeatures['ecommerce_product_ai_vision'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.product.ai_vision');
+                $planFeatures['ai_product_image_generate'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ai.product.image.generate');
+                $planFeatures['ai_media_image_generate'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ai.media.image.generate');
+                $planFeatures['ai_product_seo_generate'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ai.product.seo.generate');
                 $planFeatures['ecommerce_module'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.module');
                 $planFeatures['pharmacy_module'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'pharmacy.module');
                 $planFeatures['commerce_module'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'commerce.module');
                 $planFeatures['hardware_module'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'hardware.module');
+                $planUsage['ai_product_image_generate'] = $computeMonthlyUsage((string) $user->tenant_id, 'ai.product.image.generate');
+                $planUsage['ai_media_image_generate'] = $computeMonthlyUsage((string) $user->tenant_id, 'ai.media.image.generate');
             } catch (\Throwable $e) {
                 Log::debug('Feature flags fallback', ['error' => $e->getMessage()]);
             }
@@ -317,6 +338,38 @@ class HandleInertiaRequests extends Middleware
             }
         }
 
+        if ($user && !$user->tenant_id && $user->shop_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
+            $tid = \Illuminate\Support\Facades\DB::table('shops')->where('id', $user->shop_id)->value('tenant_id');
+            if ($tid !== null && $tid !== '') {
+                try {
+                    /** @var FeatureLimitService $featureLimitService */
+                    $featureLimitService = app(FeatureLimitService::class);
+                    $planFeatures['ecommerce_product_ai_vision'] = $featureLimitService->isFeatureEnabled((string) $tid, 'ecommerce.product.ai_vision');
+                    $planFeatures['ai_product_image_generate'] = $featureLimitService->isFeatureEnabled((string) $tid, 'ai.product.image.generate');
+                    $planFeatures['ai_media_image_generate'] = $featureLimitService->isFeatureEnabled((string) $tid, 'ai.media.image.generate');
+                    $planFeatures['ai_product_seo_generate'] = $featureLimitService->isFeatureEnabled((string) $tid, 'ai.product.seo.generate');
+                    $cfgProduct = $featureLimitService->getTenantFeatureConfig((string) $tid, 'ai.product.image.generate');
+                    $usedProduct = $featureLimitService->countMonthlyFeatureUsage((string) $tid, 'ai.product.image.generate');
+                    $limitProduct = $cfgProduct['limit'] ?? null;
+                    $planUsage['ai_product_image_generate'] = [
+                        'used' => (int) $usedProduct,
+                        'limit' => $limitProduct === null ? null : (int) $limitProduct,
+                        'remaining' => $limitProduct === null ? null : max(0, (int) $limitProduct - (int) $usedProduct),
+                    ];
+                    $cfgMedia = $featureLimitService->getTenantFeatureConfig((string) $tid, 'ai.media.image.generate');
+                    $usedMedia = $featureLimitService->countMonthlyFeatureUsage((string) $tid, 'ai.media.image.generate');
+                    $limitMedia = $cfgMedia['limit'] ?? null;
+                    $planUsage['ai_media_image_generate'] = [
+                        'used' => (int) $usedMedia,
+                        'limit' => $limitMedia === null ? null : (int) $limitMedia,
+                        'remaining' => $limitMedia === null ? null : max(0, (int) $limitMedia - (int) $usedMedia),
+                    ];
+                } catch (\Throwable $e) {
+                    Log::debug('ecommerce_product_ai_vision shop tenant fallback', ['error' => $e->getMessage()]);
+                }
+            }
+        }
+
         // Thème storefront (couleurs primaire/secondaire) — routes storefront ou vitrine publique (sous-domaine)
         $storefrontTheme = null;
         $isStorefrontPath = str_starts_with($request->path(), 'ecommerce/storefront') || $request->attributes->get('storefront_shop') !== null;
@@ -388,6 +441,7 @@ class HandleInertiaRequests extends Middleware
                 'originalUserId' => $request->session()->get('impersonate.original_user_id'),
                 'featureFlags' => $featureFlags,
                 'planFeatures' => $planFeatures,
+                'planUsage' => $planUsage,
                 'billingSummary' => $billingSummary,
             ],
             'shop' => [

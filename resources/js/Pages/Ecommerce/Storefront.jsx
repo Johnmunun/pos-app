@@ -113,7 +113,6 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
     const content = (
         <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-50">
             <Head title="Boutique en ligne" />
-            <StorefrontClientBootstrap />
 
             {/* Header */}
             <header className="sticky top-0 z-50 border-b border-slate-200/70 dark:border-slate-800 bg-white/75 dark:bg-slate-950/60 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-950/50">
@@ -194,9 +193,13 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
                                 className="h-full w-full object-cover"
                             />
                         ) : (
-                            <div
-                                className="h-full w-full bg-gradient-to-br from-amber-100 via-white to-slate-200 dark:from-amber-950/40 dark:via-slate-900 dark:to-slate-950"
-                                aria-hidden
+                            <img
+                                src="/images/ecommerce/hero-placeholder.jpg"
+                                alt="Boutique en ligne"
+                                className="h-full w-full object-cover"
+                                onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                }}
                             />
                         )}
                         <div className="absolute inset-0 bg-gradient-to-r from-white via-white/90 to-white/20 dark:from-slate-950 dark:via-slate-950/85 dark:to-slate-950/25" />
@@ -731,6 +734,6 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
         </div>
     );
 
-    return <CartProvider currency={currency}>{content}</CartProvider>;
+    return <CartProvider currency={currency} storageKey={`ecommerce_cart_${shop?.id ?? 'default'}`}>{content}</CartProvider>;
 }
 

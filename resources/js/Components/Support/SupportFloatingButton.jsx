@@ -8,7 +8,7 @@ export default function SupportFloatingButton({ enabled = true, bottomOffset }) 
 
     return (
         <div
-            className="fixed right-4 sm:right-6 z-50"
+            className="fixed left-4 sm:left-6 lg:left-[calc(16rem+1rem)] z-40"
             style={{ bottom }}
         >
             <Link

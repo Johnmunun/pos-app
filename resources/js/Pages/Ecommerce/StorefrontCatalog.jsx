@@ -7,8 +7,10 @@ import ShoppingCart from '@/Components/Ecommerce/ShoppingCart';
 import ProductCard from '@/Components/Ecommerce/ProductCard';
 import { Search, Package, Filter, Grid, List, SlidersHorizontal, X, ArrowLeft, Sparkles, ArrowRight } from 'lucide-react';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
+import AISupportFloatingWidget from '@/Components/Ecommerce/AISupportFloatingWidget';
 import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBootstrap';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
+import axios from 'axios';
 
 function shouldShowPageInNav(page) {
     if (!page) return false;
@@ -99,6 +101,10 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
     const [showFilters, setShowFilters] = useState(false);
     const [priceRange, setPriceRange] = useState({ min: '', max: '' });
     const [sortBy, setSortBy] = useState('name');
+    const [aiSearching, setAiSearching] = useState(false);
+    const [aiMatchedIds, setAiMatchedIds] = useState(null);
+    const semanticCfg = usePage().props?.storefrontClient?.semanticSearch || {};
+    const semanticEnabled = semanticCfg?.enabled === true;
 
     const sliderBanners = (banners || []).filter((b) => b.position === 'slider' && (b.image_url || b.title));
     const promotionBanner = (banners || []).find((b) => b.position === 'promotion' && (b.image_url || b.title));
@@ -125,6 +131,13 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
             return product.stock > 0;
         });
 
+        if (Array.isArray(aiMatchedIds) && aiMatchedIds.length > 0) {
+            const order = new Map(aiMatchedIds.map((id, idx) => [String(id), idx]));
+            filtered = filtered.filter((p) => order.has(String(p.id)));
+            filtered.sort((a, b) => (order.get(String(a.id)) ?? 9999) - (order.get(String(b.id)) ?? 9999));
+            return filtered;
+        }
+
         filtered.sort((a, b) => {
             switch (sortBy) {
                 case 'price_asc':
@@ -137,7 +150,7 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
         });
 
         return filtered;
-    }, [products, selectedCategory, search, priceRange, sortBy]);
+    }, [products, selectedCategory, search, priceRange, sortBy, aiMatchedIds]);
 
     const handleFilter = () => {
         router.get(links.catalog(), { search, category_id: selectedCategory }, { preserveState: true, preserveScroll: true });
@@ -147,7 +160,24 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
         setSearch('');
         setSelectedCategory('');
         setPriceRange({ min: '', max: '' });
+        setAiMatchedIds(null);
         router.get(links.catalog(), {}, { preserveState: true });
+    };
+
+    const handleSemanticSearch = async () => {
+        if (!semanticEnabled) return;
+        const q = String(search || '').trim();
+        if (!q) return;
+        setAiSearching(true);
+        try {
+            const res = await axios.post(semanticCfg.searchPath, { query: q });
+            const ids = Array.isArray(res.data?.product_ids) ? res.data.product_ids : [];
+            setAiMatchedIds(ids);
+        } catch (_e) {
+            setAiMatchedIds(null);
+        } finally {
+            setAiSearching(false);
+        }
     };
 
     const selectClass =
@@ -283,6 +313,12 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
                                     <Search className="h-5 w-5" />
                                     Rechercher
                                 </Button>
+                                {semanticEnabled && (
+                                    <Button onClick={handleSemanticSearch} variant="secondary" className="h-12 px-4 rounded-xl gap-2 shrink-0" disabled={aiSearching}>
+                                        <Sparkles className="h-5 w-5" />
+                                        {aiSearching ? 'Recherche IA...' : 'Recherche IA'}
+                                    </Button>
+                                )}
                             </div>
                             <div className="flex flex-col sm:flex-row gap-3 sm:gap-3 sm:items-center">
                                 <select
@@ -378,6 +414,9 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
                             {filteredAndSortedProducts.length} produit{filteredAndSortedProducts.length !== 1 ? 's' : ''} trouvé
                             {filteredAndSortedProducts.length !== 1 ? 's' : ''}
                         </p>
+                        {Array.isArray(aiMatchedIds) && aiMatchedIds.length > 0 && (
+                            <span className="text-xs rounded-full bg-amber-100 text-amber-700 px-2 py-1">Classement IA actif</span>
+                        )}
                         <div className="sm:hidden flex gap-1">
                             <button
                                 type="button"
@@ -433,6 +472,7 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
             </div>
 
             <WhatsAppFloatingButton phone={whatsappNumber} enabled={whatsappSupportEnabled} />
+            <AISupportFloatingWidget />
         </>
     );
 }
@@ -441,7 +481,7 @@ export default function StorefrontCatalog({ shop, products = [], categories = []
     const currency = shop?.currency || 'CDF';
 
     return (
-        <CartProvider currency={currency}>
+        <CartProvider currency={currency} storageKey={`ecommerce_cart_${shop?.id ?? 'default'}`}>
             <CatalogContent
                 products={products}
                 categories={categories}

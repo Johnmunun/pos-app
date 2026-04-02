@@ -12,6 +12,8 @@ use Src\Infrastructure\GlobalCommerce\Http\Controllers\GcCustomerController;
 use Src\Infrastructure\GlobalCommerce\Http\Controllers\GcExportController;
 use Src\Infrastructure\GlobalCommerce\Http\Controllers\GcProductMovementController;
 use Src\Infrastructure\GlobalCommerce\Http\Controllers\GcStockController;
+use Src\Infrastructure\Common\Http\Controllers\ProductAiImageGenerationController;
+use Src\Infrastructure\Common\Http\Controllers\ProductAiSeoController;
 
 /**
  * Module GlobalCommerce - Produits et catégories génériques (multi-secteur).
@@ -31,6 +33,12 @@ Route::prefix('commerce')
         Route::get('/products', [GcProductController::class, 'index'])->name('products.index');
         Route::get('/products/create', [GcProductController::class, 'create'])->name('products.create');
         Route::post('/products', [GcProductController::class, 'store'])->name('products.store');
+        Route::post('/products/ai/generate-image', [ProductAiImageGenerationController::class, 'generate'])
+            ->name('products.ai.generate-image');
+        Route::get('/products/ai/generate-image/{id}/status', [ProductAiImageGenerationController::class, 'status'])
+            ->name('products.ai.generate-image.status');
+        Route::post('/products/ai/generate-seo', [ProductAiSeoController::class, 'generate'])
+            ->name('products.ai.generate-seo');
         Route::get('/products/{id}/edit', [GcProductController::class, 'edit'])->name('products.edit');
         Route::put('/products/{id}', [GcProductController::class, 'update'])->name('products.update');
         Route::post('/products/{id}/toggle-status', [GcProductController::class, 'toggleStatus'])->name('products.toggle-status');

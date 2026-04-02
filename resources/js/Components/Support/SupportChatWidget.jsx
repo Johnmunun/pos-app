@@ -178,7 +178,7 @@ export default function SupportChatWidget({ liftForMobileBottomNav = false }) {
     }
 
     const fixedShell =
-        `fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50${
+        `fixed bottom-4 left-4 sm:bottom-6 sm:left-6 lg:left-[calc(16rem+1rem)] z-40${
             liftForMobileBottomNav ? ' max-md:!bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))]' : ''
         }`;
 

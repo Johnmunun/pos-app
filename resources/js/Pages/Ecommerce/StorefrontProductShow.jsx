@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
+import { formatCurrency as formatMoney } from '@/lib/currency';
 
 function StorefrontProductHeader({ shop, cmsPages = [] }) {
     const links = useStorefrontLinks();
@@ -93,12 +94,7 @@ function ProductContent({ product, reviews = [], shop, cmsPages, whatsapp = {}, 
         reviewCount > 0 ? Math.round((reviews.reduce((sum, r) => sum + (Number(r.rating) || 0), 0) / reviewCount) * 10) / 10 : 0;
     const filledStars = Math.round(avgRating);
 
-    const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('fr-FR', {
-            style: 'currency',
-            currency: currency || 'USD',
-        }).format(amount);
-    };
+    const formatCurrency = (amount) => formatMoney(amount, product?.price_currency || currency || 'CDF');
 
     const handleAddToCart = () => {
         if (product.stock < quantity) {
@@ -437,7 +433,7 @@ export default function StorefrontProductShow({ shop, product, reviews = [], cms
     const links = useStorefrontLinks();
 
     return (
-        <CartProvider currency={currency}>
+        <CartProvider currency={currency} storageKey={`ecommerce_cart_${shop?.id ?? 'default'}`}>
             <ProductContent
                 product={product}
                 reviews={reviews}

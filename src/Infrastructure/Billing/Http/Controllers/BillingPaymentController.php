@@ -15,6 +15,7 @@ use Inertia\Response as InertiaResponse;
 use App\Services\CurrencyConversionService;
 use Src\Application\Billing\Services\BillingPlanService;
 use Src\Infrastructure\Billing\Models\BillingPaymentTransaction;
+use Src\Infrastructure\Billing\Services\MerchantWalletService;
 use Src\Infrastructure\Ecommerce\Models\OrderItemModel;
 use Src\Infrastructure\Ecommerce\Models\OrderModel;
 use Src\Infrastructure\Billing\Services\FusionPayClient;
@@ -28,6 +29,7 @@ class BillingPaymentController extends Controller
         private readonly BillingPlanService $billingPlanService,
         private readonly CurrencyConversionService $currencyConversionService,
         private readonly UpdatePaymentStatusUseCase $updateEcommercePaymentStatusUseCase,
+        private readonly MerchantWalletService $merchantWalletService,
     ) {
     }
 
@@ -223,6 +225,16 @@ class BillingPaymentController extends Controller
             return response()->json(['message' => 'Signature webhook invalide'], 403);
         }
 
+        $eventType = (string) ($request->input('event') ?? $request->input('type') ?? 'unknown');
+        $webhookKey = $this->resolveWebhookEventKey($request);
+        if (
+            $webhookKey !== ''
+            && DB::getSchemaBuilder()->hasTable('payment_webhook_events')
+            && DB::table('payment_webhook_events')->where('event_key', $webhookKey)->exists()
+        ) {
+            return response()->json(['message' => 'Webhook déjà traité'], 200);
+        }
+
         $event = strtolower((string) $request->input('event', ''));
         $providerReference = (string) ($request->input('tokenPay') ?? $request->input('token') ?? $request->input('provider_reference'));
         $transactionId = (int) ($request->input('personal_Info.0.orderId') ?? $request->input('metadata.transaction_id') ?? 0);
@@ -257,6 +269,7 @@ class BillingPaymentController extends Controller
                     (string) $transaction->ecommerce_order_id,
                     EcommerceOrderEntity::PAYMENT_STATUS_PAID
                 );
+                $this->merchantWalletService->applySettlementFromEcommercePayment($transaction->fresh());
             } catch (\Throwable) {
                 // Ne pas échouer le webhook si la commande est déjà à jour.
             }
@@ -271,6 +284,20 @@ class BillingPaymentController extends Controller
                 'active',
                 $endsAt->toDateTimeString()
             );
+        }
+
+        if ($webhookKey !== '' && DB::getSchemaBuilder()->hasTable('payment_webhook_events')) {
+            DB::table('payment_webhook_events')->insert([
+                'provider' => 'fusionpay',
+                'event_key' => $webhookKey,
+                'event_type' => $eventType,
+                'billing_payment_transaction_id' => $transaction->id,
+                'status' => 'processed',
+                'payload' => json_encode($request->all()),
+                'processed_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
 
         return response()->json(['ok' => true, 'status' => $transaction->status]);
@@ -304,6 +331,7 @@ class BillingPaymentController extends Controller
                                     (string) $transaction->ecommerce_order_id,
                                     EcommerceOrderEntity::PAYMENT_STATUS_PAID
                                 );
+                                $this->merchantWalletService->applySettlementFromEcommercePayment($transaction->fresh());
                             } catch (\Throwable) {
                             }
                         } elseif (!empty($transaction->tenant_id) && !empty($transaction->billing_plan_id)) {
@@ -448,5 +476,24 @@ class BillingPaymentController extends Controller
         $computed = hash_hmac('sha256', $request->getContent(), $secret);
 
         return hash_equals($computed, $signature);
+    }
+
+    private function resolveWebhookEventKey(Request $request): string
+    {
+        $explicit = (string) ($request->input('event_id') ?? $request->input('id') ?? '');
+        if ($explicit !== '') {
+            return 'fusionpay:' . $explicit;
+        }
+
+        $providerReference = (string) ($request->input('tokenPay') ?? $request->input('token') ?? $request->input('provider_reference') ?? '');
+        $eventType = strtolower((string) ($request->input('event') ?? $request->input('type') ?? 'unknown'));
+        $status = strtolower((string) ($request->input('statut') ?? $request->input('status') ?? 'pending'));
+        $orderId = (string) ($request->input('personal_Info.0.orderId') ?? $request->input('metadata.transaction_id') ?? '');
+
+        if ($providerReference === '' && $orderId === '') {
+            return '';
+        }
+
+        return 'fusionpay:' . sha1($providerReference . '|' . $orderId . '|' . $eventType . '|' . $status . '|' . $request->getContent());
     }
 }

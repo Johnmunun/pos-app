@@ -22,8 +22,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
-import { formatCurrency } from '@/lib/currency';
+import { formatCurrency, normalizeCurrencyCode } from '@/lib/currency';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
+import AISupportFloatingWidget from '@/Components/Ecommerce/AISupportFloatingWidget';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 
 function StorefrontCartHeader({ shop, cmsPages = [], currency }) {
@@ -89,7 +90,7 @@ function StorefrontCartHeader({ shop, cmsPages = [], currency }) {
 
 function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop, cmsPages, whatsapp = {}, config = {} }) {
     const links = useStorefrontLinks();
-    const { cart, updateQuantity, removeFromCart, getCartTotal, getPriceInDisplayCurrency, currency, clearCart } = useCart();
+    const { cart, updateQuantity, removeFromCart, getCartTotal, getPriceInDisplayCurrency, currency, clearCart, exchangeRates } = useCart();
     const [orderDrawerOpen, setOrderDrawerOpen] = useState(false);
     const [selectedShippingId, setSelectedShippingId] = useState(shippingMethods?.[0]?.id ?? '');
     const [selectedPaymentId, setSelectedPaymentId] = useState(paymentMethods?.[0]?.id ?? '');
@@ -101,12 +102,30 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
 
     const displayCurrency = currency || shop?.currency || 'XAF';
     const format = (amount) => formatCurrency(amount, displayCurrency);
+    const normalizedDisplayCurrency = normalizeCurrencyCode(displayCurrency);
+    const displayCurrencyLabel = normalizedDisplayCurrency === 'XAF' || normalizedDisplayCurrency === 'XOF'
+        ? 'FCFA'
+        : normalizedDisplayCurrency;
+    const hasRateForCurrency = (value) => {
+        const code = normalizeCurrencyCode(value || normalizedDisplayCurrency);
+        return code === normalizedDisplayCurrency || Object.prototype.hasOwnProperty.call(exchangeRates || {}, code);
+    };
+    const canConvertAllItems = cart.every((item) => hasRateForCurrency(item.price_currency));
+    const cartCurrencies = [...new Set(cart.map((item) => normalizeCurrencyCode(item.price_currency || normalizedDisplayCurrency)))];
+    const rawSubtotal = cart.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0);
+
+    const formatItemAmount = (amount, itemCurrency) => {
+        if (!canConvertAllItems) {
+            return formatCurrency(amount, itemCurrency || displayCurrency);
+        }
+        return format(getPriceInDisplayCurrency(amount, itemCurrency));
+    };
 
     const useFlatShipping = !!config?.storefront_use_flat_shipping;
     const flatShippingAmount = Math.max(0, Number(config?.storefront_flat_shipping_amount ?? 0));
     const hasPhysicalItems = cart.some((i) => !i.is_digital);
 
-    const subtotal = getCartTotal();
+    const subtotal = !canConvertAllItems && cartCurrencies.length === 1 ? rawSubtotal : getCartTotal();
     const taxAmount = subtotal * (taxRate / 100);
     const total = subtotal + shippingAmount + taxAmount - couponDiscount;
 
@@ -202,7 +221,7 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
         <>
             <Head title="Panier - Boutique" />
             <StorefrontClientBootstrap />
-            <StorefrontCartHeader shop={shop} cmsPages={cmsPages} currency={displayCurrency} />
+            <StorefrontCartHeader shop={shop} cmsPages={cmsPages} currency={displayCurrencyLabel} />
 
             <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
                 {/* Hero section */}
@@ -283,7 +302,7 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
                                                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Réf. {item.sku}</p>
                                                 )}
                                                 <p className="text-lg font-bold text-amber-600 dark:text-amber-400 mb-4">
-                                                    {format(getPriceInDisplayCurrency(item.price, item.price_currency))}
+                                                    {formatItemAmount(item.price, item.price_currency)}
                                                     <span className="text-sm font-normal text-slate-500 dark:text-slate-400"> / unité</span>
                                                 </p>
                                                 <div className="flex flex-wrap items-center gap-3">
@@ -321,7 +340,7 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
                                             </div>
                                             <div className="flex-shrink-0 text-right">
                                                 <p className="text-xl font-bold text-slate-900 dark:text-white">
-                                                    {format(getPriceInDisplayCurrency(item.price, item.price_currency) * item.quantity)}
+                                                    {formatItemAmount((Number(item.price) || 0) * item.quantity, item.price_currency)}
                                                 </p>
                                             </div>
                                         </div>
@@ -335,9 +354,14 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
                                     <div className="flex items-center justify-between">
                                         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Résumé</h2>
                                         <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
-                                            {displayCurrency}
+                                            {displayCurrencyLabel}
                                         </span>
                                     </div>
+                                    {!canConvertAllItems && (
+                                        <div className="rounded-xl border border-amber-200 dark:border-amber-800/60 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2.5 text-xs text-amber-800 dark:text-amber-200">
+                                            Conversion indisponible pour une ou plusieurs devises: affichage des montants dans la devise d'origine des articles.
+                                        </div>
+                                    )}
 
                                     {useFlatShipping ? (
                                         <div className="rounded-xl border border-slate-200/80 dark:border-slate-600 bg-slate-50/80 dark:bg-slate-900/40 px-3 py-2.5">
@@ -346,7 +370,7 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
                                                 Frais de livraison
                                             </p>
                                             <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
-                                                Fixés par la boutique ({displayCurrency}) — non modifiables.
+                                                Fixés par la boutique ({displayCurrencyLabel}) — non modifiables.
                                             </p>
                                             <p className="text-base font-semibold text-slate-900 dark:text-white">
                                                 {hasPhysicalItems ? format(flatShippingAmount) : format(0)}
@@ -513,6 +537,7 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
             )}
 
             <WhatsAppFloatingButton phone={whatsappNumber} enabled={whatsappSupportEnabled} />
+            <AISupportFloatingWidget />
         </>
     );
 }
@@ -530,7 +555,11 @@ export default function StorefrontCart({
     config = {},
 }) {
     return (
-        <CartProvider currency={currency} exchangeRates={exchange_rates}>
+        <CartProvider
+            currency={currency}
+            exchangeRates={exchange_rates}
+            storageKey={`ecommerce_cart_${shop?.id ?? 'default'}`}
+        >
             <CartContent
                 shippingMethods={shipping_methods}
                 paymentMethods={payment_methods}

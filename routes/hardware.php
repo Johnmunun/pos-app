@@ -18,6 +18,8 @@ use Src\Infrastructure\Pharmacy\Http\Controllers\PharmacyReportController;
 use Src\Infrastructure\Pharmacy\Http\Controllers\ExportController;
 use Src\Infrastructure\Pharmacy\Http\Controllers\StockTransferController;
 use Src\Infrastructure\Quincaillerie\Http\Controllers\InventoryController as QuincaillerieInventoryController;
+use Src\Infrastructure\Common\Http\Controllers\ProductAiImageGenerationController;
+use Src\Infrastructure\Common\Http\Controllers\ProductAiSeoController;
 
 /**
  * DDD Hardware (Quincaillerie) Module Routes
@@ -77,6 +79,15 @@ Route::prefix('hardware')
         Route::post('/products', [QuincaillerieProductController::class, 'store'])
             ->middleware('permission:hardware.product.manage')
             ->name('products.store');
+        Route::post('/products/ai/generate-image', [ProductAiImageGenerationController::class, 'generate'])
+            ->middleware('permission:hardware.product.manage|hardware.product.create')
+            ->name('products.ai.generate-image');
+        Route::get('/products/ai/generate-image/{id}/status', [ProductAiImageGenerationController::class, 'status'])
+            ->middleware('permission:hardware.product.manage|hardware.product.create')
+            ->name('products.ai.generate-image.status');
+        Route::post('/products/ai/generate-seo', [ProductAiSeoController::class, 'generate'])
+            ->middleware('permission:hardware.product.manage|hardware.product.create')
+            ->name('products.ai.generate-seo');
         Route::get('/products/{id}', [QuincaillerieProductController::class, 'show'])
             ->middleware('permission:hardware.product.view|hardware.product.manage')
             ->name('products.show');

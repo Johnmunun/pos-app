@@ -31,10 +31,10 @@ function convertToCurrency(amount, fromCurrency, toCurrency, exchangeRates = {})
     return (Number(amount) * toRate) / fromRate;
 }
 
-export const CartProvider = ({ children, initialCart = [], currency = 'USD', exchangeRates = {} }) => {
+export const CartProvider = ({ children, initialCart = [], currency = 'USD', exchangeRates = {}, storageKey = CART_STORAGE_KEY }) => {
     const [cart, setCart] = useState(() => {
         try {
-            const stored = localStorage.getItem(CART_STORAGE_KEY);
+            const stored = localStorage.getItem(storageKey);
             return stored ? JSON.parse(stored) : initialCart;
         } catch {
             return initialCart;
@@ -42,8 +42,8 @@ export const CartProvider = ({ children, initialCart = [], currency = 'USD', exc
     });
 
     useEffect(() => {
-        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
-    }, [cart]);
+        localStorage.setItem(storageKey, JSON.stringify(cart));
+    }, [cart, storageKey]);
 
     const addToCart = (product, quantity = 1) => {
         if (product.stock < quantity) {

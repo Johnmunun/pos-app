@@ -30,7 +30,7 @@ export default function Drawer({ isOpen, onClose, title, children, size = 'md' }
                 leaveTo="opacity-0"
             >
                 <div
-                    className="fixed inset-0 bg-black/50 z-40"
+                    className="fixed inset-0 bg-black/50 z-[100]"
                     onClick={onClose}
                 />
             </Transition.Child>
@@ -46,7 +46,7 @@ export default function Drawer({ isOpen, onClose, title, children, size = 'md' }
                 leaveTo="translate-x-full"
             >
                 <div
-                    className={`fixed right-0 top-0 h-full ${sizeClasses[size]} w-full bg-white dark:bg-gray-800 shadow-xl z-50`}
+                    className={`fixed right-0 top-0 h-full ${sizeClasses[size]} w-full bg-white dark:bg-gray-800 shadow-xl z-[110]`}
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div className="flex flex-col h-full">
