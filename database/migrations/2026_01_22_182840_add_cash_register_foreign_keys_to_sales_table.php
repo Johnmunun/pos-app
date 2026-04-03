@@ -15,6 +15,13 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Cette migration utilise `information_schema` (MySQL) pour vérifier les contraintes.
+        // Or, les tests utilisent une base SQLite (:memory:) qui n'expose pas ces tables.
+        // En environnement SQLite, on saute l'ajout des contraintes pour éviter de bloquer les tests.
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         // Vérifier que les tables existent avant d'ajouter les foreign keys
         if (!Schema::hasTable('sales') || !Schema::hasTable('cash_registers') || !Schema::hasTable('cash_register_sessions')) {
             return;
@@ -70,6 +77,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         if (!Schema::hasTable('sales')) {
             return;
         }

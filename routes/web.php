@@ -122,11 +122,11 @@ Route::post('/api/billing/payments/callback', [BillingPaymentController::class, 
  * Public Routes - Login (Welcome page)
  */
 Route::get('/login', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
+    // Utiliser la page de login Inertia "Auth/Login" (session/cookies),
+    // compatible avec les middlewares web ('auth', 'verified').
+    return Inertia::render('Auth/Login', [
+        'status' => session('status'),
+        'canResetPassword' => Route::has('password.request'),
     ]);
 })->name('login');
 

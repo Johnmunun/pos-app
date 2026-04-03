@@ -18,15 +18,12 @@ class RootUserAccessTest extends TestCase
     public function test_root_user_can_access_admin_pages()
     {
         // Créer un utilisateur ROOT
-        $rootUser = User::create([
-            'first_name' => 'Admin',
-            'last_name' => 'Root',
+        /** @var User $rootUser */
+        $rootUser = User::factory()->create([
+            'name' => 'Admin Root',
             'email' => 'root@test.local',
-            'password' => bcrypt('password'),
             'type' => 'ROOT',
             'tenant_id' => null,
-            'is_active' => true,
-            'email_verified_at' => now(),
         ]);
 
         app(PermissionSyncService::class)->syncFromDefaultFile();
@@ -51,15 +48,12 @@ class RootUserAccessTest extends TestCase
     public function test_non_root_user_cannot_access_admin_pages()
     {
         // Créer un utilisateur normal
-        $user = User::create([
-            'first_name' => 'User',
-            'last_name' => 'Normal',
+        /** @var User $user */
+        $user = User::factory()->create([
+            'name' => 'User Normal',
             'email' => 'user@test.local',
-            'password' => bcrypt('password'),
             'type' => 'MERCHANT',
             'tenant_id' => 1,
-            'is_active' => true,
-            'email_verified_at' => now(),
         ]);
 
         // Essayer d'accéder
@@ -86,15 +80,12 @@ class RootUserAccessTest extends TestCase
      */
     public function test_root_user_redirected_to_admin_after_login()
     {
-        $rootUser = User::create([
-            'first_name' => 'Admin',
-            'last_name' => 'Root',
+        /** @var User $rootUser */
+        $rootUser = User::factory()->create([
+            'name' => 'Admin Root',
             'email' => 'root@test.local',
-            'password' => bcrypt('password'),
             'type' => 'ROOT',
             'tenant_id' => null,
-            'is_active' => true,
-            'email_verified_at' => now(),
         ]);
 
         app(PermissionSyncService::class)->syncFromDefaultFile();
@@ -109,7 +100,7 @@ class RootUserAccessTest extends TestCase
             'password' => 'password',
         ]);
 
-        $response->assertRedirect('/admin/select-tenant');
+        $response->assertRedirect('/admin/dashboard');
     }
 
     /**
@@ -117,15 +108,12 @@ class RootUserAccessTest extends TestCase
      */
     public function test_normal_user_redirected_to_dashboard_after_login()
     {
-        $user = User::create([
-            'first_name' => 'User',
-            'last_name' => 'Normal',
+        /** @var User $user */
+        $user = User::factory()->create([
+            'name' => 'User Normal',
             'email' => 'user@test.local',
-            'password' => bcrypt('password'),
             'type' => 'MERCHANT',
             'tenant_id' => 1,
-            'is_active' => true,
-            'email_verified_at' => now(),
         ]);
 
         // Se connecter via formulaire

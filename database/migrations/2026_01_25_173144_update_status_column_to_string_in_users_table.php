@@ -11,6 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // ALTER TABLE ... MODIFY est MySQL uniquement. Les tests utilisent SQLite (:memory:)
+        // donc on saute cette migration côté SQLite.
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         // Change the status column from boolean to string using raw SQL
         DB::statement('ALTER TABLE users MODIFY COLUMN status VARCHAR(255) DEFAULT "active"');
         
@@ -23,6 +29,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         // Revert back to boolean - this is more complex, we'll set based on string values
         DB::statement("UPDATE users SET status = CASE WHEN status = 'active' OR status = 'pending' THEN 1 ELSE 0 END");
         DB::statement('ALTER TABLE users MODIFY COLUMN status BOOLEAN DEFAULT 1');

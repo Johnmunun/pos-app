@@ -12,6 +12,13 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Cette migration utilise des syntaxes MySQL spécifiques (`ENUM`, `AFTER`, etc.).
+        // Or les tests utilisent SQLite `:memory:` (voir phpunit.xml). On saute donc
+        // uniquement sur SQLite pour ne pas casser l'exécution des tests.
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         Schema::table('products', function (Blueprint $table) {
             // Vérifier et ajouter/modifier currency
             if (!Schema::hasColumn('products', 'currency')) {
@@ -60,6 +67,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         Schema::table('products', function (Blueprint $table) {
             if (Schema::hasColumn('products', 'currency')) {
                 $table->dropColumn('currency');

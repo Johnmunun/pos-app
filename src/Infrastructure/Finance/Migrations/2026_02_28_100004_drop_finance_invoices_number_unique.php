@@ -9,6 +9,12 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // `SHOW INDEX` est MySQL spécifique. Les tests utilisent SQLite (:memory:)
+        // donc on saute cette migration côté sqlite.
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         // Sécuriser la migration : ne tente de supprimer l'index que s'il existe réellement
         $indexExists = collect(
             DB::select("SHOW INDEX FROM finance_invoices WHERE Key_name = 'finance_invoices_number_unique'")
@@ -23,6 +29,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         Schema::table('finance_invoices', function (Blueprint $table) {
             $table->unique('number', 'finance_invoices_number_unique');
         });

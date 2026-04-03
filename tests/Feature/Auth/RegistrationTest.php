@@ -13,19 +13,22 @@ class RegistrationTest extends TestCase
     {
         $response = $this->get('/register');
 
-        $response->assertStatus(200);
+        // Dans cette app, `/register` est une route legacy qui redirige vers l'onboarding multi-étapes.
+        $response->assertStatus(302);
+        $response->assertRedirect(route('onboarding.step1', absolute: false));
     }
 
     public function test_new_users_can_register(): void
     {
-        $response = $this->post('/register', [
+        // L'inscription complète se fait en plusieurs étapes. On teste ici l'étape 1.
+        $response = $this->post(route('onboarding.step1.process', absolute: false), [
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => 'password',
             'password_confirmation' => 'password',
         ]);
 
-        $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $this->assertGuest();
+        $response->assertRedirect(route('onboarding.step2', absolute: false));
     }
 }
