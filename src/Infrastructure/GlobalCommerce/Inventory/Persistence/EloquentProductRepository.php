@@ -9,6 +9,7 @@ use Src\Infrastructure\GlobalCommerce\Inventory\Models\GcStockMovementModel;
 use Src\Shared\ValueObjects\Money;
 use Src\Shared\ValueObjects\Quantity;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Ramsey\Uuid\Uuid;
 
@@ -60,7 +61,7 @@ class EloquentProductRepository implements ProductRepositoryInterface
                     'reference' => $beforeStock === null ? 'Stock initial' : 'Mise à jour stock',
                     'reference_type' => 'auto',
                     'reference_id' => null,
-                    'created_by' => auth()->id(),
+                    'created_by' => Auth::id(),
                 ]);
             }
         }
@@ -99,6 +100,19 @@ class EloquentProductRepository implements ProductRepositoryInterface
         if ($excludeId !== null) {
             $query->where('id', '!=', $excludeId);
         }
+        return $query->exists();
+    }
+
+    public function existsBySkuInShops(array $shopIds, string $sku, ?string $excludeId = null): bool
+    {
+        if ($shopIds === []) {
+            return false;
+        }
+        $query = ProductModel::whereIn('shop_id', $shopIds)->where('sku', $sku);
+        if ($excludeId !== null) {
+            $query->where('id', '!=', $excludeId);
+        }
+
         return $query->exists();
     }
 

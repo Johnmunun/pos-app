@@ -138,7 +138,6 @@ Suggested startup flow in app:
 - Logs enabled for API errors
 - Test with real tenant/shop/depot data
 
----
 
 ## 9) Before Building Screens
 
@@ -161,4 +160,3 @@ Validate with Postman/Insomnia:
 3. Deploy VPS
 4. Create Expo project
 5. Start with Auth + Bootstrap + POS Home
-

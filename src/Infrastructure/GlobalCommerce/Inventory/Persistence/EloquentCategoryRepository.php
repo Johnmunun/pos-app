@@ -59,7 +59,15 @@ class EloquentCategoryRepository implements CategoryRepositoryInterface
 
     public function findTree(string $shopId): array
     {
-        $roots = CategoryModel::where('shop_id', $shopId)
+        return $this->findTreeForShopIds([(string) $shopId]);
+    }
+
+    public function findTreeForShopIds(array $shopIds): array
+    {
+        if ($shopIds === []) {
+            return [];
+        }
+        $roots = CategoryModel::whereIn('shop_id', $shopIds)
             ->whereNull('parent_id')
             ->with(['children' => function ($q) {
                 $q->with('children')->orderBy('sort_order')->orderBy('name');

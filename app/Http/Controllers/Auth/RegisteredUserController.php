@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Mail\PostRegistrationPaymentReminderMail;
 use App\Mail\WelcomeRegistrationMail;
 use App\Services\DynamicMailSettingsService;
 use Src\Infrastructure\Referral\Models\ReferralAccountModel;
@@ -101,14 +102,18 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
-        // Email de bienvenue configurable depuis l'UI admin (SMTP dynamique)
+        // Emails : bienvenue + rappel souscription (SMTP admin si activé, sinon config .env)
         try {
             $mailService = app(DynamicMailSettingsService::class);
-            if ($mailService->applyFromStorage()) {
-                Mail::to($user->email)->send(new WelcomeRegistrationMail($user, $request->company_name));
-            }
+            $mailService->applyFromStorage();
+
+            Mail::to($user->email)->send(new WelcomeRegistrationMail($user, $request->company_name));
+            Mail::to($user->email)->send(new PostRegistrationPaymentReminderMail(
+                $user,
+                $request->company_name,
+            ));
         } catch (\Throwable $e) {
-            Log::warning('Welcome email failed after registration', [
+            Log::warning('Registration emails failed after store registration', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
             ]);

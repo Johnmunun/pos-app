@@ -55,19 +55,18 @@ class EcommerceFusionPaymentController extends Controller
             return response()->json(['message' => 'Accès à cette commande refusé.'], 403);
         }
 
+        // Tolérant: on autorise le lancement du paiement en ligne même si la méthode
+        // de paiement n'est pas explicitement mappée sur la commande.
         $code = (string) ($order->payment_method ?? '');
-        if ($code === '') {
-            return response()->json(['message' => 'Aucune méthode de paiement sur la commande.'], 422);
-        }
-
-        $method = PaymentMethodModel::query()
-            ->where('shop_id', $shopId)
-            ->where('code', $code)
-            ->where('is_active', true)
-            ->first();
-
-        if ($method === null || strtolower((string) $method->type) !== 'fusionpay') {
-            return response()->json(['message' => 'Le paiement en ligne FusionPay n’est pas disponible pour cette commande.'], 422);
+        if ($code !== '') {
+            $method = PaymentMethodModel::query()
+                ->where('shop_id', $shopId)
+                ->where('code', $code)
+                ->where('is_active', true)
+                ->first();
+            if ($method !== null && strtolower((string) $method->type) !== 'fusionpay') {
+                return response()->json(['message' => 'Cette commande n’utilise pas un mode de paiement en ligne.'], 422);
+            }
         }
 
         $pending = BillingPaymentTransaction::query()

@@ -59,7 +59,7 @@ final class DefaultCurrencyProvisioner
         $this->upsertRate($tenantId, $usd->id, $xaf->id, $rateUsdXaf, $effective);
 
         if ($shop !== null) {
-            $shop->currency = 'USD';
+            $shop->currency = strtoupper((string) $usd->code);
             $shop->save();
         }
     }

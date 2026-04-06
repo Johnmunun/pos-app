@@ -2,6 +2,7 @@
 
 namespace Src\Infrastructure\Ecommerce\Http\Controllers;
 
+use App\Services\EcommerceOrderCreatedMailService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,7 @@ use Src\Domain\Ecommerce\Repositories\OrderItemRepositoryInterface;
 use Carbon\Carbon;
 use Src\Domain\Ecommerce\Entities\Order;
 use Src\Infrastructure\Ecommerce\Models\PaymentMethodModel;
+use Src\Infrastructure\GlobalCommerce\Inventory\Models\ProductModel;
 use Src\Application\Billing\Services\FeatureLimitService;
 use App\Models\Shop;
 
@@ -28,7 +30,8 @@ class OrderController
         private readonly UpdatePaymentStatusUseCase $updatePaymentStatusUseCase,
         private readonly OrderRepositoryInterface $orderRepository,
         private readonly OrderItemRepositoryInterface $orderItemRepository,
-        private readonly FeatureLimitService $featureLimitService
+        private readonly FeatureLimitService $featureLimitService,
+        private readonly EcommerceOrderCreatedMailService $ecommerceOrderCreatedMailService
     ) {
     }
 
@@ -232,48 +235,80 @@ class OrderController
 
         $paymentStatusIn = $validated['payment_status'] ?? Order::PAYMENT_STATUS_PENDING;
         $methodCode = $validated['payment_method'] ?? null;
-        $needsFusionPayment = false;
-        if ($methodCode !== null && $methodCode !== '') {
-            $pm = PaymentMethodModel::query()
+        $pm = ($methodCode !== null && $methodCode !== '')
+            ? PaymentMethodModel::query()
                 ->where('shop_id', $shopId)
                 ->where('code', $methodCode)
-                ->first();
-            if ($pm !== null && strtolower((string) $pm->type) === 'fusionpay') {
-                $needsFusionPayment = true;
-                $paymentStatusIn = Order::PAYMENT_STATUS_PENDING;
+                ->first()
+            : null;
+
+        $productIds = array_values(array_unique(array_map(
+            static fn (array $i): string => (string) $i['product_id'],
+            $validated['items']
+        )));
+        $productModels = ProductModel::query()
+            ->where('shop_id', $shopId)
+            ->whereIn('id', $productIds)
+            ->get(['id', 'product_type', 'mode_paiement']);
+
+        $isImmediatePaymentItem = static function (array $item) use ($productModels): bool {
+            $model = $productModels->firstWhere('id', (string) $item['product_id']);
+            if ($model === null) {
+                // Fallback sécurisé: comportement historique = paiement immédiat
+                return true;
+            }
+            $isDigital = strtolower((string) ($model->product_type ?? 'physical')) === 'digital';
+            $mode = (string) ($model->mode_paiement ?? 'paiement_immediat');
+
+            return $isDigital || $mode !== 'paiement_livraison';
+        };
+
+        $immediateItemsRaw = [];
+        $deliveryItemsRaw = [];
+        foreach ($validated['items'] as $item) {
+            if ($isImmediatePaymentItem($item)) {
+                $immediateItemsRaw[] = $item;
+            } else {
+                $deliveryItemsRaw[] = $item;
             }
         }
 
-        $items = array_map(function ($item) {
-            return new OrderItemDTO(
-                $item['product_id'],
-                $item['product_name'],
-                $item['product_sku'] ?? null,
-                (float) $item['quantity'],
-                (float) $item['unit_price'],
-                (float) $item['discount_amount'],
-                $item['product_image_url'] ?? null
-            );
-        }, $validated['items']);
+        $requiresImmediateOnlinePayment = !empty($immediateItemsRaw);
 
-        $dto = new CreateOrderDTO(
-            $shopId,
-            $validated['customer_name'],
-            $validated['customer_email'],
-            $validated['customer_phone'] ?? null,
-            $validated['shipping_address'],
-            $validated['billing_address'] ?? null,
-            (float) $validated['subtotal_amount'],
-            (float) $validated['shipping_amount'],
-            (float) $validated['tax_amount'],
-            (float) $validated['discount_amount'],
-            $validated['currency'],
-            $validated['payment_method'] ?? null,
-            $validated['notes'] ?? null,
-            $paymentStatusIn,
-            $items,
-            $user->id
-        );
+        $availableMethods = PaymentMethodModel::query()
+            ->where('shop_id', $shopId)
+            ->where('is_active', true)
+            ->get(['id', 'code', 'type', 'sort_order'])
+            ->sortBy(fn ($m) => [(int) ($m->sort_order ?? 0), (string) $m->code])
+            ->values();
+        $fusionMethod = $availableMethods->first(fn ($m) => strtolower((string) $m->type) === 'fusionpay');
+        $selectedMethodIsFusion = $pm !== null && strtolower((string) $pm->type) === 'fusionpay';
+
+        $needsFusionPayment = $requiresImmediateOnlinePayment;
+
+        $toItemDtos = static function (array $rawItems): array {
+            return array_map(static function ($item) {
+                return new OrderItemDTO(
+                    (string) $item['product_id'],
+                    (string) $item['product_name'],
+                    $item['product_sku'] ?? null,
+                    (float) $item['quantity'],
+                    (float) $item['unit_price'],
+                    (float) $item['discount_amount'],
+                    $item['product_image_url'] ?? null
+                );
+            }, $rawItems);
+        };
+
+        $sumSubtotal = static function (array $rawItems): float {
+            return (float) array_reduce($rawItems, static function ($carry, $item) {
+                $line = ((float) $item['unit_price'] * (float) $item['quantity']) - (float) ($item['discount_amount'] ?? 0);
+
+                return $carry + $line;
+            }, 0.0);
+        };
+
+        $currency = strtoupper(trim((string) $validated['currency']));
 
         $tenantId = $user->tenant_id ? (string) $user->tenant_id : null;
         if ($tenantId === null) {
@@ -283,14 +318,123 @@ class OrderController
         $this->featureLimitService->assertCanRecordSale($tenantId);
 
         try {
-            $order = $this->createOrderUseCase->execute($dto);
-            app(\App\Services\AppNotificationService::class)->notifyEcommerceOrder(
-                'Nouvelle commande e-commerce',
-                'Commande '.$order->getOrderNumber().' creee pour '.$order->getCustomerName().'.',
-                $request->user()?->tenant_id ? (int) $request->user()->tenant_id : null
-            );
+            $createdOrders = [];
+            $primaryOrder = null;
+            $deliveryOrder = null;
 
-            $digitalTokens = \Src\Infrastructure\Ecommerce\Models\OrderItemModel::where('order_id', $order->getId())
+            $subtotalTotal = max(0.00001, $sumSubtotal($validated['items']));
+            $baseShipping = (float) $validated['shipping_amount'];
+            $baseTax = (float) $validated['tax_amount'];
+            $baseDiscount = (float) $validated['discount_amount'];
+
+            $createAndNotify = function (CreateOrderDTO $createDto, ?string $mailNote = null) use ($request, &$createdOrders) {
+                $order = $this->createOrderUseCase->execute($createDto);
+                $createdOrders[] = $order;
+                app(\App\Services\AppNotificationService::class)->notifyEcommerceOrder(
+                    'Nouvelle commande e-commerce',
+                    'Commande '.$order->getOrderNumber().' creee pour '.$order->getCustomerName().'.',
+                    $request->user()?->tenant_id ? (int) $request->user()->tenant_id : null
+                );
+                $this->ecommerceOrderCreatedMailService->notifyOrderCreated($order, $mailNote);
+
+                return $order;
+            };
+
+            if ($requiresImmediateOnlinePayment) {
+                $immediateSubtotal = $sumSubtotal($immediateItemsRaw);
+                $deliverySubtotal = $sumSubtotal($deliveryItemsRaw);
+
+                $immediateRatio = min(1.0, max(0.0, $immediateSubtotal / $subtotalTotal));
+                $immediateTax = round($baseTax * $immediateRatio, 2);
+                $immediateDiscount = round($baseDiscount * $immediateRatio, 2);
+                $deliveryTax = round($baseTax - $immediateTax, 2);
+                $deliveryDiscount = round($baseDiscount - $immediateDiscount, 2);
+
+                // Logique métier: les articles à livraison portent les frais de livraison.
+                $immediateShipping = empty($deliveryItemsRaw) ? $baseShipping : 0.0;
+                $deliveryShipping = empty($deliveryItemsRaw) ? 0.0 : $baseShipping;
+
+                $fusionPaymentCode = $selectedMethodIsFusion
+                    ? (string) $pm->code
+                    : (string) ($fusionMethod->code ?? '');
+
+                $immediateDto = new CreateOrderDTO(
+                    $shopId,
+                    $validated['customer_name'],
+                    $validated['customer_email'],
+                    $validated['customer_phone'] ?? null,
+                    $validated['shipping_address'],
+                    $validated['billing_address'] ?? null,
+                    $immediateSubtotal,
+                    $immediateShipping,
+                    $immediateTax,
+                    $immediateDiscount,
+                    $currency,
+                    $fusionPaymentCode,
+                    $validated['notes'] ?? null,
+                    Order::PAYMENT_STATUS_PENDING,
+                    $toItemDtos($immediateItemsRaw),
+                    $user->id
+                );
+                $primaryOrder = $createAndNotify($immediateDto);
+
+                if (!empty($deliveryItemsRaw)) {
+                    $deliveryMethodCode = null;
+                    if ($pm !== null && strtolower((string) $pm->type) !== 'fusionpay') {
+                        $deliveryMethodCode = (string) $pm->code;
+                    } else {
+                        $nonFusion = $availableMethods->first(fn ($m) => strtolower((string) $m->type) !== 'fusionpay');
+                        $deliveryMethodCode = $nonFusion ? (string) $nonFusion->code : null;
+                    }
+
+                    $deliveryDto = new CreateOrderDTO(
+                        $shopId,
+                        $validated['customer_name'],
+                        $validated['customer_email'],
+                        $validated['customer_phone'] ?? null,
+                        $validated['shipping_address'],
+                        $validated['billing_address'] ?? null,
+                        $deliverySubtotal,
+                        $deliveryShipping,
+                        $deliveryTax,
+                        $deliveryDiscount,
+                        $currency,
+                        $deliveryMethodCode,
+                        $validated['notes'] ?? null,
+                        $paymentStatusIn,
+                        $toItemDtos($deliveryItemsRaw),
+                        $user->id
+                    );
+                    $deliveryOrder = $createAndNotify($deliveryDto, 'Commande a la livraison enregistree.');
+                }
+            } else {
+                $items = $toItemDtos($validated['items']);
+                $dto = new CreateOrderDTO(
+                    $shopId,
+                    $validated['customer_name'],
+                    $validated['customer_email'],
+                    $validated['customer_phone'] ?? null,
+                    $validated['shipping_address'],
+                    $validated['billing_address'] ?? null,
+                    (float) $validated['subtotal_amount'],
+                    (float) $validated['shipping_amount'],
+                    (float) $validated['tax_amount'],
+                    (float) $validated['discount_amount'],
+                    $currency,
+                    $validated['payment_method'] ?? null,
+                    $validated['notes'] ?? null,
+                    $paymentStatusIn,
+                    $items,
+                    $user->id
+                );
+                $primaryOrder = $createAndNotify($dto);
+            }
+
+            if ($primaryOrder === null) {
+                throw new \RuntimeException('Impossible de créer la commande principale.');
+            }
+
+            $digitalTokens = \Src\Infrastructure\Ecommerce\Models\OrderItemModel::where('order_id', $primaryOrder->getId())
                 ->where('is_digital', true)
                 ->whereNotNull('download_token')
                 ->pluck('download_token')
@@ -298,18 +442,28 @@ class OrderController
                 ->toArray();
 
             $redirectUrl = null;
-            if (!empty($digitalTokens) && $order->getPaymentStatus() === Order::PAYMENT_STATUS_PAID) {
+            if (!empty($digitalTokens) && $primaryOrder->getPaymentStatus() === Order::PAYMENT_STATUS_PAID) {
                 $redirectUrl = route('ecommerce.payment.success', ['token' => $digitalTokens[0]]);
+            }
+
+            $message = 'Commande créée avec succès.';
+            if ($needsFusionPayment && $deliveryOrder !== null) {
+                $message = 'Commande scindée automatiquement : paiement en ligne pour les articles immédiats et commande séparée pour les articles à la livraison.';
             }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Commande créée avec succès.',
+                'message' => $message,
                 'order' => [
-                    'id' => $order->getId(),
-                    'order_number' => $order->getOrderNumber(),
+                    'id' => $primaryOrder->getId(),
+                    'order_number' => $primaryOrder->getOrderNumber(),
                 ],
+                'secondary_order' => $deliveryOrder ? [
+                    'id' => $deliveryOrder->getId(),
+                    'order_number' => $deliveryOrder->getOrderNumber(),
+                ] : null,
                 'needs_fusion_payment' => $needsFusionPayment,
+                'online_payment_unavailable' => false,
                 'digital_download_tokens' => $digitalTokens,
                 'redirect_url' => $redirectUrl,
             ]);

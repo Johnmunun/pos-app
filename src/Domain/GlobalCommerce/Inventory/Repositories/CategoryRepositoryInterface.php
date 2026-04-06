@@ -12,6 +12,12 @@ interface CategoryRepositoryInterface
     public function findByName(string $shopId, string $name): ?Category;
     public function existsByName(string $shopId, string $name, ?string $excludeId = null): bool;
     public function findTree(string $shopId): array;
+
+    /**
+     * @param list<string> $shopIds
+     * @return array<int, mixed>
+     */
+    public function findTreeForShopIds(array $shopIds): array;
     public function delete(string $id): void;
     /**
      * @return Category[]

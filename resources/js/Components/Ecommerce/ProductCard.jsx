@@ -1,11 +1,22 @@
 import { Link } from '@inertiajs/react';
 import { Button } from '@/Components/ui/button';
-import { ShoppingCart, Eye, Image as ImageIcon, Percent } from 'lucide-react';
+import { ShoppingCart, Eye, Image as ImageIcon, Percent, Banknote, CreditCard } from 'lucide-react';
 import { useState } from 'react';
+import { convertAmountToCurrency } from '@/lib/exchangeConvert';
 
-export default function ProductCard({ product, viewMode = 'grid', onAddToCart, currency = 'USD', detailUrl }) {
+export default function ProductCard({ product, viewMode = 'grid', onAddToCart, currency = 'USD', exchangeRates = null, detailUrl }) {
     const [imageError, setImageError] = useState(false);
     const productUrl = detailUrl ?? route('ecommerce.storefront.product', product.id);
+
+    const displayAmount =
+        exchangeRates && typeof exchangeRates === 'object' && Object.keys(exchangeRates).length > 0
+            ? convertAmountToCurrency(
+                  product.price_amount,
+                  product.price_currency || currency,
+                  currency,
+                  exchangeRates
+              )
+            : Number(product.price_amount ?? 0);
 
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('fr-FR', {
@@ -40,6 +51,14 @@ export default function ProductCard({ product, viewMode = 'grid', onAddToCart, c
 
     const promotionPercent = Number(product.promotion_percent ?? product.discount_percent ?? 0);
     const hasPromotion = !!product.has_promotion || promotionPercent > 0;
+    const isDigital = !!product.is_digital;
+    const payAtDelivery = !isDigital && product.mode_paiement === 'paiement_livraison';
+    const PaymentModeIcon = isDigital ? null : payAtDelivery ? Banknote : CreditCard;
+    const paymentModeLabel = isDigital
+        ? null
+        : payAtDelivery
+          ? 'Vendeur : paiement à la livraison'
+          : 'Vendeur : paiement en ligne immédiat';
 
     // List view
     if (viewMode === 'list') {
@@ -76,15 +95,21 @@ export default function ProductCard({ product, viewMode = 'grid', onAddToCart, c
                         </div>
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <div className="flex items-center gap-3">
-                                <div className="flex flex-col">
+                                <div className="flex flex-col gap-1">
                                     <p className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-                                        {formatCurrency(product.price_amount)}
+                                        {formatCurrency(displayAmount)}
                                     </p>
                                     {hasPromotion && (
                                         <div className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 px-2 py-0.5 text-[11px] font-semibold">
                                             <Percent className="h-3 w-3" />
                                             Promo{promotionPercent > 0 ? ` -${promotionPercent}%` : ''}
                                         </div>
+                                    )}
+                                    {PaymentModeIcon && paymentModeLabel && (
+                                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                            <PaymentModeIcon className="h-3 w-3 shrink-0 text-[var(--sf-primary)]" />
+                                            {paymentModeLabel}
+                                        </span>
                                     )}
                                 </div>
                                 {stockBadge}
@@ -150,15 +175,21 @@ export default function ProductCard({ product, viewMode = 'grid', onAddToCart, c
 
                 <div className="mt-auto space-y-4">
                     <div className="flex items-center gap-3">
-                        <div className="flex flex-col">
+                        <div className="flex flex-col gap-1">
                             <p className="text-xl font-bold text-slate-900 dark:text-white">
-                                {formatCurrency(product.price_amount)}
+                                {formatCurrency(displayAmount)}
                             </p>
                             {hasPromotion && (
                                 <div className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 px-2 py-0.5 text-[11px] font-semibold">
                                     <Percent className="h-3 w-3" />
                                     Promo{promotionPercent > 0 ? ` -${promotionPercent}%` : ''}
                                 </div>
+                            )}
+                            {PaymentModeIcon && paymentModeLabel && (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                    <PaymentModeIcon className="h-3 w-3 shrink-0 text-[var(--sf-primary)]" />
+                                    {paymentModeLabel}
+                                </span>
                             )}
                         </div>
                     </div>

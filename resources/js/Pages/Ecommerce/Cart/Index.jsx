@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { Button } from '@/Components/ui/button';
@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
+import { cartRequiresFusionPay, paymentMethodsForCart } from '@/lib/ecommerceCartPayment';
 
 function CartContent({
     shippingMethods,
@@ -35,6 +36,24 @@ function CartContent({
     const [couponDiscount, setCouponDiscount] = useState(0);
     const [couponApplied, setCouponApplied] = useState(false);
     const [couponLoading, setCouponLoading] = useState(false);
+
+    const visiblePaymentMethods = useMemo(
+        () => paymentMethodsForCart(paymentMethods, cart),
+        [paymentMethods, cart]
+    );
+    const fusionPayRequired = cartRequiresFusionPay(cart);
+    const fusionPayMissing =
+        fusionPayRequired && visiblePaymentMethods.length === 0 && (paymentMethods?.length ?? 0) > 0;
+
+    useEffect(() => {
+        if (visiblePaymentMethods.length === 0) {
+            return;
+        }
+        const stillValid = visiblePaymentMethods.some((m) => m.id === selectedPaymentId);
+        if (!stillValid) {
+            setSelectedPaymentId(visiblePaymentMethods[0].id);
+        }
+    }, [visiblePaymentMethods, selectedPaymentId]);
 
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('fr-FR', {
@@ -102,12 +121,18 @@ function CartContent({
             toast.error('Votre panier est vide');
             return;
         }
+        if (fusionPayMissing) {
+            toast.error(
+                'Le paiement en ligne sécurisé requis pour ce panier n’est pas disponible. Vérifiez la configuration des moyens de paiement.'
+            );
+            return;
+        }
         setOrderDrawerOpen(true);
     };
 
-    const selectedPaymentName = paymentMethods?.find((m) => m.id === selectedPaymentId)?.name ?? '';
-    const selectedPaymentCode = paymentMethods?.find((m) => m.id === selectedPaymentId)?.code ?? '';
-    const selectedPaymentType = paymentMethods?.find((m) => m.id === selectedPaymentId)?.type ?? '';
+    const selectedPaymentName = visiblePaymentMethods?.find((m) => m.id === selectedPaymentId)?.name ?? '';
+    const selectedPaymentCode = visiblePaymentMethods?.find((m) => m.id === selectedPaymentId)?.code ?? '';
+    const selectedPaymentType = visiblePaymentMethods?.find((m) => m.id === selectedPaymentId)?.type ?? '';
 
     return (
         <>
@@ -240,7 +265,18 @@ function CartContent({
                                         </div>
                                     )}
 
-                                    {paymentMethods?.length > 0 && (
+                                    {fusionPayMissing && (
+                                        <div className="rounded-md border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-3 py-2 text-xs text-red-800 dark:text-red-200">
+                                            Paiement en ligne requis pour ce panier (produit numérique ou paiement immédiat). Configurez un
+                                            moyen de paiement en ligne compatible dans les paramètres.
+                                        </div>
+                                    )}
+                                    {fusionPayRequired && !fusionPayMissing && (
+                                        <p className="text-xs text-sky-700 dark:text-sky-300">
+                                            Règle vendeur (fiche produit) : au moins un article exige un paiement en ligne immédiat.
+                                        </p>
+                                    )}
+                                    {visiblePaymentMethods?.length > 0 && (
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                 Mode de paiement
@@ -250,7 +286,7 @@ function CartContent({
                                                 onChange={(e) => setSelectedPaymentId(e.target.value)}
                                                 className="w-full rounded-md border border-gray-300 dark:border-slate-600 dark:bg-slate-800 px-3 py-2 text-sm"
                                             >
-                                                {paymentMethods.map((m) => (
+                                                {visiblePaymentMethods.map((m) => (
                                                     <option key={m.id} value={m.id}>
                                                         {m.name}
                                                     </option>
@@ -322,7 +358,12 @@ function CartContent({
                                         </div>
                                     </div>
 
-                                    <Button onClick={handleCheckout} className="w-full gap-2 mb-3" size="lg">
+                                    <Button
+                                        onClick={handleCheckout}
+                                        disabled={fusionPayMissing}
+                                        className="w-full gap-2 mb-3"
+                                        size="lg"
+                                    >
                                         Passer la commande
                                         <ArrowRight className="h-4 w-4" />
                                     </Button>
@@ -346,7 +387,7 @@ function CartContent({
                     products={products ?? []}
                     initialCart={cart}
                     shippingMethods={shippingMethods ?? []}
-                    paymentMethods={paymentMethods ?? []}
+                    paymentMethods={visiblePaymentMethods ?? []}
                     shippingAmount={shippingAmount}
                     taxRate={taxRate}
                     taxAmount={taxAmount}

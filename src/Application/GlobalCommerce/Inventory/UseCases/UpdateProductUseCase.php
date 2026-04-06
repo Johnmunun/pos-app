@@ -19,17 +19,21 @@ final class UpdateProductUseCase
 
     public function execute(UpdateProductDTO $dto): Product
     {
+        $allowed = $dto->inventoryShopIds ?? [$dto->shopId];
         $product = $this->products->findById($dto->productId);
-        if (!$product || $product->getShopId() !== $dto->shopId) {
+        if (!$product || !in_array($product->getShopId(), $allowed, true)) {
             throw new \InvalidArgumentException('Produit introuvable.');
         }
 
         $category = $this->categories->findById($dto->categoryId);
-        if (!$category || $category->getShopId() !== $dto->shopId) {
+        if (!$category || !in_array($category->getShopId(), $allowed, true)) {
             throw new \InvalidArgumentException('Catégorie invalide.');
         }
 
-        if ($this->products->existsBySku($dto->shopId, $dto->sku, $dto->productId)) {
+        $skuCheck = $dto->inventoryShopIds !== null
+            ? $this->products->existsBySkuInShops($dto->inventoryShopIds, $dto->sku, $dto->productId)
+            : $this->products->existsBySku($dto->shopId, $dto->sku, $dto->productId);
+        if ($skuCheck) {
             throw new \InvalidArgumentException("SKU déjà utilisé: {$dto->sku}");
         }
 

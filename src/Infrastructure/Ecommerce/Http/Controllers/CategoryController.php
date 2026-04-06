@@ -14,9 +14,12 @@ use Src\Application\GlobalCommerce\Inventory\DTO\UpdateCategoryDTO;
 use Src\Application\GlobalCommerce\Inventory\UseCases\CreateCategoryUseCase;
 use Src\Application\GlobalCommerce\Inventory\UseCases\UpdateCategoryUseCase;
 use Src\Application\GlobalCommerce\Inventory\UseCases\DeleteCategoryUseCase;
+use Src\Infrastructure\Ecommerce\Http\Concerns\ResolvesEcommerceInventoryScope;
 
 class CategoryController
 {
+    use ResolvesEcommerceInventoryScope;
+
     public function __construct(
         private readonly CategoryRepositoryInterface $categoryRepository,
         private readonly ProductRepositoryInterface $productRepository,
@@ -25,33 +28,27 @@ class CategoryController
         private readonly DeleteCategoryUseCase $deleteCategoryUseCase
     ) {}
 
-    private function getShopId(Request $request): string
-    {
-        $user = $request->user();
-        if (!$user) abort(403, 'User not authenticated.');
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
-        $isRoot = \App\Models\User::find($user->id)?->isRoot() ?? false;
-        if (!$shopId && !$isRoot) abort(403, 'Shop ID not found.');
-        if ($isRoot && !$shopId) abort(403, 'Please select a shop first.');
-        return (string) $shopId;
-    }
-
     public function index(Request $request): Response
     {
         if (!$request->user()?->hasPermission('ecommerce.view')) {
             abort(403, 'Vous n\'avez pas la permission de voir les catégories.');
         }
 
-        $shopId = $this->getShopId($request);
+        $shop = $this->ecommerceInventoryShop($request);
+        $shopId = (string) $shop->id;
+        $gcShopIds = $this->ecommerceGcShopIds($request, $shop);
 
         // Récupérer les catégories à partir du modèle Eloquent (liste plate)
-        $categoryModels = CategoryModel::where('shop_id', $shopId)
+        $categoryModels = CategoryModel::whereIn('shop_id', $gcShopIds)
             ->orderBy('name')
             ->get(['id', 'name']);
 
         $categoriesData = [];
         foreach ($categoryModels as $model) {
-            $products = $this->productRepository->search($shopId, '', ['category_id' => (string) $model->id]);
+            $products = $this->productRepository->search($shopId, '', array_filter([
+                'category_id' => (string) $model->id,
+                'shop_ids' => $gcShopIds,
+            ]));
             $categoriesData[] = [
                 'id' => (string) $model->id,
                 'name' => $model->name,
@@ -71,7 +68,9 @@ class CategoryController
             abort(403, 'Vous n\'avez pas la permission de créer des catégories.');
         }
 
-        $shopId = $this->getShopId($request);
+        $shop = $this->ecommerceInventoryShop($request);
+        $shopId = (string) $shop->id;
+        $gcShopIds = $this->ecommerceGcShopIds($request, $shop);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -85,7 +84,8 @@ class CategoryController
             $validated['name'],
             $validated['description'] ?? null,
             $validated['parent_id'] ?? null,
-            (int) ($validated['sort_order'] ?? 0)
+            (int) ($validated['sort_order'] ?? 0),
+            $gcShopIds
         );
 
         $this->createCategoryUseCase->execute($dto);
@@ -101,11 +101,13 @@ class CategoryController
             abort(403, 'Vous n\'avez pas la permission de modifier des catégories.');
         }
 
-        $shopId = $this->getShopId($request);
+        $shop = $this->ecommerceInventoryShop($request);
+        $shopId = (string) $shop->id;
+        $gcShopIds = $this->ecommerceGcShopIds($request, $shop);
 
-        // Vérifier que la catégorie appartient bien à ce shop
+        // Vérifier que la catégorie appartient bien à ce shop (y compris historique shop_id = tenant_id)
         $categoryModel = CategoryModel::find($id);
-        if (!$categoryModel || (string) $categoryModel->shop_id !== $shopId) {
+        if (!$categoryModel || !in_array((string) $categoryModel->shop_id, $gcShopIds, true)) {
             return redirect()->route('ecommerce.categories.index')
                 ->with('error', 'Catégorie introuvable.');
         }
@@ -125,7 +127,8 @@ class CategoryController
             $validated['description'] ?? null,
             $validated['parent_id'] ?? null,
             (int) ($validated['sort_order'] ?? 0),
-            (bool) ($validated['is_active'] ?? true)
+            (bool) ($validated['is_active'] ?? true),
+            $gcShopIds
         );
 
         $this->updateCategoryUseCase->execute($dto);

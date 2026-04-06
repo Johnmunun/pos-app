@@ -13,14 +13,24 @@ final class DeleteCategoryUseCase
     ) {
     }
 
-    public function execute(string $shopId, string $categoryId): void
+    /**
+     * @param list<string> $allowedShopIds
+     */
+    public function execute(array $allowedShopIds, string $categoryId): void
     {
+        if ($allowedShopIds === []) {
+            throw new \InvalidArgumentException('Catégorie introuvable.');
+        }
         $category = $this->categories->findById($categoryId);
-        if (!$category || $category->getShopId() !== $shopId) {
+        if (!$category || !in_array($category->getShopId(), $allowedShopIds, true)) {
             throw new \InvalidArgumentException('Catégorie introuvable.');
         }
 
-        $productsInCategory = $this->products->search($shopId, '', ['category_id' => $categoryId]);
+        $primary = $allowedShopIds[0];
+        $productsInCategory = $this->products->search($primary, '', [
+            'category_id' => $categoryId,
+            'shop_ids' => $allowedShopIds,
+        ]);
         if (count($productsInCategory) > 0) {
             throw new \InvalidArgumentException('Impossible de supprimer une catégorie qui contient des produits.');
         }

@@ -17,7 +17,7 @@ class SendLowStockAlertEmails extends Command
     /**
      * @var string
      */
-    protected $description = 'Envoie les alertes de stock faible par email aux utilisateurs concernés';
+    protected $description = 'Envoie les alertes de stock faible (pharmacie, quincaillerie, commerce) par email';
 
     public function handle(LowStockAlertMailService $service): int
     {

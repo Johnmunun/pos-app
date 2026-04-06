@@ -19,6 +19,8 @@ final class UpdateProductDTO
         public readonly string $currency,
         public readonly bool $isWeighted,
         public readonly bool $hasExpiration,
-        public readonly bool $isActive
+        public readonly bool $isActive,
+        /** @var list<string>|null */
+        public readonly ?array $inventoryShopIds = null
     ) {}
 }

@@ -15,8 +15,9 @@ final class UpdateCategoryUseCase
 
     public function execute(UpdateCategoryDTO $dto): Category
     {
+        $allowed = $dto->inventoryShopIds ?? [$dto->shopId];
         $category = $this->categories->findById($dto->categoryId);
-        if (!$category || $category->getShopId() !== $dto->shopId) {
+        if (!$category || !in_array($category->getShopId(), $allowed, true)) {
             throw new \InvalidArgumentException('Catégorie introuvable.');
         }
 
@@ -26,7 +27,7 @@ final class UpdateCategoryUseCase
 
         if ($dto->parentId) {
             $parent = $this->categories->findById($dto->parentId);
-            if (!$parent || $parent->getShopId() !== $dto->shopId) {
+            if (!$parent || !in_array($parent->getShopId(), $allowed, true)) {
                 throw new \InvalidArgumentException('Catégorie parente invalide.');
             }
             if ($dto->parentId === $dto->categoryId) {

@@ -30,7 +30,7 @@ class LowStockAlertNotification extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $shopName = $this->summary['shop_name'] ?? 'Pharmacie';
+        $shopName = $this->summary['shop_name'] ?? 'Boutique';
         $items = $this->summary['items'] ?? [];
 
         $message = (new MailMessage)
@@ -58,7 +58,7 @@ class LowStockAlertNotification extends Notification implements ShouldQueue
             $message->line('... et ' . (count($items) - 25) . ' autre(s) produit(s).');
         }
 
-        $message->action('Voir le stock', url('/pharmacy/stock'))
+        $message->action('Ouvrir le tableau de bord', url('/dashboard'))
             ->line('Merci d\'utiliser notre application.');
 
         return $message;

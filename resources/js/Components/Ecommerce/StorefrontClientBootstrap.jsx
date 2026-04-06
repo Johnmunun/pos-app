@@ -101,12 +101,34 @@ function initGtm(containerId) {
  */
 export default function StorefrontClientBootstrap() {
     const page = usePage();
-    const { storefrontClient } = page.props;
+    const { storefrontClient, storefrontTheme } = page.props;
     const audience = storefrontClient?.audience;
     const tags = storefrontClient?.marketingTags;
     const url = page.url;
 
     const pixelsInit = useRef(false);
+
+    // Même thème que dans resources/views/app.blade.php — nécessaire après navigation Inertia
+    // depuis une page hors vitrine (sinon --sf-* absents → panier / boutons « invisibles »).
+    useEffect(() => {
+        const root = document.documentElement;
+        const theme = storefrontTheme;
+        if (theme && typeof theme === 'object' && theme.primary) {
+            root.style.setProperty('--sf-primary', theme.primary);
+            const secondary = theme.secondary ?? '#d97706';
+            root.style.setProperty('--sf-secondary', secondary);
+            root.style.setProperty('--sf-primary-hover', secondary);
+        } else {
+            root.style.removeProperty('--sf-primary');
+            root.style.removeProperty('--sf-secondary');
+            root.style.removeProperty('--sf-primary-hover');
+        }
+        return () => {
+            root.style.removeProperty('--sf-primary');
+            root.style.removeProperty('--sf-secondary');
+            root.style.removeProperty('--sf-primary-hover');
+        };
+    }, [storefrontTheme]);
 
     useEffect(() => {
         if (!audience?.enabled || !audience.pingPath) return undefined;

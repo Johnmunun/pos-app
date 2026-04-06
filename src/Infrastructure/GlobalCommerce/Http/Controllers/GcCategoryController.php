@@ -19,54 +19,40 @@ use Src\Application\GlobalCommerce\Inventory\UseCases\UpdateCategoryUseCase;
 use Src\Domain\GlobalCommerce\Inventory\Repositories\CategoryRepositoryInterface;
 use Src\Infrastructure\GlobalCommerce\Inventory\Models\CategoryModel;
 use Illuminate\Support\Facades\Log;
+use App\Models\Shop;
+use App\Services\TenantBackofficeShopResolver;
 
 class GcCategoryController
 {
-    private function getShopId(Request $request): string
-    {
-        $user = $request->user();
-        if ($user === null) {
-            abort(403);
-        }
-
-        // Mobile API (token auth) may not have session, allow depot_id input fallback.
-        $depotId = $request->filled('depot_id') ? (int) $request->input('depot_id') : null;
-        if (!$depotId && $request->hasSession()) {
-            $depotId = $request->session()->get('current_depot_id');
-        }
-
-        if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
-            $shop = \App\Models\Shop::where('depot_id', (int) $depotId)
-                ->where('tenant_id', $user->tenant_id)
-                ->first();
-            if ($shop) {
-                return (string) $shop->id;
-            }
-        }
-
-        if ($user->shop_id !== null && $user->shop_id !== '') {
-            return (string) $user->shop_id;
-        }
-
-        if ($user->tenant_id) {
-            return (string) $user->tenant_id;
-        }
-
-        abort(403, 'Shop ID not found.');
-    }
-
     public function __construct(
         private CategoryRepositoryInterface $categoryRepository,
         private CreateCategoryUseCase $createCategoryUseCase,
         private UpdateCategoryUseCase $updateCategoryUseCase,
-        private DeleteCategoryUseCase $deleteCategoryUseCase
+        private DeleteCategoryUseCase $deleteCategoryUseCase,
+        private TenantBackofficeShopResolver $shopResolver,
     ) {}
+
+    /**
+     * @return array{shop: Shop, shopId: string, gcIds: list<string>}
+     */
+    private function gcScope(Request $request): array
+    {
+        $shop = $this->shopResolver->resolveShop($request);
+        $user = $request->user();
+        $tenantId = $user && $user->tenant_id !== null && $user->tenant_id !== '' ? (string) $user->tenant_id : null;
+
+        return [
+            'shop' => $shop,
+            'shopId' => (string) $shop->id,
+            'gcIds' => $this->shopResolver->globalCommerceInventoryShopIds($shop, $tenantId),
+        ];
+    }
 
     public function index(Request $request): Response
     {
-        $shopId = $this->getShopId($request);
-        $tree = $this->categoryRepository->findTree($shopId);
-        $flat = CategoryModel::where('shop_id', $shopId)->orderBy('sort_order')->orderBy('name')->get()->map(fn ($m) => [
+        $gcIds = $this->gcScope($request)['gcIds'];
+        $tree = $this->categoryRepository->findTreeForShopIds($gcIds);
+        $flat = CategoryModel::whereIn('shop_id', $gcIds)->orderBy('sort_order')->orderBy('name')->get()->map(fn ($m) => [
             'id' => $m->id,
             'name' => $m->name,
             'description' => $m->description,
@@ -82,8 +68,8 @@ class GcCategoryController
 
     public function create(Request $request): Response
     {
-        $shopId = $this->getShopId($request);
-        $categories = CategoryModel::where('shop_id', $shopId)->orderBy('name')->get(['id', 'name', 'parent_id']);
+        $gcIds = $this->gcScope($request)['gcIds'];
+        $categories = CategoryModel::whereIn('shop_id', $gcIds)->orderBy('name')->get(['id', 'name', 'parent_id']);
         return Inertia::render('Commerce/Categories/Create', [
             'parentOptions' => $categories->map(fn ($c) => ['id' => $c->id, 'name' => $c->name, 'parent_id' => $c->parent_id]),
         ]);
@@ -91,7 +77,9 @@ class GcCategoryController
 
     public function store(Request $request): RedirectResponse
     {
-        $shopId = $this->getShopId($request);
+        $scope = $this->gcScope($request);
+        $shopId = $scope['shopId'];
+        $gcIds = $scope['gcIds'];
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -103,7 +91,8 @@ class GcCategoryController
             $validated['name'],
             $validated['description'] ?? null,
             $validated['parent_id'] ?? null,
-            (int) ($validated['sort_order'] ?? 0)
+            (int) ($validated['sort_order'] ?? 0),
+            $gcIds
         );
         $this->createCategoryUseCase->execute($dto);
         return redirect()->route('commerce.categories.index')->with('success', 'Catégorie créée.');
@@ -111,12 +100,14 @@ class GcCategoryController
 
     public function edit(Request $request, string $id): Response|RedirectResponse
     {
-        $shopId = $this->getShopId($request);
+        $scope = $this->gcScope($request);
+        $shopId = $scope['shopId'];
+        $gcIds = $scope['gcIds'];
         $category = $this->categoryRepository->findById($id);
-        if (!$category || $category->getShopId() !== $shopId) {
+        if (!$category || !in_array($category->getShopId(), $gcIds, true)) {
             return redirect()->route('commerce.categories.index')->with('error', 'Catégorie introuvable.');
         }
-        $parentOptions = CategoryModel::where('shop_id', $shopId)->where('id', '!=', $id)->orderBy('name')->get(['id', 'name', 'parent_id']);
+        $parentOptions = CategoryModel::whereIn('shop_id', $gcIds)->where('id', '!=', $id)->orderBy('name')->get(['id', 'name', 'parent_id']);
         return Inertia::render('Commerce/Categories/Edit', [
             'category' => [
                 'id' => $category->getId(),
@@ -132,7 +123,9 @@ class GcCategoryController
 
     public function update(Request $request, string $id): RedirectResponse
     {
-        $shopId = $this->getShopId($request);
+        $scope = $this->gcScope($request);
+        $shopId = $scope['shopId'];
+        $gcIds = $scope['gcIds'];
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -147,7 +140,8 @@ class GcCategoryController
             $validated['description'] ?? null,
             $validated['parent_id'] ?? null,
             (int) ($validated['sort_order'] ?? 0),
-            (bool) ($validated['is_active'] ?? true)
+            (bool) ($validated['is_active'] ?? true),
+            $gcIds
         );
         $this->updateCategoryUseCase->execute($dto);
         return redirect()->route('commerce.categories.index')->with('success', 'Catégorie mise à jour.');
@@ -155,9 +149,9 @@ class GcCategoryController
 
     public function destroy(Request $request, string $id): RedirectResponse
     {
-        $shopId = $this->getShopId($request);
+        $gcIds = $this->gcScope($request)['gcIds'];
         try {
-            $this->deleteCategoryUseCase->execute($shopId, $id);
+            $this->deleteCategoryUseCase->execute($gcIds, $id);
             return redirect()->route('commerce.categories.index')->with('success', 'Catégorie supprimée.');
         } catch (\InvalidArgumentException $e) {
             return redirect()->route('commerce.categories.index')->with('error', $e->getMessage());
@@ -219,7 +213,7 @@ class GcCategoryController
             'file.max' => 'Le fichier ne doit pas dépasser 10 Mo.',
         ]);
 
-        $shopId = $this->getShopId($request);
+        $gcIds = $this->gcScope($request)['gcIds'];
         $file = $request->file('file');
         $path = $file->getRealPath();
 
@@ -276,7 +270,7 @@ class GcCategoryController
             ], 422);
         }
 
-        $existing = CategoryModel::where('shop_id', $shopId)->get(['id', 'name']);
+        $existing = CategoryModel::whereIn('shop_id', $gcIds)->get(['id', 'name']);
         $existingByName = [];
         foreach ($existing as $cat) {
             $existingByName[mb_strtolower($cat->name)] = $cat->id;
@@ -358,7 +352,9 @@ class GcCategoryController
             'file.max' => 'Le fichier ne doit pas dépasser 10 Mo.',
         ]);
 
-        $shopId = $this->getShopId($request);
+        $scope = $this->gcScope($request);
+        $shopId = $scope['shopId'];
+        $gcIds = $scope['gcIds'];
 
         $file = $request->file('file');
         $path = $file->getRealPath();
@@ -411,7 +407,7 @@ class GcCategoryController
             ], 422);
         }
 
-        $existing = CategoryModel::where('shop_id', $shopId)->get(['id', 'name']);
+        $existing = CategoryModel::whereIn('shop_id', $gcIds)->get(['id', 'name']);
         $existingByName = [];
         foreach ($existing as $cat) {
             $existingByName[mb_strtolower($cat->name)] = $cat->id;
@@ -489,7 +485,8 @@ class GcCategoryController
                     $name,
                     $rowAssoc['description'] ?? null,
                     $parentId,
-                    $sortOrder
+                    $sortOrder,
+                    $gcIds
                 );
                 $category = $this->createCategoryUseCase->execute($dto);
 

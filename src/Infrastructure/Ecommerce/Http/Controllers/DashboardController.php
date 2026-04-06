@@ -14,32 +14,17 @@ use Src\Infrastructure\Ecommerce\Models\CmsMediaModel;
 use Src\Infrastructure\GlobalCommerce\Inventory\Models\ProductModel as GcProductModel;
 use Carbon\Carbon;
 use Src\Application\Billing\Services\FeatureLimitService;
+use Src\Infrastructure\Ecommerce\Http\Concerns\ResolvesEcommerceInventoryScope;
 
 class DashboardController
 {
-    private function getShopId(Request $request): string
-    {
-        $user = $request->user();
-        if ($user === null) {
-            abort(403, 'User not authenticated.');
-        }
-
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
-        $userModel = \App\Models\User::find($user->id);
-        $isRoot = $userModel ? $userModel->isRoot() : false;
-
-        if (!$shopId && !$isRoot) {
-            abort(403, 'Shop ID not found. Please contact administrator.');
-        }
-        if ($isRoot && !$shopId) {
-            abort(403, 'Please select a shop first.');
-        }
-        return (string) $shopId;
-    }
+    use ResolvesEcommerceInventoryScope;
 
     public function index(Request $request): Response
     {
-        $shopId = $this->getShopId($request);
+        $shop = $this->ecommerceInventoryShop($request);
+        $shopId = (string) $shop->id;
+        $gcShopIds = $this->ecommerceGcShopIds($request, $shop);
 
         $fromInput = $request->input('from');
         $toInput = $request->input('to');
@@ -86,7 +71,7 @@ class DashboardController
             ->sum('total_amount');
 
         // Stockage médias : images produits (GlobalCommerce) + médias CMS
-        $productImageCount = (int) GcProductModel::where('shop_id', $shopId)
+        $productImageCount = (int) GcProductModel::whereIn('shop_id', $gcShopIds)
             ->whereNotNull('image_path')
             ->count();
         $mediaImageCount = (int) CmsMediaModel::where('shop_id', $shopId)
@@ -103,9 +88,10 @@ class DashboardController
         $totalImages = $productImageCount + $mediaImageCount;
         // La table `users` n'a pas toujours `shop_id` (selon migrations).
         // On utilise `tenant_id` (présent) comme scope boutique/tenant.
-        $usersCount = (int) \App\Models\User::query()
-            ->where('tenant_id', $shopId)
-            ->count();
+        $tenantIdForUsers = $shop->tenant_id ?? $request->user()?->tenant_id;
+        $usersCount = $tenantIdForUsers
+            ? (int) \App\Models\User::query()->where('tenant_id', $tenantIdForUsers)->count()
+            : 1;
         $perUserLimitMb = 100.0;
         $mediaStorageLimitMb = max($perUserLimitMb, $usersCount * $perUserLimitMb);
 
@@ -125,7 +111,7 @@ class DashboardController
             }
 
             // Product images (main + extras)
-            $productRows = GcProductModel::where('shop_id', $shopId)
+            $productRows = GcProductModel::whereIn('shop_id', $gcShopIds)
                 ->get(['image_path', 'extra_images']);
             foreach ($productRows as $row) {
                 if (!empty($row->image_path) && is_string($row->image_path)) {

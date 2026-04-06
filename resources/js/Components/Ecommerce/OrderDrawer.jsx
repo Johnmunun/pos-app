@@ -38,11 +38,15 @@ export default function OrderDrawer({
     paymentStatusOnSubmit = null,
     readonlyShipping = false,
     onSuccess = null,
+    /** Devise commande (ex. vitrine : même code que le panier / sélecteur) */
+    orderCurrency = null,
 }) {
     const isEditing = !!order;
     const { shop } = usePage().props;
-    const defaultCurrency = shop?.currency || 'USD';
-    const fromCart = initialCart?.length > 0 && (shippingMethods?.length > 0 || paymentMethods?.length > 0);
+    const defaultCurrency = orderCurrency || shop?.currency || 'USD';
+    // En mode vitrine/panier client, les montants doivent rester pilotés par le système
+    // (taxes, remise globale, etc.) et non éditables par l'utilisateur final.
+    const fromCart = initialCart?.length > 0;
 
     const getInitialItems = () => {
         if (order && order.items) {
@@ -123,7 +127,7 @@ export default function OrderDrawer({
             });
         }
         setErrors({});
-    }, [order, isOpen, defaultCurrency, initialCart, fromCart, shippingAmount, taxAmount, couponDiscount, selectedPaymentCode]);
+    }, [order, isOpen, defaultCurrency, orderCurrency, initialCart, fromCart, shippingAmount, taxAmount, couponDiscount, selectedPaymentCode]);
 
     const calculateSubtotal = () => {
         return formData.items.reduce((sum, item) => {
@@ -227,7 +231,7 @@ export default function OrderDrawer({
         const needsFusionCheckout =
             fromCart && (selectedPaymentType === 'fusionpay' || resolvedPm?.type === 'fusionpay');
         if (needsFusionCheckout && !String(formData.customer_phone || '').trim()) {
-            toast.error('Numéro de téléphone requis pour payer avec FusionPay.');
+            toast.error('Numéro de téléphone requis pour le paiement en ligne sécurisé.');
             setProcessing(false);
             return;
         }
@@ -265,9 +269,9 @@ export default function OrderDrawer({
                         window.location.href = fusionRes.data.checkout_url;
                         return;
                     }
-                    toast.error(fusionRes.data?.message || 'Impossible d’ouvrir la page de paiement FusionPay.');
+                    toast.error(fusionRes.data?.message || 'Impossible d’ouvrir la page de paiement sécurisée.');
                 } catch (fusionErr) {
-                    toast.error(fusionErr.response?.data?.message || 'Erreur lors du lancement du paiement FusionPay.');
+                    toast.error(fusionErr.response?.data?.message || 'Erreur lors du lancement du paiement en ligne.');
                 }
                 setProcessing(false);
                 return;
@@ -277,7 +281,8 @@ export default function OrderDrawer({
                 window.location.href = response.data.redirect_url;
                 return;
             }
-            if (typeof onSuccess === 'function') {
+            const hasSuccessCallback = typeof onSuccess === 'function';
+            if (hasSuccessCallback) {
                 try {
                     onSuccess(response.data);
                 } catch (callbackError) {
@@ -285,7 +290,9 @@ export default function OrderDrawer({
                 }
             }
             onClose();
-            router.reload({ only: ['orders'] });
+            if (!hasSuccessCallback) {
+                router.reload({ only: ['orders'] });
+            }
         } catch (error) {
             if (error.response?.data?.errors) {
                 setErrors(error.response.data.errors);
@@ -534,12 +541,12 @@ export default function OrderDrawer({
                                 {fromCart &&
                                     (selectedPaymentType === 'fusionpay' ||
                                         paymentMethods?.find((x) => x.code === formData.payment_method)?.type === 'fusionpay') && (
-                                    <div className="mt-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-900/20 p-3 space-y-2">
+                                        <div className="mt-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-900/20 p-3 space-y-2">
                                         <p className="text-xs text-amber-900 dark:text-amber-100">
-                                            Après validation, vous serez redirigé vers FusionPay (comme pour l’abonnement) pour
-                                            finaliser le paiement en ligne.
+                                            Le vendeur a configuré au moins un article à paiement immédiat : après validation, vous serez
+                                            redirigé vers la page de paiement sécurisée pour finaliser le règlement.
                                         </p>
-                                        <Label className="text-xs font-medium">Canal FusionPay</Label>
+                                        <Label className="text-xs font-medium">Canal de paiement</Label>
                                         <select
                                             value={fusionPaymentMethod}
                                             onChange={(e) => setFusionPaymentMethod(e.target.value)}
@@ -550,6 +557,17 @@ export default function OrderDrawer({
                                         </select>
                                     </div>
                                 )}
+                                {fromCart &&
+                                    (selectedPaymentType === 'cash_on_delivery' ||
+                                        paymentMethods?.find((x) => x.code === formData.payment_method)?.type ===
+                                            'cash_on_delivery') && (
+                                        <div className="mt-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/60 p-3">
+                                            <p className="text-xs text-slate-700 dark:text-slate-200">
+                                                Le vendeur a configuré ce type de règlement sur la fiche produit : aucun débit en ligne,
+                                                vous payez à la réception. Conservez le numéro de commande reçu par e-mail pour le suivi.
+                                            </p>
+                                        </div>
+                                    )}
                             </div>
                         )}
 
@@ -582,7 +600,7 @@ export default function OrderDrawer({
                                 </div>
                             )}
 
-                            {fromCart && taxRate ? (
+                            {fromCart ? (
                                 <div className="flex justify-between text-gray-600 dark:text-gray-400">
                                     <span>Taxes ({taxRate}%)</span>
                                     <span>{formData.tax_amount.toFixed(2)} {formData.currency}</span>

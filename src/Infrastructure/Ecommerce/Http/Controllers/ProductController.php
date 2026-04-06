@@ -16,9 +16,12 @@ use Src\Application\GlobalCommerce\Inventory\UseCases\CreateProductUseCase;
 use Src\Application\GlobalCommerce\Inventory\UseCases\UpdateProductUseCase;
 use Src\Application\GlobalCommerce\Inventory\UseCases\DeleteProductUseCase;
 use Src\Application\Billing\Services\FeatureLimitService;
+use Src\Infrastructure\Ecommerce\Http\Concerns\ResolvesEcommerceInventoryScope;
 
 class ProductController
 {
+    use ResolvesEcommerceInventoryScope;
+
     public function __construct(
         private readonly ProductRepositoryInterface $productRepository,
         private readonly CategoryRepositoryInterface $categoryRepository,
@@ -29,36 +32,28 @@ class ProductController
         private readonly FeatureLimitService $featureLimitService,
     ) {}
 
-    private function getShopId(Request $request): string
-    {
-        $user = $request->user();
-        if (!$user) abort(403, 'User not authenticated.');
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
-        $isRoot = \App\Models\User::find($user->id)?->isRoot() ?? false;
-        if (!$shopId && !$isRoot) abort(403, 'Shop ID not found.');
-        if ($isRoot && !$shopId) abort(403, 'Please select a shop first.');
-        return (string) $shopId;
-    }
-
     public function index(Request $request): Response
     {
         if (!$request->user()?->hasPermission('ecommerce.view')) {
             abort(403, 'Vous n\'avez pas la permission de voir les produits.');
         }
 
-        $shopId = $this->getShopId($request);
+        $shop = $this->ecommerceInventoryShop($request);
+        $shopId = (string) $shop->id;
+        $gcShopIds = $this->ecommerceGcShopIds($request, $shop);
         $search = $request->input('search', '');
         $categoryId = $request->input('category_id');
 
         $products = $this->productRepository->search($shopId, $search, array_filter([
             'category_id' => $categoryId,
+            'shop_ids' => $gcShopIds,
         ]));
 
         $productIds = array_map(fn ($p) => $p->getId(), $products);
         $models = ProductModel::whereIn('id', $productIds)->get()->keyBy('id');
 
         // Catégories pour le filtre (simple liste à plat)
-        $categoryModels = \Src\Infrastructure\GlobalCommerce\Inventory\Models\CategoryModel::where('shop_id', $shopId)
+        $categoryModels = \Src\Infrastructure\GlobalCommerce\Inventory\Models\CategoryModel::whereIn('shop_id', $gcShopIds)
             ->orderBy('name')
             ->get(['id', 'name']);
 
@@ -151,7 +146,9 @@ class ProductController
             $user->tenant_id !== null ? (string) $user->tenant_id : null
         );
 
-        $shopId = $this->getShopId($request);
+        $shop = $this->ecommerceInventoryShop($request);
+        $shopId = (string) $shop->id;
+        $gcShopIds = $this->ecommerceGcShopIds($request, $shop);
         $validated = $request->validate([
             'sku' => 'required|string|max:100',
             'barcode' => 'nullable|string|max:100',
@@ -208,7 +205,8 @@ class ProductController
             (float) ($validated['minimum_stock'] ?? 0),
             $validated['currency'] ?? 'USD',
             (bool) ($validated['is_weighted'] ?? false),
-            (bool) ($validated['has_expiration'] ?? false)
+            (bool) ($validated['has_expiration'] ?? false),
+            $gcShopIds
         );
         $product = $this->createProductUseCase->execute($dto);
 
@@ -216,7 +214,7 @@ class ProductController
             'Ecommerce',
             $product->getName(),
             $product->getSku(),
-            $this->getShopId($request),
+            $this->ecommercePrimaryShopId($request),
             $request->user()?->tenant_id ? (int) $request->user()->tenant_id : null
         );
 
@@ -347,7 +345,9 @@ class ProductController
             abort(403, 'Vous n\'avez pas la permission de modifier des produits.');
         }
 
-        $shopId = $this->getShopId($request);
+        $shop = $this->ecommerceInventoryShop($request);
+        $shopId = (string) $shop->id;
+        $gcShopIds = $this->ecommerceGcShopIds($request, $shop);
         $validated = $request->validate([
             'sku' => 'required|string|max:100',
             'barcode' => 'nullable|string|max:100',
@@ -418,7 +418,8 @@ class ProductController
             $validated['currency'] ?? 'USD',
             (bool) ($validated['is_weighted'] ?? false),
             (bool) ($validated['has_expiration'] ?? false),
-            $isActive
+            $isActive,
+            $gcShopIds
         );
 
         $product = $this->updateProductUseCase->execute($dto);
@@ -566,9 +567,10 @@ class ProductController
 
     public function destroy(Request $request, string $id): RedirectResponse
     {
-        $shopId = $this->getShopId($request);
+        $shop = $this->ecommerceInventoryShop($request);
+        $gcShopIds = $this->ecommerceGcShopIds($request, $shop);
         try {
-            $this->deleteProductUseCase->execute($shopId, $id);
+            $this->deleteProductUseCase->execute($gcShopIds, $id);
             return redirect()->route('ecommerce.products.index')->with('success', 'Produit supprimé.');
         } catch (\InvalidArgumentException $e) {
             return redirect()->route('ecommerce.products.index')->with('error', $e->getMessage());

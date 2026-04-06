@@ -2,6 +2,7 @@
 
 namespace Src\Application\Ecommerce\UseCases;
 
+use App\Services\EcommerceOrderPaidCustomerMailService;
 use Src\Application\Ecommerce\Services\GenerateDownloadTokensService;
 use Src\Application\Referral\Services\ReferralService;
 use Src\Domain\Ecommerce\Entities\Order;
@@ -12,7 +13,8 @@ class UpdatePaymentStatusUseCase
     public function __construct(
         private readonly OrderRepositoryInterface $orderRepository,
         private readonly GenerateDownloadTokensService $generateDownloadTokensService,
-        private readonly ReferralService $referralService
+        private readonly ReferralService $referralService,
+        private readonly EcommerceOrderPaidCustomerMailService $ecommerceOrderPaidCustomerMailService,
     ) {
     }
 
@@ -23,6 +25,8 @@ class UpdatePaymentStatusUseCase
         if (!$order) {
             throw new \InvalidArgumentException('Commande introuvable.');
         }
+
+        $previousPaymentStatus = $order->getPaymentStatus();
 
         switch ($paymentStatus) {
             case Order::PAYMENT_STATUS_PAID:
@@ -52,6 +56,13 @@ class UpdatePaymentStatusUseCase
         }
 
         $this->orderRepository->save($order);
+
+        if (
+            $paymentStatus === Order::PAYMENT_STATUS_PAID
+            && $previousPaymentStatus !== Order::PAYMENT_STATUS_PAID
+        ) {
+            $this->ecommerceOrderPaidCustomerMailService->notifyOrderJustPaid($order);
+        }
 
         return $order;
     }

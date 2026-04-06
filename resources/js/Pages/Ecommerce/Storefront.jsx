@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Head, Link, usePage, router } from '@inertiajs/react';
-import { ShieldCheck, Truck, Clock, Headphones, ArrowRight, Sparkles, Facebook, Instagram, Youtube } from 'lucide-react';
+import { ShieldCheck, Truck, Clock, Headphones, ArrowRight, Sparkles, Facebook, Instagram, Youtube, Banknote, CreditCard } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
+import { convertAmountToCurrency } from '@/lib/exchangeConvert';
 import { CartProvider } from '@/Contexts/CartContext';
 import ShoppingCart from '@/Components/Ecommerce/ShoppingCart';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
 import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBootstrap';
+import StorefrontCurrencySelect from '@/Components/Ecommerce/StorefrontCurrencySelect';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 
 function shouldShowPageInNav(page) {
@@ -24,10 +26,27 @@ function shouldShowPageInNav(page) {
     return !isCgv && !isPrivacy;
 }
 
-function ProductCardSimple({ product, currency, productUrl }) {
-    const price = formatCurrency(product.price_amount ?? 0, product.price_currency || currency);
+function ProductCardSimple({ product, currency, productUrl, exchangeRates = {} }) {
+    const amount =
+        exchangeRates && Object.keys(exchangeRates).length > 0
+            ? convertAmountToCurrency(
+                  product.price_amount ?? 0,
+                  product.price_currency || currency,
+                  currency,
+                  exchangeRates
+              )
+            : product.price_amount ?? 0;
+    const price = formatCurrency(amount, currency);
     const promotionPercent = Number(product.promotion_percent ?? product.discount_percent ?? 0);
     const hasPromotion = !!product.has_promotion || promotionPercent > 0;
+    const isDigital = !!product.is_digital;
+    const payAtDelivery = !isDigital && product.mode_paiement === 'paiement_livraison';
+    const PaymentIcon = isDigital ? null : payAtDelivery ? Banknote : CreditCard;
+    const paymentCaption = isDigital
+        ? null
+        : payAtDelivery
+          ? 'Vendeur : à la livraison'
+          : 'Vendeur : paiement immédiat en ligne';
 
     return (
         <Link
@@ -63,14 +82,22 @@ function ProductCardSimple({ product, currency, productUrl }) {
                     <h3 className="text-[13px] sm:text-sm font-semibold text-slate-900 dark:text-white mb-1 line-clamp-2 group-hover:text-[var(--sf-primary)] transition-colors">
                         {product.name}
                     </h3>
-                    <div className="mt-auto flex items-center justify-between pt-3 sm:pt-4">
-                        <span className="text-sm sm:text-base font-bold text-[var(--sf-primary)]">
-                            {price}
-                        </span>
-                        <span className="inline-flex items-center text-xs font-medium text-slate-500 dark:text-slate-400 group-hover:text-[var(--sf-primary)] transition-colors">
-                            Voir
-                            <ArrowRight className="h-3.5 w-3 ml-1 group-hover:translate-x-0.5 transition-transform" />
-                        </span>
+                    <div className="mt-auto pt-3 sm:pt-4 space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm sm:text-base font-bold text-[var(--sf-primary)]">
+                                {price}
+                            </span>
+                            <span className="inline-flex items-center text-xs font-medium text-slate-500 dark:text-slate-400 group-hover:text-[var(--sf-primary)] transition-colors">
+                                Voir
+                                <ArrowRight className="h-3.5 w-3 ml-1 group-hover:translate-x-0.5 transition-transform" />
+                            </span>
+                        </div>
+                        {PaymentIcon && paymentCaption && (
+                            <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                <PaymentIcon className="h-3 w-3 shrink-0 text-[var(--sf-primary)]" />
+                                {paymentCaption}
+                            </p>
+                        )}
                     </div>
                 </div>
             </div>
@@ -78,7 +105,18 @@ function ProductCardSimple({ product, currency, productUrl }) {
     );
 }
 
-export default function EcommerceStorefront({ shop, config, featuredProducts = [], newArrivals = [], banners = [], cmsPages = [], storefrontShops = [], currentStorefrontShopId }) {
+export default function EcommerceStorefront({
+    shop,
+    config,
+    featuredProducts = [],
+    newArrivals = [],
+    banners = [],
+    cmsPages = [],
+    storefrontShops = [],
+    currentStorefrontShopId,
+    exchange_rates = {},
+    available_currencies = [],
+}) {
     const links = useStorefrontLinks();
     const { shop: sharedShop } = usePage().props;
     const currency = shop?.currency || sharedShop?.currency || 'CDF';
@@ -113,6 +151,7 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
     const content = (
         <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-50">
             <Head title="Boutique en ligne" />
+            <StorefrontClientBootstrap />
 
             {/* Header */}
             <header className="sticky top-0 z-50 border-b border-slate-200/70 dark:border-slate-800 bg-white/75 dark:bg-slate-950/60 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-950/50">
@@ -172,6 +211,7 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
                                 ))}
                             </select>
                         )}
+                        <StorefrontCurrencySelect availableCurrencies={available_currencies} value={currency} />
                         <ShoppingCart
                             buttonClassName="relative inline-flex items-center justify-center h-10 w-10 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-[var(--sf-primary-hover)] transition-colors shadow-sm shadow-slate-900/10 dark:shadow-none ring-1 ring-slate-900/5 dark:ring-white/10"
                             storefrontLinks
@@ -380,7 +420,9 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
                             </div>
                             <div>
                                 <p className="text-sm font-semibold text-slate-900 dark:text-white">Paiement sécurisé</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Mobile money, carte et espèces</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                    Chaque vendeur définit sur la fiche produit le paiement immédiat ou à la livraison
+                                </p>
                             </div>
                         </div>
                         <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/80 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 hover:border-sky-200 dark:hover:border-sky-800 transition-colors">
@@ -433,7 +475,13 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
                         ) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
                                 {featuredProducts.map((p) => (
-                                    <ProductCardSimple key={p.id} product={p} currency={currency} productUrl={links.product} />
+                                    <ProductCardSimple
+                                        key={p.id}
+                                        product={p}
+                                        currency={currency}
+                                        productUrl={links.product}
+                                        exchangeRates={exchange_rates}
+                                    />
                                 ))}
                             </div>
                         )}
@@ -462,7 +510,13 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
                         ) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
                                 {newArrivals.map((p) => (
-                                    <ProductCardSimple key={p.id} product={p} currency={currency} productUrl={links.product} />
+                                    <ProductCardSimple
+                                        key={p.id}
+                                        product={p}
+                                        currency={currency}
+                                        productUrl={links.product}
+                                        exchangeRates={exchange_rates}
+                                    />
                                 ))}
                             </div>
                         )}
@@ -664,7 +718,7 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
                                             </li>
                                             <li className="flex items-center gap-2">
                                                 <span className="h-1.5 w-1.5 rounded-full bg-sky-500/90" />
-                                                Suivi des commandes
+                                                Suivi par e-mail (n° de commande)
                                             </li>
                                             <li className="flex items-center gap-2">
                                                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--sf-primary)]/90" />
@@ -734,6 +788,14 @@ export default function EcommerceStorefront({ shop, config, featuredProducts = [
         </div>
     );
 
-    return <CartProvider currency={currency} storageKey={`ecommerce_cart_${shop?.id ?? 'default'}`}>{content}</CartProvider>;
+    return (
+        <CartProvider
+            currency={currency}
+            exchangeRates={exchange_rates || {}}
+            storageKey={`ecommerce_cart_${shop?.id ?? 'default'}`}
+        >
+            {content}
+        </CartProvider>
+    );
 }
 

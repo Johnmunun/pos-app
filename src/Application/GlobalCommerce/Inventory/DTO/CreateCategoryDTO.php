@@ -9,7 +9,9 @@ final class CreateCategoryDTO
         public readonly string $name,
         public readonly ?string $description = null,
         public readonly ?string $parentId = null,
-        public readonly int $sortOrder = 0
+        public readonly int $sortOrder = 0,
+        /** @var list<string>|null */
+        public readonly ?array $inventoryShopIds = null
     ) {}
 }
 

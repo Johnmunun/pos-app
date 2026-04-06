@@ -15,7 +15,9 @@ class Money
             throw new InvalidArgumentException('Amount cannot be negative');
         }
 
-        if (!in_array($currency, ['USD', 'EUR', 'CDF'])) {
+        $currency = strtoupper(trim($currency));
+        // ISO 4217 codes (3 lettres) — aligné sur les devises tenant / vitrine (XAF, XOF, etc.)
+        if (!preg_match('/^[A-Z]{3}$/', $currency)) {
             throw new InvalidArgumentException('Unsupported currency');
         }
 
@@ -81,11 +83,12 @@ class Money
 
     public function format(): string
     {
-        $symbol = match($this->currency) {
+        $symbol = match ($this->currency) {
             'USD' => '$',
             'EUR' => '€',
             'CDF' => 'FC',
-            default => $this->currency
+            'XAF', 'XOF' => 'FCFA ',
+            default => $this->currency . ' ',
         };
 
         return $symbol . number_format($this->amount, 2);

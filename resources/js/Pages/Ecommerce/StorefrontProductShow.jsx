@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
+import StorefrontCurrencySelect from '@/Components/Ecommerce/StorefrontCurrencySelect';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
 import { Input } from '@/Components/ui/input';
@@ -18,12 +19,13 @@ import {
     Image as ImageIcon,
     Truck,
     ShieldCheck,
+    CreditCard,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 import { formatCurrency as formatMoney } from '@/lib/currency';
 
-function StorefrontProductHeader({ shop, cmsPages = [] }) {
+function StorefrontProductHeader({ shop, cmsPages = [], availableCurrencies = [] }) {
     const links = useStorefrontLinks();
     const { shop: sharedShop } = usePage().props;
     const logoUrl = shop?.logo_url || sharedShop?.logo_url || null;
@@ -71,6 +73,11 @@ function StorefrontProductHeader({ shop, cmsPages = [] }) {
                     >
                         Catalogue
                     </Link>
+                    <StorefrontCurrencySelect
+                        availableCurrencies={availableCurrencies}
+                        value={shop?.currency}
+                        variant="compact"
+                    />
                     <ShoppingCart buttonClassName="relative inline-flex items-center justify-center h-9 w-9 rounded-2xl bg-[var(--sf-primary,#f59e0b)] dark:bg-white text-white dark:text-slate-900 hover:bg-[var(--sf-primary-hover,#d97706)] dark:hover:bg-[var(--sf-primary-hover,#d97706)] transition-colors shadow-sm shadow-slate-900/10 dark:shadow-none ring-1 ring-slate-900/5 dark:ring-white/10" storefrontLinks />
                 </div>
             </div>
@@ -78,7 +85,7 @@ function StorefrontProductHeader({ shop, cmsPages = [] }) {
     );
 }
 
-function ProductContent({ product, reviews = [], shop, cmsPages, whatsapp = {}, links }) {
+function ProductContent({ product, reviews = [], shop, cmsPages, whatsapp = {}, links, available_currencies = [] }) {
     const { addToCart } = useCart();
     const currency = shop?.currency || 'USD';
 
@@ -122,7 +129,7 @@ function ProductContent({ product, reviews = [], shop, cmsPages, whatsapp = {}, 
             <Head title={product.name} />
             <StorefrontClientBootstrap />
 
-            <StorefrontProductHeader shop={shop} cmsPages={cmsPages} />
+            <StorefrontProductHeader shop={shop} cmsPages={cmsPages} availableCurrencies={available_currencies} />
 
             <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
@@ -296,11 +303,19 @@ function ProductContent({ product, reviews = [], shop, cmsPages, whatsapp = {}, 
                                         />
                                     ) : null}
 
-                                    {product.mode_paiement === 'paiement_livraison' && (
+                                    {!product.is_digital && product.mode_paiement === 'paiement_livraison' && (
                                         <div className="rounded-2xl bg-amber-50/80 dark:bg-amber-950/25 border border-amber-200/70 dark:border-amber-900/40 p-4 flex items-center gap-3">
                                             <Truck className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
                                             <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-                                                Paiement à la livraison disponible
+                                                Réglage défini par le vendeur : paiement à la livraison
+                                            </p>
+                                        </div>
+                                    )}
+                                    {!product.is_digital && product.mode_paiement !== 'paiement_livraison' && (
+                                        <div className="rounded-2xl bg-sky-50/80 dark:bg-sky-950/25 border border-sky-200/70 dark:border-sky-900/40 p-4 flex items-center gap-3">
+                                            <CreditCard className="h-5 w-5 text-sky-600 dark:text-sky-400 shrink-0" />
+                                            <p className="text-sm font-semibold text-sky-900 dark:text-sky-200">
+                                                Réglage défini par le vendeur : paiement en ligne immédiat
                                             </p>
                                         </div>
                                     )}
@@ -428,12 +443,24 @@ function ProductContent({ product, reviews = [], shop, cmsPages, whatsapp = {}, 
     );
 }
 
-export default function StorefrontProductShow({ shop, product, reviews = [], cmsPages = [], whatsapp = {} }) {
+export default function StorefrontProductShow({
+    shop,
+    product,
+    reviews = [],
+    cmsPages = [],
+    whatsapp = {},
+    exchange_rates = {},
+    available_currencies = [],
+}) {
     const currency = shop?.currency || 'CDF';
     const links = useStorefrontLinks();
 
     return (
-        <CartProvider currency={currency} storageKey={`ecommerce_cart_${shop?.id ?? 'default'}`}>
+        <CartProvider
+            currency={currency}
+            exchangeRates={exchange_rates}
+            storageKey={`ecommerce_cart_${shop?.id ?? 'default'}`}
+        >
             <ProductContent
                 product={product}
                 reviews={reviews}
@@ -441,6 +468,7 @@ export default function StorefrontProductShow({ shop, product, reviews = [], cms
                 cmsPages={cmsPages}
                 whatsapp={whatsapp}
                 links={links}
+                available_currencies={available_currencies}
             />
         </CartProvider>
     );

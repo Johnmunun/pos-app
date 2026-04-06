@@ -11,6 +11,8 @@ final class UpdateCategoryDTO
         public readonly ?string $description,
         public readonly ?string $parentId,
         public readonly int $sortOrder,
-        public readonly bool $isActive
+        public readonly bool $isActive,
+        /** @var list<string>|null */
+        public readonly ?array $inventoryShopIds = null
     ) {}
 }

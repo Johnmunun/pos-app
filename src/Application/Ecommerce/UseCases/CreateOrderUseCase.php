@@ -2,6 +2,7 @@
 
 namespace Src\Application\Ecommerce\UseCases;
 
+use App\Services\EcommerceOrderPaidCustomerMailService;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\DB;
 use Ramsey\Uuid\Uuid;
@@ -23,7 +24,8 @@ class CreateOrderUseCase
         private readonly OrderRepositoryInterface $orderRepository,
         private readonly OrderItemRepositoryInterface $orderItemRepository,
         private readonly GcProductRepositoryInterface $gcProductRepository,
-        private readonly GenerateDownloadTokensService $generateDownloadTokensService
+        private readonly GenerateDownloadTokensService $generateDownloadTokensService,
+        private readonly EcommerceOrderPaidCustomerMailService $ecommerceOrderPaidCustomerMailService,
     ) {
     }
 
@@ -95,6 +97,7 @@ class CreateOrderUseCase
             // Si déjà payé (ex: paiement externe confirmé 200 OK), générer immédiatement les tokens de téléchargement
             if ($initialPaymentStatus === Order::PAYMENT_STATUS_PAID) {
                 $this->generateDownloadTokensService->generateForOrder($order->getId());
+                $this->ecommerceOrderPaidCustomerMailService->notifyOrderJustPaid($order);
             }
 
             return $order;

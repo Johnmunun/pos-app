@@ -12,6 +12,11 @@ interface ProductRepositoryInterface
     public function findBySku(string $shopId, string $sku): ?Product;
     public function findByBarcode(string $shopId, string $barcode): ?Product;
     public function existsBySku(string $shopId, string $sku, ?string $excludeId = null): bool;
+
+    /**
+     * @param list<string> $shopIds
+     */
+    public function existsBySkuInShops(array $shopIds, string $sku, ?string $excludeId = null): bool;
     public function search(string $shopId, string $query, array $filters = []): array;
     public function delete(string $id): void;
 }

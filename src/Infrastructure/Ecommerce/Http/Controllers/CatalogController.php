@@ -6,32 +6,16 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Src\Domain\GlobalCommerce\Inventory\Repositories\ProductRepositoryInterface as GlobalCommerceProductRepositoryInterface;
+use Src\Infrastructure\Ecommerce\Http\Concerns\ResolvesEcommerceInventoryScope;
+use Src\Infrastructure\GlobalCommerce\Inventory\Models\CategoryModel;
 
 class CatalogController
 {
+    use ResolvesEcommerceInventoryScope;
+
     public function __construct(
         private readonly GlobalCommerceProductRepositoryInterface $productRepository
     ) {
-    }
-
-    private function getShopId(Request $request): string
-    {
-        $user = $request->user();
-        if ($user === null) {
-            abort(403, 'User not authenticated.');
-        }
-
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
-        $userModel = \App\Models\User::find($user->id);
-        $isRoot = $userModel ? $userModel->isRoot() : false;
-
-        if (!$shopId && !$isRoot) {
-            abort(403, 'Shop ID not found. Please contact administrator.');
-        }
-        if ($isRoot && !$shopId) {
-            abort(403, 'Please select a shop first.');
-        }
-        return (string) $shopId;
     }
 
     public function index(Request $request): Response
@@ -40,7 +24,9 @@ class CatalogController
             abort(403, 'Vous n\'avez pas la permission de voir le catalogue.');
         }
 
-        $shopId = $this->getShopId($request);
+        $shop = $this->ecommerceInventoryShop($request);
+        $shopId = (string) $shop->id;
+        $gcShopIds = $this->ecommerceGcShopIds($request, $shop);
         $categoryId = $request->input('category_id');
         $search = $request->input('search');
 
@@ -49,6 +35,7 @@ class CatalogController
             'category_id' => $categoryId,
             'is_active' => true,
             'is_published_ecommerce' => true,
+            'shop_ids' => $gcShopIds,
         ]));
 
         // Récupérer les images depuis les modèles Eloquent
@@ -102,17 +89,17 @@ class CatalogController
             ];
         }, $products);
 
-        // Récupérer les catégories pour le filtre
+        // Récupérer les catégories pour le filtre (même périmètre shop_id que les produits)
         $categoriesData = [];
         try {
-            $categoryRepo = app(\Src\Domain\GlobalCommerce\Inventory\Repositories\CategoryRepositoryInterface::class);
-            $categories = $categoryRepo->findByShop($shopId, ['active' => true]);
-            $categoriesData = array_map(function ($category) {
-                return [
-                    'id' => $category->getId(),
-                    'name' => $category->getName(),
-                ];
-            }, $categories);
+            $categoriesData = CategoryModel::query()
+                ->whereIn('shop_id', $gcShopIds)
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn ($c) => ['id' => (string) $c->id, 'name' => (string) $c->name])
+                ->values()
+                ->all();
         } catch (\Throwable $e) {
             // Catégories non disponibles
         }
@@ -189,17 +176,19 @@ class CatalogController
             'requires_shipping' => (bool) ($productModel->requires_shipping ?? !$isDigital),
         ];
 
-        $shopId = $this->getShopId($request);
+        $shop = $this->ecommerceInventoryShop($request);
+        $shopId = (string) $shop->id;
+        $gcShopIds = $this->ecommerceGcShopIds($request, $shop);
         $categoriesData = [];
         try {
-            $categoryRepo = app(\Src\Domain\GlobalCommerce\Inventory\Repositories\CategoryRepositoryInterface::class);
-            $categories = $categoryRepo->findByShop($shopId, ['active' => true]);
-            $categoriesData = array_map(function ($category) {
-                return [
-                    'id' => $category->getId(),
-                    'name' => $category->getName(),
-                ];
-            }, $categories);
+            $categoriesData = CategoryModel::query()
+                ->whereIn('shop_id', $gcShopIds)
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn ($c) => ['id' => (string) $c->id, 'name' => (string) $c->name])
+                ->values()
+                ->all();
         } catch (\Throwable $e) {
             // Categories not available
         }

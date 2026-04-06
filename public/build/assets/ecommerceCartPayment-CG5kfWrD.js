@@ -1,0 +1,1 @@
+function n(r){return!Array.isArray(r)||r.length===0?!1:r.some(e=>e.is_digital?!0:(e.mode_paiement||"paiement_immediat")!=="paiement_livraison")}function t(r,e){return Array.isArray(r)?n(e)?r.filter(i=>String(i.type||"").toLowerCase()==="fusionpay"):r:[]}export{n as c,t as p};

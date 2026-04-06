@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -6,6 +6,7 @@ import { CartProvider, useCart } from '@/Contexts/CartContext';
 import ShoppingCart from '@/Components/Ecommerce/ShoppingCart';
 import OrderDrawer from '@/Components/Ecommerce/OrderDrawer';
 import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBootstrap';
+import StorefrontCurrencySelect from '@/Components/Ecommerce/StorefrontCurrencySelect';
 import {
     ShoppingBag,
     ArrowLeft,
@@ -19,6 +20,7 @@ import {
     Truck,
     ShieldCheck,
     CreditCard,
+    Info,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
@@ -26,8 +28,42 @@ import { formatCurrency, normalizeCurrencyCode } from '@/lib/currency';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
 import AISupportFloatingWidget from '@/Components/Ecommerce/AISupportFloatingWidget';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
+import { cartRequiresFusionPay, paymentMethodsForCart } from '@/lib/ecommerceCartPayment';
 
-function StorefrontCartHeader({ shop, cmsPages = [], currency }) {
+function storefrontPaymentExplainer(pm) {
+    if (!pm) return null;
+    const t = String(pm.type || '').toLowerCase();
+    if (t === 'cash_on_delivery') {
+        return {
+            title: 'Paiement à la livraison',
+            text: 'Le vendeur a configuré au moins un article de votre panier pour un règlement à la réception. Aucun prélèvement en ligne pour ce moyen : vous payez au colis. Confirmation par e-mail avec numéro de commande.',
+        };
+    }
+    if (t === 'fusionpay') {
+        return {
+            title: 'Paiement en ligne immédiat',
+            text: 'Le vendeur a défini au moins un article avec règlement en ligne tout de suite après validation. Vous serez redirigé vers la page de paiement sécurisée (mobile money ou carte selon les options).',
+        };
+    }
+    if (t === 'card' || t === 'wallet') {
+        return {
+            title: 'Paiement en ligne',
+            text: 'Règlement lors de la validation, selon les options activées par la boutique.',
+        };
+    }
+    if (t === 'bank_transfer') {
+        return {
+            title: 'Virement bancaire',
+            text: 'Instructions possibles dans l’e-mail de confirmation selon la configuration de la boutique.',
+        };
+    }
+    return {
+        title: 'Moyen de paiement',
+        text: 'Le détail figure dans l’e-mail de confirmation de commande.',
+    };
+}
+
+function StorefrontCartHeader({ shop, cmsPages = [], currency, availableCurrencies = [], selectedCurrencyCode }) {
     const links = useStorefrontLinks();
     const { shop: sharedShop } = usePage().props;
     const logoUrl = shop?.logo_url || sharedShop?.logo_url || null;
@@ -78,6 +114,11 @@ function StorefrontCartHeader({ shop, cmsPages = [], currency }) {
                     >
                         Catalogue
                     </Link>
+                    <StorefrontCurrencySelect
+                        availableCurrencies={availableCurrencies}
+                        value={selectedCurrencyCode || shop?.currency}
+                        variant="compact"
+                    />
                     <ShoppingCart
                         buttonClassName="relative inline-flex items-center justify-center h-10 w-10 rounded-xl bg-[var(--sf-primary,#f59e0b)] text-white hover:bg-[var(--sf-primary-hover,#d97706)] shadow-lg transition-all"
                         storefrontLinks
@@ -88,7 +129,17 @@ function StorefrontCartHeader({ shop, cmsPages = [], currency }) {
     );
 }
 
-function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop, cmsPages, whatsapp = {}, config = {} }) {
+function CartContent({
+    shippingMethods,
+    paymentMethods,
+    taxRate,
+    products,
+    shop,
+    cmsPages,
+    whatsapp = {},
+    config = {},
+    available_currencies = [],
+}) {
     const links = useStorefrontLinks();
     const { cart, updateQuantity, removeFromCart, getCartTotal, getPriceInDisplayCurrency, currency, clearCart, exchangeRates } = useCart();
     const [orderDrawerOpen, setOrderDrawerOpen] = useState(false);
@@ -124,6 +175,24 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
     const useFlatShipping = !!config?.storefront_use_flat_shipping;
     const flatShippingAmount = Math.max(0, Number(config?.storefront_flat_shipping_amount ?? 0));
     const hasPhysicalItems = cart.some((i) => !i.is_digital);
+
+    const visiblePaymentMethods = useMemo(
+        () => paymentMethodsForCart(paymentMethods, cart),
+        [paymentMethods, cart]
+    );
+    const fusionPayRequired = cartRequiresFusionPay(cart);
+    const fusionPayMissing =
+        fusionPayRequired && visiblePaymentMethods.length === 0 && (paymentMethods?.length ?? 0) > 0;
+
+    useEffect(() => {
+        if (visiblePaymentMethods.length === 0) {
+            return;
+        }
+        const stillValid = visiblePaymentMethods.some((m) => m.id === selectedPaymentId);
+        if (!stillValid) {
+            setSelectedPaymentId(visiblePaymentMethods[0].id);
+        }
+    }, [visiblePaymentMethods, selectedPaymentId]);
 
     const subtotal = !canConvertAllItems && cartCurrencies.length === 1 ? rawSubtotal : getCartTotal();
     const taxAmount = subtotal * (taxRate / 100);
@@ -199,17 +268,27 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
             toast.error('Votre panier est vide');
             return;
         }
+        if (fusionPayMissing) {
+            toast.error(
+                'Le paiement en ligne sécurisé requis pour ce panier n’est pas disponible pour le moment. Contactez la boutique.'
+            );
+            return;
+        }
         setOrderDrawerOpen(true);
     };
 
-    const selectedPaymentCode = paymentMethods?.find((m) => m.id === selectedPaymentId)?.code ?? '';
-    const selectedPaymentType = paymentMethods?.find((m) => m.id === selectedPaymentId)?.type ?? '';
+    const selectedPm = visiblePaymentMethods?.find((m) => m.id === selectedPaymentId);
+    const selectedPaymentCode = selectedPm?.code ?? '';
+    const selectedPaymentType = selectedPm?.type ?? '';
+    const paymentExplainer = storefrontPaymentExplainer(selectedPm);
+    const physicalPaymentModes = cart.filter((i) => !i.is_digital).map((i) => i.mode_paiement || 'paiement_immediat');
+    const hasMixedProductPaymentModes = physicalPaymentModes.length > 1 && new Set(physicalPaymentModes).size > 1;
+    const hasDeliveryItems = cart.some((i) => !i.is_digital && (i.mode_paiement || 'paiement_immediat') === 'paiement_livraison');
+    const willSplitOrder = fusionPayRequired && hasDeliveryItems;
 
-    const hasDigitalItems = cart.some((i) => !!i.is_digital);
-    const isPayOnDelivery = selectedPaymentType === 'cash_on_delivery';
-    const isFusionPay = selectedPaymentType === 'fusionpay';
-    // Paiement immédiat auto (hors livraison / FusionPay — celui-ci passe par FusionPay après création de commande).
-    const shouldAutoMarkPaid = hasDigitalItems && !isPayOnDelivery && !isFusionPay;
+    // Ne jamais marquer la commande « payée » côté panier sans passage par le flux de paiement en ligne.
+    // Les produits numériques se valident après paiement en ligne ; sinon la commande reste en attente (ex. paiement à la livraison).
+    const shouldAutoMarkPaid = false;
 
     const whatsappNumber = whatsapp.number || null;
     const whatsappSupportEnabled = !!whatsapp.enabled;
@@ -221,7 +300,13 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
         <>
             <Head title="Panier - Boutique" />
             <StorefrontClientBootstrap />
-            <StorefrontCartHeader shop={shop} cmsPages={cmsPages} currency={displayCurrencyLabel} />
+            <StorefrontCartHeader
+                shop={shop}
+                cmsPages={cmsPages}
+                currency={displayCurrencyLabel}
+                availableCurrencies={available_currencies}
+                selectedCurrencyCode={normalizedDisplayCurrency}
+            />
 
             <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
                 {/* Hero section */}
@@ -298,6 +383,17 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h3 className="font-semibold text-slate-900 dark:text-white mb-0.5 truncate">{item.name}</h3>
+                                                {item.is_digital ? (
+                                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+                                                        Indication vendeur : produit numérique — lien après paiement en ligne confirmé
+                                                    </p>
+                                                ) : (
+                                                    <p className="text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-2">
+                                                        {item.mode_paiement === 'paiement_livraison'
+                                                            ? 'Indication vendeur (fiche produit) : paiement à la livraison'
+                                                            : 'Indication vendeur (fiche produit) : paiement en ligne immédiat'}
+                                                    </p>
+                                                )}
                                                 {item.sku && (
                                                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Réf. {item.sku}</p>
                                                 )}
@@ -383,44 +479,82 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
                                         </div>
                                     ) : (
                                         shippingMethods?.length > 0 && (
-                                            <div>
-                                                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                            <div className="rounded-xl border border-slate-200/80 dark:border-slate-600 bg-slate-50/80 dark:bg-slate-900/40 px-3 py-2.5">
+                                                <p className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                                                     <Truck className="h-4 w-4 text-amber-500" />
                                                     Livraison
-                                                </label>
-                                                <select
-                                                    value={selectedShippingId}
-                                                    onChange={(e) => setSelectedShippingId(e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-200 dark:border-slate-600 dark:bg-slate-900 px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-colors"
-                                                >
-                                                    {shippingMethods.map((m) => (
-                                                        <option key={m.id} value={m.id}>
-                                                            {m.name} – {m.base_cost > 0 ? format(m.base_cost) : 'Gratuit'}
-                                                            {m.free_shipping_threshold && ` (gratuit dès ${format(m.free_shipping_threshold)})`}
-                                                        </option>
-                                                    ))}
-                                                </select>
+                                                </p>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                                                    Définie par la boutique — non modifiable.
+                                                </p>
+                                                <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                                                    {shippingMethods[0]?.name ?? 'Standard'}
+                                                    {' — '}
+                                                    {shippingAmount > 0 ? format(shippingAmount) : 'Gratuit'}
+                                                </p>
                                             </div>
                                         )
                                     )}
 
-                                    {paymentMethods?.length > 0 && (
+                                    {fusionPayMissing && (
+                                        <div className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50/90 dark:bg-red-950/30 px-3 py-2.5 text-xs text-red-800 dark:text-red-200">
+                                            <p className="font-semibold">Paiement en ligne indisponible</p>
+                                            <p className="mt-1">
+                                                Ce panier nécessite un règlement en ligne immédiat, mais la boutique n’a pas encore activé
+                                                cette option. Contactez le vendeur ou réessayez plus tard.
+                                            </p>
+                                        </div>
+                                    )}
+                                    {fusionPayRequired && !fusionPayMissing && (
+                                        <div className="rounded-xl border border-sky-200 dark:border-sky-800/60 bg-sky-50/80 dark:bg-sky-950/25 px-3 py-2.5 text-xs text-sky-900 dark:text-sky-100">
+                                            <p className="font-medium">Règle définie par le vendeur sur la fiche produit</p>
+                                            <p className="mt-1 text-sky-800/95 dark:text-sky-200/90">
+                                                Au moins un article est réglé en ligne, tout de suite après validation de la commande — sur
+                                                la page de paiement sécurisée de la boutique (comme pour un produit numérique).
+                                            </p>
+                                        </div>
+                                    )}
+                                    {visiblePaymentMethods?.length > 0 && (
                                         <div>
                                             <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                                                 <CreditCard className="h-4 w-4 text-amber-500" />
-                                                Paiement
+                                                Moyen de paiement
                                             </label>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+                                                Livraison vs immédiat : défini par le vendeur sur chaque produit (e-commerce). Ici vous
+                                                choisissez seulement parmi les moyens compatibles avec votre panier.
+                                            </p>
                                             <select
                                                 value={selectedPaymentId}
                                                 onChange={(e) => setSelectedPaymentId(e.target.value)}
                                                 className="w-full rounded-xl border border-slate-200 dark:border-slate-600 dark:bg-slate-900 px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-colors"
                                             >
-                                                {paymentMethods.map((m) => (
+                                                {visiblePaymentMethods.map((m) => (
                                                     <option key={m.id} value={m.id}>
                                                         {m.name}
                                                     </option>
                                                 ))}
                                             </select>
+                                            {hasMixedProductPaymentModes && hasPhysicalItems && (
+                                                <div className="mt-3 rounded-xl border border-amber-200 dark:border-amber-800/60 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2.5 text-xs text-amber-900 dark:text-amber-100">
+                                                    <p className="font-medium flex items-center gap-1.5">
+                                                        <Info className="h-3.5 w-3.5 shrink-0" />
+                                                        Règles vendeur différentes sur le panier
+                                                    </p>
+                                                    <p className="mt-1 text-amber-800/95 dark:text-amber-200/90">
+                                                        Certains articles sont configurés « paiement à la livraison », d’autres « paiement
+                                                        immédiat » (fiches produit). Au moment de valider, la boutique créera
+                                                        automatiquement deux commandes: une commande payée en ligne et une commande à la
+                                                        livraison.
+                                                    </p>
+                                                </div>
+                                            )}
+                                            {paymentExplainer && (
+                                                <div className="mt-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50/80 dark:bg-slate-900/40 px-3 py-2.5 text-xs text-slate-700 dark:text-slate-200">
+                                                    <p className="font-semibold text-slate-800 dark:text-slate-100">{paymentExplainer.title}</p>
+                                                    <p className="mt-1 text-slate-600 dark:text-slate-300">{paymentExplainer.text}</p>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
 
@@ -488,6 +622,7 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
 
                                     <Button
                                         onClick={handleCheckout}
+                                        disabled={fusionPayMissing}
                                         className="w-full gap-2 rounded-xl h-12 text-base font-semibold shadow-lg shadow-[var(--sf-primary,#f59e0b)]/25 transition-all"
                                         size="lg"
                                     >
@@ -495,14 +630,29 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
                                         <ArrowRight className="h-4 w-4" />
                                     </Button>
 
-                                    <div className="flex items-center gap-3 pt-2 text-xs text-slate-500 dark:text-slate-400">
+                                    {willSplitOrder && (
+                                        <div className="rounded-xl border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/80 dark:bg-indigo-950/25 px-3 py-2.5 text-xs text-indigo-900 dark:text-indigo-100">
+                                            <p className="font-medium">Validation intelligente du panier</p>
+                                            <p className="mt-1 text-indigo-800/95 dark:text-indigo-200/90">
+                                                Votre panier contient des articles à paiement immédiat et des articles à la livraison.
+                                                La validation va créer automatiquement deux commandes, puis ouvrir le paiement en ligne
+                                                uniquement pour les articles concernés.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    <div className="flex flex-col gap-2 pt-2 text-xs text-slate-500 dark:text-slate-400">
                                         <span className="inline-flex items-center gap-1">
-                                            <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                                            Paiement sécurisé
+                                            <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
+                                            {fusionPayRequired
+                                                ? 'Paiement en ligne immédiat — puis confirmation par e-mail'
+                                                : selectedPaymentType === 'cash_on_delivery'
+                                                  ? 'Au colis (règle vendeur : à la livraison) — confirmation par e-mail avec n° de commande'
+                                                  : 'Selon le moyen proposé ci-dessus — confirmation par e-mail'}
                                         </span>
                                         <span className="inline-flex items-center gap-1">
-                                            <Truck className="h-4 w-4 text-amber-500" />
-                                            Livraison rapide
+                                            <Truck className="h-4 w-4 text-amber-500 shrink-0" />
+                                            Suivi : conservez l’e-mail de commande (n° indiqué)
                                         </span>
                                     </div>
                                 </div>
@@ -519,7 +669,7 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
                     products={products ?? []}
                     initialCart={cart}
                     shippingMethods={shippingMethods ?? []}
-                    paymentMethods={paymentMethods ?? []}
+                    paymentMethods={visiblePaymentMethods ?? []}
                     shippingAmount={shippingAmount}
                     taxRate={taxRate}
                     taxAmount={taxAmount}
@@ -529,9 +679,29 @@ function CartContent({ shippingMethods, paymentMethods, taxRate, products, shop,
                     selectedPaymentType={selectedPaymentType}
                     paymentStatusOnSubmit={shouldAutoMarkPaid ? 'paid' : 'pending'}
                     readonlyShipping={useFlatShipping}
-                    onSuccess={() => {
+                    orderCurrency={normalizedDisplayCurrency}
+                    onSuccess={(data) => {
                         clearCart();
                         setOrderDrawerOpen(false);
+                        const num = data?.order?.order_number;
+                        const secondaryNum = data?.secondary_order?.order_number;
+                        if (data?.online_payment_unavailable && num) {
+                            toast.error(
+                                secondaryNum
+                                    ? `Commande ${num} enregistrée en attente de paiement en ligne. Une autre commande ${secondaryNum} a été créée pour la livraison. Vérifiez vos e-mails.`
+                                    : `Commande ${num} enregistrée en attente de paiement en ligne. La boutique vous contactera pour finaliser.`,
+                                { duration: 11000 }
+                            );
+                        } else if (num) {
+                            toast.success(
+                                secondaryNum
+                                    ? `Commande ${num} créée pour le paiement en ligne, et commande ${secondaryNum} créée pour les articles à la livraison. Vérifiez vos e-mails de confirmation.`
+                                    : `Commande ${num} enregistrée. Un e-mail de confirmation vous a été envoyé : utilisez ce numéro pour le suivi ou toute question auprès de la boutique.`,
+                                { duration: 9500 }
+                            );
+                        } else {
+                            toast.success('Commande enregistrée. Vérifiez votre boîte e-mail pour la confirmation.');
+                        }
                     }}
                 />
             )}
@@ -550,6 +720,7 @@ export default function StorefrontCart({
     tax_rate = 0,
     currency = 'CDF',
     exchange_rates = {},
+    available_currencies = [],
     products = [],
     whatsapp = {},
     config = {},
@@ -569,6 +740,7 @@ export default function StorefrontCart({
                 cmsPages={cmsPages}
                 whatsapp={whatsapp}
                 config={config}
+                available_currencies={available_currencies}
             />
         </CartProvider>
     );

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Services\DynamicMailSettingsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Lang;
@@ -33,6 +34,9 @@ class PasswordResetLinkController extends Controller
         $request->validate([
             'email' => 'required|email',
         ]);
+
+        // Utiliser le SMTP configuré en admin quand il est activé (même logique que les mails transactionnels).
+        app(DynamicMailSettingsService::class)->applyFromStorage();
 
         $status = Password::sendResetLink(
             $request->only('email')

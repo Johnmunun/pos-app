@@ -9,6 +9,7 @@ import { Search, Package, Filter, Grid, List, SlidersHorizontal, X, ArrowLeft, S
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
 import AISupportFloatingWidget from '@/Components/Ecommerce/AISupportFloatingWidget';
 import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBootstrap';
+import StorefrontCurrencySelect from '@/Components/Ecommerce/StorefrontCurrencySelect';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 import axios from 'axios';
 
@@ -28,11 +29,10 @@ function shouldShowPageInNav(page) {
     return !isCgv && !isPrivacy;
 }
 
-function StorefrontHeader({ shop, cmsPages = [] }) {
+function StorefrontHeader({ shop, cmsPages = [], availableCurrencies = [] }) {
     const links = useStorefrontLinks();
     const { shop: sharedShop } = usePage().props;
     const logoUrl = shop?.logo_url || sharedShop?.logo_url || null;
-
     const navPages = (cmsPages || []).filter(shouldShowPageInNav).slice(0, 4);
 
     return (
@@ -82,6 +82,11 @@ function StorefrontHeader({ shop, cmsPages = [] }) {
                     >
                         Accueil
                     </Link>
+                    <StorefrontCurrencySelect
+                        availableCurrencies={availableCurrencies}
+                        value={shop?.currency}
+                        variant="compact"
+                    />
                     <ShoppingCart buttonClassName="relative inline-flex items-center justify-center h-9 w-9 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-[var(--sf-primary-hover)] transition-colors shadow-sm shadow-slate-900/10 dark:shadow-none ring-1 ring-slate-900/5 dark:ring-white/10" storefrontLinks />
                 </div>
             </div>
@@ -89,7 +94,7 @@ function StorefrontHeader({ shop, cmsPages = [] }) {
     );
 }
 
-function CatalogContent({ products = [], categories = [], filters = {}, shop, cmsPages, banners = [], whatsapp = {} }) {
+function CatalogContent({ products = [], categories = [], filters = {}, shop, cmsPages, banners = [], whatsapp = {}, exchangeRates = {}, availableCurrencies = [] }) {
     const links = useStorefrontLinks();
     const { addToCart } = useCart();
     const currency = shop?.currency || 'USD';
@@ -188,7 +193,7 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
             <Head title="Catalogue - Boutique" />
             <StorefrontClientBootstrap />
 
-            <StorefrontHeader shop={shop} cmsPages={cmsPages} />
+            <StorefrontHeader shop={shop} cmsPages={cmsPages} availableCurrencies={availableCurrencies} />
 
             <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
                 <div className="relative overflow-hidden bg-gradient-to-br from-[var(--sf-primary)] via-[var(--sf-secondary)] to-[var(--sf-primary)]">
@@ -463,6 +468,7 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
                                     viewMode={viewMode}
                                     onAddToCart={addToCart}
                                     currency={currency}
+                                    exchangeRates={exchangeRates}
                                     detailUrl={productDetailUrl(product.id)}
                                 />
                             ))}
@@ -477,11 +483,25 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
     );
 }
 
-export default function StorefrontCatalog({ shop, products = [], categories = [], filters = {}, cmsPages = [], banners = [], whatsapp = {} }) {
+export default function StorefrontCatalog({
+    shop,
+    products = [],
+    categories = [],
+    filters = {},
+    cmsPages = [],
+    banners = [],
+    whatsapp = {},
+    exchange_rates = {},
+    available_currencies = [],
+}) {
     const currency = shop?.currency || 'CDF';
 
     return (
-        <CartProvider currency={currency} storageKey={`ecommerce_cart_${shop?.id ?? 'default'}`}>
+        <CartProvider
+            currency={currency}
+            exchangeRates={exchange_rates || {}}
+            storageKey={`ecommerce_cart_${shop?.id ?? 'default'}`}
+        >
             <CatalogContent
                 products={products}
                 categories={categories}
@@ -490,6 +510,8 @@ export default function StorefrontCatalog({ shop, products = [], categories = []
                 cmsPages={cmsPages}
                 banners={banners}
                 whatsapp={whatsapp}
+                exchangeRates={exchange_rates || {}}
+                availableCurrencies={available_currencies || []}
             />
         </CartProvider>
     );

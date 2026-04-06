@@ -40,7 +40,8 @@ class EcommerceServiceProvider extends ServiceProvider
                 $app->make(OrderRepositoryInterface::class),
                 $app->make(OrderItemRepositoryInterface::class),
                 $app->make(\Src\Domain\GlobalCommerce\Inventory\Repositories\ProductRepositoryInterface::class),
-                $app->make(\Src\Application\Ecommerce\Services\GenerateDownloadTokensService::class)
+                $app->make(\Src\Application\Ecommerce\Services\GenerateDownloadTokensService::class),
+                $app->make(\App\Services\EcommerceOrderPaidCustomerMailService::class)
             );
         });
 
@@ -54,7 +55,8 @@ class EcommerceServiceProvider extends ServiceProvider
             return new UpdatePaymentStatusUseCase(
                 $app->make(OrderRepositoryInterface::class),
                 $app->make(\Src\Application\Ecommerce\Services\GenerateDownloadTokensService::class),
-                $app->make(\Src\Application\Referral\Services\ReferralService::class)
+                $app->make(\Src\Application\Referral\Services\ReferralService::class),
+                $app->make(\App\Services\EcommerceOrderPaidCustomerMailService::class)
             );
         });
 

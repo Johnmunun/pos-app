@@ -3,6 +3,7 @@
 namespace Src\Infrastructure\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Mail\PostRegistrationPaymentReminderMail;
 use App\Mail\WelcomeRegistrationMail;
 use App\Models\Role;
 use App\Models\Permission;
@@ -288,6 +289,12 @@ class OnboardingController extends Controller
                 $this->storeTemplateProvisioner->provisionTenantStore($tenant, $user);
             });
 
+            if (!$user instanceof UserModel || !$tenant instanceof TenantModel) {
+                Log::error('Onboarding complete: missing user or tenant after transaction');
+
+                return back()->withErrors(['error' => 'Impossible de finaliser l\'inscription. Réessayez dans quelques instants.']);
+            }
+
             // Secteurs Kiosque, Supermarché, Boucherie, Autre = module Global Commerce : assigner le rôle Commerçant Commerce
             $commerceSectors = ['kiosk', 'supermarket', 'butchery', 'other', 'global_commerce'];
             if (in_array($tenant->sector, $commerceSectors, true)) {
@@ -364,15 +371,21 @@ class OnboardingController extends Controller
 
             try {
                 $mailService = app(DynamicMailSettingsService::class);
-                if ($mailService->applyFromStorage()) {
-                    Mail::to($user->email)->send(new WelcomeRegistrationMail(
-                        $user,
-                        $tenant->name,
-                        $registrationData['tenant']['store_start_mode'] ?? null,
-                    ));
-                }
+                // Si SMTP admin activé : applique la config stockée ; sinon garde mailer .env (smtp, log, etc.).
+                $mailService->applyFromStorage();
+
+                Mail::to($user->email)->send(new WelcomeRegistrationMail(
+                    $user,
+                    $tenant->name,
+                    $registrationData['tenant']['store_start_mode'] ?? null,
+                ));
+
+                Mail::to($user->email)->send(new PostRegistrationPaymentReminderMail(
+                    $user,
+                    $tenant->name,
+                ));
             } catch (\Throwable $e) {
-                Log::warning('Welcome email failed after onboarding', [
+                Log::warning('Registration emails failed after onboarding', [
                     'user_id' => $user->id,
                     'error' => $e->getMessage(),
                 ]);

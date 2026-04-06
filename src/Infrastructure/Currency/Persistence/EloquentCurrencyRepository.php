@@ -2,6 +2,7 @@
 
 namespace Src\Infrastructure\Currency\Persistence;
 
+use App\Models\Shop;
 use App\Models\Currency as CurrencyModel;
 use Src\Domain\Currency\Entities\Currency;
 use Src\Domain\Currency\Repositories\CurrencyRepositoryInterface;
@@ -68,6 +69,11 @@ class EloquentCurrencyRepository implements CurrencyRepositoryInterface
         $model->is_active = $currency->isActive();
         
         $model->save();
+
+        // Aligner la colonne shops.currency (vitrine, POS) sur la devise par défaut du tenant
+        if ($model->tenant_id !== null && $model->is_default) {
+            Shop::query()->where('tenant_id', $model->tenant_id)->update(['currency' => strtoupper((string) $model->code)]);
+        }
 
         // Mettre à jour l'ID si c'était une création
         if ($currency->getId() === 0) {

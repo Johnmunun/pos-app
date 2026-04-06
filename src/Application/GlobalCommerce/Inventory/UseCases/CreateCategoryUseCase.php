@@ -15,13 +15,14 @@ final class CreateCategoryUseCase
 
     public function execute(CreateCategoryDTO $dto): Category
     {
+        $allowed = $dto->inventoryShopIds ?? [$dto->shopId];
         if ($this->categories->existsByName($dto->shopId, $dto->name)) {
             throw new \InvalidArgumentException("Une catégorie avec le nom '{$dto->name}' existe déjà.");
         }
 
         if ($dto->parentId) {
             $parent = $this->categories->findById($dto->parentId);
-            if (!$parent || $parent->getShopId() !== $dto->shopId) {
+            if (!$parent || !in_array($parent->getShopId(), $allowed, true)) {
                 throw new \InvalidArgumentException('Catégorie parente invalide.');
             }
         }

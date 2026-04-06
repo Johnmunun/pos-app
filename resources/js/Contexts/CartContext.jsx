@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { normalizeCurrencyCode } from '@/lib/currency';
+import { convertAmountToCurrency } from '@/lib/exchangeConvert';
 
 const CartContext = createContext();
 
@@ -13,23 +14,6 @@ export const useCart = () => {
 };
 
 const CART_STORAGE_KEY = 'ecommerce_cart';
-
-/**
- * Converts amount from one currency to the display currency.
- * exchangeRates: { [code]: rate } where rate = units of that currency per 1 unit of default.
- * Default currency has rate 1.
- * Formula: amountInTarget = amount * targetRate / sourceRate
- */
-function convertToCurrency(amount, fromCurrency, toCurrency, exchangeRates = {}) {
-    if (!fromCurrency || !toCurrency) return Number(amount);
-    const fromNorm = normalizeCurrencyCode(fromCurrency);
-    const toNorm = normalizeCurrencyCode(toCurrency);
-    if (fromNorm === toNorm) return Number(amount);
-    const fromRate = exchangeRates[fromNorm] ?? exchangeRates[fromCurrency] ?? 1;
-    const toRate = exchangeRates[toNorm] ?? exchangeRates[toCurrency] ?? 1;
-    if (toRate === 0) return 0;
-    return (Number(amount) * toRate) / fromRate;
-}
 
 export const CartProvider = ({ children, initialCart = [], currency = 'USD', exchangeRates = {}, storageKey = CART_STORAGE_KEY }) => {
     const [cart, setCart] = useState(() => {
@@ -121,14 +105,14 @@ export const CartProvider = ({ children, initialCart = [], currency = 'USD', exc
         const rates = Object.keys(exchangeRates).length ? exchangeRates : { [displayCurrency]: 1 };
         return cart.reduce((sum, item) => {
             const itemCurrency = item.price_currency || displayCurrency;
-            const convertedPrice = convertToCurrency(item.price, itemCurrency, displayCurrency, rates);
+            const convertedPrice = convertAmountToCurrency(item.price, itemCurrency, displayCurrency, rates);
             return sum + convertedPrice * item.quantity;
         }, 0);
     };
 
     const getPriceInDisplayCurrency = (amount, fromCurrency) => {
         const rates = Object.keys(exchangeRates).length ? exchangeRates : { [displayCurrency]: 1 };
-        return convertToCurrency(amount, fromCurrency || displayCurrency, displayCurrency, rates);
+        return convertAmountToCurrency(amount, fromCurrency || displayCurrency, displayCurrency, rates);
     };
 
     const getCartItemCount = () => {

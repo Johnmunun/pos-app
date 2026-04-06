@@ -19,9 +19,10 @@ final class CreateProductUseCase
 
     public function execute(CreateProductDTO $dto): Product
     {
+        $allowed = $dto->inventoryShopIds ?? [$dto->shopId];
         // Vérifier catégorie
         $category = $this->categories->findById($dto->categoryId);
-        if (!$category || $category->getShopId() !== $dto->shopId) {
+        if (!$category || !in_array($category->getShopId(), $allowed, true)) {
             throw new \InvalidArgumentException('Catégorie invalide pour cette boutique.');
         }
 

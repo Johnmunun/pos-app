@@ -427,6 +427,8 @@ class StorefrontController
                     }
                 }
 
+                $productType = $model->product_type ?? 'physical';
+
                 return [
                     'id' => (string) $model->id,
                     'name' => $model->name,
@@ -438,6 +440,8 @@ class StorefrontController
                     'discount_percent' => $model->discount_percent ? (float) $model->discount_percent : null,
                     'has_promotion' => $this->hasActivePromotion($model, $promotionTargets),
                     'promotion_percent' => $this->getActivePromotionPercent($model, $promotionTargets),
+                    'is_digital' => $productType === 'digital',
+                    'mode_paiement' => $model->mode_paiement ?? 'paiement_immediat',
                 ];
             };
 
@@ -501,7 +505,8 @@ class StorefrontController
             }
         }
 
-        $displayCurrency = $this->getDefaultCurrencyForTenant($tenantId);
+        $currencyBundle = $this->resolveStorefrontDisplayCurrency($request, $tenantId, $shop);
+        $displayCurrency = $currencyBundle['currency'];
 
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);
@@ -513,6 +518,8 @@ class StorefrontController
                 'currency' => $displayCurrency,
                 'logo_url' => $shopLogoUrl,
             ],
+            'exchange_rates' => $currencyBundle['exchange_rates'],
+            'available_currencies' => $currencyBundle['available_currencies'],
             'config' => $config,
             'featuredProducts' => $featured,
             'newArrivals' => $newArrivals,
@@ -664,7 +671,8 @@ class StorefrontController
 
         $user = $request->user();
         $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
-        $displayCurrency = $this->getDefaultCurrencyForTenant($tenantId);
+        $currencyBundle = $this->resolveStorefrontDisplayCurrency($request, $tenantId, $shop);
+        $displayCurrency = $currencyBundle['currency'];
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);
 
@@ -675,6 +683,8 @@ class StorefrontController
                 'currency' => $displayCurrency,
                 'logo_url' => $shopLogoUrl,
             ],
+            'exchange_rates' => $currencyBundle['exchange_rates'],
+            'available_currencies' => $currencyBundle['available_currencies'],
             'page' => [
                 'id' => $page->id,
                 'title' => $page->title,
@@ -772,12 +782,13 @@ class StorefrontController
                 'promotion_percent' => $model ? $this->getActivePromotionPercent($model, $promotionTargets) : null,
                 'download_url' => $isDigital && $model ? ($model->download_url ?? $model->download_path ?? null) : null,
                 'requires_shipping' => (bool) ($model ? ($model->requires_shipping ?? true) : true),
+                'mode_paiement' => $model?->mode_paiement ?? 'paiement_immediat',
             ];
         }, $products);
 
         $categoriesData = [];
         try {
-            $categoryModels = \Src\Infrastructure\GlobalCommerce\Inventory\Models\CategoryModel::where('shop_id', $shopId)
+            $categoryModels = \Src\Infrastructure\GlobalCommerce\Inventory\Models\CategoryModel::whereIn('shop_id', $productShopIds)
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get(['id', 'name']);
@@ -787,7 +798,8 @@ class StorefrontController
         } catch (\Throwable) {
         }
 
-        $displayCurrency = $this->getDefaultCurrencyForTenant($tenantId);
+        $currencyBundle = $this->resolveStorefrontDisplayCurrency($request, $tenantId, $shop);
+        $displayCurrency = $currencyBundle['currency'];
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
 
         // Bannières pour le header du catalogue (slider + promotion)
@@ -829,6 +841,8 @@ class StorefrontController
                 'currency' => $displayCurrency,
                 'logo_url' => $shopLogoUrl,
             ],
+            'exchange_rates' => $currencyBundle['exchange_rates'],
+            'available_currencies' => $currencyBundle['available_currencies'],
             'products' => $productsData,
             'categories' => $categoriesData,
             'filters' => ['category_id' => $categoryId, 'search' => $search],
@@ -936,7 +950,8 @@ class StorefrontController
                 ->toArray();
         }
 
-        $displayCurrency = $this->getDefaultCurrencyForTenant($tenantId);
+        $currencyBundle = $this->resolveStorefrontDisplayCurrency($request, $tenantId, $shop);
+        $displayCurrency = $currencyBundle['currency'];
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);
 
@@ -947,6 +962,8 @@ class StorefrontController
                 'currency' => $displayCurrency,
                 'logo_url' => $shopLogoUrl,
             ],
+            'exchange_rates' => $currencyBundle['exchange_rates'],
+            'available_currencies' => $currencyBundle['available_currencies'],
             'product' => $productData,
             'reviews' => $reviews,
             'cmsPages' => $this->getCmsPagesForNav($shopId),
@@ -973,9 +990,9 @@ class StorefrontController
         $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
         $taxRate = $shop->default_tax_rate ? (float) $shop->default_tax_rate : 0;
 
-        $currencyConfig = $this->getCurrencyAndRates($tenantId, $shop->currency);
-        $currency = $currencyConfig['currency'];
-        $exchangeRates = $currencyConfig['exchange_rates'];
+        $currencyBundle = $this->resolveStorefrontDisplayCurrency($request, $tenantId, $shop);
+        $currency = $currencyBundle['currency'];
+        $exchangeRates = $currencyBundle['exchange_rates'];
 
         $shippingMethods = ShippingMethodModel::where('shop_id', $shopId)
             ->where('is_active', true)
@@ -1010,7 +1027,6 @@ class StorefrontController
 
         $products = $this->getProductsForOrderDrawer($shopId);
 
-        // Devise depuis settings/currencies (Currency model) - pas shop.currency
         $displayCurrency = strtoupper($currency);
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);
@@ -1028,6 +1044,7 @@ class StorefrontController
             'tax_rate' => $taxRate,
             'currency' => $displayCurrency,
             'exchange_rates' => $exchangeRates,
+            'available_currencies' => $currencyBundle['available_currencies'],
             'products' => $products,
             'config' => $storefrontConfig,
             'whatsapp' => [
@@ -1095,6 +1112,47 @@ class StorefrontController
         }
 
         return ['currency' => $defaultCode, 'exchange_rates' => $exchangeRatesMap];
+    }
+
+    /**
+     * Devise affichée vitrine : paramètre ?currency=, session, sinon devise par défaut du tenant.
+     * Aligne shop.currency (colonne) avec les taux pour conversion côté client.
+     *
+     * @return array{currency: string, exchange_rates: array<string, float>, available_currencies: array<int, array{code: string}>}
+     */
+    private function resolveStorefrontDisplayCurrency(Request $request, string $tenantId, Shop $shop): array
+    {
+        $config = $this->getCurrencyAndRates($tenantId, $shop->currency);
+        $sessionKey = 'storefront_display_currency_'.$tenantId;
+
+        $activeCodes = Currency::where('tenant_id', $tenantId)
+            ->where('is_active', true)
+            ->orderBy('code')
+            ->pluck('code')
+            ->map(fn ($c) => strtoupper((string) $c))
+            ->values()
+            ->all();
+
+        $requested = strtoupper(trim((string) $request->query('currency', '')));
+        if ($requested !== '' && in_array($requested, $activeCodes, true)) {
+            $request->session()->put($sessionKey, $requested);
+        }
+
+        $fromSession = $request->session()->get($sessionKey);
+        $picked = is_string($fromSession) ? strtoupper(trim($fromSession)) : '';
+        $display = ($picked !== '' && in_array($picked, $activeCodes, true)) ? $picked : $config['currency'];
+
+        $rates = $config['exchange_rates'];
+        if (!isset($rates[$display])) {
+            $display = $config['currency'];
+            $request->session()->forget($sessionKey);
+        }
+
+        return [
+            'currency' => $display,
+            'exchange_rates' => $rates,
+            'available_currencies' => array_map(fn ($code) => ['code' => $code], $activeCodes),
+        ];
     }
 
     private function getProductsForOrderDrawer(string $shopId): array
@@ -1207,7 +1265,8 @@ class StorefrontController
 
         $user = $request->user();
         $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
-        $displayCurrency = $this->getDefaultCurrencyForTenant($tenantId);
+        $currencyBundle = $this->resolveStorefrontDisplayCurrency($request, $tenantId, $shop);
+        $displayCurrency = $currencyBundle['currency'];
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);
 
@@ -1218,6 +1277,8 @@ class StorefrontController
                 'currency' => $displayCurrency,
                 'logo_url' => $shopLogoUrl,
             ],
+            'exchange_rates' => $currencyBundle['exchange_rates'],
+            'available_currencies' => $currencyBundle['available_currencies'],
             'articles' => $articles,
             'cmsPages' => $this->getCmsPagesForNav($shopId),
             'whatsapp' => [
@@ -1264,7 +1325,8 @@ class StorefrontController
 
         $user = $request->user();
         $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
-        $displayCurrency = $this->getDefaultCurrencyForTenant($tenantId);
+        $currencyBundle = $this->resolveStorefrontDisplayCurrency($request, $tenantId, $shop);
+        $displayCurrency = $currencyBundle['currency'];
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);
 
@@ -1275,6 +1337,8 @@ class StorefrontController
                 'currency' => $displayCurrency,
                 'logo_url' => $shopLogoUrl,
             ],
+            'exchange_rates' => $currencyBundle['exchange_rates'],
+            'available_currencies' => $currencyBundle['available_currencies'],
             'article' => [
                 'id' => $article->id,
                 'title' => $article->title,

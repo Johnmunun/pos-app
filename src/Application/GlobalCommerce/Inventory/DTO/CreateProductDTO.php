@@ -17,7 +17,9 @@ final class CreateProductDTO
         public readonly float $minimumStock,
         public readonly string $currency,
         public readonly bool $isWeighted,
-        public readonly bool $hasExpiration
+        public readonly bool $hasExpiration,
+        /** @var list<string>|null Inventaire gc_* (id boutique + éventuellement tenant_id legacy). */
+        public readonly ?array $inventoryShopIds = null
     ) {}
 }
 

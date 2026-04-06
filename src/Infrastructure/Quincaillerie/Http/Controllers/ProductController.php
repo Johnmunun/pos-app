@@ -22,6 +22,7 @@ use Src\Infrastructure\Quincaillerie\Persistence\EloquentProductRepository;
 use Src\Application\Quincaillerie\Services\DepotFilterService;
 use Illuminate\Support\Facades\Log;
 use App\Models\Depot;
+use App\Models\Shop;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -50,7 +51,16 @@ class ProductController
             }
         }
         if ($shopId === null) {
-            $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+            if (!empty($user->shop_id)) {
+                $candidate = Shop::find($user->shop_id);
+                if ($candidate && (string) $candidate->tenant_id === (string) $user->tenant_id) {
+                    $shopId = (string) $candidate->id;
+                }
+            }
+            if ($shopId === null && $user->tenant_id) {
+                $fallback = Shop::where('tenant_id', $user->tenant_id)->where('is_active', true)->orderBy('id')->first();
+                $shopId = $fallback ? (string) $fallback->id : (string) $user->tenant_id;
+            }
         }
         $userModel = UserModel::query()->find($user->id);
         $isRoot = $userModel ? $userModel->isRoot() : false;
