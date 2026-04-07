@@ -554,6 +554,13 @@ Route::domain('{subdomain}.'.$ecommerceBaseDomain)
         Route::get('/ecommerce/storefront/product/{id}', fn ($id) => redirect()->route('public.storefront.product', ['id' => $id], 301));
         Route::get('/ecommerce/storefront/page/{slug}', fn ($slug) => redirect()->route('public.storefront.page', ['slug' => $slug], 301));
         Route::get('/ecommerce/storefront/blog/{slug}', fn ($slug) => redirect()->route('public.storefront.blog.show', ['slug' => $slug], 301));
+        // Compat POST legacy frontend bundles on public subdomain
+        Route::post('/ecommerce/orders', [OrderController::class, 'store'])
+            ->middleware('throttle:30,1')
+            ->name('public.legacy.ecommerce.orders.store');
+        Route::post('/api/ecommerce/payments/fusionpay/initiate', [EcommerceFusionPaymentController::class, 'initiate'])
+            ->middleware('throttle:30,1')
+            ->name('public.legacy.ecommerce.payments.fusionpay.initiate');
 
         Route::post('/_storefront/v', StorefrontVisitController::class)
             ->middleware('throttle:120,1')
