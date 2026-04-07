@@ -5,6 +5,7 @@ namespace Src\Infrastructure\Ecommerce\Http\Controllers;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Models\Shop;
 use Src\Infrastructure\Ecommerce\Models\CmsBannerModel;
 
 class CmsBannerController
@@ -13,11 +14,31 @@ class CmsBannerController
     {
         $user = $request->user();
         if (!$user) abort(403, 'User not authenticated.');
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
         $isRoot = \App\Models\User::find($user->id)?->isRoot() ?? false;
-        if (!$shopId && !$isRoot) abort(403, 'Shop ID not found.');
-        if ($isRoot && !$shopId) abort(403, 'Please select a shop first.');
-        return (string) $shopId;
+
+        if ($isRoot) {
+            $sessionShopId = $request->session()->get('current_storefront_shop_id');
+            if ($sessionShopId && is_numeric((string) $sessionShopId) && Shop::find((int) $sessionShopId)) {
+                return (string) ((int) $sessionShopId);
+            }
+            if (!empty($user->shop_id) && Shop::find((int) $user->shop_id)) {
+                return (string) ((int) $user->shop_id);
+            }
+            abort(403, 'Please select a shop first.');
+        }
+
+        if (!empty($user->tenant_id)) {
+            $tenantShopId = Shop::where('tenant_id', (int) $user->tenant_id)->value('id');
+            if ($tenantShopId) {
+                return (string) $tenantShopId;
+            }
+        }
+
+        if (!empty($user->shop_id) && Shop::find((int) $user->shop_id)) {
+            return (string) ((int) $user->shop_id);
+        }
+
+        abort(403, 'Shop ID not found.');
     }
 
     public function index(Request $request): Response

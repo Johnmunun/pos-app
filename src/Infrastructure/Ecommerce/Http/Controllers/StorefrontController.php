@@ -166,6 +166,22 @@ class StorefrontController
         return array_values(array_unique($ids));
     }
 
+    /**
+     * Certains historiques utilisent tenant_id comme shop_id dans ecommerce_cms_banners.
+     * On supporte les deux pour afficher correctement les bannières sur la vitrine.
+     *
+     * @return list<string>
+     */
+    private function resolveBannerShopIds(Shop $shop, ?string $tenantId): array
+    {
+        $ids = [(string) $shop->id];
+        if ($tenantId !== null && ctype_digit($tenantId) && $tenantId !== (string) $shop->id) {
+            $ids[] = (string) ((int) $tenantId);
+        }
+
+        return array_values(array_unique($ids));
+    }
+
     private function buildUniqueShopCode(int|string $tenantId): string
     {
         do {
@@ -197,6 +213,16 @@ class StorefrontController
     {
         if ($path === null || $path === '') {
             return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+        if (str_starts_with($path, '/storage/')) {
+            return $path;
+        }
+        if (str_starts_with($path, 'storage/')) {
+            return '/'.$path;
         }
 
         /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
@@ -382,6 +408,7 @@ class StorefrontController
         $shopId = (string) $shop->id;
         $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
         $productShopIds = $this->resolveProductShopIds($shop, $tenantId);
+        $bannerShopIds = $this->resolveBannerShopIds($shop, $tenantId);
 
         \Log::info('Storefront index - using shop', [
             'user_id' => $user?->id,
@@ -459,7 +486,7 @@ class StorefrontController
         // Bannières CMS (homepage, slider, promotion)
         $banners = [];
         if (Schema::hasTable('ecommerce_cms_banners')) {
-            $bannerModels = CmsBannerModel::where('shop_id', $shopId)
+            $bannerModels = CmsBannerModel::whereIn('shop_id', $bannerShopIds)
                 ->where('is_active', true)
                 ->whereIn('position', ['homepage', 'slider', 'promotion'])
                 ->orderBy('sort_order')
@@ -467,14 +494,7 @@ class StorefrontController
                 ->limit(6)
                 ->get();
             foreach ($bannerModels as $b) {
-                $url = null;
-                if ($b->image_path) {
-                    if (str_starts_with($b->image_path, 'http')) {
-                        $url = $b->image_path;
-                    } else {
-                        $url = $this->getPublicImageUrl($b->image_path);
-                    }
-                }
+                $url = $this->getPublicImageUrl($b->image_path);
                 $banners[] = [
                     'id' => $b->id,
                     'title' => $b->title,
@@ -718,6 +738,7 @@ class StorefrontController
         $user = $request->user();
         $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
         $productShopIds = $this->resolveProductShopIds($shop, $tenantId);
+        $bannerShopIds = $this->resolveBannerShopIds($shop, $tenantId);
 
         $categoryId = $request->input('category_id');
         $search = $request->input('search');
@@ -805,7 +826,7 @@ class StorefrontController
         // Bannières pour le header du catalogue (slider + promotion)
         $banners = [];
         if (Schema::hasTable('ecommerce_cms_banners')) {
-            $bannerModels = CmsBannerModel::where('shop_id', $shopId)
+            $bannerModels = CmsBannerModel::whereIn('shop_id', $bannerShopIds)
                 ->where('is_active', true)
                 ->whereIn('position', ['slider', 'promotion'])
                 ->orderBy('sort_order')
@@ -814,14 +835,7 @@ class StorefrontController
                 ->get();
 
             foreach ($bannerModels as $b) {
-                $url = null;
-                if ($b->image_path) {
-                    if (str_starts_with($b->image_path, 'http')) {
-                        $url = $b->image_path;
-                    } elseif (Storage::disk('public')->exists($b->image_path)) {
-                        $url = Storage::disk('public')->url($b->image_path);
-                    }
-                }
+                $url = $this->getPublicImageUrl($b->image_path);
                 $banners[] = [
                     'id' => $b->id,
                     'title' => $b->title,
