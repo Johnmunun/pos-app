@@ -19,6 +19,10 @@ export default function DepotSelector({ depots = [], currentDepot }) {
 
     const currentId = currentDepot?.id ?? (depots.length === 1 ? depots[0]?.id : null);
     const value = currentId !== undefined && currentId !== null ? String(currentId) : '';
+    const sanitizeLabel = (name) => String(name || '')
+        .replace(/\s+[—-]\s+Point de vente principal$/i, '')
+        .replace(/\s+[—-]\s+Dépôt principal$/i, '')
+        .trim();
 
     return (
         <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
@@ -31,7 +35,7 @@ export default function DepotSelector({ depots = [], currentDepot }) {
                 {depots.length > 1 && <option value="">— Choisir —</option>}
                 {depots.map((d) => (
                     <option key={d.id} value={String(d.id)}>
-                        {d.name}
+                        {sanitizeLabel(d.name)}
                     </option>
                 ))}
             </select>

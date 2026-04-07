@@ -15,6 +15,10 @@ export default function EcommerceMarketingIndex({
     marketingProEnabled = false,
     audienceAnalyticsEnabled = false,
 }) {
+    const sanitizeShopName = (name) => String(name || '')
+        .replace(/\s+[—-]\s+Point de vente principal$/i, '')
+        .trim();
+
     const { auth } = usePage().props;
     const planFeatures = auth?.planFeatures || {};
 
@@ -104,7 +108,7 @@ export default function EcommerceMarketingIndex({
                         </h2>
                         {shop && (
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                Boutique : <span className="font-medium">{shop.name}</span>
+                                Boutique : <span className="font-medium">{sanitizeShopName(shop.name)}</span>
                             </p>
                         )}
                     </div>
