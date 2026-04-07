@@ -886,6 +886,8 @@ class StorefrontController
         $productShopIds = $this->resolveProductShopIds($shop, $tenantId);
         $promotionTargets = $this->getActivePromotionTargets($productShopIds);
 
+        $product = $this->productRepository->findById($id);
+
         $productModel = ProductModel::query()
             ->where('id', $id)
             ->whereIn('shop_id', $productShopIds)
@@ -893,11 +895,15 @@ class StorefrontController
             ->where('is_published_ecommerce', true)
             ->first();
         if (!$productModel) {
+            // Fallback legacy: some catalogs can return products mapped outside current shop_id conventions.
+            $productModel = ProductModel::find($id);
+        }
+        if (!$productModel && !$product) {
             abort(404, 'Produit introuvable.');
         }
 
-        $typeProduit = $productModel->type_produit ?? 'physique';
-        $productType = $productModel->product_type ?? 'physical';
+        $typeProduit = $productModel?->type_produit ?? 'physique';
+        $productType = $productModel?->product_type ?? 'physical';
         $isDigital = $typeProduit === 'numerique' || $productType === 'digital';
 
         $imageUrl = null;
@@ -925,25 +931,25 @@ class StorefrontController
         }
 
         $productData = [
-            'id' => (string) $productModel->id,
-            'name' => (string) $productModel->name,
-            'description' => $productModel->description,
-            'price_amount' => (float) ($productModel->sale_price_amount ?? 0),
-            'price_currency' => (string) ($productModel->sale_price_currency ?? 'USD'),
-            'stock' => (float) ($productModel->stock ?? 0),
-            'category_id' => (string) ($productModel->category_id ?? ''),
+            'id' => (string) ($productModel?->id ?? $product?->getId() ?? $id),
+            'name' => (string) ($productModel?->name ?? $product?->getName() ?? 'Produit'),
+            'description' => $productModel?->description ?? $product?->getDescription(),
+            'price_amount' => (float) ($productModel?->sale_price_amount ?? ($product ? $product->getSalePrice()->getAmount() : 0)),
+            'price_currency' => (string) ($productModel?->sale_price_currency ?? ($product ? $product->getSalePrice()->getCurrency() : 'USD')),
+            'stock' => (float) ($productModel?->stock ?? ($product ? $product->getStock()->getValue() : 0)),
+            'category_id' => (string) ($productModel?->category_id ?? ($product ? $product->getCategoryId() : '')),
             'image_url' => $imageUrl,
             'gallery_urls' => $galleryUrls,
-            'sku' => (string) ($productModel->sku ?? ''),
+            'sku' => (string) ($productModel?->sku ?? ($product ? $product->getSku() : '')),
             'product_type' => $productType,
             'type_produit' => $typeProduit,
-            'mode_paiement' => $productModel->mode_paiement ?? 'paiement_immediat',
-            'couleur' => $productModel->couleur ?? null,
-            'taille' => $productModel->taille ?? null,
+            'mode_paiement' => $productModel?->mode_paiement ?? 'paiement_immediat',
+            'couleur' => $productModel?->couleur ?? null,
+            'taille' => $productModel?->taille ?? null,
             'is_digital' => $isDigital,
             'download_url' => $downloadUrl,
-            'requires_shipping' => (bool) ($productModel->requires_shipping ?? !$isDigital),
-            'discount_percent' => $productModel->discount_percent ?? null,
+            'requires_shipping' => (bool) ($productModel?->requires_shipping ?? !$isDigital),
+            'discount_percent' => $productModel?->discount_percent ?? null,
             'has_promotion' => $productModel ? $this->hasActivePromotion($productModel, $promotionTargets) : false,
             'promotion_percent' => $productModel ? $this->getActivePromotionPercent($productModel, $promotionTargets) : null,
         ];
