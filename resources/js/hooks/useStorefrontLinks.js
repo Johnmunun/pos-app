@@ -8,9 +8,25 @@ import { usePage } from '@inertiajs/react';
 export default function useStorefrontLinks() {
     const { storefrontIsPublic, storefrontPublicBaseUrl } = usePage().props;
     const route = typeof window !== 'undefined' ? window.route : null;
+    const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+    const isPublicByPath = pathname && !pathname.startsWith('/ecommerce/storefront');
 
     if (storefrontIsPublic && storefrontPublicBaseUrl) {
         const base = storefrontPublicBaseUrl.replace(/\/$/, '');
+        return {
+            index: () => base + '/',
+            catalog: () => base + '/catalog',
+            cart: () => base + '/cart',
+            blog: () => base + '/blog',
+            product: (id) => base + '/product/' + id,
+            page: (slug) => base + '/page/' + slug,
+            blogShow: (slug) => base + '/blog/' + slug,
+        };
+    }
+
+    // Fallback robuste: en vitrine publique (sous-domaine), générer des liens relatifs publics.
+    if (isPublicByPath) {
+        const base = `${window?.location?.origin || ''}`.replace(/\/$/, '');
         return {
             index: () => base + '/',
             catalog: () => base + '/catalog',

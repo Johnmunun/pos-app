@@ -544,6 +544,16 @@ $ecommerceBaseDomain = config('services.ecommerce.base_domain', 'omnisolution.sh
 Route::domain('{subdomain}.'.$ecommerceBaseDomain)
     ->middleware(['resolve.storefront.by.subdomain'])
     ->group(function () {
+        // Compat legacy: if an internal preview URL is hit on public subdomain,
+        // redirect to the equivalent public storefront route.
+        Route::get('/ecommerce/storefront', fn () => redirect()->route('public.storefront.index', [], 301));
+        Route::get('/ecommerce/storefront/catalog', fn () => redirect()->route('public.storefront.catalog', [], 301));
+        Route::get('/ecommerce/storefront/cart', fn () => redirect()->route('public.storefront.cart', [], 301));
+        Route::get('/ecommerce/storefront/blog', fn () => redirect()->route('public.storefront.blog', [], 301));
+        Route::get('/ecommerce/storefront/product/{id}', fn ($id) => redirect()->route('public.storefront.product', ['id' => $id], 301));
+        Route::get('/ecommerce/storefront/page/{slug}', fn ($slug) => redirect()->route('public.storefront.page', ['slug' => $slug], 301));
+        Route::get('/ecommerce/storefront/blog/{slug}', fn ($slug) => redirect()->route('public.storefront.blog.show', ['slug' => $slug], 301));
+
         Route::post('/_storefront/v', StorefrontVisitController::class)
             ->middleware('throttle:120,1')
             ->name('public.storefront.visit');
