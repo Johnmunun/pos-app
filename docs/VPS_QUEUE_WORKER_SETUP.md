@@ -33,13 +33,13 @@ Créer le fichier:
 sudo nano /etc/supervisor/conf.d/pos-app-worker.conf
 ```
 
-Contenu:
+Contenu (utiliser un seul chemin de projet partout) :
 
 ```ini
 [program:pos-app-worker]
 process_name=%(program_name)s_%(process_num)02d
-directory=/var/www/pos-app
-command=php /var/www/pos-app/artisan queue:work --queue=default --tries=1 --timeout=180 --sleep=2 --max-time=3600
+directory=/home/omnisolution.shop/public_html/pos-app
+command=php artisan queue:work --queue=default --tries=1 --timeout=180 --sleep=2 --max-time=3600
 autostart=true
 autorestart=true
 stopasgroup=true
@@ -47,11 +47,11 @@ killasgroup=true
 user=www-data
 numprocs=1
 redirect_stderr=true
-stdout_logfile=/var/www/pos-app/storage/logs/worker.log
+stdout_logfile=/home/omnisolution.shop/public_html/pos-app/storage/logs/worker.log
 stopwaitsecs=200
 ```
 
-Remplacer `/var/www/pos-app` par le vrai chemin du projet.
+Remplacer `/home/omnisolution.shop/public_html/pos-app` par le vrai chemin du projet si différent.
 
 ## 3) Activer et démarrer
 
@@ -65,7 +65,7 @@ sudo supervisorctl status
 ## 4) Vérifier les logs
 
 ```bash
-tail -f /var/www/pos-app/storage/logs/worker.log
+tail -f /home/omnisolution.shop/public_html/pos-app/storage/logs/worker.log
 ```
 
 ## 5) Commandes à faire après déploiement

@@ -78,6 +78,31 @@ export default function Hero() {
                     </a>
                 </div>
 
+                {/* Preuve sociale */}
+                <div className="mb-12 flex flex-col items-center gap-3">
+                    <div className="flex -space-x-3">
+                        {[
+                            { label: 'A', tone: 'bg-stone-900 text-white' },
+                            { label: 'B', tone: 'bg-stone-700 text-white' },
+                            { label: 'C', tone: 'bg-amber-900 text-white' },
+                            { label: 'D', tone: 'bg-amber-700 text-white' },
+                            { label: 'E', tone: 'bg-orange-700 text-white' },
+                            { label: 'F', tone: 'bg-orange-500 text-white' },
+                        ].map((avatar, idx) => (
+                            <div
+                                key={idx}
+                                className={`h-10 w-10 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center text-xs font-bold shadow-sm ${avatar.tone}`}
+                                title="Utilisateur"
+                            >
+                                {avatar.label}
+                            </div>
+                        ))}
+                    </div>
+                    <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium">
+                        <span className="font-bold text-gray-900 dark:text-white">+ de 150 personnes</span> utilisent deja la plateforme
+                    </p>
+                </div>
+
                 {/* Avantages rapides */}
                 <div className="flex flex-col sm:flex-row justify-center items-center gap-8 text-sm mb-16">
                     {[

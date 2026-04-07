@@ -600,6 +600,11 @@ class SupportChatController extends Controller
         @ini_set('zlib.output_compression', '0');
 
         $lastId = (int) ($request->query('after_id') ?? 0);
+        // EventSource reconnect sends Last-Event-ID; use it to avoid replaying old messages.
+        $lastEventId = (int) ($request->header('Last-Event-ID') ?? 0);
+        if ($lastEventId > $lastId) {
+            $lastId = $lastEventId;
+        }
 
         /** @var StreamedResponse $resp */
         $resp = response()->stream(function () use ($conversation, $lastId) {

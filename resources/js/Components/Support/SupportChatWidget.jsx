@@ -39,6 +39,7 @@ export default function SupportChatWidget({ liftForMobileBottomNav = false }) {
     }, [open]);
 
     const esRef = useRef(null);
+    const seenMessageIdsRef = useRef(new Set());
     const listRef = useRef(null);
     const fileRef = useRef(null);
 
@@ -62,6 +63,7 @@ export default function SupportChatWidget({ liftForMobileBottomNav = false }) {
     const loadInitialMessages = async (id) => {
         const res = await window.axios.get(route('support.chat.messages', id));
         const list = Array.isArray(res?.data?.messages) ? res.data.messages : [];
+        seenMessageIdsRef.current = new Set(list.map((m) => Number(m?.id)).filter((idValue) => Number.isFinite(idValue) && idValue > 0));
         setMessages(list);
         setTimeout(scrollToBottom, 50);
         return list.length ? (list[list.length - 1]?.id || 0) : 0;
@@ -81,10 +83,12 @@ export default function SupportChatWidget({ liftForMobileBottomNav = false }) {
             es.addEventListener('message', (e) => {
                 try {
                     const payload = JSON.parse(e.data);
+                    const incomingId = Number(payload?.id || 0);
+                    if (!Number.isFinite(incomingId) || incomingId <= 0) return;
                     const incomingFromSupport = payload?.sender_user_id !== user?.id;
                     setMessages((prev) => {
-                        // avoid duplicates
-                        if (prev.length && prev[prev.length - 1]?.id === payload.id) return prev;
+                        if (seenMessageIdsRef.current.has(incomingId)) return prev;
+                        seenMessageIdsRef.current.add(incomingId);
                         return [...prev, payload];
                     });
                     if (incomingFromSupport) {
