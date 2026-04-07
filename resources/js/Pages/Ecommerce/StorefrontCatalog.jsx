@@ -200,18 +200,30 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
                     <div className="absolute inset-0 opacity-10 bg-[length:24px_24px] [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.4)_1px,transparent_0)]" />
                     <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 lg:py-12">
                         <div className="grid gap-6 lg:grid-cols-12 items-stretch">
-                            <div className="lg:col-span-6 flex flex-col justify-center">
-                                <div className="inline-flex w-fit flex-col gap-2 sm:gap-3 rounded-2xl bg-slate-900/35 backdrop-blur-sm px-4 py-3 ring-1 ring-white/25 shadow-lg">
-                                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 text-xs font-semibold text-white">
-                                    <Sparkles className="h-3.5 w-3.5" />
-                                    Catalogue en ligne
-                                </span>
-                                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight drop-shadow">
-                                    Catalogue
-                                </h1>
-                                <p className="mt-1 sm:mt-2 text-white/95 text-sm sm:text-base lg:text-lg max-w-xl">
-                                    Recherchez et filtrez nos produits de manière claire et responsive.
-                                </p>
+                            <div className="lg:col-span-6 flex flex-col justify-center relative">
+                                <div className="absolute inset-0 max-w-xl rounded-3xl bg-gradient-to-r from-slate-950/30 via-slate-950/10 to-transparent blur-2xl pointer-events-none" />
+                                <div className="relative max-w-xl space-y-4">
+                                    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 text-xs font-semibold text-white/95 ring-1 ring-white/30 backdrop-blur-sm">
+                                        <Sparkles className="h-3.5 w-3.5" />
+                                        Catalogue en ligne
+                                    </span>
+                                    <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight [text-shadow:0_4px_20px_rgba(0,0,0,0.35)]">
+                                        Trouvez rapidement le bon produit
+                                    </h1>
+                                    <p className="text-white/90 text-sm sm:text-base lg:text-lg leading-relaxed max-w-lg">
+                                        Parcourez votre catalogue avec une expérience claire et fluide : recherche rapide, filtres précis et consultation instantanée des articles.
+                                    </p>
+                                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                                        <span className="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white/95 ring-1 ring-white/20">
+                                            Recherche intelligente
+                                        </span>
+                                        <span className="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white/95 ring-1 ring-white/20">
+                                            Filtres avancés
+                                        </span>
+                                        <span className="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white/95 ring-1 ring-white/20">
+                                            Vue responsive
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
