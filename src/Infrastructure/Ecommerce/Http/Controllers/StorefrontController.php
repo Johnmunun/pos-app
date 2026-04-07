@@ -899,6 +899,18 @@ class StorefrontController
             $productModel = ProductModel::find($id);
         }
         if (!$productModel && !$product) {
+            \Log::warning('Storefront product not found (public)', [
+                'requested_product_id' => $id,
+                'shop_id' => $shop->id,
+                'shop_tenant_id' => $shop->tenant_id,
+                'resolved_tenant_id' => $tenantId,
+                'product_shop_ids' => $productShopIds,
+                'host' => $request->getHost(),
+                'path' => $request->getPathInfo(),
+                'query' => $request->query(),
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
             abort(404, 'Produit introuvable.');
         }
 

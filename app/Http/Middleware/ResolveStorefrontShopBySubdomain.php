@@ -33,6 +33,13 @@ class ResolveStorefrontShopBySubdomain
             ->first();
 
         if (!$shop) {
+            \Log::warning('Storefront subdomain not resolved', [
+                'host' => $request->getHost(),
+                'path' => $request->getPathInfo(),
+                'subdomain' => $subdomain,
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
             abort(404, 'Boutique introuvable ou non publiée.');
         }
 
