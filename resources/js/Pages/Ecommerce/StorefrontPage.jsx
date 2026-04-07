@@ -5,6 +5,11 @@ import AISupportFloatingWidget from '@/Components/Ecommerce/AISupportFloatingWid
 import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBootstrap';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 
+function normalizeHtmlSpaces(value) {
+    if (!value) return '';
+    return String(value).replace(/&nbsp;/gi, ' ').replace(/\u00A0/g, ' ');
+}
+
 export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {} }) {
     const links = useStorefrontLinks();
     const isContact = page?.template === 'contact';
@@ -17,6 +22,7 @@ export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {
 
     const whatsappNumber = whatsapp.number || null;
     const whatsappSupportEnabled = !!whatsapp.enabled;
+    const pageContent = normalizeHtmlSpaces(page?.content || '');
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-50">
@@ -161,7 +167,7 @@ export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {
                         prose-ul:my-4 prose-li:text-slate-600 dark:prose-li:text-slate-300
                         prose-strong:text-slate-900 dark:prose-strong:text-white
                         prose-a:text-amber-600 dark:prose-a:text-amber-400 prose-a:no-underline hover:prose-a:underline"
-                    dangerouslySetInnerHTML={{ __html: page?.content || '' }}
+                    dangerouslySetInnerHTML={{ __html: pageContent }}
                 />
 
                 {/* Back link */}

@@ -7,6 +7,16 @@ import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBo
 import { ArrowLeft, CalendarDays, ArrowRight, Sparkles } from 'lucide-react';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 
+function normalizeInlineText(value) {
+    if (!value) return '';
+    return String(value)
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/\u00A0/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 function StorefrontBlogHeader({ shop, cmsPages = [] }) {
     const links = useStorefrontLinks();
     const { shop: sharedShop } = usePage().props;
@@ -137,8 +147,10 @@ function BlogContent({ shop, articles = [], cmsPages = [], whatsapp = {} }) {
                                             <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white line-clamp-2 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                                                 {article.title}
                                             </h2>
-                                            {article.excerpt && (
-                                                <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-3">{article.excerpt}</p>
+                                            {normalizeInlineText(article.excerpt) && (
+                                                <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-3 break-words">
+                                                    {normalizeInlineText(article.excerpt)}
+                                                </p>
                                             )}
                                             <div className="mt-2 pt-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
                                                 <span>Lire l&apos;article complet</span>

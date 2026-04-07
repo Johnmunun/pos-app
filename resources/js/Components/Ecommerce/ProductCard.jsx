@@ -4,9 +4,22 @@ import { ShoppingCart, Eye, Image as ImageIcon, Percent, Banknote, CreditCard } 
 import { useState } from 'react';
 import { convertAmountToCurrency } from '@/lib/exchangeConvert';
 
+function toPlainPreviewText(value) {
+    if (!value) return '';
+    const raw = String(value);
+    // Remove HTML tags and normalize non-breaking spaces.
+    return raw
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/\u00A0/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 export default function ProductCard({ product, viewMode = 'grid', onAddToCart, currency = 'USD', exchangeRates = null, detailUrl }) {
     const [imageError, setImageError] = useState(false);
     const productUrl = detailUrl ?? route('ecommerce.storefront.product', product.id);
+    const productDescription = toPlainPreviewText(product?.description);
 
     const displayAmount =
         exchangeRates && typeof exchangeRates === 'object' && Object.keys(exchangeRates).length > 0
@@ -87,9 +100,9 @@ export default function ProductCard({ product, viewMode = 'grid', onAddToCart, c
                                     {product.name}
                                 </h3>
                             </Link>
-                            {product.description && (
+                            {productDescription && (
                                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-3 line-clamp-2">
-                                    {product.description}
+                                    {productDescription}
                                 </p>
                             )}
                         </div>
@@ -166,11 +179,10 @@ export default function ProductCard({ product, viewMode = 'grid', onAddToCart, c
                         {product.name}
                     </h3>
                 </Link>
-                {product.description && (
-                    <p
-                        className="text-sm text-slate-500 dark:text-slate-400 mb-4 line-clamp-2 flex-1"
-                        dangerouslySetInnerHTML={{ __html: product.description }}
-                    />
+                {productDescription && (
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 line-clamp-2 flex-1 break-words">
+                        {productDescription}
+                    </p>
                 )}
 
                 <div className="mt-auto space-y-4">

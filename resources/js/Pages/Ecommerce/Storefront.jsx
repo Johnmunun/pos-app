@@ -10,6 +10,16 @@ import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBo
 import StorefrontCurrencySelect from '@/Components/Ecommerce/StorefrontCurrencySelect';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 
+function normalizeRichTextToLine(value) {
+    if (!value) return '';
+    return String(value)
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/\u00A0/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 function shouldShowPageInNav(page) {
     if (!page) return false;
     const title = (page.title || '').toLowerCase();
@@ -125,9 +135,10 @@ export default function EcommerceStorefront({
     const heroBadge = config?.hero_badge || 'Season Sale';
     const heroTitle = config?.hero_title || "MEN'S FASHION";
     const heroSubtitle = config?.hero_subtitle || 'Min. 35–70% Off';
-    const heroDescription =
+    const heroDescription = normalizeRichTextToLine(
         config?.hero_description ||
-        'Découvrez une sélection de produits modernes pour votre clientèle, avec une expérience d’achat fluide.';
+            'Découvrez une sélection de produits modernes pour votre clientèle, avec une expérience d’achat fluide.'
+    );
     const primaryLabel = config?.hero_primary_label || 'Voir la boutique';
     const secondaryLabel = config?.hero_secondary_label || 'Découvrir les nouveautés';
 
@@ -260,7 +271,7 @@ export default function EcommerceStorefront({
                                 <p className="text-xl font-semibold text-[var(--sf-primary)]">
                                     {heroSubtitle}
                                 </p>
-                                <p className="text-base sm:text-lg text-slate-700/90 dark:text-slate-200/80 max-w-xl">
+                                <p className="text-base sm:text-lg text-slate-700/90 dark:text-slate-200/80 max-w-xl break-words">
                                     {heroDescription}
                                 </p>
 

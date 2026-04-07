@@ -7,6 +7,11 @@ import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBo
 import { ArrowLeft, CalendarDays } from 'lucide-react';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 
+function normalizeHtmlSpaces(value) {
+    if (!value) return '';
+    return String(value).replace(/&nbsp;/gi, ' ').replace(/\u00A0/g, ' ');
+}
+
 function StorefrontBlogShowHeader({ shop, cmsPages = [] }) {
     const links = useStorefrontLinks();
     const { shop: sharedShop } = usePage().props;
@@ -51,6 +56,7 @@ function BlogShowContent({ shop, article, cmsPages = [], whatsapp = {} }) {
     const currency = shop?.currency || sharedShop?.currency || 'CDF';
     const whatsappNumber = whatsapp.number || null;
     const whatsappSupportEnabled = !!whatsapp.enabled;
+    const articleContent = normalizeHtmlSpaces(article?.content || '');
 
     return (
         <>
@@ -96,7 +102,7 @@ function BlogShowContent({ shop, article, cmsPages = [], whatsapp = {} }) {
                             prose-ul:my-4 prose-li:text-slate-600 dark:prose-li:text-slate-300
                             prose-strong:text-slate-900 dark:prose-strong:text-white
                             prose-a:text-amber-600 dark:prose-a:text-amber-400 prose-a:no-underline hover:prose-a:underline"
-                        dangerouslySetInnerHTML={{ __html: article?.content || '' }}
+                        dangerouslySetInnerHTML={{ __html: articleContent }}
                     />
 
                     {/* Back link */}
