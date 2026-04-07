@@ -662,6 +662,7 @@ class StorefrontController
      */
     public function showPage(Request $request, string $slug): Response
     {
+        $slug = (string) ($request->route('slug') ?? $slug);
         $shopId = $this->getShopId($request);
 
         $page = null;
@@ -876,6 +877,9 @@ class StorefrontController
      */
     public function showProduct(Request $request, string $id): Response
     {
+        // On subdomain routes, always read the explicit named param to avoid
+        // accidentally receiving "{subdomain}" as first string argument.
+        $id = (string) ($request->route('id') ?? $id);
         $shopId = $this->getShopId($request);
         $shop = Shop::find($shopId);
         if (!$shop) {
@@ -1328,6 +1332,7 @@ class StorefrontController
 
     public function blogShow(Request $request, string $slug): Response
     {
+        $slug = (string) ($request->route('slug') ?? $slug);
         $shopId = $this->getShopId($request);
         $shop = Shop::find($shopId);
         if (!$shop) {
