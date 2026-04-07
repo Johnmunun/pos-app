@@ -41,7 +41,7 @@ final class TenantPhysicalStoreBootstrap
             $shop = Shop::create([
                 'tenant_id' => $tenant->id,
                 'depot_id' => $depot->id,
-                'name' => ($tenant->name ?? 'Ma boutique').' — Point de vente principal',
+                'name' => ($tenant->name ?? 'Ma boutique'),
                 'code' => $shopCode,
                 'type' => 'physical',
                 'address' => $tenant->address,
