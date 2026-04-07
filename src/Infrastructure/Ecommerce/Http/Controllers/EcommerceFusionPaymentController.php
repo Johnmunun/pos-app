@@ -36,7 +36,8 @@ class EcommerceFusionPaymentController extends Controller
         ]);
 
         $user = Auth::user();
-        if ($user === null) {
+        $storefrontShop = $request->attributes->get('storefront_shop');
+        if ($user === null && $storefrontShop === null) {
             return response()->json(['message' => 'Non authentifié.'], 401);
         }
 
@@ -50,9 +51,16 @@ class EcommerceFusionPaymentController extends Controller
         }
 
         $shopId = (string) $order->shop_id;
-        $userShop = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
-        if ($userShop === null || $shopId !== (string) $userShop) {
-            return response()->json(['message' => 'Accès à cette commande refusé.'], 403);
+        if ($user !== null) {
+            $userShop = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+            if ($userShop === null || $shopId !== (string) $userShop) {
+                return response()->json(['message' => 'Accès à cette commande refusé.'], 403);
+            }
+        } else {
+            $publicShopId = $storefrontShop ? (string) $storefrontShop->id : '';
+            if ($publicShopId === '' || $publicShopId !== $shopId) {
+                return response()->json(['message' => 'Accès à cette commande refusé.'], 403);
+            }
         }
 
         // Tolérant: on autorise le lancement du paiement en ligne même si la méthode
@@ -121,7 +129,9 @@ class EcommerceFusionPaymentController extends Controller
             ], 422);
         }
 
-        $tenantId = $user->tenant_id !== null ? (string) $user->tenant_id : null;
+        $tenantId = $user?->tenant_id !== null
+            ? (string) $user?->tenant_id
+            : (($storefrontShop && isset($storefrontShop->tenant_id)) ? (string) $storefrontShop->tenant_id : null);
 
         $placeholderPlanId = (int) DB::table('billing_plans')->orderBy('id')->value('id');
         if ($placeholderPlanId < 1) {
@@ -132,7 +142,7 @@ class EcommerceFusionPaymentController extends Controller
 
         $transaction = BillingPaymentTransaction::create([
             'tenant_id' => $tenantId,
-            'user_id' => $user->id,
+            'user_id' => $user?->id,
             'billing_plan_id' => $placeholderPlanId,
             'ecommerce_order_id' => $order->id,
             'payment_method' => $validated['payment_method'],

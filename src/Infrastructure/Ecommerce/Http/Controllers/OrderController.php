@@ -229,7 +229,12 @@ class OrderController
     public function store(Request $request): JsonResponse
     {
             $user = $request->user();
-            if (!$user || (!$user->hasPermission('ecommerce.order.create') && !$user->hasPermission('ecommerce.create'))) {
+            $storefrontShop = $request->attributes->get('storefront_shop');
+            $isPublicStorefrontRequest = $user === null && $storefrontShop !== null;
+            if (
+                !$isPublicStorefrontRequest
+                && (!$user || (!$user->hasPermission('ecommerce.order.create') && !$user->hasPermission('ecommerce.create')))
+            ) {
             abort(403, 'Vous n\'avez pas la permission de créer des commandes.');
         }
 
@@ -257,7 +262,9 @@ class OrderController
             'items.*.product_image_url' => 'nullable|string',
         ]);
 
-        $shopId = $this->getShopId($request);
+        $shopId = $isPublicStorefrontRequest
+            ? (string) $storefrontShop->id
+            : $this->getShopId($request);
 
         $paymentStatusIn = $validated['payment_status'] ?? Order::PAYMENT_STATUS_PENDING;
         $methodCode = $validated['payment_method'] ?? null;
@@ -336,7 +343,7 @@ class OrderController
 
         $currency = strtoupper(trim((string) $validated['currency']));
 
-        $tenantId = $user->tenant_id ? (string) $user->tenant_id : null;
+        $tenantId = $user?->tenant_id ? (string) $user->tenant_id : null;
         if ($tenantId === null) {
             $shopRow = Shop::query()->find($shopId);
             $tenantId = $shopRow ? (string) $shopRow->tenant_id : null;
@@ -400,7 +407,7 @@ class OrderController
                     $validated['notes'] ?? null,
                     Order::PAYMENT_STATUS_PENDING,
                     $toItemDtos($immediateItemsRaw),
-                    $user->id
+                    $user?->id
                 );
                 $primaryOrder = $createAndNotify($immediateDto);
 
@@ -429,7 +436,7 @@ class OrderController
                         $validated['notes'] ?? null,
                         $paymentStatusIn,
                         $toItemDtos($deliveryItemsRaw),
-                        $user->id
+                        $user?->id
                     );
                     $deliveryOrder = $createAndNotify($deliveryDto, 'Commande a la livraison enregistree.');
                 }
@@ -451,7 +458,7 @@ class OrderController
                     $validated['notes'] ?? null,
                     $paymentStatusIn,
                     $items,
-                    $user->id
+                    $user?->id
                 );
                 $primaryOrder = $createAndNotify($dto);
             }

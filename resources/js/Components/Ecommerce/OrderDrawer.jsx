@@ -42,7 +42,13 @@ export default function OrderDrawer({
     orderCurrency = null,
 }) {
     const isEditing = !!order;
-    const { shop } = usePage().props;
+    const pageProps = usePage().props;
+    const { shop } = pageProps;
+    const isPublicStorefront = !!pageProps?.storefrontIsPublic;
+    const createOrderRoute = isPublicStorefront ? 'public.storefront.orders.store' : 'ecommerce.orders.store';
+    const fusionInitRoute = isPublicStorefront
+        ? 'public.storefront.payments.fusionpay.initiate'
+        : 'api.ecommerce.payments.fusionpay.initiate';
     const defaultCurrency = orderCurrency || shop?.currency || 'USD';
     // En mode vitrine/panier client, les montants doivent rester pilotés par le système
     // (taxes, remise globale, etc.) et non éditables par l'utilisateur final.
@@ -254,12 +260,12 @@ export default function OrderDrawer({
         };
 
         try {
-            const response = await axios.post(route('ecommerce.orders.store'), payload);
+            const response = await axios.post(route(createOrderRoute), payload);
             toast.success(response.data.message || 'Commande créée avec succès');
 
             if (response.data?.needs_fusion_payment && response.data?.order?.id) {
                 try {
-                    const fusionRes = await axios.post(route('api.ecommerce.payments.fusionpay.initiate'), {
+                    const fusionRes = await axios.post(route(fusionInitRoute), {
                         order_id: response.data.order.id,
                         payment_method: fusionPaymentMethod,
                         phone: String(formData.customer_phone || '').trim(),

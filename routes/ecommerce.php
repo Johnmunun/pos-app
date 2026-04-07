@@ -33,6 +33,7 @@ use Src\Infrastructure\Common\Http\Controllers\ProductAiSeoController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\StorefrontVisitController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\StorefrontAiSupportController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\StorefrontAiSemanticSearchController;
+use Src\Infrastructure\Ecommerce\Http\Controllers\EcommerceFusionPaymentController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\CmsMediaAiImageController;
 use Src\Infrastructure\GlobalCommerce\Http\Controllers\GcProductController;
 use Src\Infrastructure\GlobalCommerce\Http\Controllers\GcCategoryController;
@@ -564,6 +565,12 @@ Route::domain('{subdomain}.'.$ecommerceBaseDomain)
         Route::get('/catalog', [StorefrontController::class, 'catalog'])->name('public.storefront.catalog');
         Route::get('/product/{id}', [StorefrontController::class, 'showProduct'])->name('public.storefront.product');
         Route::get('/cart', [StorefrontController::class, 'cart'])->name('public.storefront.cart');
+        Route::post('/orders', [OrderController::class, 'store'])
+            ->middleware('throttle:30,1')
+            ->name('public.storefront.orders.store');
+        Route::post('/payments/fusionpay/initiate', [EcommerceFusionPaymentController::class, 'initiate'])
+            ->middleware('throttle:30,1')
+            ->name('public.storefront.payments.fusionpay.initiate');
         Route::post('/support/ai/ask', [StorefrontAiSupportController::class, 'ask'])->name('public.storefront.support.ai.ask');
         Route::post('/search/semantic', [StorefrontAiSemanticSearchController::class, 'search'])->name('public.storefront.search.semantic');
     });
