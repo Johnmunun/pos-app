@@ -200,17 +200,19 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
                     <div className="absolute inset-0 opacity-10 bg-[length:24px_24px] [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.4)_1px,transparent_0)]" />
                     <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 lg:py-12">
                         <div className="grid gap-6 lg:grid-cols-12 items-stretch">
-                            <div className="lg:col-span-6 flex flex-col justify-center space-y-2 sm:space-y-3">
-                                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 text-xs font-semibold text-amber-50/90">
+                            <div className="lg:col-span-6 flex flex-col justify-center">
+                                <div className="inline-flex w-fit flex-col gap-2 sm:gap-3 rounded-2xl bg-slate-900/35 backdrop-blur-sm px-4 py-3 ring-1 ring-white/25 shadow-lg">
+                                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 text-xs font-semibold text-white">
                                     <Sparkles className="h-3.5 w-3.5" />
                                     Catalogue en ligne
                                 </span>
-                                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight drop-shadow-sm">
+                                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight drop-shadow">
                                     Catalogue
                                 </h1>
-                                <p className="mt-1 sm:mt-2 text-amber-50 text-sm sm:text-base lg:text-lg max-w-xl">
+                                <p className="mt-1 sm:mt-2 text-white/95 text-sm sm:text-base lg:text-lg max-w-xl">
                                     Recherchez et filtrez nos produits de manière claire et responsive.
                                 </p>
+                                </div>
                             </div>
 
                             {(sliderBanners.length > 0 || promotionBanner) && (
