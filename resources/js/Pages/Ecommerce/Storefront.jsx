@@ -9,6 +9,7 @@ import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButto
 import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBootstrap';
 import StorefrontCurrencySelect from '@/Components/Ecommerce/StorefrontCurrencySelect';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
+import { formatShopName } from '@/lib/shopName';
 
 function normalizeRichTextToLine(value) {
     if (!value) return '';
@@ -182,7 +183,7 @@ export default function EcommerceStorefront({
                         )}
                         <div>
                             <span className="font-bold text-sm sm:text-base text-slate-900 dark:text-white block truncate">
-                                {shop?.name || 'Ma Boutique'}
+                                {formatShopName(shop?.name, 'Ma Boutique')}
                             </span>
                             <span className="text-[11px] text-slate-500 dark:text-slate-400">Boutique en ligne</span>
                         </div>
@@ -643,7 +644,7 @@ export default function EcommerceStorefront({
                                     </span>
                                     <div className="leading-tight">
                                         <div className="text-sm font-bold text-slate-900 dark:text-white">
-                                            {shop?.name || 'Ma Boutique'}
+                                            {formatShopName(shop?.name, 'Ma Boutique')}
                                         </div>
                                         <div className="text-xs text-slate-500 dark:text-slate-400">Boutique en ligne</div>
                                     </div>
@@ -743,7 +744,7 @@ export default function EcommerceStorefront({
 
                         <div className="mt-10 pt-8 border-t border-slate-200/80 dark:border-slate-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <p className="text-xs text-slate-500 dark:text-slate-400">
-                                © {new Date().getFullYear()} {shop?.name || 'Ma Boutique'}. Tous droits réservés.
+                                © {new Date().getFullYear()} {formatShopName(shop?.name, 'Ma Boutique')}. Tous droits réservés.
                             </p>
                             <div className="flex items-center gap-4">
                                 {(config?.social_facebook_url ||

@@ -24,6 +24,7 @@ import {
 import { toast } from 'react-hot-toast';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 import { formatCurrency as formatMoney } from '@/lib/currency';
+import { formatShopName } from '@/lib/shopName';
 
 function StorefrontProductHeader({ shop, cmsPages = [], availableCurrencies = [] }) {
     const links = useStorefrontLinks();
@@ -50,7 +51,7 @@ function StorefrontProductHeader({ shop, cmsPages = [], availableCurrencies = []
                                 {shop?.name?.charAt(0) || 'S'}
                             </span>
                         )}
-                        <span className="font-semibold text-sm text-slate-900 dark:text-white truncate">{shop?.name || 'Boutique'}</span>
+                        <span className="font-semibold text-sm text-slate-900 dark:text-white truncate">{formatShopName(shop?.name)}</span>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 sm:gap-3">

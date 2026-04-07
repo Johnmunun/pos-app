@@ -11,6 +11,7 @@ import AISupportFloatingWidget from '@/Components/Ecommerce/AISupportFloatingWid
 import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBootstrap';
 import StorefrontCurrencySelect from '@/Components/Ecommerce/StorefrontCurrencySelect';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
+import { formatShopName } from '@/lib/shopName';
 import axios from 'axios';
 
 function shouldShowPageInNav(page) {
@@ -55,7 +56,7 @@ function StorefrontHeader({ shop, cmsPages = [], availableCurrencies = [] }) {
                                 {shop?.name?.charAt(0) || 'S'}
                             </span>
                         )}
-                        <span className="font-semibold text-sm text-slate-900 dark:text-white truncate">{shop?.name || 'Boutique'}</span>
+                        <span className="font-semibold text-sm text-slate-900 dark:text-white truncate">{formatShopName(shop?.name)}</span>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 sm:gap-3">

@@ -29,6 +29,7 @@ import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButto
 import AISupportFloatingWidget from '@/Components/Ecommerce/AISupportFloatingWidget';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 import { cartRequiresFusionPay, paymentMethodsForCart } from '@/lib/ecommerceCartPayment';
+import { formatShopName } from '@/lib/shopName';
 
 function storefrontPaymentExplainer(pm) {
     if (!pm) return null;
@@ -89,7 +90,7 @@ function StorefrontCartHeader({ shop, cmsPages = [], currency, availableCurrenci
                             </span>
                         )}
                         <div>
-                            <span className="font-semibold text-slate-900 dark:text-white block truncate">{shop?.name || 'Boutique'}</span>
+                            <span className="font-semibold text-slate-900 dark:text-white block truncate">{formatShopName(shop?.name)}</span>
                             <span className="text-xs text-slate-500 dark:text-slate-400">{currency || 'CDF'} • Panier</span>
                         </div>
                     </div>
