@@ -28,7 +28,7 @@ import EcommerceActionButton from '@/Components/Ecommerce/EcommerceActionButton'
 import { Pagination } from '@/Components/ui/pagination';
 import axios from 'axios';
 
-export default function OrdersIndex({ orders = [], stats = {}, filters = {}, pagination }) {
+export default function OrdersIndex({ orders = [], stats = {}, financial = {}, filters = {}, pagination }) {
     const { auth } = usePage().props;
     const permissions = auth?.permissions || [];
 
@@ -174,6 +174,8 @@ export default function OrdersIndex({ orders = [], stats = {}, filters = {}, pag
         }).format(amount);
     };
 
+    const defaultCurrency = orders?.[0]?.currency || 'USD';
+
     return (
         <AppLayout
             header={
@@ -231,6 +233,27 @@ export default function OrdersIndex({ orders = [], stats = {}, filters = {}, pag
                             </div>
                         </div>
                     )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-4 border border-emerald-200 dark:border-emerald-800">
+                            <div className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Montant payé (filtre)</div>
+                            <div className="mt-1 text-2xl font-bold text-emerald-900 dark:text-emerald-300">
+                                {formatCurrency(financial.paid_filtered ?? 0, defaultCurrency)}
+                            </div>
+                        </div>
+                        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
+                            <div className="text-sm font-medium text-amber-700 dark:text-amber-400">Montant en attente (filtre)</div>
+                            <div className="mt-1 text-2xl font-bold text-amber-900 dark:text-amber-300">
+                                {formatCurrency(financial.pending_filtered ?? 0, defaultCurrency)}
+                            </div>
+                        </div>
+                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                            <div className="text-sm font-medium text-blue-700 dark:text-blue-400">Montant potentiel (filtre)</div>
+                            <div className="mt-1 text-2xl font-bold text-blue-900 dark:text-blue-300">
+                                {formatCurrency(financial.expected_filtered ?? 0, defaultCurrency)}
+                            </div>
+                        </div>
+                    </div>
 
                     {/* Filtres */}
                     <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">

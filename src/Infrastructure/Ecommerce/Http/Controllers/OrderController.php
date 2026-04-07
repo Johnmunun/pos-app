@@ -20,6 +20,7 @@ use Src\Domain\Ecommerce\Entities\Order;
 use Src\Infrastructure\Ecommerce\Models\PaymentMethodModel;
 use Src\Infrastructure\GlobalCommerce\Inventory\Models\ProductModel;
 use Src\Application\Billing\Services\FeatureLimitService;
+use Src\Infrastructure\Billing\Services\MerchantWalletService;
 use App\Models\Shop;
 
 class OrderController
@@ -31,7 +32,8 @@ class OrderController
         private readonly OrderRepositoryInterface $orderRepository,
         private readonly OrderItemRepositoryInterface $orderItemRepository,
         private readonly FeatureLimitService $featureLimitService,
-        private readonly EcommerceOrderCreatedMailService $ecommerceOrderCreatedMailService
+        private readonly EcommerceOrderCreatedMailService $ecommerceOrderCreatedMailService,
+        private readonly MerchantWalletService $merchantWalletService,
     ) {
     }
 
@@ -115,9 +117,33 @@ class OrderController
             'cancelled' => $this->orderRepository->countByShop($shopId, 'cancelled'),
         ];
 
+        $financial = [
+            'paid_total' => (float) \Src\Infrastructure\Ecommerce\Models\OrderModel::query()
+                ->where('shop_id', $shopId)
+                ->where('payment_status', 'paid')
+                ->sum('total_amount'),
+            'expected_total' => (float) \Src\Infrastructure\Ecommerce\Models\OrderModel::query()
+                ->where('shop_id', $shopId)
+                ->whereNotIn('payment_status', ['failed', 'refunded'])
+                ->sum('total_amount'),
+            'paid_filtered' => (float) (clone $query)
+                ->where('payment_status', 'paid')
+                ->sum('total_amount'),
+            'expected_filtered' => (float) (clone $query)
+                ->whereNotIn('payment_status', ['failed', 'refunded'])
+                ->sum('total_amount'),
+        ];
+        $financial['pending_total'] = round(max(0, $financial['expected_total'] - $financial['paid_total']), 2);
+        $financial['pending_filtered'] = round(max(0, $financial['expected_filtered'] - $financial['paid_filtered']), 2);
+        $financial['paid_total'] = round($financial['paid_total'], 2);
+        $financial['expected_total'] = round($financial['expected_total'], 2);
+        $financial['paid_filtered'] = round($financial['paid_filtered'], 2);
+        $financial['expected_filtered'] = round($financial['expected_filtered'], 2);
+
         return Inertia::render('Ecommerce/Orders/Index', [
             'orders' => $ordersData,
             'stats' => $stats,
+            'financial' => $financial,
             'filters' => [
                 'from' => $from?->format('Y-m-d'),
                 'to' => $to?->format('Y-m-d'),
@@ -531,8 +557,15 @@ class OrderController
         ]);
 
         try {
+            $before = \Src\Infrastructure\Ecommerce\Models\OrderModel::query()
+                ->where('id', $id)
+                ->first(['id', 'payment_status']);
             $order = $this->updatePaymentStatusUseCase->execute($id, $validated['payment_status']);
             if (($validated['payment_status'] ?? '') === 'paid') {
+                $wasAlreadyPaid = strtolower((string) ($before?->payment_status ?? '')) === 'paid';
+                if (!$wasAlreadyPaid) {
+                    $this->merchantWalletService->applySettlementFromEcommerceOrderId((string) $id);
+                }
                 app(\App\Services\AppNotificationService::class)->notifyEcommerceOrder(
                     'Paiement e-commerce confirme',
                     'La commande '.$order->getOrderNumber().' est marquee payee.',

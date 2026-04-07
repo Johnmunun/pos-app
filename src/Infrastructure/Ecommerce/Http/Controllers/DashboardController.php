@@ -69,6 +69,14 @@ class DashboardController
             ->where('payment_status', 'paid')
             ->where('created_at', '>=', $last7)
             ->sum('total_amount');
+        $expectedToday = (float) OrderModel::where('shop_id', $shopId)
+            ->where('created_at', '>=', $todayStart)
+            ->whereNotIn('payment_status', ['failed', 'refunded'])
+            ->sum('total_amount');
+        $expectedLast7Days = (float) OrderModel::where('shop_id', $shopId)
+            ->where('created_at', '>=', $last7)
+            ->whereNotIn('payment_status', ['failed', 'refunded'])
+            ->sum('total_amount');
 
         // Stockage médias : images produits (GlobalCommerce) + médias CMS
         $productImageCount = (int) GcProductModel::whereIn('shop_id', $gcShopIds)
@@ -265,6 +273,10 @@ class DashboardController
                 'revenue' => [
                     'today' => round($revenueToday, 2),
                     'last_7_days' => round($revenueLast7Days, 2),
+                    'expected_today' => round($expectedToday, 2),
+                    'expected_last_7_days' => round($expectedLast7Days, 2),
+                    'pending_today' => round(max(0, $expectedToday - $revenueToday), 2),
+                    'pending_last_7_days' => round(max(0, $expectedLast7Days - $revenueLast7Days), 2),
                 ],
                 'alerts' => $alerts,
                 'media_storage' => [

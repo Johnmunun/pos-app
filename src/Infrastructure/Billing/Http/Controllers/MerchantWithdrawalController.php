@@ -19,6 +19,17 @@ class MerchantWithdrawalController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
+        if (
+            $user === null
+            || (
+                !$user->hasPermission('ecommerce.payment.view')
+                && !$user->hasPermission('ecommerce.order.view')
+                && !$user->hasPermission('module.ecommerce')
+            )
+        ) {
+            return response()->json(['message' => 'Accès refusé.'], 403);
+        }
+
         $tenantId = (string) ($user?->tenant_id ?? '');
         if ($tenantId === '') {
             return response()->json(['message' => 'Tenant introuvable.'], 422);
@@ -44,8 +55,15 @@ class MerchantWithdrawalController extends Controller
     public function store(Request $request): JsonResponse
     {
         $user = $request->user();
-        if ($user === null) {
-            return response()->json(['message' => 'Non authentifié.'], 401);
+        if (
+            $user === null
+            || (
+                !$user->hasPermission('ecommerce.order.payment.update')
+                && !$user->hasPermission('ecommerce.payment.view')
+                && !$user->hasPermission('module.ecommerce')
+            )
+        ) {
+            return response()->json(['message' => 'Accès refusé.'], 403);
         }
 
         $validated = $request->validate([

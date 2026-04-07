@@ -63,7 +63,7 @@ export default function ShoppingCart({ buttonClassName, storefrontLinks = false 
                 className="fixed top-0 right-0 h-[100dvh] w-full max-w-[100vw] sm:w-96 bg-white dark:bg-slate-800 shadow-2xl z-[9999] flex flex-col overflow-hidden transform transition-transform duration-300 ease-in-out translate-x-0 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
             >
                 {/* Header - style vitrine cohérent */}
-                <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-[var(--sf-primary)] border-b border-[var(--sf-secondary)]/50">
+                <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-slate-900 border-b border-slate-800">
                     <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                         <ShoppingCartIcon className="h-5 w-5" />
                         Panier ({itemCount})
@@ -145,7 +145,7 @@ export default function ShoppingCart({ buttonClassName, storefrontLinks = false 
 
                 {/* Footer */}
                 {cart.length > 0 && (
-                    <div className="sticky bottom-0 z-10 border-t border-slate-200 dark:border-slate-700 p-4 space-y-3 bg-white dark:bg-slate-800">
+                    <div className="sticky bottom-0 z-10 border-t border-slate-200 dark:border-slate-700 p-4 space-y-3 bg-slate-50 dark:bg-slate-900">
                         {!canConvertAllItems && (
                             <div className="rounded-lg border border-amber-200 dark:border-amber-800/60 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
                                 Conversion indisponible: affichage des montants dans la devise d'origine des articles.
@@ -161,7 +161,7 @@ export default function ShoppingCart({ buttonClassName, storefrontLinks = false 
                         </div>
                         <Link href={cartUrl} className="block">
                             <Button
-                                className="w-full gap-2 bg-[var(--sf-primary)] hover:bg-[var(--sf-primary-hover)]"
+                                className="w-full gap-2 bg-slate-900 hover:bg-slate-800 text-white"
                                 onClick={() => setIsMiniCartOpen(false)}
                             >
                                 Voir le panier

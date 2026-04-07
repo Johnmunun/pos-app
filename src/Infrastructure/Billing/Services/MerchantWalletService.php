@@ -32,8 +32,13 @@ class MerchantWalletService
 
         DB::transaction(function () use ($transaction): void {
             $existing = MerchantWalletLedgerEntry::query()
-                ->where('billing_payment_transaction_id', $transaction->id)
                 ->where('entry_type', 'payment_settlement')
+                ->where(function ($q) use ($transaction): void {
+                    $q->where('billing_payment_transaction_id', $transaction->id);
+                    if (!empty($transaction->ecommerce_order_id)) {
+                        $q->orWhere('ecommerce_order_id', (string) $transaction->ecommerce_order_id);
+                    }
+                })
                 ->first();
             if ($existing !== null) {
                 return;
@@ -102,6 +107,78 @@ class MerchantWalletService
                 $currency
             );
             $this->appNotificationService->notifyEcommerceOrder($title, $body, (int) $tenantId);
+        });
+    }
+
+    public function applySettlementFromEcommerceOrderId(string $orderId, string $source = 'manual_confirmation'): void
+    {
+        if (!Schema::hasTable('merchant_wallet_ledger_entries') || !Schema::hasTable('merchant_wallet_balances')) {
+            return;
+        }
+
+        if ($orderId === '') {
+            return;
+        }
+
+        DB::transaction(function () use ($orderId, $source): void {
+            $existing = MerchantWalletLedgerEntry::query()
+                ->where('entry_type', 'payment_settlement')
+                ->where('ecommerce_order_id', $orderId)
+                ->first();
+            if ($existing !== null) {
+                return;
+            }
+
+            $order = OrderModel::query()->find($orderId);
+            if ($order === null || strtolower((string) $order->payment_status) !== 'paid') {
+                return;
+            }
+
+            $tenantId = $this->resolveTenantIdFromShop((string) $order->shop_id);
+            if ($tenantId === null) {
+                return;
+            }
+
+            $currency = strtoupper((string) ($order->currency ?: 'USD'));
+            $gross = (float) $order->total_amount;
+            if ($gross <= 0) {
+                return;
+            }
+
+            $feeRate = $this->resolvePlatformTakeRatePercent($tenantId);
+            $platformFee = round(($gross * $feeRate) / 100, 2);
+            $gatewayFee = 0.0;
+            $net = round(max(0, $gross - $platformFee - $gatewayFee), 2);
+
+            $balance = MerchantWalletBalance::query()->firstOrCreate(
+                ['tenant_id' => (string) $tenantId, 'currency_code' => $currency],
+                ['available_balance' => 0, 'pending_balance' => 0, 'locked_balance' => 0]
+            );
+
+            $balance->available_balance = round((float) $balance->available_balance + $net, 2);
+            $balance->save();
+
+            MerchantWalletLedgerEntry::query()->create([
+                'tenant_id' => (string) $tenantId,
+                'shop_id' => (string) $order->shop_id,
+                'billing_payment_transaction_id' => null,
+                'ecommerce_order_id' => (string) $order->id,
+                'entry_type' => 'payment_settlement',
+                'direction' => 'credit',
+                'currency_code' => $currency,
+                'gross_amount' => $gross,
+                'platform_fee_amount' => $platformFee,
+                'gateway_fee_amount' => $gatewayFee,
+                'net_amount' => $net,
+                'running_available_balance' => (float) $balance->available_balance,
+                'running_pending_balance' => (float) $balance->pending_balance,
+                'running_locked_balance' => (float) $balance->locked_balance,
+                'meta' => [
+                    'order_number' => $order->order_number,
+                    'platform_take_rate_percent' => $feeRate,
+                    'source' => $source,
+                ],
+            ]);
         });
     }
 

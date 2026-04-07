@@ -236,7 +236,9 @@ export default function EcommerceDashboard({
                                 <div className="flex-1">
                                     <p className="text-emerald-100 text-sm font-medium mb-2">REVENUS AUJOURD&apos;HUI</p>
                                     <p className="text-white text-2xl md:text-3xl font-bold mb-2">{fmt(revenue.today ?? 0)}</p>
-                                    <p className="text-emerald-100 text-xs">Commandes payées</p>
+                                    <p className="text-emerald-100 text-xs">
+                                        En attente: {fmt(revenue.pending_today ?? 0)} • Potentiel: {fmt(revenue.expected_today ?? 0)}
+                                    </p>
                                 </div>
                                 <div className="w-12 h-12 md:w-14 md:h-14 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
                                     <DollarSign className="h-6 w-6 md:h-7 md:w-7 text-white" />
@@ -251,7 +253,9 @@ export default function EcommerceDashboard({
                                 <div className="flex-1">
                                     <p className="text-amber-100 text-sm font-medium mb-2">REVENUS (7 JOURS)</p>
                                     <p className="text-white text-2xl md:text-3xl font-bold mb-2">{fmt(revenue.last_7_days ?? 0)}</p>
-                                    <p className="text-amber-100 text-xs">Derniers 7 jours</p>
+                                    <p className="text-amber-100 text-xs">
+                                        En attente: {fmt(revenue.pending_last_7_days ?? 0)} • Potentiel: {fmt(revenue.expected_last_7_days ?? 0)}
+                                    </p>
                                 </div>
                                 <div className="w-12 h-12 md:w-14 md:h-14 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
                                     <TrendingUp className="h-6 w-6 md:h-7 md:w-7 text-white" />
