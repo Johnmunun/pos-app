@@ -886,12 +886,16 @@ class StorefrontController
         $productShopIds = $this->resolveProductShopIds($shop, $tenantId);
         $promotionTargets = $this->getActivePromotionTargets($productShopIds);
 
-        $product = $this->productRepository->findById($id);
-        if (!$product) {
+        $productModel = ProductModel::query()
+            ->where('id', $id)
+            ->whereIn('shop_id', $productShopIds)
+            ->where('is_active', true)
+            ->where('is_published_ecommerce', true)
+            ->first();
+        if (!$productModel) {
             abort(404, 'Produit introuvable.');
         }
 
-        $productModel = ProductModel::find($id);
         $typeProduit = $productModel->type_produit ?? 'physique';
         $productType = $productModel->product_type ?? 'physical';
         $isDigital = $typeProduit === 'numerique' || $productType === 'digital';
@@ -921,16 +925,16 @@ class StorefrontController
         }
 
         $productData = [
-            'id' => $product->getId(),
-            'name' => $product->getName(),
-            'description' => $product->getDescription(),
-            'price_amount' => $product->getSalePrice()->getAmount(),
-            'price_currency' => $product->getSalePrice()->getCurrency(),
-            'stock' => $product->getStock()->getValue(),
-            'category_id' => $product->getCategoryId(),
+            'id' => (string) $productModel->id,
+            'name' => (string) $productModel->name,
+            'description' => $productModel->description,
+            'price_amount' => (float) ($productModel->sale_price_amount ?? 0),
+            'price_currency' => (string) ($productModel->sale_price_currency ?? 'USD'),
+            'stock' => (float) ($productModel->stock ?? 0),
+            'category_id' => (string) ($productModel->category_id ?? ''),
             'image_url' => $imageUrl,
             'gallery_urls' => $galleryUrls,
-            'sku' => $product->getSku(),
+            'sku' => (string) ($productModel->sku ?? ''),
             'product_type' => $productType,
             'type_produit' => $typeProduit,
             'mode_paiement' => $productModel->mode_paiement ?? 'paiement_immediat',
