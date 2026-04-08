@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Models\Shop;
 use Src\Infrastructure\Billing\Models\BillingPaymentTransaction;
 use Src\Infrastructure\Billing\Services\FusionPayClient;
 use Src\Infrastructure\Ecommerce\Models\OrderModel;
@@ -37,6 +38,23 @@ class EcommerceFusionPaymentController extends Controller
 
         $user = Auth::user();
         $storefrontShop = $request->attributes->get('storefront_shop');
+        if ($storefrontShop === null) {
+            $host = strtolower((string) $request->getHost());
+            $baseDomain = strtolower((string) config('services.ecommerce.base_domain', 'omnisolution.shop'));
+            if (
+                $baseDomain !== ''
+                && str_ends_with($host, '.'.$baseDomain)
+                && $host !== $baseDomain
+            ) {
+                $subdomain = substr($host, 0, -1 * (strlen($baseDomain) + 1));
+                if ($subdomain !== false && $subdomain !== '') {
+                    $storefrontShop = Shop::query()
+                        ->whereRaw('LOWER(ecommerce_subdomain) = ?', [strtolower($subdomain)])
+                        ->where('ecommerce_is_online', true)
+                        ->first();
+                }
+            }
+        }
         if ($user === null && $storefrontShop === null) {
             return response()->json(['message' => 'Non authentifié.'], 401);
         }
@@ -51,7 +69,8 @@ class EcommerceFusionPaymentController extends Controller
         }
 
         $shopId = (string) $order->shop_id;
-        if ($user !== null) {
+        $isPublicStorefrontRequest = $storefrontShop !== null;
+        if (!$isPublicStorefrontRequest && $user !== null) {
             $userShop = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
             if ($userShop === null || $shopId !== (string) $userShop) {
                 return response()->json(['message' => 'Accès à cette commande refusé.'], 403);

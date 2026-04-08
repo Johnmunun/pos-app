@@ -265,12 +265,24 @@ export default function OrderDrawer({
 
             if (response.data?.needs_fusion_payment && response.data?.order?.id) {
                 try {
-                    const fusionRes = await axios.post(route(fusionInitRoute), {
+                    const fusionPayload = {
                         order_id: response.data.order.id,
                         payment_method: fusionPaymentMethod,
                         phone: String(formData.customer_phone || '').trim(),
                         customer_name: formData.customer_name,
-                    });
+                    };
+                    let fusionRes;
+                    try {
+                        fusionRes = await axios.post(route(fusionInitRoute), fusionPayload);
+                    } catch (firstFusionErr) {
+                        // Certains contextes vitrine conservent une session user:
+                        // on retente via la route publique si la route initiale est refusée.
+                        if (firstFusionErr?.response?.status === 403 && !isPublicStorefront) {
+                            fusionRes = await axios.post(route('public.storefront.payments.fusionpay.initiate'), fusionPayload);
+                        } else {
+                            throw firstFusionErr;
+                        }
+                    }
                     if (fusionRes.data?.checkout_url) {
                         window.location.href = fusionRes.data.checkout_url;
                         return;
