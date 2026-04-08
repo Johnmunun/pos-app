@@ -45,10 +45,12 @@ export default function OrderDrawer({
     const pageProps = usePage().props;
     const { shop } = pageProps;
     const isPublicStorefront = !!pageProps?.storefrontIsPublic;
-    const createOrderRoute = isPublicStorefront ? 'public.storefront.orders.store' : 'ecommerce.orders.store';
-    const fusionInitRoute = isPublicStorefront
-        ? 'public.storefront.payments.fusionpay.initiate'
-        : 'api.ecommerce.payments.fusionpay.initiate';
+    const createOrderEndpoint = isPublicStorefront
+        ? '/orders'
+        : route('ecommerce.orders.store');
+    const fusionInitEndpoint = isPublicStorefront
+        ? '/payments/fusionpay/initiate'
+        : route('api.ecommerce.payments.fusionpay.initiate');
     const defaultCurrency = orderCurrency || shop?.currency || 'USD';
     // En mode vitrine/panier client, les montants doivent rester pilotés par le système
     // (taxes, remise globale, etc.) et non éditables par l'utilisateur final.
@@ -260,7 +262,7 @@ export default function OrderDrawer({
         };
 
         try {
-            const response = await axios.post(route(createOrderRoute), payload);
+            const response = await axios.post(createOrderEndpoint, payload);
             toast.success(response.data.message || 'Commande créée avec succès');
 
             if (response.data?.needs_fusion_payment && response.data?.order?.id) {
@@ -273,12 +275,12 @@ export default function OrderDrawer({
                     };
                     let fusionRes;
                     try {
-                        fusionRes = await axios.post(route(fusionInitRoute), fusionPayload);
+                        fusionRes = await axios.post(fusionInitEndpoint, fusionPayload);
                     } catch (firstFusionErr) {
                         // Certains contextes vitrine conservent une session user:
                         // on retente via la route publique si la route initiale est refusée.
                         if (firstFusionErr?.response?.status === 403 && !isPublicStorefront) {
-                            fusionRes = await axios.post(route('public.storefront.payments.fusionpay.initiate'), fusionPayload);
+                            fusionRes = await axios.post('/payments/fusionpay/initiate', fusionPayload);
                         } else {
                             throw firstFusionErr;
                         }
