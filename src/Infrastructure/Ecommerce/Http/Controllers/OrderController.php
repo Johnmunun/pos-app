@@ -230,7 +230,24 @@ class OrderController
     {
             $user = $request->user();
             $storefrontShop = $request->attributes->get('storefront_shop');
-            $isPublicStorefrontRequest = $user === null && $storefrontShop !== null;
+            if ($storefrontShop === null) {
+                $host = strtolower((string) $request->getHost());
+                $baseDomain = strtolower((string) config('services.ecommerce.base_domain', 'omnisolution.shop'));
+                if (
+                    $baseDomain !== ''
+                    && str_ends_with($host, '.'.$baseDomain)
+                    && $host !== $baseDomain
+                ) {
+                    $subdomain = substr($host, 0, -1 * (strlen($baseDomain) + 1));
+                    if ($subdomain !== false && $subdomain !== '') {
+                        $storefrontShop = Shop::query()
+                            ->whereRaw('LOWER(ecommerce_subdomain) = ?', [strtolower($subdomain)])
+                            ->where('ecommerce_is_online', true)
+                            ->first();
+                    }
+                }
+            }
+            $isPublicStorefrontRequest = $storefrontShop !== null;
             if (
                 !$isPublicStorefrontRequest
                 && (!$user || (!$user->hasPermission('ecommerce.order.create') && !$user->hasPermission('ecommerce.create')))
