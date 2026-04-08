@@ -117,6 +117,10 @@ Route::get('/api/billing/plans', [BillingAdminController::class, 'publicPlansApi
     ->name('api.billing.plans.public');
 Route::post('/api/billing/payments/callback', [BillingPaymentController::class, 'callback'])
     ->name('billing.payments.callback');
+Route::get('/billing/payments/{id}', [BillingPaymentController::class, 'showStatusPage'])
+    ->name('billing.payments.show');
+Route::get('/api/billing/payments/{id}/status', [BillingPaymentController::class, 'status'])
+    ->name('api.billing.payments.status');
 
 /**
  * Public Routes - Login (Welcome page)
@@ -253,14 +257,10 @@ Route::middleware('auth')->group(function () {
         ->name('api.ecommerce.payments.fusionpay.initiate');
     Route::get('/api/billing/payments/latest', [BillingPaymentController::class, 'latest'])
         ->name('api.billing.payments.latest');
-    Route::get('/api/billing/payments/{id}/status', [BillingPaymentController::class, 'status'])
-        ->name('api.billing.payments.status');
     Route::get('/api/merchant/withdrawals', [MerchantWithdrawalController::class, 'index'])
         ->name('api.merchant.withdrawals.index');
     Route::post('/api/merchant/withdrawals', [MerchantWithdrawalController::class, 'store'])
         ->name('api.merchant.withdrawals.store');
-    Route::get('/billing/payments/{id}', [BillingPaymentController::class, 'showStatusPage'])
-        ->name('billing.payments.show');
     Route::get('/onboarding/payment', [BillingPaymentController::class, 'showOnboardingPaymentPage'])
         ->name('billing.onboarding.payment');
 

@@ -305,11 +305,13 @@ class BillingPaymentController extends Controller
 
     public function status(int $id): JsonResponse
     {
-        $user = Auth::user();
+        $request = request();
         $transaction = BillingPaymentTransaction::query()
             ->where('id', $id)
-            ->where('user_id', $user->id)
             ->firstOrFail();
+        if (!$this->canAccessTransaction($request, $transaction)) {
+            abort(403, 'Accès à cette transaction refusé.');
+        }
 
         $providerStatus = null;
         if ($transaction->provider_reference) {
@@ -396,14 +398,16 @@ class BillingPaymentController extends Controller
 
     public function showStatusPage(int $id): InertiaResponse|RedirectResponse
     {
-        $user = Auth::user();
-
         $transaction = BillingPaymentTransaction::query()
             ->where('id', $id)
-            ->where('user_id', $user->id)
             ->firstOrFail();
+        $request = request();
+        if (!$this->canAccessTransaction($request, $transaction)) {
+            abort(403, 'Accès à cette transaction refusé.');
+        }
 
         $ecommerceSuccessUrl = $this->resolveEcommercePaymentSuccessUrl($transaction);
+        $publicAccess = $this->isPublicTokenAccess($request, $transaction);
 
         if ($ecommerceSuccessUrl !== null && $this->isTransactionPaid($transaction)) {
             return redirect()->to($ecommerceSuccessUrl);
@@ -422,6 +426,7 @@ class BillingPaymentController extends Controller
                 'expires_at' => $transaction->expires_at,
                 'ecommerce_success_url' => $ecommerceSuccessUrl,
                 'has_ecommerce_order' => filled($transaction->ecommerce_order_id),
+                'public_access' => $publicAccess,
             ],
         ]);
     }
@@ -458,6 +463,37 @@ class BillingPaymentController extends Controller
             ->value('download_token');
 
         return $token ? route('ecommerce.payment.success', ['token' => $token]) : null;
+    }
+
+    private function canAccessTransaction(Request $request, BillingPaymentTransaction $transaction): bool
+    {
+        $user = Auth::user();
+        if ($user !== null && (int) $transaction->user_id === (int) $user->id) {
+            return true;
+        }
+
+        return $this->isPublicTokenAccess($request, $transaction);
+    }
+
+    private function isPublicTokenAccess(Request $request, BillingPaymentTransaction $transaction): bool
+    {
+        if (empty($transaction->ecommerce_order_id)) {
+            return false;
+        }
+
+        $token = (string) $request->query('token', '');
+        if ($token === '') {
+            return false;
+        }
+
+        $metadataToken = (string) data_get($transaction->metadata, 'payment_access_token', '');
+        if ($metadataToken !== '' && hash_equals($metadataToken, $token)) {
+            return true;
+        }
+
+        $providerReference = (string) ($transaction->provider_reference ?? '');
+
+        return $providerReference !== '' && hash_equals($providerReference, $token);
     }
 
     private function isValidWebhook(Request $request): bool

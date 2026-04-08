@@ -14,6 +14,7 @@ use Src\Infrastructure\Billing\Models\BillingPaymentTransaction;
 use Src\Infrastructure\Billing\Services\FusionPayClient;
 use Src\Infrastructure\Ecommerce\Models\OrderModel;
 use Src\Infrastructure\Ecommerce\Models\PaymentMethodModel;
+use Illuminate\Support\Str;
 
 class EcommerceFusionPaymentController extends Controller
 {
@@ -175,6 +176,7 @@ class EcommerceFusionPaymentController extends Controller
                 'order_amount_original' => $amount,
                 'customer_name' => $validated['customer_name'],
                 'phone' => preg_replace('/\s+/', '', (string) $validated['phone']),
+                'payment_access_token' => Str::random(48),
             ],
         ]);
 
@@ -199,7 +201,10 @@ class EcommerceFusionPaymentController extends Controller
             ],
             'numeroSend' => preg_replace('/\s+/', '', (string) $validated['phone']),
             'nomclient' => (string) $validated['customer_name'],
-            'return_url' => route('billing.payments.show', $transaction->id),
+            'return_url' => route('billing.payments.show', [
+                'id' => $transaction->id,
+                'token' => (string) data_get($transaction->metadata, 'payment_access_token', ''),
+            ]),
             'webhook_url' => $callbackUrl,
         ];
 

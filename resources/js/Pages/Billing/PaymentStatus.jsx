@@ -1,5 +1,4 @@
 import { Head, Link } from '@inertiajs/react';
-import AppLayout from '@/Layouts/AppLayout';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { CheckCircle2, Clock3, ExternalLink, ShieldCheck } from 'lucide-react';
@@ -31,6 +30,11 @@ export default function PaymentStatus({ transaction }) {
     const isPaid = useMemo(() => isPaidStatus(tx?.status), [tx?.status]);
 
     const hasEcommerceOrder = Boolean(tx?.has_ecommerce_order);
+    const isPublicAccess = Boolean(tx?.public_access);
+    const tokenParam = useMemo(() => {
+        if (typeof window === 'undefined') return '';
+        return new URLSearchParams(window.location.search).get('token') || '';
+    }, []);
 
     const redirectAfterPaid = useCallback((data) => {
         if (data.ecommerce_success_url) {
@@ -50,7 +54,9 @@ export default function PaymentStatus({ transaction }) {
         setChecking(true);
         setMessage('');
         try {
-            const { data } = await axios.get(route('api.billing.payments.status', tx.id));
+            const { data } = await axios.get(route('api.billing.payments.status', tx.id), {
+                params: tokenParam ? { token: tokenParam } : {},
+            });
             setTx((prev) => ({ ...prev, ...data }));
 
             if (isPaidStatus(data.status)) {
@@ -74,7 +80,9 @@ export default function PaymentStatus({ transaction }) {
 
         const intervalId = window.setInterval(async () => {
             try {
-                const { data } = await axios.get(route('api.billing.payments.status', tx.id));
+                const { data } = await axios.get(route('api.billing.payments.status', tx.id), {
+                    params: tokenParam ? { token: tokenParam } : {},
+                });
                 setTx((prev) => ({ ...prev, ...data }));
 
                 const nextStatus = String(data?.status || '').toLowerCase();
@@ -92,7 +100,7 @@ export default function PaymentStatus({ transaction }) {
         }, 8000);
 
         return () => window.clearInterval(intervalId);
-    }, [isPaid, tx?.id, redirectAfterPaid]);
+    }, [isPaid, tx?.id, redirectAfterPaid, tokenParam]);
 
     const afterSuccessCopy = hasEcommerceOrder
         ? 'Après succès, vous serez redirigé vers une page avec vos liens de téléchargement (produits numériques).'
@@ -102,13 +110,10 @@ export default function PaymentStatus({ transaction }) {
         ? 'Après paiement confirmé, vous pouvez aussi recevoir un e-mail récapitulatif selon la configuration du magasin.'
         : "Apres paiement confirme, un email est envoye sur ta boite mail pour confirmer l'operation.";
 
-    return (
-        <AppLayout
-            header={<h2 className="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Suivi paiement</h2>}
-        >
+    const content = (
+        <>
             <Head title={hasEcommerceOrder ? 'Suivi paiement commande' : 'Suivi paiement abonnement'} />
-
-            <div className="py-8">
+            <div className={isPublicAccess ? 'py-8 min-h-screen bg-slate-50 dark:bg-slate-950' : 'py-8'}>
                 <div className="max-w-3xl mx-auto sm:px-6 lg:px-8">
                     <div className="relative overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl shadow p-6 sm:p-8">
                         <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-emerald-500/10 to-indigo-500/10" />
@@ -181,7 +186,7 @@ export default function PaymentStatus({ transaction }) {
                                 </button>
 
                                 <Link
-                                    href={route('pending')}
+                                    href={isPublicAccess ? '/' : route('pending')}
                                     className="h-11 px-4 rounded-2xl border border-gray-300 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-200 inline-flex items-center"
                                 >
                                     Retour
@@ -197,6 +202,8 @@ export default function PaymentStatus({ transaction }) {
                     </div>
                 </div>
             </div>
-        </AppLayout>
+        </>
     );
+
+    return content;
 }
