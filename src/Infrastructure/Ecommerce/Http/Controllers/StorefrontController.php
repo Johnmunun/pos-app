@@ -1492,6 +1492,7 @@ class StorefrontController
                 'searchPath' => $isPublicSubdomain ? '/search/semantic' : '/ecommerce/storefront/search/semantic',
             ],
         ];
+        $payload['storefrontIsPublic'] = $isPublicSubdomain;
 
         return $payload;
     }
