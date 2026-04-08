@@ -17,6 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'api/billing/payments/callback',
             // Ping audience vitrine (sous-domaine public, POST sans session CSRF fiable)
             '_storefront/v',
+            // Checkout vitrine publique (sous-domaine): requis pour clients non authentifiés
+            'orders',
+            'ecommerce/orders',
+            'payments/fusionpay/initiate',
+            'api/ecommerce/payments/fusionpay/initiate',
         ]);
 
         $middleware->web(append: [
