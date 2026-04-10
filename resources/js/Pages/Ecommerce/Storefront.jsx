@@ -98,13 +98,13 @@ function ProductCardSimple({ product, currency, productUrl, exchangeRates = {} }
                             <span className="text-sm sm:text-base font-bold text-[var(--sf-primary)]">
                                 {price}
                             </span>
-                            <span className="inline-flex items-center text-xs font-medium text-slate-500 dark:text-slate-400 group-hover:text-[var(--sf-primary)] transition-colors">
+                            <span className="inline-flex items-center text-xs font-medium text-slate-700 dark:text-slate-300 group-hover:text-[var(--sf-primary)] transition-colors">
                                 Voir
                                 <ArrowRight className="h-3.5 w-3 ml-1 group-hover:translate-x-0.5 transition-transform" />
                             </span>
                         </div>
                         {PaymentIcon && paymentCaption && (
-                            <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                            <p className="text-[10px] sm:text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1">
                                 <PaymentIcon className="h-3 w-3 shrink-0 text-[var(--sf-primary)]" />
                                 {paymentCaption}
                             </p>
@@ -162,7 +162,7 @@ export default function EcommerceStorefront({
     const navPages = (cmsPages || []).filter(shouldShowPageInNav).slice(0, 4);
 
     const content = (
-        <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-50">
+        <div className="min-h-screen bg-white dark:bg-gradient-to-b dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-950 dark:text-slate-50">
             <Head title="Boutique en ligne" />
             <StorefrontClientBootstrap />
 
@@ -199,7 +199,7 @@ export default function EcommerceStorefront({
                                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
                                     {promotionBanner.title || 'Offre promotionnelle en cours'}
                                 </h2>
-                                <p className="text-sm text-slate-600 dark:text-slate-300 max-w-xl">
+                                <p className="text-sm text-slate-800 dark:text-slate-200 max-w-xl">
                                     Profitez de cette promotion pour booster vos ventes ou mettre en avant un produit phare de votre
                                     boutique.
                                 </p>
@@ -232,42 +232,42 @@ export default function EcommerceStorefront({
                 {/* Avantages */}
                 <section className="border-y border-slate-200/80 dark:border-slate-800">
                     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                        <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/80 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 hover:border-[var(--sf-primary)]/50 transition-colors">
+                        <div className="flex items-start gap-4 p-4 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 shadow-sm shadow-slate-900/5 hover:border-[var(--sf-primary)]/50 transition-colors">
                             <div className="flex-shrink-0 h-11 w-11 rounded-xl bg-[var(--sf-primary)]/20 flex items-center justify-center">
                                 <Truck className="h-5 w-5 text-[var(--sf-primary)]" />
                             </div>
                             <div>
                                 <p className="text-sm font-semibold text-slate-900 dark:text-white">Livraison rapide</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Dans la journée sur votre ville</p>
+                                <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5">Dans la journée sur votre ville</p>
                             </div>
                         </div>
-                        <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/80 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 hover:border-emerald-200 dark:hover:border-emerald-800 transition-colors">
+                        <div className="flex items-start gap-4 p-4 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 shadow-sm shadow-slate-900/5 hover:border-emerald-200 dark:hover:border-emerald-800 transition-colors">
                             <div className="flex-shrink-0 h-11 w-11 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
                                 <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                             </div>
                             <div>
                                 <p className="text-sm font-semibold text-slate-900 dark:text-white">Paiement sécurisé</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5">
                                     Chaque vendeur définit sur la fiche produit le paiement immédiat ou à la livraison
                                 </p>
                             </div>
                         </div>
-                        <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/80 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 hover:border-sky-200 dark:hover:border-sky-800 transition-colors">
+                        <div className="flex items-start gap-4 p-4 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 shadow-sm shadow-slate-900/5 hover:border-sky-200 dark:hover:border-sky-800 transition-colors">
                             <div className="flex-shrink-0 h-11 w-11 rounded-xl bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center">
                                 <Clock className="h-5 w-5 text-sky-600 dark:text-sky-400" />
                             </div>
                             <div>
                                 <p className="text-sm font-semibold text-slate-900 dark:text-white">Ouvert 24/7</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Commandez à tout moment</p>
+                                <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5">Commandez à tout moment</p>
                             </div>
                         </div>
-                        <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/80 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 hover:border-violet-200 dark:hover:border-violet-800 transition-colors">
+                        <div className="flex items-start gap-4 p-4 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 shadow-sm shadow-slate-900/5 hover:border-violet-200 dark:hover:border-violet-800 transition-colors">
                             <div className="flex-shrink-0 h-11 w-11 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
                                 <Headphones className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                             </div>
                             <div>
                                 <p className="text-sm font-semibold text-slate-900 dark:text-white">Support client</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">À votre écoute</p>
+                                <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5">À votre écoute</p>
                             </div>
                         </div>
                     </div>
@@ -281,7 +281,7 @@ export default function EcommerceStorefront({
                                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
                                     Produits en vedette
                                 </h2>
-                                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                                <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300">
                                     Une sélection courte pour mettre en avant vos meilleurs articles.
                                 </p>
                             </div>
@@ -295,7 +295,7 @@ export default function EcommerceStorefront({
                         </div>
 
                         {featuredProducts.length === 0 ? (
-                            <div className="text-sm text-slate-500 dark:text-slate-400">
+                            <div className="text-sm text-slate-800 dark:text-slate-200">
                                 Aucun produit publié pour le moment. Activez l&apos;option &quot;Publier sur e-commerce&quot; dans vos
                                 produits pour remplir cette section.
                             </div>
@@ -323,14 +323,14 @@ export default function EcommerceStorefront({
                                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
                                     Nouveautés
                                 </h2>
-                                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                                <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300">
                                     Derniers articles ajoutés à votre catalogue.
                                 </p>
                             </div>
                         </div>
 
                         {newArrivals.length === 0 ? (
-                            <div className="text-sm text-slate-500 dark:text-slate-400">
+                            <div className="text-sm text-slate-800 dark:text-slate-200">
                                 Ajoutez de nouveaux produits dans le module Commerce / GlobalCommerce pour voir cette section se
                                 remplir automatiquement.
                             </div>
@@ -352,14 +352,14 @@ export default function EcommerceStorefront({
 
                 {/* Bannières slider (si plusieurs) */}
                 {sliderBanners.length > 0 && (
-                    <section className="py-10 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40">
+                    <section className="py-10 border-t border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950/40">
                         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-sm font-semibold tracking-wide text-slate-500 dark:text-slate-400 uppercase">
+                                <h2 className="text-sm font-semibold tracking-wide text-slate-800 dark:text-slate-200 uppercase">
                                     Offres du moment
                                 </h2>
                                 {sliderBanners.length > 1 && (
-                                    <div className="hidden sm:flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                    <div className="hidden sm:flex items-center gap-2 text-xs font-medium text-slate-800 dark:text-slate-200">
                                         <button
                                             type="button"
                                             onClick={() =>
@@ -448,7 +448,7 @@ export default function EcommerceStorefront({
                 )}
 
                 {/* Footer */}
-                <footer className="border-t border-slate-200/80 dark:border-slate-800 bg-white/70 dark:bg-slate-950/40 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-950/30">
+                <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                         <div className="grid gap-10 lg:grid-cols-12">
                             {/* Brand */}
@@ -461,10 +461,10 @@ export default function EcommerceStorefront({
                                         <div className="text-sm font-bold text-slate-900 dark:text-white">
                                             {formatShopName(shop?.name, 'Ma Boutique')}
                                         </div>
-                                        <div className="text-xs text-slate-500 dark:text-slate-400">Boutique en ligne</div>
+                                        <div className="text-xs font-medium text-slate-700 dark:text-slate-300">Boutique en ligne</div>
                                     </div>
                                 </Link>
-                                <p className="mt-4 text-sm text-slate-600 dark:text-slate-300 max-w-sm">
+                                <p className="mt-4 text-sm text-slate-800 dark:text-slate-200 max-w-sm">
                                     Une expérience d’achat simple, rapide et sécurisée. Découvrez nos nouveautés et nos produits en vedette.
                                 </p>
                                 <div className="mt-5 flex flex-wrap gap-2">
@@ -487,7 +487,7 @@ export default function EcommerceStorefront({
                             <div className="lg:col-span-8">
                                 <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
                                     <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200">
                                             Boutique
                                         </p>
                                         <ul className="mt-4 space-y-2">
@@ -511,7 +511,7 @@ export default function EcommerceStorefront({
                                     </div>
 
                                     <div className={cmsPages.length > 0 ? '' : 'sm:col-span-2 lg:col-span-2'}>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200">
                                             Informations
                                         </p>
                                         {cmsPages.length > 0 ? (
@@ -528,17 +528,17 @@ export default function EcommerceStorefront({
                                                 ))}
                                             </ul>
                                         ) : (
-                                            <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">
+                                            <p className="mt-4 text-sm text-slate-800 dark:text-slate-200">
                                                 Retrouvez bientôt ici nos pages d’informations (livraison, retours, contact).
                                             </p>
                                         )}
                                     </div>
 
                                     <div className="hidden lg:block">
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200">
                                             Confiance
                                         </p>
-                                        <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+                                        <ul className="mt-4 space-y-2 text-sm text-slate-800 dark:text-slate-200">
                                             <li className="flex items-center gap-2">
                                                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500/90" />
                                                 Paiement sécurisé
@@ -558,7 +558,7 @@ export default function EcommerceStorefront({
                         </div>
 
                         <div className="mt-10 pt-8 border-t border-slate-200/80 dark:border-slate-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                            <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
                                 © {new Date().getFullYear()} {formatShopName(shop?.name, 'Ma Boutique')}. Tous droits réservés.
                             </p>
                             <div className="flex items-center gap-4">
@@ -567,14 +567,14 @@ export default function EcommerceStorefront({
                                     config?.social_tiktok_url ||
                                     config?.social_youtube_url) && (
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[11px] text-slate-500 dark:text-slate-400">Suivez-nous</span>
+                                        <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">Suivez-nous</span>
                                         <div className="flex items-center gap-2">
                                             {config?.social_facebook_url && (
                                                 <a
                                                     href={config.social_facebook_url}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-200 hover:bg-[var(--sf-primary)]/20 hover:text-[var(--sf-primary)] transition-colors"
+                                                    className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-100 hover:bg-[var(--sf-primary)]/20 hover:text-[var(--sf-primary)] transition-colors"
                                                 >
                                                     <Facebook className="h-3.5 w-3.5" />
                                                 </a>
@@ -584,7 +584,7 @@ export default function EcommerceStorefront({
                                                     href={config.social_instagram_url}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-200 hover:bg-[var(--sf-primary)]/20 hover:text-[var(--sf-primary)] transition-colors"
+                                                    className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-100 hover:bg-[var(--sf-primary)]/20 hover:text-[var(--sf-primary)] transition-colors"
                                                 >
                                                     <Instagram className="h-3.5 w-3.5" />
                                                 </a>
@@ -594,7 +594,7 @@ export default function EcommerceStorefront({
                                                     href={config.social_youtube_url}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-200 hover:bg-[var(--sf-primary)]/20 hover:text-[var(--sf-primary)] transition-colors"
+                                                    className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-100 hover:bg-[var(--sf-primary)]/20 hover:text-[var(--sf-primary)] transition-colors"
                                                 >
                                                     <Youtube className="h-3.5 w-3.5" />
                                                 </a>
@@ -602,7 +602,7 @@ export default function EcommerceStorefront({
                                         </div>
                                     </div>
                                 )}
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300">
                                     Propulsé par une vitrine moderne
                                 </p>
                             </div>

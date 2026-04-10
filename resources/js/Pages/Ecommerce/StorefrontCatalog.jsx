@@ -37,12 +37,12 @@ function StorefrontHeader({ shop, cmsPages = [], availableCurrencies = [] }) {
     const navPages = (cmsPages || []).filter(shouldShowPageInNav).slice(0, 4);
 
     return (
-        <header className="sticky top-0 z-40 border-b border-slate-200/70 dark:border-slate-800 bg-white/75 dark:bg-slate-950/60 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-950/50">
+        <header className="sticky top-0 z-40 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 backdrop-blur-xl supports-[backdrop-filter]:bg-white/95 dark:supports-[backdrop-filter]:bg-slate-950/95">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <Link
                         href={links.index()}
-                        className="p-2 -ml-2 rounded-2xl text-slate-500 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--sf-primary)]/30"
+                        className="p-2 -ml-2 rounded-2xl text-slate-800 dark:text-slate-200 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--sf-primary)]/30"
                     >
                         <ArrowLeft className="h-5 w-5" />
                     </Link>
@@ -60,26 +60,26 @@ function StorefrontHeader({ shop, cmsPages = [], availableCurrencies = [] }) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2 sm:gap-3">
-                    <nav className="hidden md:flex items-center gap-1 rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-white/60 dark:bg-slate-950/30 p-1">
+                    <nav className="hidden md:flex items-center gap-1 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80 p-1">
                         {navPages.map((p) => (
                             <Link
                                 key={p.id}
                                 href={links.page(p.slug)}
-                                className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors"
+                                className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors"
                             >
                                 {p.title}
                             </Link>
                         ))}
                         <Link
                             href={links.blog()}
-                            className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors"
+                            className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors"
                         >
                             Blog
                         </Link>
                     </nav>
                     <Link
                         href={links.index()}
-                        className="hidden sm:inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white/60 dark:bg-slate-950/30 border border-slate-200/70 dark:border-slate-800 hover:border-[var(--sf-primary)] hover:text-[var(--sf-primary)] transition-colors"
+                        className="hidden sm:inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-[var(--sf-primary)] hover:text-[var(--sf-primary)] transition-colors"
                     >
                         Accueil
                     </Link>
@@ -196,7 +196,7 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
 
             <StorefrontHeader shop={shop} cmsPages={cmsPages} availableCurrencies={availableCurrencies} />
 
-            <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+            <div className="min-h-screen bg-white dark:bg-slate-950">
                 <div className="relative overflow-hidden bg-gradient-to-br from-[var(--sf-primary)] via-[var(--sf-secondary)] to-[var(--sf-primary)]">
                     <div className="absolute inset-0 opacity-10 bg-[length:24px_24px] [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.4)_1px,transparent_0)]" />
                     <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 lg:py-12">
@@ -326,7 +326,7 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
                                         onKeyPress={(e) => e.key === 'Enter' && handleFilter()}
-                                        className="pl-11 h-12 rounded-xl border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/50 focus:ring-2 focus:ring-[var(--sf-primary)]/30 text-base"
+                                        className="pl-11 h-12 rounded-xl border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-[var(--sf-primary)]/30 text-base text-slate-900 dark:text-slate-100"
                                     />
                                 </div>
                                 <Button onClick={handleFilter} className="h-12 px-5 rounded-xl gap-2 shrink-0">
@@ -430,7 +430,7 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
                     </div>
 
                     <div className="flex items-center justify-between mb-4 sm:mb-5">
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                        <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
                             {filteredAndSortedProducts.length} produit{filteredAndSortedProducts.length !== 1 ? 's' : ''} trouvé
                             {filteredAndSortedProducts.length !== 1 ? 's' : ''}
                         </p>

@@ -1,1 +1,0 @@
-import{c}from"./createLucideIcon-8Dsev2Ji.js";const e=[["rect",{width:"20",height:"12",x:"2",y:"6",rx:"2",key:"9lu3g6"}],["circle",{cx:"12",cy:"12",r:"2",key:"1c9p78"}],["path",{d:"M6 12h.01M18 12h.01",key:"113zkx"}]],r=c("banknote",e);const o=[["path",{d:"m21 21-4.34-4.34",key:"14j7rj"}],["circle",{cx:"11",cy:"11",r:"8",key:"4ej97u"}]],n=c("search",o);export{r as B,n as S};

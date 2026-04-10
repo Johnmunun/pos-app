@@ -23,7 +23,7 @@ function BrandBlock({ logoUrl, shopName, variant = 'default', compact = false })
         : 'font-bold text-sm sm:text-base text-slate-900 dark:text-white block truncate';
     const subClass = isSpotlight
         ? 'text-[11px] text-zinc-200 font-medium'
-        : 'text-[11px] text-slate-500 dark:text-slate-400';
+        : 'text-[11px] text-slate-700 dark:text-slate-300 font-medium';
 
     const logoSize = isEditorial ? (compact ? 'h-12 w-12' : 'h-14 w-14') : compact ? 'h-9 w-9' : 'h-10 w-10';
     const initialSize = isEditorial ? 'text-lg' : 'text-sm';
@@ -68,10 +68,10 @@ function NavLinks({ links, navPages, layoutPreset, navMode = 'pill' }) {
         layoutPreset === 'spotlight'
             ? spotlightLinkBase
             : layoutPreset === 'minimal'
-              ? 'inline-flex items-center gap-0.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-[var(--sf-primary)] transition-colors'
+              ? 'inline-flex items-center gap-0.5 text-sm font-semibold text-slate-800 dark:text-slate-200 hover:text-[var(--sf-primary)] transition-colors'
               : isPremium
-                ? 'inline-flex items-center gap-0.5 px-2.5 py-2 rounded-lg text-[11px] sm:text-xs font-semibold uppercase tracking-[0.12em] text-slate-600 dark:text-slate-300 hover:text-[var(--sf-primary)] transition-colors'
-                : 'inline-flex items-center gap-0.5 px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors';
+                ? 'inline-flex items-center gap-0.5 px-2.5 py-2 rounded-lg text-[11px] sm:text-xs font-semibold uppercase tracking-[0.12em] text-slate-800 dark:text-slate-200 hover:text-[var(--sf-primary)] transition-colors'
+                : 'inline-flex items-center gap-0.5 px-3 py-2 rounded-xl text-sm font-semibold text-slate-800 dark:text-slate-200 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors';
 
     const activeHomeClass =
         layoutPreset === 'spotlight'
@@ -87,7 +87,7 @@ function NavLinks({ links, navPages, layoutPreset, navMode = 'pill' }) {
               ? 'hidden lg:flex items-center gap-6 xl:gap-8'
               : isPremium
                 ? 'hidden xl:flex items-center justify-center gap-0.5 sm:gap-1 flex-1'
-                : 'hidden lg:flex items-center gap-1 rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-white/60 dark:bg-slate-950/30 p-1';
+                : 'hidden lg:flex items-center gap-1 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/70 p-1';
 
     const showChevron = isPremium && layoutPreset !== 'spotlight' && layoutPreset !== 'minimal';
 
@@ -119,7 +119,7 @@ function TopUtilityBar({ message, links, variant = 'light' }) {
     const dark = variant === 'dark';
     const bar = dark
         ? 'border-b border-zinc-700/80 bg-zinc-950 text-zinc-100'
-        : 'border-b border-slate-200/80 dark:border-slate-800 bg-slate-100/90 dark:bg-slate-900/85 text-slate-700 dark:text-slate-200';
+        : 'border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100';
 
     return (
         <div className={`text-[11px] sm:text-xs ${bar}`}>
@@ -133,27 +133,27 @@ function TopUtilityBar({ message, links, variant = 'light' }) {
                     </Link>
                     <Link
                         href={links.blog()}
-                        className={`shrink-0 hidden sm:inline font-semibold hover:underline underline-offset-2 ${dark ? 'text-zinc-100 hover:text-white' : 'text-slate-600 dark:text-slate-300'}`}
+                        className={`shrink-0 hidden sm:inline font-semibold hover:underline underline-offset-2 ${dark ? 'text-zinc-100 hover:text-white' : 'text-slate-800 dark:text-slate-200'}`}
                     >
                         Blog
                     </Link>
                     <Link
                         href={links.catalog()}
-                        className={`shrink-0 hidden md:inline font-semibold hover:underline underline-offset-2 ${dark ? 'text-zinc-100 hover:text-white' : 'text-slate-600 dark:text-slate-300'}`}
+                        className={`shrink-0 hidden md:inline font-semibold hover:underline underline-offset-2 ${dark ? 'text-zinc-100 hover:text-white' : 'text-slate-800 dark:text-slate-200'}`}
                     >
                         Catalogue
                     </Link>
                 </div>
                 <p
                     className={`flex-1 text-center truncate px-2 font-semibold tabular-nums text-[11px] sm:text-xs ${
-                        dark ? 'text-zinc-100 [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]' : 'opacity-90'
+                        dark ? 'text-zinc-100 [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]' : 'text-slate-800 dark:text-slate-100'
                     }`}
                 >
                     {message}
                 </p>
                 <Link
                     href={links.cart()}
-                    className={`shrink-0 font-semibold hover:underline underline-offset-2 ${dark ? 'text-white hover:text-zinc-50' : 'text-slate-600 dark:text-slate-300'}`}
+                    className={`shrink-0 font-semibold hover:underline underline-offset-2 ${dark ? 'text-white hover:text-zinc-50' : 'text-slate-800 dark:text-slate-200'}`}
                 >
                     Panier
                 </Link>
@@ -235,7 +235,7 @@ function ToolbarRight({
     const catClass =
         layoutPreset === 'spotlight'
             ? 'inline-flex items-center px-4 py-2 rounded-xl text-sm font-bold text-white bg-white/20 border border-white/30 [text-shadow:0_1px_2px_rgba(0,0,0,0.4)] hover:bg-white/25 hover:border-white/40 transition-colors'
-            : 'inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-[var(--sf-primary)] bg-white/60 dark:bg-slate-950/30 border border-slate-200/70 dark:border-slate-800 hover:border-[var(--sf-primary)] transition-colors';
+            : 'inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold text-slate-900 dark:text-slate-100 hover:text-[var(--sf-primary)] bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 hover:border-[var(--sf-primary)] transition-colors';
 
     const cartClass =
         layoutPreset === 'spotlight'
@@ -280,33 +280,33 @@ function ToolbarRight({
 function TrustGrid() {
     return (
         <div className="pt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="rounded-2xl bg-white/80 dark:bg-slate-950/30 border border-slate-200/70 dark:border-slate-800 p-3 backdrop-blur">
+            <div className="rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 p-3 shadow-sm shadow-slate-900/5">
                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
                     <Truck className="h-4 w-4 text-[var(--sf-primary)]" />
                     Livraison
                 </div>
-                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Rapide & fiable</p>
+                <p className="mt-1 text-xs text-slate-800 dark:text-slate-200">Rapide & fiable</p>
             </div>
-            <div className="rounded-2xl bg-white/80 dark:bg-slate-950/30 border border-slate-200/70 dark:border-slate-800 p-3 backdrop-blur">
+            <div className="rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 p-3 shadow-sm shadow-slate-900/5">
                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
                     <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                     Paiement
                 </div>
-                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Sécurisé</p>
+                <p className="mt-1 text-xs text-slate-800 dark:text-slate-200">Sécurisé</p>
             </div>
-            <div className="rounded-2xl bg-white/80 dark:bg-slate-950/30 border border-slate-200/70 dark:border-slate-800 p-3 backdrop-blur">
+            <div className="rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 p-3 shadow-sm shadow-slate-900/5">
                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
                     <Clock className="h-4 w-4 text-sky-600 dark:text-sky-400" />
                     24/7
                 </div>
-                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Commande facile</p>
+                <p className="mt-1 text-xs text-slate-800 dark:text-slate-200">Commande facile</p>
             </div>
-            <div className="rounded-2xl bg-white/80 dark:bg-slate-950/30 border border-slate-200/70 dark:border-slate-800 p-3 backdrop-blur">
+            <div className="rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 p-3 shadow-sm shadow-slate-900/5">
                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
                     <Headphones className="h-4 w-4 text-violet-600 dark:text-violet-400" />
                     Support
                 </div>
-                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Réactif</p>
+                <p className="mt-1 text-xs text-slate-800 dark:text-slate-200">Réactif</p>
             </div>
         </div>
     );
@@ -367,12 +367,12 @@ export default function StorefrontHeaderHero({
                         </div>
                     </div>
                 </header>
-                <section className="relative overflow-hidden bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+                <section className="relative overflow-hidden bg-white dark:bg-gradient-to-b dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
                     <div className="absolute inset-0 pointer-events-none opacity-[0.35] dark:opacity-20">
                         <div className="absolute top-20 left-1/2 -translate-x-1/2 h-64 w-[42rem] rounded-full bg-[var(--sf-primary)]/25 blur-3xl" />
                     </div>
                     <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24 text-center">
-                        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-sm">
+                        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-xs font-semibold text-slate-900 dark:text-slate-100 shadow-sm">
                             <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[var(--sf-primary)]" />
                             {heroBadge}
                         </div>
@@ -380,7 +380,7 @@ export default function StorefrontHeaderHero({
                             {heroTitle}
                         </h1>
                         <p className="mt-4 text-lg sm:text-xl font-semibold text-[var(--sf-primary)]">{heroSubtitle}</p>
-                        <p className="mt-4 text-base text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
+                        <p className="mt-4 text-base text-slate-800 dark:text-slate-200 max-w-2xl mx-auto leading-relaxed">
                             {heroDescription}
                         </p>
                         <div className="mt-8 flex flex-col sm:flex-row flex-wrap gap-3 justify-center">
@@ -393,7 +393,7 @@ export default function StorefrontHeaderHero({
                             </Link>
                             <Link
                                 href={links.catalog()}
-                                className="inline-flex items-center justify-center px-7 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/40 text-sm font-semibold text-slate-800 dark:text-slate-100 hover:border-[var(--sf-primary)] transition-colors"
+                                className="inline-flex items-center justify-center px-7 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-semibold text-slate-900 dark:text-slate-100 hover:border-[var(--sf-primary)] transition-colors"
                             >
                                 {secondaryLabel}
                             </Link>
@@ -540,7 +540,7 @@ export default function StorefrontHeaderHero({
                                     {heroTitle}
                                 </h1>
                                 <p className="text-xl font-semibold text-[var(--sf-primary)]">{heroSubtitle}</p>
-                                <p className="text-base sm:text-lg text-slate-300 max-w-lg leading-relaxed">{heroDescription}</p>
+                                <p className="text-base sm:text-lg text-zinc-100 max-w-lg leading-relaxed">{heroDescription}</p>
                                 <div className="flex flex-wrap gap-3 pt-2">
                                     <Link
                                         href={links.catalog()}
@@ -570,7 +570,7 @@ export default function StorefrontHeaderHero({
                                             />
                                         </Link>
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-slate-500 text-sm px-6 text-center">
+                                        <div className="w-full h-full flex items-center justify-center text-zinc-200 text-sm px-6 text-center">
                                             Ajoutez une bannière « homepage » pour un impact maximal.
                                         </div>
                                     )}
@@ -615,7 +615,7 @@ export default function StorefrontHeaderHero({
                                     <span className="font-bold text-base sm:text-lg text-slate-900 dark:text-white block truncate tracking-tight">
                                         {formatShopName(shop?.name, 'Ma Boutique')}
                                     </span>
-                                    <span className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
+                                    <span className="text-[10px] sm:text-[11px] text-slate-700 dark:text-slate-300 uppercase tracking-wider font-semibold">
                                         Boutique en ligne
                                     </span>
                                 </div>
@@ -663,7 +663,7 @@ export default function StorefrontHeaderHero({
                 <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
                     <div className="grid lg:grid-cols-12 gap-10 items-center">
                         <div className="lg:col-span-6 space-y-5">
-                            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 dark:bg-slate-950/40 border border-slate-200/70 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 backdrop-blur">
+                            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-slate-100 shadow-sm">
                                 <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[var(--sf-primary)]" />
                                 {heroBadge}
                             </div>
@@ -671,7 +671,7 @@ export default function StorefrontHeaderHero({
                                 {heroTitle}
                             </h1>
                             <p className="text-xl font-semibold text-[var(--sf-primary)]">{heroSubtitle}</p>
-                            <p className="text-base sm:text-lg text-slate-700/90 dark:text-slate-200/80 max-w-xl break-words">
+                            <p className="text-base sm:text-lg text-slate-900 dark:text-slate-100 max-w-xl break-words">
                                 {heroDescription}
                             </p>
 
@@ -685,7 +685,7 @@ export default function StorefrontHeaderHero({
                                 </Link>
                                 <Link
                                     href={links.catalog()}
-                                    className="inline-flex items-center justify-center px-6 py-3 rounded-2xl bg-white/80 dark:bg-slate-950/30 border border-slate-200/70 dark:border-slate-800 text-sm font-semibold text-slate-800 dark:text-slate-100 hover:border-[var(--sf-primary)] hover:text-[var(--sf-primary)] transition-colors backdrop-blur"
+                                    className="inline-flex items-center justify-center px-6 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-900 dark:text-slate-100 hover:border-[var(--sf-primary)] hover:text-[var(--sf-primary)] transition-colors"
                                 >
                                     {secondaryLabel}
                                 </Link>
