@@ -1,13 +1,44 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { Card, CardHeader, CardTitle, CardContent } from '@/Components/ui/card';
 import { Input } from '@/Components/ui/input';
 import { Button } from '@/Components/ui/button';
-import { Sparkles, LayoutTemplate, Palette } from 'lucide-react';
+import { Sparkles, LayoutTemplate, Palette, Layers, Crown } from 'lucide-react';
 import RichTextEditor from '@/Components/RichTextEditor';
 
-export default function StorefrontCms({ shop, config }) {
+const LAYOUT_PRESETS = [
+    {
+        id: 'classic',
+        title: 'Classique',
+        description: 'Navigation flottante et héro en deux colonnes — modèle actuel par défaut.',
+        pro: false,
+    },
+    {
+        id: 'minimal',
+        title: 'Épuré',
+        description: 'Barre fine, liens discrets et héro centré façon boutique SaaS.',
+        pro: true,
+    },
+    {
+        id: 'editorial',
+        title: 'Éditorial',
+        description: 'Bandeau accroche, logo centré et héro plein écran type lookbook.',
+        pro: true,
+    },
+    {
+        id: 'spotlight',
+        title: 'Spotlight',
+        description: 'En-tête sombre contrasté et mise en avant produit façon grande surface en ligne.',
+        pro: true,
+    },
+];
+
+export default function StorefrontCms({ shop, config, storefront_pro_themes }) {
+    const { planFeatures } = usePage().props;
+    const canProThemes = storefront_pro_themes ?? planFeatures?.ecommerce_storefront_pro_themes ?? false;
+
     const { data, setData, put, processing } = useForm({
+        storefront_layout_preset: config?.storefront_layout_preset || 'classic',
         hero_badge: config?.hero_badge || '',
         hero_title: config?.hero_title || '',
         hero_subtitle: config?.hero_subtitle || '',
@@ -55,6 +86,64 @@ export default function StorefrontCms({ shop, config }) {
             <Head title="CMS Vitrine E-commerce" />
 
             <div className="py-6 max-w-4xl space-y-6">
+                <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-base text-gray-900 dark:text-white">
+                            <Layers className="h-5 w-5 text-sky-500" />
+                            Modèle d&apos;en-tête &amp; héro
+                        </CardTitle>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Personnalisez uniquement le haut de page d&apos;accueil (barre de navigation + section héro). Le reste de
+                            la vitrine reste inchangé. Les modèles avancés sont réservés aux forfaits incluant la vitrine Pro.
+                        </p>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {LAYOUT_PRESETS.map((p) => {
+                                    const locked = p.pro && !canProThemes;
+                                    const selected = data.storefront_layout_preset === p.id;
+                                    return (
+                                        <button
+                                            key={p.id}
+                                            type="button"
+                                            disabled={locked}
+                                            onClick={() => {
+                                                if (!locked) setData('storefront_layout_preset', p.id);
+                                            }}
+                                            className={`relative text-left rounded-2xl border p-4 transition-all ${
+                                                selected
+                                                    ? 'border-amber-500 ring-2 ring-amber-500/25 bg-amber-50/50 dark:bg-amber-950/25'
+                                                    : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900/40 hover:border-gray-300 dark:hover:border-slate-600'
+                                            } ${locked ? 'opacity-55 cursor-not-allowed' : 'cursor-pointer'}`}
+                                        >
+                                            {p.pro ? (
+                                                <span className="absolute top-3 right-3 inline-flex items-center gap-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 rounded-full">
+                                                    <Crown className="h-3 w-3" />
+                                                    Pro
+                                                </span>
+                                            ) : null}
+                                            <p className="text-sm font-semibold text-gray-900 dark:text-white pr-14">{p.title}</p>
+                                            <p className="mt-1 text-xs text-gray-600 dark:text-gray-400 leading-snug">{p.description}</p>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            {!canProThemes ? (
+                                <p className="text-xs text-amber-800 dark:text-amber-200/90 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 rounded-xl px-3 py-2">
+                                    Les modèles Pro seront appliqués automatiquement lorsque votre abonnement inclut la fonctionnalité
+                                    « vitrine Pro » (en-tête &amp; héro avancés).
+                                </p>
+                            ) : null}
+                            <div className="pt-1 flex justify-end">
+                                <Button type="submit" disabled={processing}>
+                                    Enregistrer
+                                </Button>
+                            </div>
+                        </form>
+                    </CardContent>
+                </Card>
+
                 <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
                     <CardHeader className="pb-3">
                         <CardTitle className="flex items-center gap-2 text-base text-gray-900 dark:text-white">

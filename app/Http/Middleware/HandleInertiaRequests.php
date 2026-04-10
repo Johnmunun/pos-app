@@ -252,6 +252,7 @@ class HandleInertiaRequests extends Middleware
                 $planFeatures['ecommerce_orders'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.orders');
                 $planFeatures['ecommerce_promotions'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.promotions');
                 $planFeatures['ecommerce_marketing_pro'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.marketing.pro');
+                $planFeatures['ecommerce_storefront_pro_themes'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.storefront.pro_themes');
                 $planFeatures['ecommerce_product_ai_vision'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.product.ai_vision');
                 $planFeatures['ai_product_image_generate'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ai.product.image.generate');
                 $planFeatures['ai_media_image_generate'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ai.media.image.generate');

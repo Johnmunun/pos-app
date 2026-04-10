@@ -380,6 +380,7 @@ class StorefrontController
     private function getStorefrontConfig(Shop $shop): array
     {
         $defaults = [
+            'storefront_layout_preset' => 'classic',
             'hero_badge' => 'Season Sale',
             'hero_title' => 'MEN\'S FASHION',
             'hero_subtitle' => 'Min. 35–70% Off',
@@ -401,6 +402,29 @@ class StorefrontController
         return array_merge($defaults, $config);
     }
 
+    /**
+     * @return list<string>
+     */
+    private function storefrontLayoutPresetCodes(): array
+    {
+        return ['classic', 'minimal', 'editorial', 'spotlight'];
+    }
+
+    private function resolveStorefrontLayoutPreset(string $raw, string $tenantId): string
+    {
+        $preset = strtolower(trim($raw));
+        if (!in_array($preset, $this->storefrontLayoutPresetCodes(), true)) {
+            $preset = 'classic';
+        }
+        if ($preset === 'classic') {
+            return 'classic';
+        }
+
+        $features = app(FeatureLimitService::class);
+
+        return $features->isFeatureEnabled($tenantId, 'ecommerce.storefront.pro_themes') ? $preset : 'classic';
+    }
+
     public function index(Request $request): Response
     {
         $user = $request->user();
@@ -420,6 +444,10 @@ class StorefrontController
 
         // La prévisualisation est autorisée pour tout utilisateur ayant accès au storefront (même si la boutique n'est pas "en ligne")
         $config = $this->getStorefrontConfig($shop);
+        $config['storefront_layout_preset'] = $this->resolveStorefrontLayoutPreset(
+            isset($config['storefront_layout_preset']) ? (string) $config['storefront_layout_preset'] : 'classic',
+            $tenantId
+        );
 
         // Produits en vedette (limités pour éviter les requêtes lourdes)
         $featured = [];
@@ -594,6 +622,13 @@ class StorefrontController
         }
 
         $config = $this->getStorefrontConfig($shop);
+        $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
+        $features = app(FeatureLimitService::class);
+        $storefrontProThemes = $features->isFeatureEnabled($tenantId, 'ecommerce.storefront.pro_themes');
+        $config['storefront_layout_preset'] = $this->resolveStorefrontLayoutPreset(
+            isset($config['storefront_layout_preset']) ? (string) $config['storefront_layout_preset'] : 'classic',
+            $tenantId
+        );
 
         $shopLogoUrl = $this->getShopLogoUrl((string) $shopId);
 
@@ -604,6 +639,7 @@ class StorefrontController
                 'logo_url' => $shopLogoUrl,
             ],
             'config' => $config,
+            'storefront_pro_themes' => $storefrontProThemes,
         ]);
     }
 
@@ -616,6 +652,7 @@ class StorefrontController
         }
 
         $data = $request->validate([
+            'storefront_layout_preset' => 'nullable|string|in:classic,minimal,editorial,spotlight',
             'hero_badge' => 'nullable|string|max:100',
             'hero_title' => 'nullable|string|max:150',
             'hero_subtitle' => 'nullable|string|max:150',
@@ -648,6 +685,14 @@ class StorefrontController
             if (isset($data[$key]) && (string) $data[$key] === '') {
                 unset($data[$key]);
             }
+        }
+
+        $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
+        if (array_key_exists('storefront_layout_preset', $data)) {
+            $data['storefront_layout_preset'] = $this->resolveStorefrontLayoutPreset(
+                (string) $data['storefront_layout_preset'],
+                $tenantId
+            );
         }
 
         $shop->ecommerce_storefront_config = array_merge($current, $data);
