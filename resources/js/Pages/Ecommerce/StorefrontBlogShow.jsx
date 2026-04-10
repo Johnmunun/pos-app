@@ -23,7 +23,7 @@ function StorefrontBlogShowHeader({ shop, cmsPages = [] }) {
                 <div className="flex items-center gap-3">
                     <Link
                         href={links.blog()}
-                        className="p-2 -ml-2 rounded-2xl text-slate-500 hover:text-amber-700 dark:hover:text-amber-400 hover:bg-amber-50/80 dark:hover:bg-amber-950/25 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                        className="p-2 -ml-2 rounded-2xl text-neutral-900 hover:text-[var(--sf-primary,#d97706)] dark:text-neutral-100 dark:hover:text-[var(--sf-primary,#fbbf24)] hover:bg-amber-50/80 dark:hover:bg-amber-950/25 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/30"
                     >
                         <ArrowLeft className="h-5 w-5" />
                     </Link>

@@ -37,7 +37,7 @@ function StorefrontProductHeader({ shop, cmsPages = [], availableCurrencies = []
                 <div className="flex items-center gap-3">
                     <Link
                         href={links.index()}
-                        className="p-2 -ml-2 rounded-2xl text-slate-500 hover:text-amber-700 dark:hover:text-amber-400 hover:bg-amber-50/80 dark:hover:bg-amber-950/25 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                        className="p-2 -ml-2 rounded-2xl text-neutral-900 hover:text-[var(--sf-primary,#d97706)] dark:text-neutral-100 dark:hover:text-[var(--sf-primary,#fbbf24)] hover:bg-amber-50/80 dark:hover:bg-amber-950/25 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/30"
                     >
                         <ArrowLeft className="h-5 w-5" />
                     </Link>
@@ -61,7 +61,7 @@ function StorefrontProductHeader({ shop, cmsPages = [], availableCurrencies = []
                                 <Link
                                     key={p.id}
                                     href={links.page(p.slug)}
-                                    className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-amber-700 dark:hover:text-amber-400 hover:bg-amber-50/80 dark:hover:bg-amber-950/25 transition-colors"
+                                    className="px-3 py-2 rounded-xl text-xs font-semibold text-neutral-950 dark:text-neutral-100 hover:text-[var(--sf-primary,#d97706)] dark:hover:text-[var(--sf-primary,#fbbf24)] hover:bg-amber-50/80 dark:hover:bg-amber-950/25 transition-colors"
                                 >
                                     {p.title}
                                 </Link>
@@ -70,7 +70,7 @@ function StorefrontProductHeader({ shop, cmsPages = [], availableCurrencies = []
                     )}
                     <Link
                         href={links.catalog()}
-                        className="hidden sm:inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white/60 dark:bg-slate-950/30 border border-slate-200/70 dark:border-slate-800 hover:border-[var(--sf-primary,#f59e0b)] dark:hover:border-[var(--sf-primary,#f59e0b)] hover:text-[var(--sf-primary,#f59e0b)] dark:hover:text-[var(--sf-primary,#f59e0b)] transition-colors"
+                        className="hidden sm:inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold text-neutral-950 dark:text-neutral-100 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-[var(--sf-primary,#f59e0b)] dark:hover:border-[var(--sf-primary,#f59e0b)] hover:text-[var(--sf-primary,#f59e0b)] dark:hover:text-[var(--sf-primary,#f59e0b)] transition-colors"
                     >
                         Catalogue
                     </Link>

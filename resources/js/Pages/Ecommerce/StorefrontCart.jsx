@@ -102,7 +102,7 @@ function StorefrontCartHeader({ shop, cmsPages = [], currency, availableCurrenci
                                 <Link
                                     key={p.id}
                                     href={links.page(p.slug)}
-                                    className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                                    className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-neutral-950 dark:text-neutral-100 hover:text-[var(--sf-primary,#d97706)] dark:hover:text-[var(--sf-primary,#fbbf24)] hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
                                 >
                                     {p.title}
                                 </Link>
@@ -111,7 +111,7 @@ function StorefrontCartHeader({ shop, cmsPages = [], currency, availableCurrenci
                     )}
                     <Link
                         href={links.catalog()}
-                        className="hidden sm:inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                        className="hidden sm:inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-950 dark:text-neutral-100 hover:text-[var(--sf-primary,#d97706)] dark:hover:text-[var(--sf-primary,#fbbf24)] hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
                     >
                         Catalogue
                     </Link>

@@ -22,7 +22,7 @@ function BrandBlock({ logoUrl, shopName, variant = 'default', compact = false })
         ? 'font-bold text-sm sm:text-base text-white block truncate'
         : 'font-bold text-sm sm:text-base text-slate-900 dark:text-white block truncate';
     const subClass = isSpotlight
-        ? 'text-[11px] text-zinc-200 font-medium'
+        ? 'text-[11px] text-white/90 font-medium'
         : 'text-[11px] text-slate-700 dark:text-slate-300 font-medium';
 
     const logoSize = isEditorial ? (compact ? 'h-12 w-12' : 'h-14 w-14') : compact ? 'h-9 w-9' : 'h-10 w-10';
@@ -60,7 +60,7 @@ function BrandBlock({ logoUrl, shopName, variant = 'default', compact = false })
 function NavLinks({ links, navPages, layoutPreset, navMode = 'pill' }) {
     const isPremium = navMode === 'premium';
     const spotlightLinkBase =
-        'inline-flex items-center gap-0.5 px-3 py-2 rounded-xl text-sm font-semibold text-zinc-100 tracking-wide [text-shadow:0_1px_2px_rgba(0,0,0,0.45)] hover:text-white hover:bg-white/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/50 transition-colors';
+        'inline-flex items-center gap-0.5 px-3 py-2 rounded-xl text-sm font-semibold text-white tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,0.65)] hover:text-white hover:bg-white/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/50 transition-colors visited:text-white';
     const spotlightLinkActive =
         'text-white bg-white/20 ring-1 ring-white/35 shadow-md shadow-black/25 [text-shadow:0_1px_3px_rgba(0,0,0,0.55)]';
 
@@ -68,16 +68,16 @@ function NavLinks({ links, navPages, layoutPreset, navMode = 'pill' }) {
         layoutPreset === 'spotlight'
             ? spotlightLinkBase
             : layoutPreset === 'minimal'
-              ? 'inline-flex items-center gap-0.5 text-sm font-semibold text-slate-800 dark:text-slate-200 hover:text-[var(--sf-primary)] transition-colors'
+              ? 'inline-flex items-center gap-0.5 text-sm font-semibold text-neutral-950 dark:text-neutral-100 hover:text-[var(--sf-primary)] transition-colors visited:text-neutral-950 dark:visited:text-neutral-100'
               : isPremium
-                ? 'inline-flex items-center gap-0.5 px-2.5 py-2 rounded-lg text-[11px] sm:text-xs font-semibold uppercase tracking-[0.12em] text-slate-800 dark:text-slate-200 hover:text-[var(--sf-primary)] transition-colors'
-                : 'inline-flex items-center gap-0.5 px-3 py-2 rounded-xl text-sm font-semibold text-slate-800 dark:text-slate-200 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors';
+                ? 'inline-flex items-center gap-0.5 px-2.5 py-2 rounded-lg text-[11px] sm:text-xs font-semibold uppercase tracking-[0.12em] text-neutral-950 dark:text-neutral-100 hover:text-[var(--sf-primary)] transition-colors visited:text-neutral-950 dark:visited:text-neutral-100'
+                : 'inline-flex items-center gap-0.5 px-3 py-2 rounded-xl text-sm font-semibold text-neutral-950 dark:text-neutral-100 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors visited:text-neutral-950 dark:visited:text-neutral-100';
 
     const activeHomeClass =
         layoutPreset === 'spotlight'
             ? spotlightLinkActive
             : isPremium
-              ? 'text-[var(--sf-primary)]'
+              ? 'text-[var(--sf-primary)] !font-bold ring-1 ring-[var(--sf-primary)]/35 bg-[var(--sf-primary)]/10'
               : 'text-[var(--sf-primary)] bg-[var(--sf-primary)]/10';
 
     const wrapClass =
@@ -98,17 +98,17 @@ function NavLinks({ links, navPages, layoutPreset, navMode = 'pill' }) {
             </Link>
             <Link href={links.catalog()} className={linkClass}>
                 Catalogue
-                {showChevron ? <ChevronDown className="h-3 w-3 opacity-40" strokeWidth={2.5} /> : null}
+                {showChevron ? <ChevronDown className="h-3 w-3 shrink-0 opacity-80 text-current" strokeWidth={2.5} /> : null}
             </Link>
             {navPages.map((p) => (
                 <Link key={p.id} href={links.page(p.slug)} className={linkClass}>
                     {p.title}
-                    {showChevron ? <ChevronDown className="h-3 w-3 opacity-40" strokeWidth={2.5} /> : null}
+                    {showChevron ? <ChevronDown className="h-3 w-3 shrink-0 opacity-80 text-current" strokeWidth={2.5} /> : null}
                 </Link>
             ))}
             <Link href={links.blog()} className={linkClass}>
                 Blog
-                {showChevron ? <ChevronDown className="h-3 w-3 opacity-40" strokeWidth={2.5} /> : null}
+                {showChevron ? <ChevronDown className="h-3 w-3 shrink-0 opacity-80 text-current" strokeWidth={2.5} /> : null}
             </Link>
         </nav>
     );
@@ -118,7 +118,7 @@ function NavLinks({ links, navPages, layoutPreset, navMode = 'pill' }) {
 function TopUtilityBar({ message, links, variant = 'light' }) {
     const dark = variant === 'dark';
     const bar = dark
-        ? 'border-b border-zinc-700/80 bg-zinc-950 text-zinc-100'
+        ? 'border-b border-zinc-700/80 bg-zinc-950 text-white'
         : 'border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100';
 
     return (
@@ -127,33 +127,33 @@ function TopUtilityBar({ message, links, variant = 'light' }) {
                 <div className="flex items-center gap-3 sm:gap-5 min-w-0">
                     <Link
                         href={links.index()}
-                        className={`shrink-0 font-semibold hover:underline underline-offset-2 ${dark ? 'text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.5)]' : 'text-slate-800 dark:text-white'}`}
+                        className={`shrink-0 font-semibold hover:underline underline-offset-2 ${dark ? 'text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.5)]' : 'text-slate-900 dark:text-white'}`}
                     >
                         Accueil
                     </Link>
                     <Link
                         href={links.blog()}
-                        className={`shrink-0 hidden sm:inline font-semibold hover:underline underline-offset-2 ${dark ? 'text-zinc-100 hover:text-white' : 'text-slate-800 dark:text-slate-200'}`}
+                        className={`shrink-0 hidden sm:inline font-semibold hover:underline underline-offset-2 ${dark ? 'text-white hover:text-white' : 'text-slate-900 dark:text-slate-100'}`}
                     >
                         Blog
                     </Link>
                     <Link
                         href={links.catalog()}
-                        className={`shrink-0 hidden md:inline font-semibold hover:underline underline-offset-2 ${dark ? 'text-zinc-100 hover:text-white' : 'text-slate-800 dark:text-slate-200'}`}
+                        className={`shrink-0 hidden md:inline font-semibold hover:underline underline-offset-2 ${dark ? 'text-white hover:text-white' : 'text-slate-900 dark:text-slate-100'}`}
                     >
                         Catalogue
                     </Link>
                 </div>
                 <p
                     className={`flex-1 text-center truncate px-2 font-semibold tabular-nums text-[11px] sm:text-xs ${
-                        dark ? 'text-zinc-100 [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]' : 'text-slate-800 dark:text-slate-100'
+                        dark ? 'text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]' : 'text-slate-900 dark:text-slate-100'
                     }`}
                 >
                     {message}
                 </p>
                 <Link
                     href={links.cart()}
-                    className={`shrink-0 font-semibold hover:underline underline-offset-2 ${dark ? 'text-white hover:text-zinc-50' : 'text-slate-800 dark:text-slate-200'}`}
+                    className={`shrink-0 font-semibold hover:underline underline-offset-2 ${dark ? 'text-white hover:text-white' : 'text-slate-900 dark:text-slate-100'}`}
                 >
                     Panier
                 </Link>
@@ -497,9 +497,9 @@ export default function StorefrontHeaderHero({
     if (layoutPreset === 'spotlight') {
         return (
             <>
-                <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/98 backdrop-blur-xl text-white shadow-lg shadow-black/20">
+                <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950 text-white shadow-lg shadow-black/20">
                     <TopUtilityBar message={heroBadge} links={links} variant="dark" />
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-6 bg-slate-950">
                         <Link
                             href={links.index()}
                             className="rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--sf-primary)]/40 min-w-0 shrink-0"
@@ -595,7 +595,7 @@ export default function StorefrontHeaderHero({
         <>
             <header className="sticky top-0 z-50 shadow-md shadow-slate-900/6 dark:shadow-black/30">
                 <TopUtilityBar message={heroBadge} links={links} variant="light" />
-                <div className="bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800">
+                <div className="bg-white dark:bg-slate-950 border-b border-slate-200/80 dark:border-slate-800">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 lg:py-3.5">
                         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:gap-8">
                             <Link

@@ -42,7 +42,7 @@ function StorefrontHeader({ shop, cmsPages = [], availableCurrencies = [] }) {
                 <div className="flex items-center gap-3">
                     <Link
                         href={links.index()}
-                        className="p-2 -ml-2 rounded-2xl text-slate-800 dark:text-slate-200 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--sf-primary)]/30"
+                        className="p-2 -ml-2 rounded-2xl text-neutral-950 dark:text-neutral-100 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--sf-primary)]/30"
                     >
                         <ArrowLeft className="h-5 w-5" />
                     </Link>
@@ -65,14 +65,14 @@ function StorefrontHeader({ shop, cmsPages = [], availableCurrencies = [] }) {
                             <Link
                                 key={p.id}
                                 href={links.page(p.slug)}
-                                className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors"
+                                className="px-3 py-2 rounded-xl text-xs font-semibold text-neutral-950 dark:text-neutral-100 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors"
                             >
                                 {p.title}
                             </Link>
                         ))}
                         <Link
                             href={links.blog()}
-                            className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors"
+                            className="px-3 py-2 rounded-xl text-xs font-semibold text-neutral-950 dark:text-neutral-100 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors"
                         >
                             Blog
                         </Link>
