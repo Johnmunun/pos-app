@@ -41,10 +41,28 @@ class MarketingController
         return $shop->tenant_id !== null ? (string) $shop->tenant_id : (string) $shop->id;
     }
 
+    private function resolveShop(string $shopId, ?string $tenantId = null): ?Shop
+    {
+        $shop = Shop::query()->find($shopId);
+        if ($shop !== null) {
+            return $shop;
+        }
+
+        if ($tenantId !== null && $tenantId !== '') {
+            return Shop::query()
+                ->where('tenant_id', $tenantId)
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        return null;
+    }
+
     public function index(Request $request): Response
     {
         $shopId = $this->getShopId($request);
-        $shop = Shop::find($shopId);
+        $tenantId = $request->user()?->tenant_id ? (string) $request->user()?->tenant_id : null;
+        $shop = $this->resolveShop($shopId, $tenantId);
 
         if (!$shop) {
             abort(404, 'Shop not found');
@@ -86,7 +104,8 @@ class MarketingController
     public function update(Request $request): RedirectResponse
     {
         $shopId = $this->getShopId($request);
-        $shop = Shop::find($shopId);
+        $tenantId = $request->user()?->tenant_id ? (string) $request->user()?->tenant_id : null;
+        $shop = $this->resolveShop($shopId, $tenantId);
 
         if (!$shop) {
             abort(404, 'Shop not found');

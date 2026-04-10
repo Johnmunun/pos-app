@@ -21,6 +21,7 @@ export default function CmsBannerDrawer({ isOpen, onClose, banner = null, positi
     const { data, setData, post, put, processing, errors } = useForm({
         title: banner?.title ?? '',
         image_path: banner?.image_path ?? '',
+        image_file: null,
         link: banner?.link ?? '',
         position: banner?.position ?? 'homepage',
         is_active: banner?.is_active ?? true,
@@ -31,6 +32,7 @@ export default function CmsBannerDrawer({ isOpen, onClose, banner = null, positi
         setData({
             title: banner?.title ?? '',
             image_path: banner?.image_path ?? '',
+            image_file: null,
             link: banner?.link ?? '',
             position: banner?.position ?? 'homepage',
             is_active: banner?.is_active ?? true,
@@ -39,8 +41,8 @@ export default function CmsBannerDrawer({ isOpen, onClose, banner = null, positi
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (isEdit) put(route('ecommerce.cms.banners.update', banner.id), { onSuccess: onClose });
-        else post(route('ecommerce.cms.banners.store'), { onSuccess: onClose });
+        if (isEdit) put(route('ecommerce.cms.banners.update', banner.id), { onSuccess: onClose, forceFormData: true });
+        else post(route('ecommerce.cms.banners.store'), { onSuccess: onClose, forceFormData: true });
     };
 
     return (
@@ -70,6 +72,16 @@ export default function CmsBannerDrawer({ isOpen, onClose, banner = null, positi
                         <Label>Image (chemin ou URL)</Label>
                         <Input value={data.image_path} onChange={(e) => setData('image_path', e.target.value)} className="mt-1 placeholder:text-gray-500 dark:placeholder:text-gray-400" placeholder="Ex : ecommerce/cms/media/xxx/banner.jpg" />
                         {errors.image_path && <p className="text-sm text-red-500 mt-1">{errors.image_path}</p>}
+                    </div>
+                    <div>
+                        <Label>Ou uploader une image</Label>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => setData('image_file', e.target.files?.[0] || null)}
+                            className="mt-1 block w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200"
+                        />
+                        {errors.image_file && <p className="text-sm text-red-500 mt-1">{errors.image_file}</p>}
                     </div>
                     <div>
                         <Label>Lien (URL au clic)</Label>
