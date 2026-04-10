@@ -2,9 +2,12 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
+use App\Notifications\FailedLoginAttemptNotification;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -43,6 +46,7 @@ class LoginRequest extends FormRequest
 
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
+            $this->notifyFailedAttempt();
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
@@ -81,5 +85,30 @@ class LoginRequest extends FormRequest
     public function throttleKey(): string
     {
         return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+    }
+
+    private function notifyFailedAttempt(): void
+    {
+        $email = Str::lower((string) $this->input('email', ''));
+        if ($email === '') {
+            return;
+        }
+
+        try {
+            $user = User::query()->whereRaw('LOWER(email) = ?', [$email])->first();
+            if ($user === null) {
+                return;
+            }
+
+            $user->notify(new FailedLoginAttemptNotification(
+                (string) ($this->ip() ?? 'N/A'),
+                (string) ($this->userAgent() ?? 'Inconnu'),
+            ));
+        } catch (\Throwable $e) {
+            Log::warning('Failed to notify user about failed login attempt', [
+                'email' => $email,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

@@ -17,7 +17,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property-read int $roles_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Depot> $depots
  */
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, Notifiable;
 

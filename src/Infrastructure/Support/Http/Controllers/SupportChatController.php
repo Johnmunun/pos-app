@@ -168,11 +168,13 @@ class SupportChatController extends Controller
                         'id' => null,
                         'name' => (string) ($c->guest_name ?: 'Visiteur'),
                         'phone' => $c->guest_phone ? (string) $c->guest_phone : null,
+                        'email' => null,
                         'type' => 'guest',
                     ] : [
                         'id' => (int) ($c->user?->getAttribute('id') ?? 0),
                         'name' => (string) ($c->user?->getAttribute('name') ?? 'Client'),
-                        'phone' => null,
+                        'phone' => (string) ($c->user?->getAttribute('phone') ?? ''),
+                        'email' => (string) ($c->user?->getAttribute('email') ?? ''),
                         'type' => 'user',
                     ],
                     'assigned_to' => $c->assignedTo ? [

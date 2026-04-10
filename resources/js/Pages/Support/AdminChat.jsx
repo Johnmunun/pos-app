@@ -59,8 +59,9 @@ export default function AdminChat({ conversations = [] }) {
         return conversationList.filter((c) => {
             const name = String(c?.user?.name || '').toLowerCase();
             const phone = String(c?.user?.phone || '').toLowerCase();
+            const email = String(c?.user?.email || '').toLowerCase();
             const id = String(c?.id || '');
-            return name.includes(q) || phone.includes(q) || id.includes(q);
+            return name.includes(q) || phone.includes(q) || email.includes(q) || id.includes(q);
         });
     }, [conversationList, search]);
     const members = useMemo(() => {
@@ -273,6 +274,7 @@ export default function AdminChat({ conversations = [] }) {
                 <h2>Conversation #${selected.id}</h2>
                 <p><strong>Client:</strong> ${selected.user?.name || 'Client'}</p>
                 <p><strong>Telephone:</strong> ${selected.user?.phone || 'N/A'}</p>
+                <p><strong>Email:</strong> ${selected.user?.email || 'N/A'}</p>
                 <p><strong>Statut:</strong> ${selected.status || 'open'}</p>
                 <hr />
                 ${lines.map((l) => `<p style="font-size:12px;line-height:1.4">${l}</p>`).join('')}
@@ -436,6 +438,11 @@ export default function AdminChat({ conversations = [] }) {
                                         {c.user?.phone ? (
                                             <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                                                 {c.user.phone}
+                                            </div>
+                                        ) : null}
+                                        {c.user?.email ? (
+                                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                                {c.user.email}
                                             </div>
                                         ) : null}
                                         <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -627,6 +634,7 @@ export default function AdminChat({ conversations = [] }) {
                                     <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Contact</p>
                                     <p className="mt-2 text-sm font-medium text-gray-900 dark:text-white">{selected?.user?.name || 'Client'}</p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400">{selected?.user?.phone || 'Sans numéro'}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{selected?.user?.email || 'Sans e-mail'}</p>
                                 </div>
 
                                 <div>
