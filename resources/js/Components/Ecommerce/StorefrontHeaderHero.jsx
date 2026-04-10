@@ -22,7 +22,7 @@ function BrandBlock({ logoUrl, shopName, variant = 'default', compact = false })
         ? 'font-bold text-sm sm:text-base text-white block truncate'
         : 'font-bold text-sm sm:text-base text-slate-900 dark:text-white block truncate';
     const subClass = isSpotlight
-        ? 'text-[11px] text-white/60'
+        ? 'text-[11px] text-zinc-200 font-medium'
         : 'text-[11px] text-slate-500 dark:text-slate-400';
 
     const logoSize = isEditorial ? (compact ? 'h-12 w-12' : 'h-14 w-14') : compact ? 'h-9 w-9' : 'h-10 w-10';
@@ -59,9 +59,14 @@ function BrandBlock({ logoUrl, shopName, variant = 'default', compact = false })
 
 function NavLinks({ links, navPages, layoutPreset, navMode = 'pill' }) {
     const isPremium = navMode === 'premium';
+    const spotlightLinkBase =
+        'inline-flex items-center gap-0.5 px-3 py-2 rounded-xl text-sm font-semibold text-zinc-100 tracking-wide [text-shadow:0_1px_2px_rgba(0,0,0,0.45)] hover:text-white hover:bg-white/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/50 transition-colors';
+    const spotlightLinkActive =
+        'text-white bg-white/20 ring-1 ring-white/35 shadow-md shadow-black/25 [text-shadow:0_1px_3px_rgba(0,0,0,0.55)]';
+
     const linkClass =
         layoutPreset === 'spotlight'
-            ? 'inline-flex items-center gap-0.5 px-3 py-2 rounded-xl text-sm font-medium text-white/75 hover:text-white hover:bg-white/10 transition-colors'
+            ? spotlightLinkBase
             : layoutPreset === 'minimal'
               ? 'inline-flex items-center gap-0.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-[var(--sf-primary)] transition-colors'
               : isPremium
@@ -70,16 +75,19 @@ function NavLinks({ links, navPages, layoutPreset, navMode = 'pill' }) {
 
     const activeHomeClass =
         layoutPreset === 'spotlight'
-            ? 'text-white'
-            : isPremium ? 'text-[var(--sf-primary)]'
+            ? spotlightLinkActive
+            : isPremium
+              ? 'text-[var(--sf-primary)]'
               : 'text-[var(--sf-primary)] bg-[var(--sf-primary)]/10';
 
     const wrapClass =
-        layoutPreset === 'minimal'
-            ? 'hidden lg:flex items-center gap-6 xl:gap-8'
-            : isPremium
-              ? 'hidden xl:flex items-center justify-center gap-0.5 sm:gap-1 flex-1'
-              : 'hidden lg:flex items-center gap-1 rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-white/60 dark:bg-slate-950/30 p-1';
+        layoutPreset === 'spotlight'
+            ? 'hidden lg:flex flex-1 flex-wrap items-center justify-center gap-1 min-w-0 px-1'
+            : layoutPreset === 'minimal'
+              ? 'hidden lg:flex items-center gap-6 xl:gap-8'
+              : isPremium
+                ? 'hidden xl:flex items-center justify-center gap-0.5 sm:gap-1 flex-1'
+                : 'hidden lg:flex items-center gap-1 rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-white/60 dark:bg-slate-950/30 p-1';
 
     const showChevron = isPremium && layoutPreset !== 'spotlight' && layoutPreset !== 'minimal';
 
@@ -110,38 +118,42 @@ function NavLinks({ links, navPages, layoutPreset, navMode = 'pill' }) {
 function TopUtilityBar({ message, links, variant = 'light' }) {
     const dark = variant === 'dark';
     const bar = dark
-        ? 'border-b border-white/10 bg-slate-950/80 text-white/90'
+        ? 'border-b border-zinc-700/80 bg-zinc-950 text-zinc-100'
         : 'border-b border-slate-200/80 dark:border-slate-800 bg-slate-100/90 dark:bg-slate-900/85 text-slate-700 dark:text-slate-200';
 
     return (
         <div className={`text-[11px] sm:text-xs ${bar}`}>
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
                 <div className="flex items-center gap-3 sm:gap-5 min-w-0">
                     <Link
                         href={links.index()}
-                        className={`shrink-0 font-medium hover:underline underline-offset-2 ${dark ? 'text-white' : 'text-slate-800 dark:text-white'}`}
+                        className={`shrink-0 font-semibold hover:underline underline-offset-2 ${dark ? 'text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.5)]' : 'text-slate-800 dark:text-white'}`}
                     >
                         Accueil
                     </Link>
                     <Link
                         href={links.blog()}
-                        className={`shrink-0 hidden sm:inline font-medium hover:underline underline-offset-2 ${dark ? 'text-white/85' : 'text-slate-600 dark:text-slate-300'}`}
+                        className={`shrink-0 hidden sm:inline font-semibold hover:underline underline-offset-2 ${dark ? 'text-zinc-100 hover:text-white' : 'text-slate-600 dark:text-slate-300'}`}
                     >
                         Blog
                     </Link>
                     <Link
                         href={links.catalog()}
-                        className={`shrink-0 hidden md:inline font-medium hover:underline underline-offset-2 ${dark ? 'text-white/85' : 'text-slate-600 dark:text-slate-300'}`}
+                        className={`shrink-0 hidden md:inline font-semibold hover:underline underline-offset-2 ${dark ? 'text-zinc-100 hover:text-white' : 'text-slate-600 dark:text-slate-300'}`}
                     >
                         Catalogue
                     </Link>
                 </div>
-                <p className="flex-1 text-center truncate px-2 font-medium tabular-nums text-[11px] sm:text-xs opacity-90">
+                <p
+                    className={`flex-1 text-center truncate px-2 font-semibold tabular-nums text-[11px] sm:text-xs ${
+                        dark ? 'text-zinc-100 [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]' : 'opacity-90'
+                    }`}
+                >
                     {message}
                 </p>
                 <Link
                     href={links.cart()}
-                    className={`shrink-0 font-medium hover:underline underline-offset-2 ${dark ? 'text-white/85' : 'text-slate-600 dark:text-slate-300'}`}
+                    className={`shrink-0 font-semibold hover:underline underline-offset-2 ${dark ? 'text-white hover:text-zinc-50' : 'text-slate-600 dark:text-slate-300'}`}
                 >
                     Panier
                 </Link>
@@ -159,7 +171,7 @@ function CatalogSearchField({ links, className = '', inverse = false }) {
         <form
             action={base}
             method="get"
-            className={`flex w-full items-center rounded-2xl border overflow-hidden shadow-sm ${inverse ? 'border-white/20 bg-white/10' : 'border-slate-200/90 dark:border-slate-600 bg-white dark:bg-slate-900'} ${className}`}
+            className={`flex w-full items-center rounded-2xl border overflow-hidden shadow-sm ${inverse ? 'border-zinc-500/50 bg-zinc-900/90 shadow-black/30' : 'border-slate-200/90 dark:border-slate-600 bg-white dark:bg-slate-900'} ${className}`}
             role="search"
         >
             <label htmlFor="storefront-header-search" className="sr-only">
@@ -170,7 +182,7 @@ function CatalogSearchField({ links, className = '', inverse = false }) {
                 type="search"
                 name="search"
                 placeholder="Rechercher un produit…"
-                className={`min-w-0 flex-1 border-0 bg-transparent px-4 py-2.5 text-sm outline-none focus:ring-0 placeholder:text-slate-400 ${inverse ? 'text-white placeholder:text-white/50' : 'text-slate-900 dark:text-white'}`}
+                className={`min-w-0 flex-1 border-0 bg-transparent px-4 py-2.5 text-sm outline-none focus:ring-0 placeholder:text-slate-400 ${inverse ? 'text-zinc-50 placeholder:text-zinc-400' : 'text-slate-900 dark:text-white'}`}
                 autoComplete="off"
             />
             <button
@@ -222,7 +234,7 @@ function ToolbarRight({
 }) {
     const catClass =
         layoutPreset === 'spotlight'
-            ? 'inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold text-white/90 bg-white/10 border border-white/15 hover:bg-white/15 transition-colors'
+            ? 'inline-flex items-center px-4 py-2 rounded-xl text-sm font-bold text-white bg-white/20 border border-white/30 [text-shadow:0_1px_2px_rgba(0,0,0,0.4)] hover:bg-white/25 hover:border-white/40 transition-colors'
             : 'inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-[var(--sf-primary)] bg-white/60 dark:bg-slate-950/30 border border-slate-200/70 dark:border-slate-800 hover:border-[var(--sf-primary)] transition-colors';
 
     const cartClass =
@@ -244,7 +256,7 @@ function ToolbarRight({
                     }}
                     className={
                         layoutPreset === 'spotlight'
-                            ? 'text-xs font-medium rounded-xl border border-white/20 bg-white/10 text-white py-1.5 pl-2 pr-8 focus:ring-[var(--sf-primary)]'
+                            ? 'text-xs font-bold rounded-xl border border-white/35 bg-zinc-900/80 text-zinc-50 py-1.5 pl-2 pr-8 focus:ring-2 focus:ring-white/40 [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]'
                             : 'text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 py-1.5 pl-2 pr-8 focus:ring-[var(--sf-primary)]'
                     }
                 >

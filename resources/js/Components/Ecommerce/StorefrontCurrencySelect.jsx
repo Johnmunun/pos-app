@@ -25,14 +25,14 @@ export default function StorefrontCurrencySelect({
 
     const selectClass =
         variant === 'inverse'
-            ? 'text-xs font-medium rounded-xl border border-white/25 bg-white/10 text-white py-1.5 pl-2 pr-8 max-w-[5.5rem]'
+            ? 'text-xs font-bold rounded-xl border border-white/40 bg-zinc-900/70 text-zinc-50 py-1.5 pl-2 pr-8 max-w-[5.5rem] [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]'
             : variant === 'compact'
               ? 'rounded-xl border border-slate-200/80 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 px-2 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-100 max-w-[5.5rem]'
               : 'text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 py-1.5 pl-2 pr-8';
 
     const labelClass =
         variant === 'inverse'
-            ? 'flex items-center gap-1.5 text-xs text-white/75'
+            ? 'flex items-center gap-1.5 text-xs font-semibold text-zinc-100 [text-shadow:0_1px_2px_rgba(0,0,0,0.4)]'
             : 'flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300';
 
     return (
