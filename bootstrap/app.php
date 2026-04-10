@@ -99,14 +99,28 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Mobile API: explicit 405 with allowed methods.
         $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException $e, \Illuminate\Http\Request $request) use ($isMobileApi) {
-            if (! $isMobileApi($request)) {
-                return null;
-            }
-
             $allowHeader = $e->getHeaders()['Allow'] ?? '';
             $allowedMethods = is_string($allowHeader) && $allowHeader !== ''
                 ? array_map('trim', explode(',', $allowHeader))
                 : [];
+
+            if (! $isMobileApi($request)) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => 'Méthode HTTP non autorisée pour cette route.',
+                        'code' => 'METHOD_NOT_ALLOWED',
+                        'allowed_methods' => $allowedMethods,
+                    ], 405);
+                }
+
+                $fallbackUrl = url()->previous() ?: '/';
+
+                if ($request->header('X-Inertia')) {
+                    return response('', 409)->header('X-Inertia-Location', $fallbackUrl);
+                }
+
+                return redirect()->to($fallbackUrl);
+            }
 
             return response()->json([
                 'message' => 'HTTP method not allowed for this endpoint.',
