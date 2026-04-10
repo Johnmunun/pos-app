@@ -1,8 +1,11 @@
 import { Link, router } from '@inertiajs/react';
 import {
     ArrowRight,
+    ChevronDown,
     Clock,
     Headphones,
+    LayoutGrid,
+    Search,
     ShieldCheck,
     Sparkles,
     Truck,
@@ -54,30 +57,154 @@ function BrandBlock({ logoUrl, shopName, variant = 'default', compact = false })
     return <div className="flex items-center gap-3">{inner}</div>;
 }
 
-function NavLinks({ links, navPages, layoutPreset }) {
+function NavLinks({ links, navPages, layoutPreset, navMode = 'pill' }) {
+    const isPremium = navMode === 'premium';
     const linkClass =
         layoutPreset === 'spotlight'
-            ? 'px-3 py-2 rounded-xl text-sm font-medium text-white/75 hover:text-white hover:bg-white/10 transition-colors'
+            ? 'inline-flex items-center gap-0.5 px-3 py-2 rounded-xl text-sm font-medium text-white/75 hover:text-white hover:bg-white/10 transition-colors'
             : layoutPreset === 'minimal'
-              ? 'text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-[var(--sf-primary)] transition-colors'
-              : 'px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors';
+              ? 'inline-flex items-center gap-0.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-[var(--sf-primary)] transition-colors'
+              : isPremium
+                ? 'inline-flex items-center gap-0.5 px-2.5 py-2 rounded-lg text-[11px] sm:text-xs font-semibold uppercase tracking-[0.12em] text-slate-600 dark:text-slate-300 hover:text-[var(--sf-primary)] transition-colors'
+                : 'inline-flex items-center gap-0.5 px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/10 transition-colors';
+
+    const activeHomeClass =
+        layoutPreset === 'spotlight'
+            ? 'text-white'
+            : isPremium ? 'text-[var(--sf-primary)]'
+              : 'text-[var(--sf-primary)] bg-[var(--sf-primary)]/10';
 
     const wrapClass =
         layoutPreset === 'minimal'
-            ? 'hidden lg:flex items-center gap-8'
-            : 'hidden lg:flex items-center gap-1 rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-white/60 dark:bg-slate-950/30 p-1';
+            ? 'hidden lg:flex items-center gap-6 xl:gap-8'
+            : isPremium
+              ? 'hidden xl:flex items-center justify-center gap-0.5 sm:gap-1 flex-1'
+              : 'hidden lg:flex items-center gap-1 rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-white/60 dark:bg-slate-950/30 p-1';
+
+    const showChevron = isPremium && layoutPreset !== 'spotlight' && layoutPreset !== 'minimal';
 
     return (
-        <nav className={wrapClass}>
+        <nav className={wrapClass} aria-label="Navigation principale">
+            <Link href={links.index()} className={`${linkClass} ${activeHomeClass}`}>
+                Accueil
+            </Link>
+            <Link href={links.catalog()} className={linkClass}>
+                Catalogue
+                {showChevron ? <ChevronDown className="h-3 w-3 opacity-40" strokeWidth={2.5} /> : null}
+            </Link>
             {navPages.map((p) => (
                 <Link key={p.id} href={links.page(p.slug)} className={linkClass}>
                     {p.title}
+                    {showChevron ? <ChevronDown className="h-3 w-3 opacity-40" strokeWidth={2.5} /> : null}
                 </Link>
             ))}
             <Link href={links.blog()} className={linkClass}>
                 Blog
+                {showChevron ? <ChevronDown className="h-3 w-3 opacity-40" strokeWidth={2.5} /> : null}
             </Link>
         </nav>
+    );
+}
+
+/** Barre fine type « livraison offerte » (digitaz, eCommax). La devise reste près du panier. */
+function TopUtilityBar({ message, links, variant = 'light' }) {
+    const dark = variant === 'dark';
+    const bar = dark
+        ? 'border-b border-white/10 bg-slate-950/80 text-white/90'
+        : 'border-b border-slate-200/80 dark:border-slate-800 bg-slate-100/90 dark:bg-slate-900/85 text-slate-700 dark:text-slate-200';
+
+    return (
+        <div className={`text-[11px] sm:text-xs ${bar}`}>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+                <div className="flex items-center gap-3 sm:gap-5 min-w-0">
+                    <Link
+                        href={links.index()}
+                        className={`shrink-0 font-medium hover:underline underline-offset-2 ${dark ? 'text-white' : 'text-slate-800 dark:text-white'}`}
+                    >
+                        Accueil
+                    </Link>
+                    <Link
+                        href={links.blog()}
+                        className={`shrink-0 hidden sm:inline font-medium hover:underline underline-offset-2 ${dark ? 'text-white/85' : 'text-slate-600 dark:text-slate-300'}`}
+                    >
+                        Blog
+                    </Link>
+                    <Link
+                        href={links.catalog()}
+                        className={`shrink-0 hidden md:inline font-medium hover:underline underline-offset-2 ${dark ? 'text-white/85' : 'text-slate-600 dark:text-slate-300'}`}
+                    >
+                        Catalogue
+                    </Link>
+                </div>
+                <p className="flex-1 text-center truncate px-2 font-medium tabular-nums text-[11px] sm:text-xs opacity-90">
+                    {message}
+                </p>
+                <Link
+                    href={links.cart()}
+                    className={`shrink-0 font-medium hover:underline underline-offset-2 ${dark ? 'text-white/85' : 'text-slate-600 dark:text-slate-300'}`}
+                >
+                    Panier
+                </Link>
+            </div>
+        </div>
+    );
+}
+
+/** Recherche catalogue (GET ?search=) — même contrat que la page catalogue. */
+function CatalogSearchField({ links, className = '', inverse = false }) {
+    const catalogUrl = links.catalog();
+    const base = typeof catalogUrl === 'string' && catalogUrl.includes('?') ? catalogUrl.split('?')[0] : catalogUrl;
+
+    return (
+        <form
+            action={base}
+            method="get"
+            className={`flex w-full items-center rounded-2xl border overflow-hidden shadow-sm ${inverse ? 'border-white/20 bg-white/10' : 'border-slate-200/90 dark:border-slate-600 bg-white dark:bg-slate-900'} ${className}`}
+            role="search"
+        >
+            <label htmlFor="storefront-header-search" className="sr-only">
+                Rechercher un produit
+            </label>
+            <input
+                id="storefront-header-search"
+                type="search"
+                name="search"
+                placeholder="Rechercher un produit…"
+                className={`min-w-0 flex-1 border-0 bg-transparent px-4 py-2.5 text-sm outline-none focus:ring-0 placeholder:text-slate-400 ${inverse ? 'text-white placeholder:text-white/50' : 'text-slate-900 dark:text-white'}`}
+                autoComplete="off"
+            />
+            <button
+                type="submit"
+                className={`flex h-11 w-11 sm:h-[2.625rem] sm:w-12 shrink-0 items-center justify-center transition-colors ${inverse ? 'bg-white text-slate-900 hover:bg-white/90' : 'bg-slate-900 dark:bg-[var(--sf-primary)] text-white hover:opacity-95'}`}
+                aria-label="Lancer la recherche"
+            >
+                <Search className="h-4 w-4 sm:h-[1.125rem] sm:w-[1.125rem]" strokeWidth={2.25} />
+            </button>
+        </form>
+    );
+}
+
+/** Bandeau inférieur façon « Shop by department » (digitaz). */
+function CategoryAccentStrip({ links }) {
+    return (
+        <div className="bg-[var(--sf-primary)] text-white shadow-md shadow-[var(--sf-primary)]/15">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm">
+                <Link
+                    href={links.catalog()}
+                    className="inline-flex items-center gap-2 font-semibold tracking-wide hover:opacity-95"
+                >
+                    <LayoutGrid className="h-4 w-4 opacity-90" strokeWidth={2.25} />
+                    Toutes les catégories
+                </Link>
+                <span className="hidden md:inline text-white/90 font-medium">
+                    Nouveautés, promotions et commande en ligne 24/7
+                </span>
+                <Link href={links.cart()} className="inline-flex items-center gap-1.5 font-semibold hover:opacity-95">
+                    Voir le panier
+                    <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+            </div>
+        </div>
     );
 }
 
@@ -90,11 +217,13 @@ function ToolbarRight({
     available_currencies,
     currency,
     currencySelectVariant = 'default',
+    /** Ex. `xl:hidden` : affiche « Catalogue » seulement quand la nav centrale est masquée (mobile / tablette). */
+    catalogToolbarClass = '',
 }) {
     const catClass =
         layoutPreset === 'spotlight'
-            ? 'hidden sm:inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold text-white/90 bg-white/10 border border-white/15 hover:bg-white/15 transition-colors'
-            : 'hidden sm:inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-[var(--sf-primary)] bg-white/60 dark:bg-slate-950/30 border border-slate-200/70 dark:border-slate-800 hover:border-[var(--sf-primary)] transition-colors';
+            ? 'inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold text-white/90 bg-white/10 border border-white/15 hover:bg-white/15 transition-colors'
+            : 'inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-[var(--sf-primary)] bg-white/60 dark:bg-slate-950/30 border border-slate-200/70 dark:border-slate-800 hover:border-[var(--sf-primary)] transition-colors';
 
     const cartClass =
         layoutPreset === 'spotlight'
@@ -102,8 +231,8 @@ function ToolbarRight({
             : 'relative inline-flex items-center justify-center h-10 w-10 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-[var(--sf-primary-hover)] transition-colors shadow-sm shadow-slate-900/10 dark:shadow-none ring-1 ring-slate-900/5 dark:ring-white/10';
 
     return (
-        <div className="flex items-center gap-2 sm:gap-3">
-            <Link href={links.catalog()} className={catClass}>
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <Link href={links.catalog()} className={`${catClass} ${catalogToolbarClass}`.trim()}>
                 Catalogue
             </Link>
             {storefrontShops?.length > 1 && (
@@ -199,24 +328,31 @@ export default function StorefrontHeaderHero({
     if (layoutPreset === 'minimal') {
         return (
             <>
-                <header className="sticky top-0 z-50 border-b border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-950/90 backdrop-blur-xl">
-                    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
-                        <Link
-                            href={links.index()}
-                            className="rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--sf-primary)]/30 min-w-0"
-                        >
-                            <BrandBlock logoUrl={logoUrl} shopName={shop?.name} />
-                        </Link>
-                        <NavLinks links={links} navPages={navPages} layoutPreset="minimal" />
-                        <ToolbarRight
-                            links={links}
-                            layoutPreset="classic"
-                            storefrontShops={storefrontShops}
-                            currentStorefrontShopId={currentStorefrontShopId}
-                            shop={shop}
-                            available_currencies={available_currencies}
-                            currency={currency}
-                        />
+                <header className="sticky top-0 z-50 border-b border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm shadow-slate-900/5">
+                    <TopUtilityBar message={heroBadge} links={links} variant="light" />
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="flex h-14 sm:h-16 items-center justify-between gap-3">
+                            <Link
+                                href={links.index()}
+                                className="rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--sf-primary)]/30 min-w-0"
+                            >
+                                <BrandBlock logoUrl={logoUrl} shopName={shop?.name} />
+                            </Link>
+                            <NavLinks links={links} navPages={navPages} layoutPreset="minimal" />
+                            <ToolbarRight
+                                links={links}
+                                layoutPreset="classic"
+                                storefrontShops={storefrontShops}
+                                currentStorefrontShopId={currentStorefrontShopId}
+                                shop={shop}
+                                available_currencies={available_currencies}
+                                currency={currency}
+                                catalogToolbarClass="lg:hidden"
+                            />
+                        </div>
+                        <div className="pb-3 lg:hidden">
+                            <CatalogSearchField links={links} />
+                        </div>
                     </div>
                 </header>
                 <section className="relative overflow-hidden bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
@@ -268,12 +404,8 @@ export default function StorefrontHeaderHero({
         return (
             <>
                 <header className="sticky top-0 z-50 bg-white dark:bg-slate-950 border-b border-slate-200/80 dark:border-slate-800 shadow-sm shadow-slate-900/5">
-                    <div className="bg-gradient-to-r from-[var(--sf-primary)]/15 via-amber-50/80 to-[var(--sf-primary)]/10 dark:from-[var(--sf-primary)]/25 dark:via-slate-900 dark:to-slate-900 border-b border-slate-200/50 dark:border-slate-800/80">
-                        <p className="text-center text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 py-2 px-4 tracking-wide">
-                            {heroBadge}
-                        </p>
-                    </div>
-                    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-2 flex justify-center">
+                    <TopUtilityBar message={heroBadge} links={links} variant="light" />
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-2 flex justify-center">
                         <Link
                             href={links.index()}
                             className="rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--sf-primary)]/30"
@@ -281,9 +413,14 @@ export default function StorefrontHeaderHero({
                             <BrandBlock logoUrl={logoUrl} shopName={shop?.name} variant="editorial" />
                         </Link>
                     </div>
-                    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-4 flex flex-col lg:flex-row items-center gap-4 lg:justify-between">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-3">
+                        <div className="max-w-2xl mx-auto">
+                            <CatalogSearchField links={links} />
+                        </div>
+                    </div>
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4 flex flex-col lg:flex-row items-center gap-4 lg:justify-between">
                         <div className="w-full lg:flex-1 flex justify-center">
-                            <NavLinks links={links} navPages={navPages} layoutPreset="minimal" />
+                            <NavLinks links={links} navPages={navPages} layoutPreset="minimal" navMode="premium" />
                         </div>
                         <div className="shrink-0 flex justify-center w-full lg:w-auto">
                             <ToolbarRight
@@ -294,9 +431,11 @@ export default function StorefrontHeaderHero({
                                 shop={shop}
                                 available_currencies={available_currencies}
                                 currency={currency}
+                                catalogToolbarClass="lg:hidden"
                             />
                         </div>
                     </div>
+                    <CategoryAccentStrip links={links} />
                 </header>
                 <section className="relative min-h-[min(88vh,820px)] flex flex-col justify-end overflow-hidden">
                     <div className="absolute inset-0">
@@ -346,15 +485,19 @@ export default function StorefrontHeaderHero({
     if (layoutPreset === 'spotlight') {
         return (
             <>
-                <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/95 backdrop-blur-xl text-white">
-                    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+                <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/98 backdrop-blur-xl text-white shadow-lg shadow-black/20">
+                    <TopUtilityBar message={heroBadge} links={links} variant="dark" />
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
                         <Link
                             href={links.index()}
-                            className="rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--sf-primary)]/40 min-w-0"
+                            className="rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--sf-primary)]/40 min-w-0 shrink-0"
                         >
                             <BrandBlock logoUrl={logoUrl} shopName={shop?.name} variant="spotlight" />
                         </Link>
                         <NavLinks links={links} navPages={navPages} layoutPreset="spotlight" />
+                        <div className="w-full lg:flex-1 lg:max-w-xl xl:max-w-2xl order-last lg:order-none">
+                            <CatalogSearchField links={links} inverse />
+                        </div>
                         <ToolbarRight
                             links={links}
                             layoutPreset="spotlight"
@@ -364,8 +507,10 @@ export default function StorefrontHeaderHero({
                             available_currencies={available_currencies}
                             currency={currency}
                             currencySelectVariant="inverse"
+                            catalogToolbarClass="lg:hidden"
                         />
                     </div>
+                    <CategoryAccentStrip links={links} />
                 </header>
                 <section className="relative overflow-hidden bg-slate-950">
                     <div className="absolute inset-0 opacity-40">
@@ -433,44 +578,57 @@ export default function StorefrontHeaderHero({
         );
     }
 
-    /* classic */
+    /* classic — en-tête dense type marketplace (DAVICI / digitaz / eCommax) */
     return (
         <>
-            <header className="sticky top-0 z-50 border-b border-slate-200/70 dark:border-slate-800 bg-white/75 dark:bg-slate-950/60 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-950/50">
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-                    <Link
-                        href={links.index()}
-                        className="flex items-center gap-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--sf-primary)]/30"
-                    >
-                        {logoUrl ? (
-                            <span className="inline-flex items-center justify-center h-10 w-10 rounded-2xl bg-white shadow-lg shadow-slate-900/10 ring-1 ring-slate-200 overflow-hidden">
-                                <img src={logoUrl} alt={shop?.name || 'Logo'} className="w-full h-full object-contain" />
-                            </span>
-                        ) : (
-                            <span className="inline-flex items-center justify-center h-10 w-10 rounded-2xl bg-gradient-to-br from-[var(--sf-primary)] to-[var(--sf-secondary)] text-white font-bold text-sm shadow-lg shadow-[var(--sf-primary)]/25 ring-1 ring-white/30">
-                                {shop?.name?.charAt(0) || 'S'}
-                            </span>
-                        )}
-                        <div>
-                            <span className="font-bold text-sm sm:text-base text-slate-900 dark:text-white block truncate">
-                                {formatShopName(shop?.name, 'Ma Boutique')}
-                            </span>
-                            <span className="text-[11px] text-slate-500 dark:text-slate-400">Boutique en ligne</span>
+            <header className="sticky top-0 z-50 shadow-md shadow-slate-900/6 dark:shadow-black/30">
+                <TopUtilityBar message={heroBadge} links={links} variant="light" />
+                <div className="bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 lg:py-3.5">
+                        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:gap-8">
+                            <Link
+                                href={links.index()}
+                                className="flex items-center gap-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--sf-primary)]/30 shrink-0 xl:max-w-[220px]"
+                            >
+                                {logoUrl ? (
+                                    <span className="inline-flex items-center justify-center h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-white shadow-md shadow-slate-900/10 ring-1 ring-slate-200/90 dark:ring-slate-700 overflow-hidden">
+                                        <img src={logoUrl} alt={shop?.name || 'Logo'} className="w-full h-full object-contain" />
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center justify-center h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-gradient-to-br from-[var(--sf-primary)] to-[var(--sf-secondary)] text-white font-bold text-base shadow-lg shadow-[var(--sf-primary)]/30 ring-1 ring-white/30">
+                                        {shop?.name?.charAt(0) || 'S'}
+                                    </span>
+                                )}
+                                <div className="min-w-0">
+                                    <span className="font-bold text-base sm:text-lg text-slate-900 dark:text-white block truncate tracking-tight">
+                                        {formatShopName(shop?.name, 'Ma Boutique')}
+                                    </span>
+                                    <span className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
+                                        Boutique en ligne
+                                    </span>
+                                </div>
+                            </Link>
+
+                            <NavLinks links={links} navPages={navPages} layoutPreset="classic" navMode="premium" />
+
+                            <div className="w-full xl:flex-1 xl:max-w-xl 2xl:max-w-2xl order-last xl:order-none">
+                                <CatalogSearchField links={links} />
+                            </div>
+
+                            <ToolbarRight
+                                links={links}
+                                layoutPreset="classic"
+                                storefrontShops={storefrontShops}
+                                currentStorefrontShopId={currentStorefrontShopId}
+                                shop={shop}
+                                available_currencies={available_currencies}
+                                currency={currency}
+                                catalogToolbarClass="xl:hidden"
+                            />
                         </div>
-                    </Link>
-                    <div className="flex items-center gap-2 sm:gap-3">
-                        <NavLinks links={links} navPages={navPages} layoutPreset="classic" />
-                        <ToolbarRight
-                            links={links}
-                            layoutPreset="classic"
-                            storefrontShops={storefrontShops}
-                            currentStorefrontShopId={currentStorefrontShopId}
-                            shop={shop}
-                            available_currencies={available_currencies}
-                            currency={currency}
-                        />
                     </div>
                 </div>
+                <CategoryAccentStrip links={links} />
             </header>
             <section className="relative overflow-hidden">
                 <div className="absolute inset-0">
