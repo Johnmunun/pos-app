@@ -1,7 +1,9 @@
 import '../css/app.css';
 import './bootstrap';
 
+import { createElement } from 'react';
 import { createInertiaApp, router } from '@inertiajs/react';
+import AppMetaPixel from './Components/AppMetaPixel';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { Toaster } from 'react-hot-toast';
@@ -148,7 +150,29 @@ createInertiaApp({
 
         root.render(
             <>
-                <App {...props} />
+                <App {...props}>
+                    {({ Component, props: pageProps, key }) => {
+                        const child = createElement(Component, { key, ...pageProps });
+                        let content = child;
+                        if (typeof Component.layout === 'function') {
+                            content = Component.layout(child);
+                        } else if (Array.isArray(Component.layout)) {
+                            content = Component.layout
+                                .concat(child)
+                                .reverse()
+                                .reduce(
+                                    (nested, Layout) =>
+                                        createElement(Layout, { children: nested, ...pageProps }),
+                                );
+                        }
+                        return (
+                            <>
+                                <AppMetaPixel />
+                                {content}
+                            </>
+                        );
+                    }}
+                </App>
                 <Toaster
                     position="top-right"
                     toastOptions={{

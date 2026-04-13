@@ -1,28 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
-
-function initFacebookPixel(pixelId) {
-    if (window.fbq) {
-        window.fbq('track', 'PageView');
-        return;
-    }
-    const n = window.fbq || function fbqFallback() {
-        n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
-    };
-    window.fbq = n;
-    if (!window._fbq) window._fbq = n;
-    n.push = n;
-    n.loaded = true;
-    n.version = '2.0';
-    n.queue = [];
-    const t = document.createElement('script');
-    t.async = true;
-    t.src = 'https://connect.facebook.net/en_US/fbevents.js';
-    const s = document.getElementsByTagName('script')[0];
-    s.parentNode.insertBefore(t, s);
-    window.fbq('init', pixelId);
-    window.fbq('track', 'PageView');
-}
+import { initFacebookPixel, trackFacebookPageView } from '../../lib/metaPixel';
 
 function initTikTok(pixelId) {
     if (window.ttq) {
@@ -186,7 +164,7 @@ export default function StorefrontClientBootstrap() {
         }
         const remove = router.on('success', () => {
             try {
-                if (window.fbq) window.fbq('track', 'PageView');
+                trackFacebookPageView();
                 if (window.ttq) window.ttq.page();
                 if (window.gtag && tags.googleAnalyticsId && !tags.googleTagManagerId) {
                     window.gtag('event', 'page_view', {

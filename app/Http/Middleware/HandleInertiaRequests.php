@@ -430,6 +430,9 @@ class HandleInertiaRequests extends Middleware
             Log::debug('Error getting app branding for Inertia', ['error' => $e->getMessage()]);
         }
 
+        $metaPixelId = config('services.meta.pixel_id');
+        $metaPixelId = is_string($metaPixelId) && trim($metaPixelId) !== '' ? trim($metaPixelId) : null;
+
         return [
             ...parent::share($request),
             'auth' => [
@@ -465,6 +468,9 @@ class HandleInertiaRequests extends Middleware
             'storefrontTheme' => $storefrontTheme,
             'storefrontIsPublic' => $request->attributes->get('storefront_shop') !== null,
             'storefrontPublicBaseUrl' => $request->attributes->get('storefront_shop') ? $request->root() : null,
+            'appMarketing' => [
+                'metaPixelId' => $metaPixelId,
+            ],
         ];
     }
 

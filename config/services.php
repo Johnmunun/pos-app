@@ -58,4 +58,11 @@ return [
         'base_domain' => env('ECOMmerce_BASE_DOMAIN', 'omnisolution.shop'),
     ],
 
+    /*
+    | Pixel Meta pour l’app Inertia principale (pub / remarketing), distinct du pixel configuré par boutique (vitrine).
+    */
+    'meta' => [
+        'pixel_id' => env('META_PIXEL_ID'),
+    ],
+
 ];
