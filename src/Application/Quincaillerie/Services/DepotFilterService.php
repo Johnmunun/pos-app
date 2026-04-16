@@ -39,6 +39,14 @@ class DepotFilterService
             return $query;
         }
 
+        $singleDepotIds = $this->resolveSingleActiveDepotIds($user);
+        if ($singleDepotIds !== []) {
+            return $query->where(function ($q) use ($depotColumn, $singleDepotIds) {
+                $q->whereIn($depotColumn, $singleDepotIds)
+                    ->orWhereNull($depotColumn);
+            });
+        }
+
         $permissions = $user->permissionCodes();
         $currentDepotId = $request->session()->get('current_depot_id');
 
@@ -154,6 +162,11 @@ class DepotFilterService
             return null;
         }
 
+        $singleDepotIds = $this->resolveSingleActiveDepotIds($user);
+        if ($singleDepotIds !== []) {
+            return $singleDepotIds[0];
+        }
+
         $currentDepotId = $request->session()->get('current_depot_id');
         if (!$currentDepotId) {
             return null; // Dépôt central
@@ -212,6 +225,34 @@ class DepotFilterService
             if ($depot) {
                 return [(int) $depot->id];
             }
+        }
+
+        $activeDepotIds = Depot::query()
+            ->where('tenant_id', $tenantId)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
+        if (count($activeDepotIds) === 1) {
+            return $activeDepotIds;
+        }
+
+        return [];
+    }
+
+    /**
+     * Si le tenant n'a qu'un seul dépôt actif, on l'utilise toujours.
+     *
+     * @return list<int>
+     */
+    private function resolveSingleActiveDepotIds($user): array
+    {
+        $tenantId = $user->tenant_id ?? null;
+        if ($tenantId === null || $tenantId === '') {
+            return [];
         }
 
         $activeDepotIds = Depot::query()
