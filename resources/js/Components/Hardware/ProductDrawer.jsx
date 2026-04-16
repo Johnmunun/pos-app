@@ -170,7 +170,6 @@ export default function HardwareProductDrawer({ isOpen, onClose, product = null,
                 forceFormData: true,
                 preserveScroll: false,
                 onSuccess: () => {
-                    toast.success('Produit mis à jour');
                     onClose();
                     reset();
                     setImagePreview(null);
@@ -197,7 +196,6 @@ export default function HardwareProductDrawer({ isOpen, onClose, product = null,
                 forceFormData: true,
                 preserveScroll: false,
                 onSuccess: () => {
-                    toast.success('Produit créé');
                     onClose();
                     reset();
                     setImagePreview(null);

@@ -2,6 +2,7 @@
 
 namespace Src\Application\Quincaillerie\Services;
 
+use App\Models\Depot;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -78,7 +79,15 @@ class DepotFilterService
             });
         }
 
-        // Pas de permission warehouse : ne voir que le dépôt central
+        $fallbackDepotIds = $this->resolveFallbackDepotIds($request, $user);
+        if ($fallbackDepotIds !== []) {
+            return $query->where(function ($q) use ($depotColumn, $fallbackDepotIds) {
+                $q->whereIn($depotColumn, $fallbackDepotIds)
+                    ->orWhereNull($depotColumn);
+            });
+        }
+
+        // Pas de dépôt exploitable : ne voir que le dépôt central
         return $query->whereNull($depotColumn);
     }
 
@@ -165,7 +174,59 @@ class DepotFilterService
             }
         }
 
+        $fallbackDepotIds = $this->resolveFallbackDepotIds($request, $user);
+
+        if ($fallbackDepotIds !== []) {
+            if (in_array((int) $currentDepotId, $fallbackDepotIds, true)) {
+                return (int) $currentDepotId;
+            }
+
+            return $fallbackDepotIds[0];
+        }
+
         // Pas d'accès : retourner null (dépôt central)
         return null;
+    }
+
+    /**
+     * Résout un dépôt "par défaut" exploitable même sans permission warehouse explicite.
+     * Cas typique: onboarding avec une seule boutique/dépôt actif.
+     *
+     * @return list<int>
+     */
+    private function resolveFallbackDepotIds(Request $request, $user): array
+    {
+        $tenantId = $user->tenant_id ?? null;
+        if ($tenantId === null || $tenantId === '') {
+            return [];
+        }
+
+        $currentDepotId = $request->session()->get('current_depot_id');
+        if ($currentDepotId !== null && $currentDepotId !== '') {
+            $depot = Depot::query()
+                ->where('id', (int) $currentDepotId)
+                ->where('tenant_id', $tenantId)
+                ->where('is_active', true)
+                ->first();
+
+            if ($depot) {
+                return [(int) $depot->id];
+            }
+        }
+
+        $activeDepotIds = Depot::query()
+            ->where('tenant_id', $tenantId)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
+        if (count($activeDepotIds) === 1) {
+            return $activeDepotIds;
+        }
+
+        return [];
     }
 }

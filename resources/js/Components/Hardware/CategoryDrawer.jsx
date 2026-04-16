@@ -50,7 +50,6 @@ export default function HardwareCategoryDrawer({ isOpen, onClose, category = nul
                 await put(route('hardware.categories.update', category.id), {
                     preserveScroll: true,
                     onSuccess: () => {
-                        toast.success('Catégorie mise à jour');
                         onClose();
                         reset();
                     },
@@ -60,7 +59,6 @@ export default function HardwareCategoryDrawer({ isOpen, onClose, category = nul
                 await post(route('hardware.categories.store'), {
                     preserveScroll: true,
                     onSuccess: () => {
-                        toast.success('Catégorie créée');
                         onClose();
                         reset();
                     },

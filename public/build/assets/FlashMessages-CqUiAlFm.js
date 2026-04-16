@@ -1,0 +1,1 @@
+import{u as r,r as a,z as e}from"./app-BQ8oUq1d.js";function o(){const{flash:s}=r().props;return a.useEffect(()=>{s?.success&&e.success(s.success,{id:`flash-success:${s.success}`}),s?.error&&e.error(s.error,{id:`flash-error:${s.error}`}),s?.message&&e.success(s.message,{id:`flash-message:${s.message}`})},[s]),null}export{o as F};

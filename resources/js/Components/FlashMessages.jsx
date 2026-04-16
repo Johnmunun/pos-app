@@ -12,13 +12,13 @@ export default function FlashMessages() {
 
     useEffect(() => {
         if (flash?.success) {
-            toast.success(flash.success);
+            toast.success(flash.success, { id: `flash-success:${flash.success}` });
         }
         if (flash?.error) {
-            toast.error(flash.error);
+            toast.error(flash.error, { id: `flash-error:${flash.error}` });
         }
         if (flash?.message) {
-            toast.success(flash.message);
+            toast.success(flash.message, { id: `flash-message:${flash.message}` });
         }
     }, [flash]);
 

@@ -14,6 +14,7 @@ use Src\Domain\Quincaillerie\Repositories\CategoryRepositoryInterface;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Models\Shop;
 use Src\Infrastructure\Quincaillerie\Models\CategoryModel;
 use Src\Application\Quincaillerie\Services\DepotFilterService;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -33,7 +34,37 @@ class CategoryController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+
+        $shopId = null;
+        $depotId = $request->session()->get('current_depot_id');
+        if ($depotId && $user->tenant_id) {
+            $shopByDepot = Shop::query()
+                ->where('depot_id', $depotId)
+                ->where('tenant_id', $user->tenant_id)
+                ->first();
+
+            if ($shopByDepot) {
+                $shopId = (string) $shopByDepot->id;
+            }
+        }
+
+        if ($shopId === null && !empty($user->shop_id)) {
+            $candidate = Shop::find($user->shop_id);
+            if ($candidate && (string) $candidate->tenant_id === (string) $user->tenant_id) {
+                $shopId = (string) $candidate->id;
+            }
+        }
+
+        if ($shopId === null && $user->tenant_id) {
+            $fallback = Shop::query()
+                ->where('tenant_id', $user->tenant_id)
+                ->where('is_active', true)
+                ->orderBy('id')
+                ->first();
+
+            $shopId = $fallback ? (string) $fallback->id : (string) $user->tenant_id;
+        }
+
         return $shopId ? (string) $shopId : null;
     }
 
