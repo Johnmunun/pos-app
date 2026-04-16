@@ -29,6 +29,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Reader\Csv;
 use Src\Application\Billing\Services\FeatureLimitService;
+use Src\Infrastructure\StoreProvisioning\SectorExcelTemplateImporter;
 
 /**
  * Contrôleur Produits - Module Quincaillerie.
@@ -78,7 +79,8 @@ class ProductController
         private CategoryRepositoryInterface $categoryRepository,
         private ProductImageService $imageService,
         private DepotFilterService $depotFilterService,
-        private FeatureLimitService $featureLimitService
+        private FeatureLimitService $featureLimitService,
+        private SectorExcelTemplateImporter $sectorExcelTemplateImporter
     ) {}
 
     public function generateCode(Request $request): JsonResponse
@@ -131,6 +133,29 @@ class ProductController
         }
 
         $productModels = $query->get();
+        if (
+            $productModels->isEmpty()
+            && !$request->filled('search')
+            && !$request->filled('category_id')
+            && !$request->filled('status')
+        ) {
+            try {
+                $shop = Shop::query()->find($shopId);
+                $tenant = $user->tenant_id ? \App\Models\Tenant::query()->find($user->tenant_id) : null;
+                $isPreconfigured = ($tenant?->store_start_mode === \Src\Domains\StoreProvisioning\StoreStartMode::PRECONFIGURED_STORE);
+                if ($shop && $tenant && $isPreconfigured) {
+                    $effectiveDepotId = $this->depotFilterService->getEffectiveDepotId($request);
+                    $this->sectorExcelTemplateImporter->import((int) $tenant->id, $shop, $effectiveDepotId, 'hardware');
+                    $productModels = $query->get();
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Hardware auto-repair import failed', [
+                    'shop_id' => $shopId,
+                    'tenant_id' => $user->tenant_id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
         /** @var \Illuminate\Database\Eloquent\Collection<int, ProductModel> $productModels */
         $products = $productModels->map(function (ProductModel $model) {
             return [

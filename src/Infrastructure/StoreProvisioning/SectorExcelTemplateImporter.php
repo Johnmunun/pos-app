@@ -240,15 +240,32 @@ final class SectorExcelTemplateImporter
 
         $prodRows = $this->reader->readSheet($productsPath);
         foreach ($prodRows as $row) {
-            $code = trim((string) ($row['product_code'] ?? ''));
+            $code = trim((string) (
+                $row['product_code']
+                ?? $row['code']
+                ?? $row['sku']
+                ?? ''
+            ));
             if ($code === '') {
                 continue;
             }
-            $catCode = trim((string) ($row['category_code'] ?? ''));
-            $catId = HardwareCategoryModel::query()
-                ->where('shop_id', $shop->id)
-                ->where('category_code', $catCode)
-                ->value('id');
+            $catCode = trim((string) (
+                $row['category_code']
+                ?? $row['categorie_code']
+                ?? $row['category_id']
+                ?? $row['categorie_id']
+                ?? ''
+            ));
+
+            $catQuery = HardwareCategoryModel::query()->where('shop_id', $shop->id);
+            if ($catCode !== '') {
+                $catQuery->where(function ($q) use ($catCode) {
+                    $q->where('category_code', $catCode)
+                        ->orWhere('id', $catCode)
+                        ->orWhere('name', $catCode);
+                });
+            }
+            $catId = $catQuery->value('id');
             if ($catId === null) {
                 continue;
             }
@@ -263,8 +280,18 @@ final class SectorExcelTemplateImporter
                 'depot_id' => $depotId,
                 'name' => $row['name'] ?? $code,
                 'description' => $row['description'] ?? null,
-                'price_amount' => (float) str_replace(',', '.', (string) ($row['price_amount'] ?? '0')),
-                'price_currency' => strtoupper(trim((string) ($row['price_currency'] ?? 'USD'))) ?: 'USD',
+                'price_amount' => (float) str_replace(',', '.', (string) (
+                    $row['price_amount']
+                    ?? $row['price']
+                    ?? $row['sale_price_amount']
+                    ?? '0'
+                )),
+                'price_currency' => strtoupper(trim((string) (
+                    $row['price_currency']
+                    ?? $row['currency']
+                    ?? $row['sale_price_currency']
+                    ?? 'USD'
+                ))) ?: 'USD',
                 'stock' => (float) str_replace(',', '.', (string) ($row['stock'] ?? '0')),
                 'type_unite' => strtoupper(trim((string) ($row['type_unite'] ?? 'UNITE'))) ?: 'UNITE',
                 'quantite_par_unite' => (int) ($row['quantite_par_unite'] ?? 1),
