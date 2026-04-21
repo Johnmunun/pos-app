@@ -12,11 +12,17 @@ use PhpOffice\PhpSpreadsheet\Reader\Csv;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Ramsey\Uuid\Uuid;
+use Src\Application\Billing\Services\FeatureLimitService;
 use Src\Infrastructure\GlobalCommerce\Procurement\Models\SupplierModel;
 use Illuminate\Support\Facades\Log;
 
 class GcSupplierController
 {
+    public function __construct(
+        private readonly FeatureLimitService $featureLimitService,
+    ) {
+    }
+
     private function getShopId(Request $request): string
     {
         $user = $request->user();
@@ -71,6 +77,7 @@ class GcSupplierController
     public function store(Request $request): JsonResponse|RedirectResponse
     {
         $shopId = $this->getShopId($request);
+        $this->featureLimitService->assertCanCreateSupplier((string) ($request->user()?->tenant_id ?? ''));
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255',

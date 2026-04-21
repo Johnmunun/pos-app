@@ -21,6 +21,7 @@ use Src\Infrastructure\GlobalCommerce\Inventory\Models\CategoryModel;
 use Illuminate\Support\Facades\Log;
 use App\Models\Shop;
 use App\Services\TenantBackofficeShopResolver;
+use Src\Application\Billing\Services\FeatureLimitService;
 
 class GcCategoryController
 {
@@ -30,6 +31,7 @@ class GcCategoryController
         private UpdateCategoryUseCase $updateCategoryUseCase,
         private DeleteCategoryUseCase $deleteCategoryUseCase,
         private TenantBackofficeShopResolver $shopResolver,
+        private FeatureLimitService $featureLimitService,
     ) {}
 
     /**
@@ -77,6 +79,7 @@ class GcCategoryController
 
     public function store(Request $request): RedirectResponse
     {
+        $this->featureLimitService->assertCanCreateCategory((string) ($request->user()?->tenant_id ?? ''));
         $scope = $this->gcScope($request);
         $shopId = $scope['shopId'];
         $gcIds = $scope['gcIds'];

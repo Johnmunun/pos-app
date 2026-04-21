@@ -2,7 +2,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Head, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function MailSettings({ mailSettings }) {
+export default function MailSettings({ mailSettings, mailHealth }) {
     const [showGuide, setShowGuide] = useState(false);
     const form = useForm({
         enabled: Boolean(mailSettings?.enabled),
@@ -41,6 +41,59 @@ export default function MailSettings({ mailSettings }) {
             <Head title="Configuration Mail" />
 
             <div className="py-6 space-y-6">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                        <div>
+                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Mail Health</h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Verification automatique de la configuration SMTP enregistree.
+                            </p>
+                        </div>
+                        <span
+                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                                mailHealth?.status === 'healthy'
+                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                            }`}
+                        >
+                            {mailHealth?.status === 'healthy' ? 'Sain' : 'Attention'}
+                        </span>
+                    </div>
+
+                    <div className="mt-4 grid gap-2 md:grid-cols-3">
+                        {[
+                            { label: 'Service active', ok: Boolean(mailHealth?.checks?.enabled) },
+                            { label: 'Host SMTP', ok: Boolean(mailHealth?.checks?.host) },
+                            { label: 'Port SMTP', ok: Boolean(mailHealth?.checks?.port) },
+                            { label: 'Username SMTP', ok: Boolean(mailHealth?.checks?.username) },
+                            { label: 'Mot de passe SMTP', ok: Boolean(mailHealth?.checks?.password_set) },
+                            { label: 'From address', ok: Boolean(mailHealth?.checks?.from_address) },
+                        ].map((item) => (
+                            <div
+                                key={item.label}
+                                className={`rounded-lg border px-3 py-2 text-xs ${
+                                    item.ok
+                                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300'
+                                        : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300'
+                                }`}
+                            >
+                                {item.ok ? 'OK' : 'Manquant'} - {item.label}
+                            </div>
+                        ))}
+                    </div>
+
+                    {Array.isArray(mailHealth?.issues) && mailHealth.issues.length > 0 ? (
+                        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                            <p className="font-semibold mb-1">Points a corriger:</p>
+                            <ul className="space-y-1">
+                                {mailHealth.issues.map((issue) => (
+                                    <li key={issue}>- {issue}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    ) : null}
+                </div>
+
                 <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
                     <div className="flex items-center justify-between mb-4">
                         <p className="text-sm text-gray-500 dark:text-gray-400">

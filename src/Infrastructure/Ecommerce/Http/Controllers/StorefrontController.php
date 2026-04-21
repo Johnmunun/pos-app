@@ -1141,21 +1141,6 @@ class StorefrontController
         return Inertia::render('Ecommerce/StorefrontCart', $this->mergeStorefrontClientProps($request, $shop, $cartPayload));
     }
 
-    /**
-     * Devise par défaut depuis settings/currencies (table currencies).
-     */
-    private function getDefaultCurrencyForTenant(string $tenantId): string
-    {
-        $currencies = Currency::where('tenant_id', $tenantId)
-            ->where('is_active', true)
-            ->orderByDesc('is_default')
-            ->orderBy('code')
-            ->get();
-        $default = $currencies->firstWhere('is_default', true) ?? $currencies->first();
-
-        return $default ? strtoupper($default->code) : 'USD';
-    }
-
     private function getCurrencyAndRates(string $tenantId, ?string $fallbackCurrency = null): array
     {
         $currenciesList = Currency::where('tenant_id', $tenantId)

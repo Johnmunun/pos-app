@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Send, X, Loader2, Mic, Square, Volume2 } from 'lucide-react';
+import { Lightbulb, Send, X, Loader2, Mic, Square, Volume2 } from 'lucide-react';
 import axios from 'axios';
 import { usePage, router } from '@inertiajs/react';
 
@@ -283,12 +283,12 @@ export default function HardwareAssistant({ bottomOffset = null }) {
         ref={buttonRef}
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="fixed right-4 sm:right-6 z-40 inline-flex items-center justify-center rounded-full bg-amber-500 text-white shadow-lg hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
+        className="fixed right-4 sm:right-6 z-40 inline-flex items-center justify-center rounded-full bg-violet-600 text-white shadow-lg hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500"
         style={{ width: 52, height: 52, ...(!bottomOffset ? { bottom: '16px' } : {}) }}
         title="Assistant Quincaillerie"
         aria-label="Ouvrir l'assistant Quincaillerie"
       >
-        <MessageCircle className="h-6 w-6" />
+        <Lightbulb className="h-6 w-6" />
       </button>
 
       {/* Panneau assistant */}

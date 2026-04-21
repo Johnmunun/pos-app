@@ -4,6 +4,7 @@ namespace Src\Infrastructure\Billing\Services;
 
 use App\Models\User;
 use App\Services\AppNotificationService;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use RuntimeException;
@@ -265,6 +266,182 @@ class MerchantWalletService
 
             return $request;
         });
+    }
+
+    public function approveWithdrawalRequest(int $withdrawalId, User $admin): MerchantWithdrawalRequest
+    {
+        return DB::transaction(function () use ($withdrawalId, $admin): MerchantWithdrawalRequest {
+            $request = MerchantWithdrawalRequest::query()->lockForUpdate()->find($withdrawalId);
+            if ($request === null) {
+                throw new RuntimeException('Demande de retrait introuvable.');
+            }
+
+            if ((string) $request->status !== 'pending') {
+                throw new RuntimeException('Seules les demandes en attente peuvent etre approuvees.');
+            }
+
+            $request->status = 'approved';
+            $request->approved_by_user_id = $admin->id;
+            $request->approved_at = now();
+            $request->rejection_reason = null;
+            $request->save();
+
+            $this->appendWithdrawalLedgerEntry($request, 'withdrawal_approved', 'debit');
+
+            return $request;
+        });
+    }
+
+    public function rejectWithdrawalRequest(int $withdrawalId, User $admin, string $reason = ''): MerchantWithdrawalRequest
+    {
+        return DB::transaction(function () use ($withdrawalId, $admin, $reason): MerchantWithdrawalRequest {
+            $request = MerchantWithdrawalRequest::query()->lockForUpdate()->find($withdrawalId);
+            if ($request === null) {
+                throw new RuntimeException('Demande de retrait introuvable.');
+            }
+
+            if (!in_array((string) $request->status, ['pending', 'approved'], true)) {
+                throw new RuntimeException('Cette demande ne peut plus etre rejetee.');
+            }
+
+            $balance = MerchantWalletBalance::query()->lockForUpdate()->firstOrCreate(
+                ['tenant_id' => (string) $request->tenant_id, 'currency_code' => (string) $request->currency_code],
+                ['available_balance' => 0, 'pending_balance' => 0, 'locked_balance' => 0]
+            );
+
+            $amount = round((float) $request->requested_amount, 2);
+            $balance->locked_balance = round(max(0, (float) $balance->locked_balance - $amount), 2);
+            $balance->available_balance = round((float) $balance->available_balance + $amount, 2);
+            $balance->save();
+
+            $request->status = 'rejected';
+            $request->approved_by_user_id = $admin->id;
+            $request->approved_at = $request->approved_at ?: now();
+            $request->rejection_reason = trim($reason) !== '' ? trim($reason) : 'Demande rejetee par l\'administrateur.';
+            $request->save();
+
+            $this->appendWithdrawalLedgerEntry($request, 'withdrawal_rejected', 'credit', $balance, [
+                'rejection_reason' => $request->rejection_reason,
+            ]);
+
+            return $request;
+        });
+    }
+
+    public function completeWithdrawalRequest(int $withdrawalId, User $admin, array $meta = []): MerchantWithdrawalRequest
+    {
+        return DB::transaction(function () use ($withdrawalId, $admin, $meta): MerchantWithdrawalRequest {
+            $request = MerchantWithdrawalRequest::query()->lockForUpdate()->find($withdrawalId);
+            if ($request === null) {
+                throw new RuntimeException('Demande de retrait introuvable.');
+            }
+
+            if (!in_array((string) $request->status, ['pending', 'approved'], true)) {
+                throw new RuntimeException('Cette demande ne peut pas etre marquee comme payee.');
+            }
+
+            $balance = MerchantWalletBalance::query()->lockForUpdate()->firstOrCreate(
+                ['tenant_id' => (string) $request->tenant_id, 'currency_code' => (string) $request->currency_code],
+                ['available_balance' => 0, 'pending_balance' => 0, 'locked_balance' => 0]
+            );
+
+            $amount = round((float) $request->requested_amount, 2);
+            if ((float) $balance->locked_balance < $amount) {
+                throw new RuntimeException('Solde bloque insuffisant pour finaliser ce retrait.');
+            }
+
+            $balance->locked_balance = round((float) $balance->locked_balance - $amount, 2);
+            $balance->save();
+
+            $mergedMeta = array_merge((array) $request->meta, $meta);
+            $request->meta = $mergedMeta;
+            $request->status = 'paid';
+            $request->approved_by_user_id = $request->approved_by_user_id ?: $admin->id;
+            $request->approved_at = $request->approved_at ?: now();
+            $request->paid_at = now();
+            $request->rejection_reason = null;
+            $request->save();
+
+            $this->appendWithdrawalLedgerEntry($request, 'withdrawal_completed', 'debit', $balance, $meta);
+
+            return $request;
+        });
+    }
+
+    public function failWithdrawalRequest(int $withdrawalId, User $admin, string $reason = '', array $meta = []): MerchantWithdrawalRequest
+    {
+        return DB::transaction(function () use ($withdrawalId, $admin, $reason, $meta): MerchantWithdrawalRequest {
+            $request = MerchantWithdrawalRequest::query()->lockForUpdate()->find($withdrawalId);
+            if ($request === null) {
+                throw new RuntimeException('Demande de retrait introuvable.');
+            }
+
+            if (!in_array((string) $request->status, ['pending', 'approved'], true)) {
+                throw new RuntimeException('Cette demande ne peut pas etre marquee en echec.');
+            }
+
+            $balance = MerchantWalletBalance::query()->lockForUpdate()->firstOrCreate(
+                ['tenant_id' => (string) $request->tenant_id, 'currency_code' => (string) $request->currency_code],
+                ['available_balance' => 0, 'pending_balance' => 0, 'locked_balance' => 0]
+            );
+
+            $amount = round((float) $request->requested_amount, 2);
+            $balance->locked_balance = round(max(0, (float) $balance->locked_balance - $amount), 2);
+            $balance->available_balance = round((float) $balance->available_balance + $amount, 2);
+            $balance->save();
+
+            $requestMeta = array_merge((array) $request->meta, $meta);
+            $request->meta = $requestMeta;
+            $request->status = 'failed';
+            $request->approved_by_user_id = $request->approved_by_user_id ?: $admin->id;
+            $request->approved_at = $request->approved_at ?: now();
+            $request->rejection_reason = trim($reason) !== '' ? trim($reason) : 'Echec de transfert.';
+            $request->paid_at = null;
+            $request->save();
+
+            $this->appendWithdrawalLedgerEntry($request, 'withdrawal_failed', 'credit', $balance, [
+                'failure_reason' => $request->rejection_reason,
+            ] + $meta);
+
+            return $request;
+        });
+    }
+
+    private function appendWithdrawalLedgerEntry(
+        MerchantWithdrawalRequest $request,
+        string $entryType,
+        string $direction,
+        ?MerchantWalletBalance $balance = null,
+        array $extraMeta = []
+    ): void {
+        if ($balance === null) {
+            $balance = MerchantWalletBalance::query()->firstOrCreate(
+                ['tenant_id' => (string) $request->tenant_id, 'currency_code' => (string) $request->currency_code],
+                ['available_balance' => 0, 'pending_balance' => 0, 'locked_balance' => 0]
+            );
+        }
+
+        MerchantWalletLedgerEntry::query()->create([
+            'tenant_id' => (string) $request->tenant_id,
+            'shop_id' => null,
+            'billing_payment_transaction_id' => null,
+            'ecommerce_order_id' => null,
+            'entry_type' => $entryType,
+            'direction' => $direction,
+            'currency_code' => (string) $request->currency_code,
+            'gross_amount' => (float) $request->requested_amount,
+            'platform_fee_amount' => (float) $request->fee_amount,
+            'gateway_fee_amount' => 0,
+            'net_amount' => (float) $request->net_amount,
+            'running_available_balance' => (float) $balance->available_balance,
+            'running_pending_balance' => (float) $balance->pending_balance,
+            'running_locked_balance' => (float) $balance->locked_balance,
+            'meta' => array_merge([
+                'withdrawal_request_id' => $request->id,
+                'status' => (string) $request->status,
+                'recorded_at' => Carbon::now()->toIso8601String(),
+            ], $extraMeta),
+        ]);
     }
 
     private function resolveTenantIdFromShop(string $shopId): ?string

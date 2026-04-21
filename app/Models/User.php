@@ -11,6 +11,8 @@ use Laravel\Sanctum\HasApiTokens;
 /**
  * @property string|null $tenant_id
  * @property string|null $shop_id
+ * @property string|null $status
+ * @property bool|null $is_active
  * @property-read \App\Models\Tenant|null $tenant
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Role> $roles
  * @property-read int $roles_count

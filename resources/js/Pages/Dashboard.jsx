@@ -25,9 +25,18 @@ export default function Dashboard() {
     const { auth, referralStats } = usePage().props;
     const permissions = auth?.permissions ?? [];
     const billingSummary = auth?.billingSummary ?? null;
+    const isTrialPlan = String(billingSummary?.plan_name || '').toLowerCase().includes('trial');
     const expiryLabel = billingSummary?.expires_at
         ? new Date(billingSummary.expires_at).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })
         : 'Illimité';
+    const trialUsageRows = billingSummary ? [
+        { label: 'Prod.', used: billingSummary.products_used, limit: billingSummary.products_limit },
+        { label: 'Cat.', used: billingSummary.categories_used, limit: billingSummary.categories_limit },
+        { label: 'Fourn.', used: billingSummary.suppliers_used, limit: billingSummary.suppliers_limit },
+        { label: 'Clts', used: billingSummary.customers_used, limit: billingSummary.customers_limit },
+        { label: 'Dep.', used: billingSummary.depots_used, limit: billingSummary.depots_limit },
+        { label: 'Ventes', used: billingSummary.sales_used, limit: billingSummary.sales_limit },
+    ] : [];
 
     // Widgets généraux (toujours visibles)
     const generalWidgets = [
@@ -143,11 +152,53 @@ export default function Dashboard() {
                                     </div>
                                 </div>
                                 <a
-                                    href="/settings"
+                                    href="/onboarding/payment"
                                     className="text-sm font-semibold text-amber-700 dark:text-amber-200 hover:underline"
                                 >
-                                    Voir détails
+                                    Upgrade
                                 </a>
+                            </div>
+                        </div>
+                    ) : null}
+
+                    {isTrialPlan ? (
+                        <div className="mb-6 rounded-2xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/80 dark:bg-indigo-950/20 p-5">
+                            <div className="flex items-center justify-between gap-3 mb-4">
+                                <h3 className="text-base font-semibold text-indigo-900 dark:text-indigo-200">
+                                    Trial
+                                </h3>
+                                <a
+                                    href="/onboarding/payment"
+                                    className="inline-flex items-center rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
+                                >
+                                    Upgrade
+                                </a>
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                {trialUsageRows.map((row) => {
+                                    const limit = row.limit === null || row.limit === undefined ? null : Number(row.limit);
+                                    const used = Number(row.used || 0);
+                                    const progress = limit && limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+                                    const nearLimit = limit !== null && limit > 0 && used >= limit;
+                                    return (
+                                        <div key={row.label} className="rounded-xl border border-indigo-200/70 dark:border-indigo-800 p-3 bg-white/80 dark:bg-slate-900/30">
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="font-medium text-slate-800 dark:text-slate-100">{row.label}</span>
+                                                <span className={`text-xs font-semibold ${nearLimit ? 'text-rose-600 dark:text-rose-400' : 'text-slate-600 dark:text-slate-300'}`}>
+                                                    {used}/{limit ?? 'illimité'}
+                                                </span>
+                                            </div>
+                                            {limit !== null ? (
+                                                <div className="mt-2 h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                                                    <div
+                                                        className={`h-2 ${nearLimit ? 'bg-rose-500' : 'bg-indigo-500'}`}
+                                                        style={{ width: `${progress}%` }}
+                                                    />
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     ) : null}

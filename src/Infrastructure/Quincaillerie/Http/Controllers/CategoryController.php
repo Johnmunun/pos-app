@@ -17,6 +17,7 @@ use Inertia\Response;
 use App\Models\Shop;
 use Src\Infrastructure\Quincaillerie\Models\CategoryModel;
 use Src\Application\Quincaillerie\Services\DepotFilterService;
+use Src\Application\Billing\Services\FeatureLimitService;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -73,7 +74,8 @@ class CategoryController
         private CreateCategoryUseCase $createCategoryUseCase,
         private UpdateCategoryUseCase $updateCategoryUseCase,
         private DeleteCategoryUseCase $deleteCategoryUseCase,
-        private DepotFilterService $depotFilterService
+        private DepotFilterService $depotFilterService,
+        private FeatureLimitService $featureLimitService,
     ) {}
 
     public function index(Request $request): Response
@@ -156,6 +158,7 @@ class CategoryController
                 $shopId = ''; // ROOT sans shop : on pourrait refuser ou prendre le premier tenant
                 return redirect()->back()->withErrors(['message' => 'Veuillez sélectionner un magasin.'])->withInput();
             }
+            $this->featureLimitService->assertCanCreateCategory((string) ($user->tenant_id ?? ''));
 
             $request->validate([
                 'name' => 'required|string|max:255',

@@ -75,9 +75,18 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
     const featureFlags = page.props?.auth?.featureFlags || {};
     const planFeatures = page.props?.auth?.planFeatures || {};
     const billingSummary = page.props?.auth?.billingSummary || null;
+    const isTrialPlan = String(billingSummary?.plan_name || '').toLowerCase().includes('trial');
     const planExpiryLabel = billingSummary?.expires_at
         ? new Date(billingSummary.expires_at).toLocaleDateString()
         : '-';
+    const trialUsageRows = billingSummary ? [
+        { label: 'Prod.', used: billingSummary.products_used, limit: billingSummary.products_limit },
+        { label: 'Cat.', used: billingSummary.categories_used, limit: billingSummary.categories_limit },
+        { label: 'Fourn.', used: billingSummary.suppliers_used, limit: billingSummary.suppliers_limit },
+        { label: 'Clts', used: billingSummary.customers_used, limit: billingSummary.customers_limit },
+        { label: 'Dep.', used: billingSummary.depots_used, limit: billingSummary.depots_limit },
+        { label: 'Ventes', used: billingSummary.sales_used, limit: billingSummary.sales_limit },
+    ] : [];
     
     // Fonction pour vérifier si une route est active
     const isActiveRoute = (href) => {
@@ -133,6 +142,8 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
             items: [
                 { label: 'Dashboard', href: '/dashboard', permission: '*', icon: LayoutDashboard, rootOnly: true, excludeSectors: ['ecommerce'] },
                 { label: 'Mon profil', href: '/profile', permission: '*', icon: User },
+                { label: 'Upgrade plan', href: '/onboarding/payment', permission: '*', icon: CreditCard },
+                { label: 'Mes retraits', href: '/withdrawals', permission: 'module.ecommerce|module.commerce|module.pharmacy|module.hardware|finance.dashboard.view|finance.report.view|referral.view|referral.stats.view|ecommerce.payment.view|ecommerce.order.view|ecommerce.order.payment.update', icon: DollarSign },
                 { label: 'Tuto', href: '/tutorial', permission: '*', icon: BookOpen },
                 { label: 'Notifications', href: '#', permission: 'notifications.view', icon: Bell },
                 { label: 'Activité récente', href: '#', permission: 'activity.view', icon: ClipboardList },
@@ -327,6 +338,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                 { label: 'Configuration Mail', href: '/admin/mail-settings', permission: 'settings.mail.manage', icon: MailIcon },
                 { label: 'Plans & Limitations', href: '/admin/billing/plans', permission: 'admin.billing.manage', icon: CreditCard },
                 { label: 'Transactions (abonnements)', href: '/admin/billing/transactions', permission: 'admin.billing.manage', icon: Scroll },
+                { label: 'Retraits marchands', href: '/admin/billing/withdrawals', permission: 'admin.billing.manage', icon: Building },
                 { label: 'Préférences UI', href: '#', permission: 'settings.ui', icon: Palette },
                 { label: 'Referral / Parrainage', href: '/referrals/settings', permission: 'referral.settings.view|referral.settings.manage', icon: Users },
             ]
@@ -527,6 +539,27 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                                 <p className="text-[11px] text-amber-700/90 dark:text-amber-300/90 mt-1">
                                     Expire le: {planExpiryLabel}
                                 </p>
+                                {isTrialPlan ? (
+                                    <>
+                                        <div className="mt-2 rounded-lg border border-amber-200/70 dark:border-amber-700/60 bg-white/70 dark:bg-slate-900/30 p-2">
+                                            <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-200">Trial</p>
+                                            <div className="mt-1 space-y-1">
+                                                {trialUsageRows.slice(0, 3).map((row) => (
+                                                    <div key={row.label} className="flex items-center justify-between text-[11px] text-amber-800/90 dark:text-amber-200/90">
+                                                        <span>{row.label}</span>
+                                                        <span>{Number(row.used || 0)}/{row.limit ?? 'illimite'}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <Link
+                                            href="/onboarding/payment"
+                                            className="mt-2 inline-flex w-full items-center justify-center rounded-lg bg-amber-600 px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-amber-700"
+                                        >
+                                            Upgrade
+                                        </Link>
+                                    </>
+                                ) : null}
                             </div>
                         </div>
                     )}
@@ -582,6 +615,28 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                             <p className="text-[11px] text-amber-700/90 dark:text-amber-300/90">
                                 Utilisateurs: {billingSummary.users_used}/{billingSummary.users_limit ?? 'illimite'}
                             </p>
+                            {isTrialPlan ? (
+                                <>
+                                    <div className="mt-2 rounded-lg border border-amber-200/70 dark:border-amber-700/60 bg-white/70 dark:bg-slate-900/30 p-2">
+                                        <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-200">Trial</p>
+                                        <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-1">
+                                            {trialUsageRows.map((row) => (
+                                                <div key={row.label} className="flex items-center justify-between gap-2 text-[11px] text-amber-800/90 dark:text-amber-200/90">
+                                                    <span className="truncate">{row.label}</span>
+                                                    <span>{Number(row.used || 0)}/{row.limit ?? 'illimite'}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <Link
+                                        href="/onboarding/payment"
+                                        onClick={onClose}
+                                        className="mt-2 inline-flex w-full items-center justify-center rounded-lg bg-amber-600 px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-amber-700"
+                                    >
+                                        Upgrade
+                                    </Link>
+                                </>
+                            ) : null}
                         </div>
                     )}
 

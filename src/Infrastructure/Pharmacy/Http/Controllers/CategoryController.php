@@ -20,6 +20,7 @@ use PhpOffice\PhpSpreadsheet\Reader\Csv;
 use Inertia\Inertia;
 use Inertia\Response;
 use App\Models\User as UserModel;
+use Src\Application\Billing\Services\FeatureLimitService;
 
 class CategoryController
 {
@@ -34,7 +35,8 @@ class CategoryController
         private CreateCategoryUseCase $createCategoryUseCase,
         private UpdateCategoryUseCase $updateCategoryUseCase,
         private DeleteCategoryUseCase $deleteCategoryUseCase,
-        private CategoryPdfService $pdfService
+        private CategoryPdfService $pdfService,
+        private FeatureLimitService $featureLimitService
     ) {}
 
     public function index(Request $request): Response
@@ -130,6 +132,7 @@ class CategoryController
                 return redirect()->back()
                     ->withErrors(['message' => 'Shop ID not found. Please contact administrator.']);
             }
+            $this->featureLimitService->assertCanCreateCategory((string) ($user->tenant_id ?? ''));
             
             // Validation
             $request->validate([

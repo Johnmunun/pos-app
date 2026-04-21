@@ -27,7 +27,11 @@
                     <tr>
                         <td style="padding:32px;">
                             <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.6;">
-                                Merci pour votre inscription@if($companyName) pour <strong>{{ $companyName }}</strong>@endif.
+                                Merci pour votre inscription
+                                @if($companyName)
+                                    pour <strong>{{ $companyName }}</strong>
+                                @endif
+                                .
                             </p>
                             @if(!empty($storeStartMode))
                                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;">

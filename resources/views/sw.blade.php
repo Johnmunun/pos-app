@@ -66,8 +66,20 @@ self.addEventListener('fetch', (event) => {
                 return caches.match(event.request).then((response) => {
                     if (response) return response;
                     if (event.request.destination === 'document' && !url.pathname.startsWith('/admin/') && !url.pathname.startsWith('/api/')) {
-                        return caches.match(OFFLINE_URL);
+                        return caches.match(OFFLINE_URL).then((offlineResponse) => {
+                            if (offlineResponse) return offlineResponse;
+                            return new Response('Offline', {
+                                status: 503,
+                                statusText: 'Service Unavailable',
+                                headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+                            });
+                        });
                     }
+                    return new Response('Network error', {
+                        status: 503,
+                        statusText: 'Service Unavailable',
+                        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+                    });
                 });
             })
     );

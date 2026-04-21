@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Send, X, Loader2, ExternalLink, Mic, Square, Settings, Volume2 } from 'lucide-react';
+import { Lightbulb, Send, X, Loader2, ExternalLink, Mic, Square, Settings, Volume2 } from 'lucide-react';
 import axios from 'axios';
 import { usePage, router } from '@inertiajs/react';
 
@@ -328,12 +328,12 @@ Question actuelle: ${currentText}`;
         ref={buttonRef}
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed right-4 sm:right-6 z-40 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg transition hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-400"
+        className="fixed right-4 sm:right-6 z-40 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-violet-600 text-white shadow-lg transition hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-400"
         style={!bottomOffset ? { bottom: '96px' } : {}}
         title="Assistant Commerce (code)"
         aria-label="Ouvrir l'assistant"
       >
-        <MessageCircle className="h-6 w-6 sm:h-7 sm:w-7" />
+        <Lightbulb className="h-6 w-6 sm:h-7 sm:w-7" />
       </button>
 
       {open && (

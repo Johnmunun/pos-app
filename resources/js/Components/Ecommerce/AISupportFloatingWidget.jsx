@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { usePage } from '@inertiajs/react';
 import axios from 'axios';
-import { MessageCircle, Send, X } from 'lucide-react';
+import { Lightbulb, Send, X } from 'lucide-react';
 
 export default function AISupportFloatingWidget() {
     const { props } = usePage();
@@ -78,10 +78,10 @@ export default function AISupportFloatingWidget() {
                 <button
                     type="button"
                     onClick={() => setOpen(true)}
-                    className="h-12 w-12 rounded-full bg-amber-600 text-white shadow-lg hover:bg-amber-700 transition"
+                    className="h-12 w-12 rounded-full bg-violet-600 text-white shadow-lg hover:bg-violet-700 transition"
                     title="Support IA"
                 >
-                    <MessageCircle className="h-6 w-6 mx-auto" />
+                    <Lightbulb className="h-6 w-6 mx-auto" />
                 </button>
             ) : (
                 <div className="w-[320px] max-w-[90vw] rounded-xl border border-slate-200 bg-white shadow-xl">

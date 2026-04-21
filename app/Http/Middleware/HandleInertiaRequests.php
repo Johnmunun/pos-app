@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Inertia\Middleware;
 use Symfony\Component\HttpFoundation\Response;
@@ -227,115 +228,168 @@ class HandleInertiaRequests extends Middleware
         ];
         $billingSummary = null;
         if ($user && $user->tenant_id) {
-            try {
-                /** @var FeatureLimitService $featureLimitService */
-                $featureLimitService = app(FeatureLimitService::class);
-                $computeMonthlyUsage = function (string $tenantId, string $featureCode) use ($featureLimitService): array {
-                    $cfg = $featureLimitService->getTenantFeatureConfig($tenantId, $featureCode);
-                    $limit = $cfg['limit'] ?? null;
-                    $used = $featureLimitService->countMonthlyFeatureUsage($tenantId, $featureCode);
-                    $remaining = $limit === null ? null : max(0, (int) $limit - (int) $used);
-                    return ['used' => (int) $used, 'limit' => $limit === null ? null : (int) $limit, 'remaining' => $remaining];
-                };
-                $featureFlags['api_payments'] = $featureLimitService->isFeatureEnabled(
-                    (string) $user->tenant_id,
-                    'api.payments'
-                );
-                $featureFlags['analytics_advanced'] = $featureLimitService->isFeatureEnabled(
-                    (string) $user->tenant_id,
-                    'analytics.advanced'
-                );
-                $planFeatures['ai_assistant'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ai.assistant');
-                $planFeatures['multi_depot'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'multi.depot');
-                $planFeatures['support_priority'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'support.priority');
-                $planFeatures['ecommerce_catalog'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.catalog');
-                $planFeatures['ecommerce_orders'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.orders');
-                $planFeatures['ecommerce_promotions'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.promotions');
-                $planFeatures['ecommerce_marketing_pro'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.marketing.pro');
-                $planFeatures['ecommerce_storefront_pro_themes'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.storefront.pro_themes');
-                $planFeatures['ecommerce_product_ai_vision'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.product.ai_vision');
-                $planFeatures['ai_product_image_generate'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ai.product.image.generate');
-                $planFeatures['ai_media_image_generate'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ai.media.image.generate');
-                $planFeatures['ai_product_seo_generate'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ai.product.seo.generate');
-                $planFeatures['ecommerce_module'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'ecommerce.module');
-                $planFeatures['pharmacy_module'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'pharmacy.module');
-                $planFeatures['commerce_module'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'commerce.module');
-                $planFeatures['hardware_module'] = $featureLimitService->isFeatureEnabled((string) $user->tenant_id, 'hardware.module');
-                $planUsage['ai_product_image_generate'] = $computeMonthlyUsage((string) $user->tenant_id, 'ai.product.image.generate');
-                $planUsage['ai_media_image_generate'] = $computeMonthlyUsage((string) $user->tenant_id, 'ai.media.image.generate');
-            } catch (\Throwable $e) {
-                Log::debug('Feature flags fallback', ['error' => $e->getMessage()]);
-            }
+            $tenantId = (string) $user->tenant_id;
+            $cacheKey = 'inertia:billing_payload:tenant:' . $tenantId;
+            $cachedPayload = Cache::get($cacheKey);
 
-            try {
-                if (
-                    \Illuminate\Support\Facades\Schema::hasTable('billing_plans')
-                    && \Illuminate\Support\Facades\Schema::hasTable('tenant_plan_subscriptions')
-                ) {
+            if (is_array($cachedPayload)) {
+                $featureFlags = is_array($cachedPayload['featureFlags'] ?? null) ? $cachedPayload['featureFlags'] : $featureFlags;
+                $planFeatures = is_array($cachedPayload['planFeatures'] ?? null) ? $cachedPayload['planFeatures'] : $planFeatures;
+                $planUsage = is_array($cachedPayload['planUsage'] ?? null) ? $cachedPayload['planUsage'] : $planUsage;
+                $billingSummary = is_array($cachedPayload['billingSummary'] ?? null) ? $cachedPayload['billingSummary'] : $billingSummary;
+            } else {
+                try {
                     /** @var FeatureLimitService $featureLimitService */
                     $featureLimitService = app(FeatureLimitService::class);
-
-                    $subscription = \Illuminate\Support\Facades\DB::table('tenant_plan_subscriptions as tps')
-                        ->join('billing_plans as bp', 'bp.id', '=', 'tps.billing_plan_id')
-                        ->where('tps.tenant_id', (string) $user->tenant_id)
-                        ->where('tps.status', 'active')
-                        ->select(['bp.name as plan_name', 'tps.starts_at', 'tps.ends_at', 'tps.trial_ends_at'])
-                        ->orderByDesc('tps.id')
-                        ->first();
-
-                    $productsConfig = $featureLimitService->getTenantFeatureConfig((string) $user->tenant_id, 'products.max');
-                    $usersConfig = $featureLimitService->getTenantFeatureConfig((string) $user->tenant_id, 'users.max');
-
-                    $usersCount = (int) \Illuminate\Support\Facades\DB::table('users')
-                        ->where('tenant_id', (string) $user->tenant_id)
-                        ->where('type', '!=', 'ROOT')
-                        ->count();
-
-                    $shopIds = [];
-                    if (\Illuminate\Support\Facades\Schema::hasTable('shops')) {
-                        $shopIds = \Illuminate\Support\Facades\DB::table('shops')
-                            ->where('tenant_id', (string) $user->tenant_id)
-                            ->pluck('id')
-                            ->toArray();
-                    }
-
-                    $productsCount = 0;
-                    if (\Illuminate\Support\Facades\Schema::hasTable('gc_products')) {
-                        $productsCount += !empty($shopIds)
-                            ? \Illuminate\Support\Facades\DB::table('gc_products')->whereIn('shop_id', $shopIds)->count()
-                            : \Illuminate\Support\Facades\DB::table('gc_products')->where('shop_id', (string) $user->tenant_id)->count();
-                    }
-                    if (\Illuminate\Support\Facades\Schema::hasTable('pharmacy_products')) {
-                        $productsCount += !empty($shopIds)
-                            ? \Illuminate\Support\Facades\DB::table('pharmacy_products')->whereIn('shop_id', $shopIds)->count()
-                            : \Illuminate\Support\Facades\DB::table('pharmacy_products')->where('shop_id', (string) $user->tenant_id)->count();
-                    }
-                    if (\Illuminate\Support\Facades\Schema::hasTable('quincaillerie_products')) {
-                        $productsCount += !empty($shopIds)
-                            ? \Illuminate\Support\Facades\DB::table('quincaillerie_products')->whereIn('shop_id', $shopIds)->count()
-                            : \Illuminate\Support\Facades\DB::table('quincaillerie_products')->where('shop_id', (string) $user->tenant_id)->count();
-                    }
-
-                    $expiresAt = $subscription?->ends_at ?? $subscription?->trial_ends_at ?? null;
-                    if ($expiresAt === null && $subscription !== null && !empty($subscription->starts_at)) {
-                        try {
-                            $expiresAt = \Illuminate\Support\Carbon::parse($subscription->starts_at)->addMonth();
-                        } catch (\Throwable $e) {
-                            $expiresAt = null;
-                        }
-                    }
-
-                    $billingSummary = [
-                        'plan_name' => $subscription?->plan_name ?? 'Plan par defaut',
-                        'expires_at' => $expiresAt,
-                        'products_used' => (int) $productsCount,
-                        'products_limit' => $productsConfig['enabled'] ? $productsConfig['limit'] : 0,
-                        'users_used' => (int) $usersCount,
-                        'users_limit' => $usersConfig['enabled'] ? $usersConfig['limit'] : 0,
-                    ];
+                    $computeMonthlyUsage = function (string $tenantId, string $featureCode) use ($featureLimitService): array {
+                        $cfg = $featureLimitService->getTenantFeatureConfig($tenantId, $featureCode);
+                        $limit = $cfg['limit'] ?? null;
+                        $used = $featureLimitService->countMonthlyFeatureUsage($tenantId, $featureCode);
+                        $remaining = $limit === null ? null : max(0, (int) $limit - (int) $used);
+                        return ['used' => (int) $used, 'limit' => $limit === null ? null : (int) $limit, 'remaining' => $remaining];
+                    };
+                    $featureFlags['api_payments'] = $featureLimitService->isFeatureEnabled($tenantId, 'api.payments');
+                    $featureFlags['analytics_advanced'] = $featureLimitService->isFeatureEnabled($tenantId, 'analytics.advanced');
+                    $planFeatures['ai_assistant'] = $featureLimitService->isFeatureEnabled($tenantId, 'ai.assistant');
+                    $planFeatures['multi_depot'] = $featureLimitService->isFeatureEnabled($tenantId, 'multi.depot');
+                    $planFeatures['support_priority'] = $featureLimitService->isFeatureEnabled($tenantId, 'support.priority');
+                    $planFeatures['ecommerce_catalog'] = $featureLimitService->isFeatureEnabled($tenantId, 'ecommerce.catalog');
+                    $planFeatures['ecommerce_orders'] = $featureLimitService->isFeatureEnabled($tenantId, 'ecommerce.orders');
+                    $planFeatures['ecommerce_promotions'] = $featureLimitService->isFeatureEnabled($tenantId, 'ecommerce.promotions');
+                    $planFeatures['ecommerce_marketing_pro'] = $featureLimitService->isFeatureEnabled($tenantId, 'ecommerce.marketing.pro');
+                    $planFeatures['ecommerce_storefront_pro_themes'] = $featureLimitService->isFeatureEnabled($tenantId, 'ecommerce.storefront.pro_themes');
+                    $planFeatures['ecommerce_product_ai_vision'] = $featureLimitService->isFeatureEnabled($tenantId, 'ecommerce.product.ai_vision');
+                    $planFeatures['ai_product_image_generate'] = $featureLimitService->isFeatureEnabled($tenantId, 'ai.product.image.generate');
+                    $planFeatures['ai_media_image_generate'] = $featureLimitService->isFeatureEnabled($tenantId, 'ai.media.image.generate');
+                    $planFeatures['ai_product_seo_generate'] = $featureLimitService->isFeatureEnabled($tenantId, 'ai.product.seo.generate');
+                    $planFeatures['ecommerce_module'] = $featureLimitService->isFeatureEnabled($tenantId, 'ecommerce.module');
+                    $planFeatures['pharmacy_module'] = $featureLimitService->isFeatureEnabled($tenantId, 'pharmacy.module');
+                    $planFeatures['commerce_module'] = $featureLimitService->isFeatureEnabled($tenantId, 'commerce.module');
+                    $planFeatures['hardware_module'] = $featureLimitService->isFeatureEnabled($tenantId, 'hardware.module');
+                    $planUsage['ai_product_image_generate'] = $computeMonthlyUsage($tenantId, 'ai.product.image.generate');
+                    $planUsage['ai_media_image_generate'] = $computeMonthlyUsage($tenantId, 'ai.media.image.generate');
+                } catch (\Throwable $e) {
+                    Log::debug('Feature flags fallback', ['error' => $e->getMessage()]);
                 }
-            } catch (\Throwable $e) {
-                Log::debug('Billing summary fallback', ['error' => $e->getMessage()]);
+
+                try {
+                    if (\Illuminate\Support\Facades\Schema::hasTable('billing_plans') && \Illuminate\Support\Facades\Schema::hasTable('tenant_plan_subscriptions')) {
+                        /** @var FeatureLimitService $featureLimitService */
+                        $featureLimitService = app(FeatureLimitService::class);
+
+                        $subscription = \Illuminate\Support\Facades\DB::table('tenant_plan_subscriptions as tps')
+                            ->join('billing_plans as bp', 'bp.id', '=', 'tps.billing_plan_id')
+                            ->where('tps.tenant_id', $tenantId)
+                            ->where('tps.status', 'active')
+                            ->select(['bp.name as plan_name', 'tps.starts_at', 'tps.ends_at', 'tps.trial_ends_at'])
+                            ->orderByDesc('tps.id')
+                            ->first();
+
+                        $productsConfig = $featureLimitService->getTenantFeatureConfig($tenantId, 'products.max');
+                        $usersConfig = $featureLimitService->getTenantFeatureConfig($tenantId, 'users.max');
+                        $categoriesConfig = $featureLimitService->getTenantFeatureConfig($tenantId, 'categories.max');
+                        $suppliersConfig = $featureLimitService->getTenantFeatureConfig($tenantId, 'suppliers.max');
+                        $customersConfig = $featureLimitService->getTenantFeatureConfig($tenantId, 'customers.max');
+                        $depotsConfig = $featureLimitService->getTenantFeatureConfig($tenantId, 'depots.max');
+                        $salesConfig = $featureLimitService->getTenantFeatureConfig($tenantId, 'sales.monthly.max');
+
+                        $usersCount = (int) \Illuminate\Support\Facades\DB::table('users')
+                            ->where('tenant_id', $tenantId)
+                            ->where('type', '!=', 'ROOT')
+                            ->count();
+
+                        $shopIds = [];
+                        if (\Illuminate\Support\Facades\Schema::hasTable('shops')) {
+                            $shopIds = \Illuminate\Support\Facades\DB::table('shops')
+                                ->where('tenant_id', $tenantId)
+                                ->pluck('id')
+                                ->toArray();
+                        }
+
+                        $productsCount = 0;
+                        if (\Illuminate\Support\Facades\Schema::hasTable('gc_products')) {
+                            $productsCount += !empty($shopIds)
+                                ? \Illuminate\Support\Facades\DB::table('gc_products')->whereIn('shop_id', $shopIds)->count()
+                                : \Illuminate\Support\Facades\DB::table('gc_products')->where('shop_id', $tenantId)->count();
+                        }
+                        if (\Illuminate\Support\Facades\Schema::hasTable('pharmacy_products')) {
+                            $productsCount += !empty($shopIds)
+                                ? \Illuminate\Support\Facades\DB::table('pharmacy_products')->whereIn('shop_id', $shopIds)->count()
+                                : \Illuminate\Support\Facades\DB::table('pharmacy_products')->where('shop_id', $tenantId)->count();
+                        }
+                        if (\Illuminate\Support\Facades\Schema::hasTable('quincaillerie_products')) {
+                            $productsCount += !empty($shopIds)
+                                ? \Illuminate\Support\Facades\DB::table('quincaillerie_products')->whereIn('shop_id', $shopIds)->count()
+                                : \Illuminate\Support\Facades\DB::table('quincaillerie_products')->where('shop_id', $tenantId)->count();
+                        }
+
+                        $countByShopTables = function (array $tables) use ($shopIds, $tenantId): int {
+                            $total = 0;
+                            foreach ($tables as $table) {
+                                if (!\Illuminate\Support\Facades\Schema::hasTable($table)) {
+                                    continue;
+                                }
+                                if (!empty($shopIds) && \Illuminate\Support\Facades\Schema::hasColumn($table, 'shop_id')) {
+                                    $total += (int) \Illuminate\Support\Facades\DB::table($table)->whereIn('shop_id', $shopIds)->count();
+                                    continue;
+                                }
+                                if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'tenant_id')) {
+                                    $total += (int) \Illuminate\Support\Facades\DB::table($table)->where('tenant_id', $tenantId)->count();
+                                    continue;
+                                }
+                                if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'shop_id')) {
+                                    $total += (int) \Illuminate\Support\Facades\DB::table($table)->where('shop_id', $tenantId)->count();
+                                }
+                            }
+                            return $total;
+                        };
+
+                        $categoriesCount = $countByShopTables(['gc_categories', 'pharmacy_categories', 'quincaillerie_categories']);
+                        $suppliersCount = $countByShopTables(['gc_suppliers', 'pharmacy_suppliers', 'quincaillerie_suppliers']);
+                        $customersCount = $countByShopTables(['customers', 'pharmacy_customers', 'quincaillerie_customers', 'ecommerce_customers']);
+                        $depotsCount = \Illuminate\Support\Facades\Schema::hasTable('depots')
+                            ? (int) \Illuminate\Support\Facades\DB::table('depots')->where('tenant_id', $tenantId)->count()
+                            : 0;
+                        $salesCount = $featureLimitService->countMonthlySalesForTenant($tenantId);
+
+                        $expiresAt = $subscription?->ends_at ?? $subscription?->trial_ends_at ?? null;
+                        if ($expiresAt === null && $subscription !== null && !empty($subscription->starts_at)) {
+                            try {
+                                $expiresAt = \Illuminate\Support\Carbon::parse($subscription->starts_at)->addMonth();
+                            } catch (\Throwable $e) {
+                                $expiresAt = null;
+                            }
+                        }
+
+                        $billingSummary = [
+                            'plan_name' => $subscription?->plan_name ?? 'Plan par defaut',
+                            'expires_at' => $expiresAt,
+                            'products_used' => (int) $productsCount,
+                            'products_limit' => $productsConfig['enabled'] ? $productsConfig['limit'] : 0,
+                            'users_used' => (int) $usersCount,
+                            'users_limit' => $usersConfig['enabled'] ? $usersConfig['limit'] : 0,
+                            'categories_used' => (int) $categoriesCount,
+                            'categories_limit' => $categoriesConfig['enabled'] ? $categoriesConfig['limit'] : 0,
+                            'suppliers_used' => (int) $suppliersCount,
+                            'suppliers_limit' => $suppliersConfig['enabled'] ? $suppliersConfig['limit'] : 0,
+                            'customers_used' => (int) $customersCount,
+                            'customers_limit' => $customersConfig['enabled'] ? $customersConfig['limit'] : 0,
+                            'depots_used' => (int) $depotsCount,
+                            'depots_limit' => $depotsConfig['enabled'] ? $depotsConfig['limit'] : 0,
+                            'sales_used' => (int) $salesCount,
+                            'sales_limit' => $salesConfig['enabled'] ? $salesConfig['limit'] : 0,
+                        ];
+                    }
+                } catch (\Throwable $e) {
+                    Log::debug('Billing summary fallback', ['error' => $e->getMessage()]);
+                }
+
+                Cache::put($cacheKey, [
+                    'featureFlags' => $featureFlags,
+                    'planFeatures' => $planFeatures,
+                    'planUsage' => $planUsage,
+                    'billingSummary' => $billingSummary,
+                ], now()->addSeconds(45));
             }
         }
 
@@ -464,6 +518,7 @@ class HandleInertiaRequests extends Middleware
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
                 'message' => $request->session()->get('message'),
+                'trial_upgrade_prompt' => (bool) $request->session()->get('trial_upgrade_prompt', false),
             ],
             'storefrontTheme' => $storefrontTheme,
             'storefrontIsPublic' => $request->attributes->get('storefront_shop') !== null,

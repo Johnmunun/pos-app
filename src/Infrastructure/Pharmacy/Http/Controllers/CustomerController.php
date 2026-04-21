@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
+use Src\Application\Billing\Services\FeatureLimitService;
 use Src\Application\Pharmacy\DTO\CreateCustomerDTO;
 use Src\Application\Pharmacy\DTO\UpdateCustomerDTO;
 use Src\Application\Pharmacy\UseCases\Customer\CreateCustomerUseCase;
@@ -39,7 +40,8 @@ class CustomerController extends Controller
         private readonly CreateCustomerUseCase $createCustomerUseCase,
         private readonly UpdateCustomerUseCase $updateCustomerUseCase,
         private readonly ActivateCustomerUseCase $activateCustomerUseCase,
-        private readonly DeactivateCustomerUseCase $deactivateCustomerUseCase
+        private readonly DeactivateCustomerUseCase $deactivateCustomerUseCase,
+        private readonly FeatureLimitService $featureLimitService
     ) {
     }
 
@@ -52,6 +54,7 @@ class CustomerController extends Controller
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
+        $this->featureLimitService->assertCanCreateCustomer((string) ($user->tenant_id ?? ''));
         $shopId = $user->shop_id ?? $user->tenant_id;
         $isRoot = $user->type === 'ROOT';
 

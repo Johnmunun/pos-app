@@ -281,12 +281,12 @@ export default function HardwareProductsIndex({ products = [], categories = [], 
                                         className="border-blue-500 text-blue-600 hover:bg-blue-50 dark:border-blue-600 dark:text-blue-300 dark:hover:bg-blue-900/30"
                                     >
                                         <Upload className="h-4 w-4 mr-2" />
-                                        Importer
+                                    Import
                                     </Button>
                                 )}
                                 <Button onClick={handleCreate} className="bg-amber-500 hover:bg-amber-600 text-white">
                                     <Plus className="h-4 w-4 mr-2" />
-                                    <span className="hidden sm:inline">Ajouter un produit</span>
+                                <span className="hidden sm:inline">Nouveau</span>
                                     <span className="sm:hidden">Ajouter</span>
                                 </Button>
                             </>
@@ -372,7 +372,7 @@ export default function HardwareProductsIndex({ products = [], categories = [], 
                                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Aucun produit</h3>
                                 <p className="text-gray-500 dark:text-gray-400 mb-4">Créez votre premier produit.</p>
                                 <Button onClick={handleCreate} className="bg-amber-500 hover:bg-amber-600 text-white">
-                                    <Plus className="h-4 w-4 mr-2" /> Ajouter un produit
+                                    <Plus className="h-4 w-4 mr-2" /> Ajouter
                                 </Button>
                             </div>
                         ) : (

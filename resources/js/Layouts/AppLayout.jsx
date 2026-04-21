@@ -5,6 +5,7 @@ import Navbar from '@/Components/Layout/Navbar';
 import DepotAlert from '@/Components/DepotAlert';
 import FlashMessages from '@/Components/FlashMessages';
 import BillingPaymentSuccessModal from '@/Components/Billing/BillingPaymentSuccessModal';
+import TrialUpgradePromptModal from '@/Components/Billing/TrialUpgradePromptModal';
 import PharmacyAssistant from '@/Components/Pharmacy/PharmacyAssistant';
 import HardwareAssistant from '@/Components/Hardware/HardwareAssistant';
 import CommerceAssistant from '@/Components/Commerce/CommerceAssistant';
@@ -212,6 +213,9 @@ export default function AppLayout({ children, header, fullWidth = false }) {
 
             {/* Modal succès paiement abonnement */}
             <BillingPaymentSuccessModal />
+
+            {/* Modal marketing plan Trial (affiché à la connexion) */}
+            <TrialUpgradePromptModal />
 
             {/* Bottom nav tactile (md:hidden dans le composant) */}
             {user ? <MobileBottomNav /> : null}

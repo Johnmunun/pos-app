@@ -1,4 +1,4 @@
-import { CheckCircle, User, ShoppingBag, CreditCard, BarChart } from 'lucide-react';
+import { CheckCircle, ShoppingBag, CreditCard, BarChart } from 'lucide-react';
 import { usePage } from '@inertiajs/react';
 
 /**
@@ -82,19 +82,32 @@ export default function Hero() {
                 <div className="mb-12 flex flex-col items-center gap-3">
                     <div className="flex -space-x-3">
                         {[
-                            { tone: 'bg-stone-900 text-white' },
-                            { tone: 'bg-stone-700 text-white' },
-                            { tone: 'bg-amber-900 text-white' },
-                            { tone: 'bg-amber-700 text-white' },
-                            { tone: 'bg-orange-700 text-white' },
-                            { tone: 'bg-orange-500 text-white' },
+                            { src: 'https://i.pravatar.cc/80?img=47', initials: 'AK' },
+                            { src: 'https://i.pravatar.cc/80?img=12', initials: 'CN' },
+                            { src: 'https://i.pravatar.cc/80?img=32', initials: 'NM' },
+                            { src: 'https://i.pravatar.cc/80?img=15', initials: 'YE' },
+                            { src: 'https://i.pravatar.cc/80?img=59', initials: 'BN' },
+                            { src: 'https://i.pravatar.cc/80?img=25', initials: 'GN' },
                         ].map((avatar, idx) => (
                             <div
                                 key={idx}
-                                className={`h-10 w-10 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center text-xs font-bold shadow-sm ${avatar.tone}`}
+                                className="h-10 w-10 rounded-full border-2 border-white dark:border-gray-900 overflow-hidden shadow-sm bg-amber-100 dark:bg-amber-900/20"
                                 title="Utilisateur"
                             >
-                                <User className="h-4 w-4" />
+                                <img
+                                    src={avatar.src}
+                                    alt="Utilisateur"
+                                    loading="lazy"
+                                    className="h-full w-full object-cover"
+                                    onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        const fallback = e.currentTarget.parentElement?.querySelector('.avatar-fallback');
+                                        if (fallback) fallback.classList.remove('hidden');
+                                    }}
+                                />
+                                <span className="avatar-fallback hidden text-[10px] font-bold text-amber-700 dark:text-amber-300">
+                                    {avatar.initials}
+                                </span>
                             </div>
                         ))}
                     </div>

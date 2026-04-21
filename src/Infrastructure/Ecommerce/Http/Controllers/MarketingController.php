@@ -60,8 +60,9 @@ class MarketingController
 
     public function index(Request $request): Response
     {
+        $user = $request->user();
         $shopId = $this->getShopId($request);
-        $tenantId = $request->user()?->tenant_id ? (string) $request->user()?->tenant_id : null;
+        $tenantId = $user && $user->tenant_id ? (string) $user->tenant_id : null;
         $shop = $this->resolveShop($shopId, $tenantId);
 
         if (!$shop) {
@@ -103,8 +104,9 @@ class MarketingController
 
     public function update(Request $request): RedirectResponse
     {
+        $user = $request->user();
         $shopId = $this->getShopId($request);
-        $tenantId = $request->user()?->tenant_id ? (string) $request->user()?->tenant_id : null;
+        $tenantId = $user && $user->tenant_id ? (string) $user->tenant_id : null;
         $shop = $this->resolveShop($shopId, $tenantId);
 
         if (!$shop) {

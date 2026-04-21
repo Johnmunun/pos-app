@@ -17,9 +17,11 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Throwable;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
+use Src\Application\Billing\Services\BillingPlanService;
 
 class RegisteredUserController extends Controller
 {
@@ -82,8 +84,17 @@ class RegisteredUserController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'type' => 'TENANT_ADMIN', // Premier utilisateur = admin du tenant
+            'status' => 'active',
             'is_active' => true,
         ]);
+
+        $trialPlanId = (int) (DB::table('billing_plans')->where('code', 'trial')->value('id') ?? 0);
+        if ($trialPlanId <= 0) {
+            $trialPlanId = (int) (DB::table('billing_plans')->where('is_default', true)->value('id') ?? 0);
+        }
+        if ($trialPlanId > 0) {
+            app(BillingPlanService::class)->assignTenantPlan((string) $tenant, $trialPlanId, 'active');
+        }
 
         // Si un code de parrainage est présent, créer le compte referral avec parent
         $rawReferralCode = $request->input('referral_code') ?: $request->query('ref');
@@ -102,25 +113,66 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
-        // Emails : bienvenue + rappel souscription (SMTP admin si activé, sinon config .env)
-        try {
-            $mailService = app(DynamicMailSettingsService::class);
-            $mailService->applyFromStorage();
-
-            Mail::to($user->email)->send(new WelcomeRegistrationMail($user, $request->company_name));
-            Mail::to($user->email)->send(new PostRegistrationPaymentReminderMail(
-                $user,
-                $request->company_name,
-            ));
-        } catch (\Throwable $e) {
-            Log::warning('Registration emails failed after store registration', [
-                'user_id' => $user->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
+        $this->sendRegistrationEmails($user, (string) $request->company_name);
 
         Auth::login($user);
+        $request->session()->flash('trial_upgrade_prompt', true);
 
         return redirect(route('dashboard', absolute: false));
+    }
+
+    private function sendRegistrationEmails(User $user, string $companyName): void
+    {
+        /** @var DynamicMailSettingsService $mailService */
+        $mailService = app(DynamicMailSettingsService::class);
+        $dynamicApplied = $mailService->applyFromStorage();
+
+        $sendAll = function () use ($user, $companyName): void {
+            Mail::to($user->email)->send(new WelcomeRegistrationMail($user, $companyName));
+            Mail::to($user->email)->send(new PostRegistrationPaymentReminderMail($user, $companyName));
+        };
+
+        try {
+            $sendAll();
+        } catch (Throwable $e) {
+            Log::warning('Registration emails failed (primary mailer)', [
+                'user_id' => $user->id,
+                'dynamic_mail_applied' => $dynamicApplied,
+                'error' => $e->getMessage(),
+            ]);
+
+            if (!$dynamicApplied) {
+                return;
+            }
+
+            try {
+                $this->restoreEnvMailConfig();
+                $sendAll();
+            } catch (Throwable $retryError) {
+                Log::error('Registration emails failed (env fallback)', [
+                    'user_id' => $user->id,
+                    'error' => $retryError->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    private function restoreEnvMailConfig(): void
+    {
+        config()->set('mail.default', 'smtp');
+        config()->set('mail.mailers.smtp.transport', 'smtp');
+        config()->set('mail.mailers.smtp.host', (string) config('mail.mailers.smtp.host', ''));
+        config()->set('mail.mailers.smtp.port', (int) config('mail.mailers.smtp.port', 587));
+        config()->set('mail.mailers.smtp.encryption', config('mail.mailers.smtp.encryption'));
+        config()->set('mail.mailers.smtp.username', (string) config('mail.mailers.smtp.username', ''));
+        config()->set('mail.mailers.smtp.password', (string) config('mail.mailers.smtp.password', ''));
+        config()->set('mail.from.address', (string) config('mail.from.address', ''));
+        config()->set('mail.from.name', (string) config('mail.from.name', 'OmniPOS'));
+
+        try {
+            Mail::purge('smtp');
+        } catch (Throwable) {
+            // noop
+        }
     }
 }

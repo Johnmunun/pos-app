@@ -50,7 +50,8 @@ class CmsBannerController
     private function resolveBannerShopIds(Request $request, string $shopId): array
     {
         $ids = [$shopId];
-        $tenantId = $request->user()?->tenant_id ? (string) $request->user()?->tenant_id : null;
+        $user = $request->user();
+        $tenantId = $user && $user->tenant_id ? (string) $user->tenant_id : null;
         if ($tenantId !== null && ctype_digit($tenantId) && $tenantId !== $shopId) {
             $ids[] = (string) ((int) $tenantId);
         }

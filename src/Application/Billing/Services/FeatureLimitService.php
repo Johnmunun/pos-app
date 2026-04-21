@@ -15,6 +15,11 @@ class FeatureLimitService
     ) {
     }
 
+    private function limitReachedMessage(string $baseMessage): string
+    {
+        return $baseMessage . ' Vous avez atteint la limite du plan Trial. Passez a un plan superieur pour debloquer plus de fonctionnalites.';
+    }
+
     public function assertCanCreateProduct(?string $tenantId): void
     {
         if ($tenantId === null) {
@@ -60,7 +65,7 @@ class FeatureLimitService
         }
 
         if ($count >= (int) $limit) {
-            abort(403, "Limite de produits atteinte pour votre plan ({$limit}).");
+            abort(403, $this->limitReachedMessage("Limite de produits atteinte pour votre plan ({$limit})."));
         }
     }
 
@@ -110,7 +115,7 @@ class FeatureLimitService
         $used = $this->countMonthlyFeatureUsage((string) $tenantId, $featureCode);
         if ($used >= (int) $limit) {
             $name = $label ?? 'cette fonctionnalite';
-            abort(403, "Quota mensuel atteint pour {$name} ({$limit}/mois).");
+            abort(403, $this->limitReachedMessage("Quota mensuel atteint pour {$name} ({$limit}/mois)."));
         }
     }
 
@@ -168,8 +173,107 @@ class FeatureLimitService
             ->count();
 
         if ($count >= (int) $limit) {
-            abort(403, "Limite d'utilisateurs atteinte pour votre plan ({$limit}).");
+            abort(403, $this->limitReachedMessage("Limite d'utilisateurs atteinte pour votre plan ({$limit})."));
         }
+    }
+
+    public function assertCanCreateCategory(?string $tenantId): void
+    {
+        $this->assertTenantLimit($tenantId, 'categories.max', 'Limite de categories atteinte pour votre plan');
+    }
+
+    public function assertCanCreateSupplier(?string $tenantId): void
+    {
+        $this->assertTenantLimit($tenantId, 'suppliers.max', 'Limite de fournisseurs atteinte pour votre plan');
+    }
+
+    public function assertCanCreateCustomer(?string $tenantId): void
+    {
+        $this->assertTenantLimit($tenantId, 'customers.max', 'Limite de clients atteinte pour votre plan');
+    }
+
+    public function assertCanCreateDepot(?string $tenantId): void
+    {
+        $this->assertTenantLimit($tenantId, 'depots.max', 'Limite de depots atteinte pour votre plan');
+    }
+
+    private function assertTenantLimit(?string $tenantId, string $featureCode, string $message): void
+    {
+        if ($tenantId === null || $tenantId === '') {
+            return;
+        }
+
+        $config = $this->repository->getTenantFeatureConfig((string) $tenantId, $featureCode);
+        if (!($config['enabled'] ?? true)) {
+            return;
+        }
+
+        $limit = $config['limit'] ?? null;
+        if ($limit === null) {
+            return;
+        }
+
+        $count = $this->countTenantResource((string) $tenantId, $featureCode);
+        if ($count >= (int) $limit) {
+            abort(403, $this->limitReachedMessage($message . " ({$limit})."));
+        }
+    }
+
+    private function countTenantResource(string $tenantId, string $featureCode): int
+    {
+        $shopIds = collect();
+        if (Schema::hasTable('shops')) {
+            $shopIds = DB::table('shops')->where('tenant_id', $tenantId)->pluck('id');
+        }
+
+        return match ($featureCode) {
+            'categories.max' => $this->countByShopTables($tenantId, $shopIds, [
+                'gc_categories',
+                'pharmacy_categories',
+                'quincaillerie_categories',
+            ]),
+            'suppliers.max' => $this->countByShopTables($tenantId, $shopIds, [
+                'gc_suppliers',
+                'pharmacy_suppliers',
+                'quincaillerie_suppliers',
+            ]),
+            'customers.max' => $this->countByShopTables($tenantId, $shopIds, [
+                'customers',
+                'pharmacy_customers',
+                'quincaillerie_customers',
+                'ecommerce_customers',
+            ]),
+            'depots.max' => Schema::hasTable('depots')
+                ? (int) DB::table('depots')->where('tenant_id', $tenantId)->count()
+                : 0,
+            default => 0,
+        };
+    }
+
+    private function countByShopTables(string $tenantId, \Illuminate\Support\Collection $shopIds, array $tables): int
+    {
+        $total = 0;
+        foreach ($tables as $table) {
+            if (!Schema::hasTable($table)) {
+                continue;
+            }
+
+            if ($shopIds->isNotEmpty() && Schema::hasColumn($table, 'shop_id')) {
+                $total += (int) DB::table($table)->whereIn('shop_id', $shopIds->all())->count();
+                continue;
+            }
+
+            if (Schema::hasColumn($table, 'tenant_id')) {
+                $total += (int) DB::table($table)->where('tenant_id', $tenantId)->count();
+                continue;
+            }
+
+            if (Schema::hasColumn($table, 'shop_id')) {
+                $total += (int) DB::table($table)->where('shop_id', $tenantId)->count();
+            }
+        }
+
+        return $total;
     }
 
     /**
@@ -200,8 +304,10 @@ class FeatureLimitService
             );
             abort(
                 403,
-                "Le nombre de ventes mensuelles autorisé par votre plan est atteint ({$limit} pour le mois en cours). "
-                . 'Passez à un plan supérieur ou attendez le prochain mois pour continuer.'
+                $this->limitReachedMessage(
+                    "Le nombre de ventes mensuelles autorisé par votre plan est atteint ({$limit} pour le mois en cours). "
+                    . 'Passez à un plan supérieur ou attendez le prochain mois pour continuer.'
+                )
             );
         }
     }

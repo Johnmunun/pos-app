@@ -6,10 +6,16 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use Src\Application\Billing\Services\FeatureLimitService;
 use Src\Infrastructure\GlobalCommerce\Procurement\Models\SupplierModel;
 
 class SupplierController
 {
+    public function __construct(
+        private readonly FeatureLimitService $featureLimitService,
+    ) {
+    }
+
     private function getShopId(Request $request): string
     {
         $user = $request->user();
@@ -48,6 +54,7 @@ class SupplierController
     public function store(Request $request): \Illuminate\Http\JsonResponse|RedirectResponse
     {
         $shopId = $this->getShopId($request);
+        $this->featureLimitService->assertCanCreateSupplier((string) ($request->user()?->tenant_id ?? ''));
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255',

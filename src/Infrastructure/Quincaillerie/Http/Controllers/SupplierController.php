@@ -16,6 +16,7 @@ use Src\Application\Quincaillerie\UseCases\Supplier\ActivateSupplierUseCase;
 use Src\Application\Quincaillerie\UseCases\Supplier\CreateSupplierUseCase;
 use Src\Application\Quincaillerie\UseCases\Supplier\DeactivateSupplierUseCase;
 use Src\Application\Quincaillerie\UseCases\Supplier\UpdateSupplierUseCase;
+use Src\Application\Billing\Services\FeatureLimitService;
 use Src\Infrastructure\Quincaillerie\Models\SupplierModel;
 use Src\Infrastructure\Quincaillerie\Models\ProductModel;
 use Src\Application\Quincaillerie\Services\DepotFilterService;
@@ -37,7 +38,8 @@ class SupplierController extends Controller
         private readonly UpdateSupplierUseCase $updateSupplierUseCase,
         private readonly ActivateSupplierUseCase $activateSupplierUseCase,
         private readonly DeactivateSupplierUseCase $deactivateSupplierUseCase,
-        private readonly DepotFilterService $depotFilterService
+        private readonly DepotFilterService $depotFilterService,
+        private readonly FeatureLimitService $featureLimitService
     ) {
     }
 
@@ -50,6 +52,7 @@ class SupplierController extends Controller
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
+        $this->featureLimitService->assertCanCreateSupplier((string) ($user->tenant_id ?? ''));
         $shopId = $user->shop_id ?? $user->tenant_id;
         $isRoot = $user->type === 'ROOT';
 

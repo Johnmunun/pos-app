@@ -48,7 +48,7 @@ class EcommerceFusionPaymentController extends Controller
                 && $host !== $baseDomain
             ) {
                 $subdomain = substr($host, 0, -1 * (strlen($baseDomain) + 1));
-                if ($subdomain !== false && $subdomain !== '') {
+                if ($subdomain !== '') {
                     $storefrontShop = Shop::query()
                         ->whereRaw('LOWER(ecommerce_subdomain) = ?', [strtolower($subdomain)])
                         ->where('ecommerce_is_online', true)
@@ -149,9 +149,12 @@ class EcommerceFusionPaymentController extends Controller
             ], 422);
         }
 
-        $tenantId = $user?->tenant_id !== null
-            ? (string) $user?->tenant_id
-            : (($storefrontShop && isset($storefrontShop->tenant_id)) ? (string) $storefrontShop->tenant_id : null);
+        $tenantId = null;
+        if ($user !== null && $user->tenant_id !== null) {
+            $tenantId = (string) $user->tenant_id;
+        } elseif ($storefrontShop && isset($storefrontShop->tenant_id)) {
+            $tenantId = (string) $storefrontShop->tenant_id;
+        }
 
         $placeholderPlanId = (int) DB::table('billing_plans')->orderBy('id')->value('id');
         if ($placeholderPlanId < 1) {

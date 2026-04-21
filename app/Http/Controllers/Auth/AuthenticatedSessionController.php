@@ -52,11 +52,12 @@ class AuthenticatedSessionController extends Controller
         }
 
         // Si ROOT user → dashboard ROOT
-        if (auth()->user()->type === 'ROOT') {
+        if (($user?->type ?? null) === 'ROOT') {
             return redirect()->intended(route('admin.dashboard', absolute: false));
         }
 
         // Sinon → dashboard du tenant
+        $request->session()->flash('trial_upgrade_prompt', true);
         return redirect()->intended(route('dashboard', absolute: false));
     }
 

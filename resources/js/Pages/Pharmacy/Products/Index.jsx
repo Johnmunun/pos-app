@@ -277,7 +277,7 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                                 }`}
                             >
                                 <FileText className="h-4 w-4 mr-2" />
-                                Exporter PDF
+                                PDF
                             </a>
                             <a
                                 href={products.length ? route(`${routePrefix}.products.export.excel`) : '#'}
@@ -289,7 +289,7 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                                 }`}
                             >
                                 <Download className="h-4 w-4 mr-2" />
-                                Exporter Excel
+                                Excel
                             </a>
                         </div>
                         {/* Version compacte pour mobile */}
@@ -338,7 +338,7 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                                 className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 px-3 h-10 shadow-sm hover:shadow-md bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700"
                             >
                                 <Upload className="h-4 w-4 mr-2" />
-                                <span className="hidden sm:inline">Importer</span>
+                                <span className="hidden sm:inline">Import</span>
                             </button>
                         )}
                         <button
@@ -346,7 +346,7 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:text-white dark:hover:bg-amber-700 px-4 py-2 h-10 shadow-sm hover:shadow-md"
                         >
                             <Plus className="h-4 w-4 mr-2" />
-                            <span className="hidden sm:inline">Ajouter un produit</span>
+                            <span className="hidden sm:inline">Nouveau</span>
                             <span className="sm:hidden">Ajouter</span>
                         </button>
                     </div>
@@ -433,7 +433,7 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                                         className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:text-white dark:hover:bg-amber-700 px-4 py-2 h-10 shadow-sm hover:shadow-md"
                                     >
                                         <Plus className="h-4 w-4 mr-2" />
-                                        Ajouter un produit
+                                        Ajouter
                                     </button>
                                 </div>
                             ) : (

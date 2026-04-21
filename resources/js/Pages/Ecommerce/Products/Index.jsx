@@ -230,27 +230,27 @@ export default function EcommerceProductsIndex({ products = [], categories = [],
                 <EcommercePageHeader title="Produits E-commerce" icon={Package}>
                     <EcommerceActionButton
                         icon={Download}
-                        label="Export Excel"
+                        label="Excel"
                         variant="outline"
                         className="border-emerald-500 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-400 dark:text-emerald-300 dark:hover:bg-emerald-900/20"
                         onClick={() => window.open(route('ecommerce.exports.products.excel'), '_blank')}
                     />
                     <EcommerceActionButton
                         icon={Download}
-                        label="Export PDF"
+                        label="PDF"
                         variant="outline"
                         className="border-red-500 text-red-700 hover:bg-red-50 dark:border-red-400 dark:text-red-300 dark:hover:bg-red-900/20"
                         onClick={() => window.open(route('ecommerce.exports.products.pdf'), '_blank')}
                     />
-                    <EcommerceActionButton icon={Upload} label="Importer" variant="outline" onClick={handleOpenImport} />
+                    <EcommerceActionButton icon={Upload} label="Import" variant="outline" onClick={handleOpenImport} />
                     <Button asChild variant="outline" size="sm" className="inline-flex items-center justify-center gap-2 p-2 sm:px-3 sm:py-2 min-w-[36px] sm:min-w-0">
                         <Link href={route('ecommerce.catalog.index')} title="Voir le catalogue">
                             <ShoppingCart className="h-4 w-4 shrink-0" />
-                            <span className="hidden sm:inline">Voir le catalogue</span>
+                            <span className="hidden sm:inline">Catalogue</span>
                         </Link>
                     </Button>
                     {canManageCommerceProducts && (
-                        <EcommerceActionButton icon={Plus} label="Nouveau produit" onClick={handleCreate} />
+                        <EcommerceActionButton icon={Plus} label="Nouveau" onClick={handleCreate} />
                     )}
                 </EcommercePageHeader>
             }

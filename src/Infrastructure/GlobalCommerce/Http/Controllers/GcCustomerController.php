@@ -14,9 +14,15 @@ use PhpOffice\PhpSpreadsheet\Reader\Csv;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Illuminate\Support\Facades\Log;
+use Src\Application\Billing\Services\FeatureLimitService;
 
 class GcCustomerController
 {
+    public function __construct(
+        private readonly FeatureLimitService $featureLimitService,
+    ) {
+    }
+
     private function getTenantId(Request $request): int
     {
         $user = $request->user();
@@ -71,6 +77,7 @@ class GcCustomerController
     public function store(Request $request): JsonResponse|RedirectResponse
     {
         $tenantId = $this->getTenantId($request);
+        $this->featureLimitService->assertCanCreateCustomer((string) $tenantId);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',

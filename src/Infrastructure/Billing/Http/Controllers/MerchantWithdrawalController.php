@@ -5,6 +5,8 @@ namespace Src\Infrastructure\Billing\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
 use Src\Infrastructure\Billing\Models\MerchantWalletBalance;
 use Src\Infrastructure\Billing\Models\MerchantWithdrawalRequest;
 use Src\Infrastructure\Billing\Services\MerchantWalletService;
@@ -16,17 +18,20 @@ class MerchantWithdrawalController extends Controller
     ) {
     }
 
+    public function page(Request $request): Response
+    {
+        $user = $request->user();
+        if (!$this->canAccessWithdrawals($user)) {
+            abort(403, 'Acces refuse.');
+        }
+
+        return Inertia::render('Billing/Withdrawals');
+    }
+
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        if (
-            $user === null
-            || (
-                !$user->hasPermission('ecommerce.payment.view')
-                && !$user->hasPermission('ecommerce.order.view')
-                && !$user->hasPermission('module.ecommerce')
-            )
-        ) {
+        if (!$this->canAccessWithdrawals($user)) {
             return response()->json(['message' => 'Accès refusé.'], 403);
         }
 
@@ -55,21 +60,14 @@ class MerchantWithdrawalController extends Controller
     public function store(Request $request): JsonResponse
     {
         $user = $request->user();
-        if (
-            $user === null
-            || (
-                !$user->hasPermission('ecommerce.order.payment.update')
-                && !$user->hasPermission('ecommerce.payment.view')
-                && !$user->hasPermission('module.ecommerce')
-            )
-        ) {
+        if (!$this->canAccessWithdrawals($user)) {
             return response()->json(['message' => 'Accès refusé.'], 403);
         }
 
         $validated = $request->validate([
             'currency_code' => ['required', 'string', 'size:3'],
             'requested_amount' => ['required', 'numeric', 'gt:0'],
-            'destination_type' => ['required', 'string', 'in:mobile_money,bank,wallet'],
+            'destination_type' => ['required', 'string', 'in:mobile_money,bank,wallet,paypal'],
             'destination_reference' => ['required', 'string', 'max:190'],
         ]);
 
@@ -83,5 +81,25 @@ class MerchantWithdrawalController extends Controller
             'message' => 'Demande de retrait enregistrée.',
             'withdrawal' => $withdrawal,
         ]);
+    }
+
+    private function canAccessWithdrawals(mixed $user): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        return $user->hasPermission('module.ecommerce')
+            || $user->hasPermission('module.commerce')
+            || $user->hasPermission('module.pharmacy')
+            || $user->hasPermission('module.hardware')
+            || $user->hasPermission('finance.dashboard.view')
+            || $user->hasPermission('finance.report.view')
+            || $user->hasPermission('referral.view')
+            || $user->hasPermission('referral.stats.view')
+            || $user->hasPermission('ecommerce.payment.view')
+            || $user->hasPermission('ecommerce.order.view')
+            || $user->hasPermission('ecommerce.order.payment.update')
+            || $user->isRoot();
     }
 }

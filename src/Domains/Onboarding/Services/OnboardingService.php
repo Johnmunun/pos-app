@@ -162,9 +162,9 @@ class OnboardingService
                 'name' => $data[1]['name'],
                 'email' => $data[1]['email'],
                 'password' => $data[1]['password'], // Sera hashé par l'infrastructure
-                'type' => 'MERCHANT',
-                'status' => 'pending',
-                'is_active' => false
+                'type' => 'TENANT_ADMIN',
+                'status' => 'active',
+                'is_active' => true
             ],
             'tenant' => [
                 'name' => $data[3]['company_name'],

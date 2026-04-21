@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use Src\Application\Billing\Services\FeatureLimitService;
 use Src\Domain\GlobalCommerce\Inventory\Repositories\CategoryRepositoryInterface;
 use Src\Domain\GlobalCommerce\Inventory\Repositories\ProductRepositoryInterface;
 use Src\Infrastructure\GlobalCommerce\Inventory\Models\CategoryModel;
@@ -25,18 +26,21 @@ class CategoryController
         private readonly ProductRepositoryInterface $productRepository,
         private readonly CreateCategoryUseCase $createCategoryUseCase,
         private readonly UpdateCategoryUseCase $updateCategoryUseCase,
-        private readonly DeleteCategoryUseCase $deleteCategoryUseCase
+        private readonly DeleteCategoryUseCase $deleteCategoryUseCase,
+        private readonly FeatureLimitService $featureLimitService,
     ) {}
 
     public function index(Request $request): Response
     {
-        if (!$request->user()?->hasPermission('ecommerce.view')) {
+        $user = $request->user();
+        if (!$user?->hasPermission('ecommerce.view')) {
             abort(403, 'Vous n\'avez pas la permission de voir les catégories.');
         }
 
         $shop = $this->ecommerceInventoryShop($request);
         $shopId = (string) $shop->id;
         $gcShopIds = $this->ecommerceGcShopIds($request, $shop);
+        $this->featureLimitService->assertCanCreateCategory((string) ($user->tenant_id ?? ''));
 
         // Récupérer les catégories à partir du modèle Eloquent (liste plate)
         $categoryModels = CategoryModel::whereIn('shop_id', $gcShopIds)

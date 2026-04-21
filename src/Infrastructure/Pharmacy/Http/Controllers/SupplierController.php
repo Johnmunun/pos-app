@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
+use Src\Application\Billing\Services\FeatureLimitService;
 use Src\Application\Pharmacy\DTO\CreateSupplierDTO;
 use Src\Application\Pharmacy\DTO\UpdateSupplierDTO;
 use Src\Application\Pharmacy\UseCases\Supplier\ActivateSupplierUseCase;
@@ -42,7 +43,8 @@ class SupplierController extends Controller
         private readonly CreateSupplierUseCase $createSupplierUseCase,
         private readonly UpdateSupplierUseCase $updateSupplierUseCase,
         private readonly ActivateSupplierUseCase $activateSupplierUseCase,
-        private readonly DeactivateSupplierUseCase $deactivateSupplierUseCase
+        private readonly DeactivateSupplierUseCase $deactivateSupplierUseCase,
+        private readonly FeatureLimitService $featureLimitService
     ) {
     }
 
@@ -55,6 +57,7 @@ class SupplierController extends Controller
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
+        $this->featureLimitService->assertCanCreateSupplier((string) ($user->tenant_id ?? ''));
         $shopId = $user->shop_id ?? $user->tenant_id;
         $isRoot = $user->type === 'ROOT';
 

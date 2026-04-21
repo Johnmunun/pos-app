@@ -22,24 +22,59 @@ class AdminMailSettingsController extends Controller
     public function index(): Response
     {
         $settings = $this->mailSettingsService->getStored();
+        $mailSettings = [
+            'enabled' => (bool) ($settings['enabled'] ?? false),
+            'host' => (string) ($settings['host'] ?? ''),
+            'port' => (int) ($settings['port'] ?? 587),
+            'encryption' => (string) ($settings['encryption'] ?? 'tls'),
+            'username' => (string) ($settings['username'] ?? ''),
+            'from_address' => (string) ($settings['from_address'] ?? ''),
+            'from_name' => (string) ($settings['from_name'] ?? ''),
+            'password_set' => !empty($settings['password_encrypted']),
+            'events' => [
+                'account_activated' => (bool) (($settings['events']['account_activated'] ?? $this->mailSettingsService->defaultEvents()['account_activated']) ?? true),
+                'sale_completed' => (bool) (($settings['events']['sale_completed'] ?? $this->mailSettingsService->defaultEvents()['sale_completed']) ?? true),
+                'stock_low' => (bool) (($settings['events']['stock_low'] ?? $this->mailSettingsService->defaultEvents()['stock_low']) ?? true),
+                'stock_expiration' => (bool) (($settings['events']['stock_expiration'] ?? $this->mailSettingsService->defaultEvents()['stock_expiration']) ?? true),
+                'ecommerce_order' => (bool) (($settings['events']['ecommerce_order'] ?? $this->mailSettingsService->defaultEvents()['ecommerce_order']) ?? true),
+                'sales_monthly_limit' => (bool) (($settings['events']['sales_monthly_limit'] ?? $this->mailSettingsService->defaultEvents()['sales_monthly_limit']) ?? true),
+            ],
+        ];
+
+        $issues = [];
+        if (!$mailSettings['enabled']) {
+            $issues[] = 'Service email desactive.';
+        }
+        if ($mailSettings['host'] === '') {
+            $issues[] = 'Host SMTP manquant.';
+        }
+        if ($mailSettings['port'] <= 0) {
+            $issues[] = 'Port SMTP invalide.';
+        }
+        if ($mailSettings['username'] === '') {
+            $issues[] = 'Username SMTP manquant.';
+        }
+        if (!$mailSettings['password_set']) {
+            $issues[] = 'Mot de passe SMTP non defini.';
+        }
+        if ($mailSettings['from_address'] === '') {
+            $issues[] = 'Adresse expediteur manquante.';
+        }
+
+        $healthStatus = empty($issues) ? 'healthy' : 'degraded';
 
         return Inertia::render('Admin/MailSettings', [
-            'mailSettings' => [
-                'enabled' => (bool) ($settings['enabled'] ?? false),
-                'host' => (string) ($settings['host'] ?? ''),
-                'port' => (int) ($settings['port'] ?? 587),
-                'encryption' => (string) ($settings['encryption'] ?? 'tls'),
-                'username' => (string) ($settings['username'] ?? ''),
-                'from_address' => (string) ($settings['from_address'] ?? ''),
-                'from_name' => (string) ($settings['from_name'] ?? ''),
-                'password_set' => !empty($settings['password_encrypted']),
-                'events' => [
-                    'account_activated' => (bool) (($settings['events']['account_activated'] ?? $this->mailSettingsService->defaultEvents()['account_activated']) ?? true),
-                    'sale_completed' => (bool) (($settings['events']['sale_completed'] ?? $this->mailSettingsService->defaultEvents()['sale_completed']) ?? true),
-                    'stock_low' => (bool) (($settings['events']['stock_low'] ?? $this->mailSettingsService->defaultEvents()['stock_low']) ?? true),
-                    'stock_expiration' => (bool) (($settings['events']['stock_expiration'] ?? $this->mailSettingsService->defaultEvents()['stock_expiration']) ?? true),
-                    'ecommerce_order' => (bool) (($settings['events']['ecommerce_order'] ?? $this->mailSettingsService->defaultEvents()['ecommerce_order']) ?? true),
-                    'sales_monthly_limit' => (bool) (($settings['events']['sales_monthly_limit'] ?? $this->mailSettingsService->defaultEvents()['sales_monthly_limit']) ?? true),
+            'mailSettings' => $mailSettings,
+            'mailHealth' => [
+                'status' => $healthStatus,
+                'issues' => $issues,
+                'checks' => [
+                    'enabled' => $mailSettings['enabled'],
+                    'host' => $mailSettings['host'] !== '',
+                    'port' => $mailSettings['port'] > 0,
+                    'username' => $mailSettings['username'] !== '',
+                    'password_set' => $mailSettings['password_set'],
+                    'from_address' => $mailSettings['from_address'] !== '',
                 ],
             ],
         ]);

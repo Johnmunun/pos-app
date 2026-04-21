@@ -31,11 +31,17 @@ export default function Error403() {
                 <p className="text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
                     Vous n'avez pas les permissions nécessaires pour accéder à cette ressource.
                     <br />
-                    Veuillez contacter votre administrateur si vous pensez qu'il s'agit d'une erreur.
+                    Vous avez peut-être atteint une limite de votre plan.
                 </p>
 
                 {/* Actions */}
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <Link
+                        href={route('billing.onboarding.payment')}
+                        className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md font-medium"
+                    >
+                        Upgrade plan
+                    </Link>
                     <Link
                         href={route('dashboard')}
                         className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md font-medium"

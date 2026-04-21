@@ -149,6 +149,12 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
 
                 {/* Actions droite */}
                 <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-3 flex-shrink-0">
+                    <Link
+                        href={route('billing.onboarding.payment')}
+                        className="hidden md:inline-flex items-center rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-700"
+                    >
+                        Upgrade
+                    </Link>
                     {/* Indicateur d'impersonation */}
                     {isImpersonating && (
                         <div className="hidden md:flex items-center gap-2 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 rounded-lg text-xs font-medium">

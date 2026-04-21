@@ -7,12 +7,18 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
+use Src\Application\Billing\Services\FeatureLimitService;
 
 /**
  * Gère le contexte dépôt (sélection) et la liste des dépôts du tenant.
  */
 class DepotController extends Controller
 {
+    public function __construct(
+        private readonly FeatureLimitService $featureLimitService,
+    ) {
+    }
+
     /**
      * Liste des dépôts du tenant (page gestion).
      */
@@ -108,6 +114,7 @@ class DepotController extends Controller
         if (!$user->hasPermission($permission) && $user->type !== 'ROOT') {
             abort(403, 'Permission refusée.');
         }
+        $this->featureLimitService->assertCanCreateDepot((string) ($user->tenant_id ?? ''));
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',

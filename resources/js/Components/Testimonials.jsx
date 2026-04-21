@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Star } from 'lucide-react';
 
 /**
@@ -5,7 +6,29 @@ import { Star } from 'lucide-react';
  *
  * Section de témoignages clients
  */
-function TestimonialCard({ name, role, company, content, avatar }) {
+function Avatar({ src, alt, fallback }) {
+    const [failed, setFailed] = useState(false);
+
+    if (!src || failed) {
+        return (
+            <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                {fallback}
+            </div>
+        );
+    }
+
+    return (
+        <img
+            src={src}
+            alt={alt}
+            loading="lazy"
+            onError={() => setFailed(true)}
+            className="w-12 h-12 rounded-full object-cover shadow-lg ring-2 ring-amber-100 dark:ring-amber-900/30"
+        />
+    );
+}
+
+function TestimonialCard({ name, role, company, content, avatar, avatarUrl }) {
     return (
         <div className="bg-white dark:bg-gray-700 rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow duration-300 border border-gray-200 dark:border-gray-600">
             {/* Étoiles */}
@@ -27,9 +50,7 @@ function TestimonialCard({ name, role, company, content, avatar }) {
 
             {/* Auteur */}
             <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                    {avatar}
-                </div>
+                <Avatar src={avatarUrl} alt={name} fallback={avatar} />
                 <div>
                     <p className="font-semibold text-gray-900 dark:text-white text-sm">{name}</p>
                     <p className="text-gray-500 dark:text-gray-400 text-xs">{role} · {company}</p>
@@ -49,6 +70,7 @@ export default function Testimonials() {
             company: 'Marché Nzambe',
             content: 'OmniPOS a transformé ma façon de vendre. Interface intuitive et support formidable!',
             avatar: 'AK',
+            avatarUrl: 'https://api.dicebear.com/9.x/personas/svg?seed=AlineKabeya&backgroundColor=f59e0b',
         },
         {
             name: 'Cédric Nzambe',
@@ -56,6 +78,7 @@ export default function Testimonials() {
             company: 'Congo Express',
             content: 'Les tableaux de bord sont incroyables. Nos revenus ont augmenté de 40% en 3 mois.',
             avatar: 'CN',
+            avatarUrl: 'https://api.dicebear.com/9.x/personas/svg?seed=CedricNzambe&backgroundColor=ea580c',
         },
         {
             name: 'Nadine Mbuyi',
@@ -63,6 +86,7 @@ export default function Testimonials() {
             company: 'Mbote Boutique',
             content: 'Excellent service client et fonctionnalités que d\'autres n\'ont pas. Recommandé!',
             avatar: 'NM',
+            avatarUrl: 'https://api.dicebear.com/9.x/personas/svg?seed=NadineMbuyi&backgroundColor=d97706',
         },
         {
             name: 'Yannick Ekambi',
@@ -70,6 +94,7 @@ export default function Testimonials() {
             company: 'Douala Mode',
             content: 'La meilleure décision pour mon business. Paiements sécurisés et rapides, clients satisfaits.',
             avatar: 'YE',
+            avatarUrl: 'https://api.dicebear.com/9.x/personas/svg?seed=YannickEkambi&backgroundColor=b45309',
         },
         {
             name: 'Brice Ndzié',
@@ -77,6 +102,7 @@ export default function Testimonials() {
             company: 'Yaoundé Tech',
             content: 'Parfait pour gérer nos ventes en ligne. Intégration facile et ROI rapide!',
             avatar: 'BN',
+            avatarUrl: 'https://api.dicebear.com/9.x/personas/svg?seed=BriceNdzie&backgroundColor=c2410c',
         },
         {
             name: 'Grace Nkem',
@@ -84,6 +110,7 @@ export default function Testimonials() {
             company: 'Camer Market',
             content: 'Solution complète et fiable. Notre équipe l\'adore et les clients aussi!',
             avatar: 'GN',
+            avatarUrl: 'https://api.dicebear.com/9.x/personas/svg?seed=GraceNkem&backgroundColor=9a3412',
         },
     ];
 
@@ -115,6 +142,7 @@ export default function Testimonials() {
                             company={testimonial.company}
                             content={testimonial.content}
                             avatar={testimonial.avatar}
+                            avatarUrl={testimonial.avatarUrl}
                         />
                     ))}
                 </div>

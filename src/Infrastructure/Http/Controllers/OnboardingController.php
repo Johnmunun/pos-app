@@ -21,6 +21,8 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
+use Src\Application\Billing\Services\BillingPlanService;
 use Src\Domains\Onboarding\Services\OnboardingService;
 use Src\Infrastructure\Referral\Models\ReferralAccountModel;
 use Src\Infrastructure\Repositories\EloquentOnboardingRepository;
@@ -43,6 +45,7 @@ class OnboardingController extends Controller
 
     public function __construct(
         private readonly StoreTemplateProvisionerInterface $storeTemplateProvisioner,
+        private readonly BillingPlanService $billingPlanService,
     ) {
         $this->onboardingService = new OnboardingService();
         $this->repository = new EloquentOnboardingRepository();
@@ -295,48 +298,23 @@ class OnboardingController extends Controller
                 return back()->withErrors(['error' => 'Impossible de finaliser l\'inscription. Réessayez dans quelques instants.']);
             }
 
-            // Secteurs Kiosque, Supermarché, Boucherie, Autre = module Global Commerce : assigner le rôle Commerçant Commerce
-            $commerceSectors = ['kiosk', 'supermarket', 'butchery', 'other', 'global_commerce'];
-            if (in_array($tenant->sector, $commerceSectors, true)) {
-                $commerceRole = Role::where('name', 'Commerçant Commerce')->whereNull('tenant_id')->first();
-                if ($commerceRole) {
-                    $user->roles()->syncWithoutDetaching([$commerceRole->id]);
-                }
+            $trialPlanId = (int) (DB::table('billing_plans')->where('code', 'trial')->value('id') ?? 0);
+            if ($trialPlanId <= 0) {
+                $trialPlanId = (int) (DB::table('billing_plans')->where('is_default', true)->value('id') ?? 0);
+            }
+            if ($trialPlanId > 0) {
+                $this->billingPlanService->assignTenantPlan((string) $tenant->id, $trialPlanId, 'active');
             }
 
-            // Secteur E-commerce = module E-commerce : assigner le rôle Commerçant E-commerce
-            if ($tenant->sector === 'ecommerce') {
-                $ecommerceRole = Role::where('name', 'Commerçant E-commerce')->whereNull('tenant_id')->first();
-                if ($ecommerceRole) {
-                    $user->roles()->syncWithoutDetaching([$ecommerceRole->id]);
-                } else {
-                    // Si le rôle n'existe pas, créer un rôle par défaut avec les permissions e-commerce
-                    $ecommerceRole = Role::create([
-                        'tenant_id' => null,
-                        'name' => 'Commerçant E-commerce',
-                        'description' => 'Rôle par défaut pour les commerçants e-commerce (créé automatiquement).',
-                        'is_active' => true,
-                    ]);
-                    
-                    // Assigner les permissions e-commerce
-                    $ecommercePermissions = Permission::where('is_old', false)
-                        ->whereIn('code', [
-                            'module.ecommerce',
-                            'ecommerce.view',
-                            'ecommerce.create',
-                            'ecommerce.update',
-                            'ecommerce.manage_orders',
-                        ])
-                        ->pluck('id')
-                        ->toArray();
-                    
-                    if (!empty($ecommercePermissions)) {
-                        $ecommerceRole->permissions()->sync($ecommercePermissions);
-                    }
-                    
-                    $user->roles()->syncWithoutDetaching([$ecommerceRole->id]);
+            if ((string) $user->status !== 'active') {
+                $user->status = 'active';
+                if (Schema::hasColumn('users', 'is_active')) {
+                    $user->is_active = true;
                 }
+                $user->save();
             }
+
+            $this->assignModuleRoleBySector($user, (string) $tenant->sector);
 
             // Créer le compte de parrainage si un code d'invitation a été fourni
             $step3Data = $session->getStepData(3);
@@ -359,6 +337,7 @@ class OnboardingController extends Controller
             
             // Connecter l'utilisateur
             Auth::login($user);
+            $request->session()->flash('trial_upgrade_prompt', true);
 
             // Créer une notification système pour ROOT / admins (nouvelle inscription)
             try {
@@ -369,32 +348,16 @@ class OnboardingController extends Controller
                 ]);
             }
 
-            try {
-                $mailService = app(DynamicMailSettingsService::class);
-                // Si SMTP admin activé : applique la config stockée ; sinon garde mailer .env (smtp, log, etc.).
-                $mailService->applyFromStorage();
-
-                Mail::to($user->email)->send(new WelcomeRegistrationMail(
-                    $user,
-                    $tenant->name,
-                    $registrationData['tenant']['store_start_mode'] ?? null,
-                ));
-
-                Mail::to($user->email)->send(new PostRegistrationPaymentReminderMail(
-                    $user,
-                    $tenant->name,
-                ));
-            } catch (\Throwable $e) {
-                Log::warning('Registration emails failed after onboarding', [
-                    'user_id' => $user->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+            $this->sendRegistrationEmails(
+                $user,
+                (string) $tenant->name,
+                $registrationData['tenant']['store_start_mode'] ?? null,
+            );
 
             // Ajouter un message de succès
-            request()->session()->flash('success', 'Votre compte a été créé avec succès ! Il est en attente de validation par notre équipe.');
-            
-            return redirect()->route('pending');
+            request()->session()->flash('success', 'Votre compte a été créé avec succès. Vous êtes en plan Trial avec des limites d usage.');
+
+            return redirect()->route('dashboard');
             
         } catch (\DomainException|\InvalidArgumentException $e) {
             return back()->withErrors(['error' => $e->getMessage()]);
@@ -520,5 +483,133 @@ class OnboardingController extends Controller
             'code' => strtoupper(Str::random(8)),
             'store_start_mode' => $tenantData['store_start_mode'] ?? StoreStartMode::EMPTY_STORE,
         ]);
+    }
+
+    private function sendRegistrationEmails(UserModel $user, string $companyName, ?string $storeStartMode = null): void
+    {
+        /** @var DynamicMailSettingsService $mailService */
+        $mailService = app(DynamicMailSettingsService::class);
+        $dynamicApplied = $mailService->applyFromStorage();
+
+        $sendAll = function () use ($user, $companyName, $storeStartMode): void {
+            Mail::to($user->email)->send(new WelcomeRegistrationMail(
+                $user,
+                $companyName,
+                $storeStartMode,
+            ));
+
+            Mail::to($user->email)->send(new PostRegistrationPaymentReminderMail(
+                $user,
+                $companyName,
+            ));
+        };
+
+        try {
+            $sendAll();
+        } catch (Throwable $e) {
+            Log::warning('Registration emails failed after onboarding (primary mailer)', [
+                'user_id' => $user->id,
+                'dynamic_mail_applied' => $dynamicApplied,
+                'error' => $e->getMessage(),
+            ]);
+
+            if (!$dynamicApplied) {
+                return;
+            }
+
+            try {
+                $this->restoreEnvMailConfig();
+                $sendAll();
+            } catch (Throwable $retryError) {
+                Log::error('Registration emails failed after onboarding (env fallback)', [
+                    'user_id' => $user->id,
+                    'error' => $retryError->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    private function restoreEnvMailConfig(): void
+    {
+        config()->set('mail.default', 'smtp');
+        config()->set('mail.mailers.smtp.transport', 'smtp');
+        config()->set('mail.mailers.smtp.host', (string) config('mail.mailers.smtp.host', ''));
+        config()->set('mail.mailers.smtp.port', (int) config('mail.mailers.smtp.port', 587));
+        config()->set('mail.mailers.smtp.encryption', config('mail.mailers.smtp.encryption'));
+        config()->set('mail.mailers.smtp.username', (string) config('mail.mailers.smtp.username', ''));
+        config()->set('mail.mailers.smtp.password', (string) config('mail.mailers.smtp.password', ''));
+        config()->set('mail.from.address', (string) config('mail.from.address', ''));
+        config()->set('mail.from.name', (string) config('mail.from.name', 'OmniPOS'));
+
+        try {
+            Mail::purge('smtp');
+        } catch (Throwable) {
+            // noop
+        }
+    }
+
+    private function assignModuleRoleBySector(UserModel $user, string $sector): void
+    {
+        $normalized = strtolower(trim($sector));
+        $commerceSectors = ['kiosk', 'supermarket', 'butchery', 'other', 'global_commerce'];
+
+        $roleCandidates = match (true) {
+            $normalized === 'ecommerce' => ['e-commerce', 'Commerçant E-commerce'],
+            in_array($normalized, $commerceSectors, true) => ['Global commerce', 'Commerçant Commerce', 'Vendeur Commerce'],
+            $normalized === 'pharmacy' => ['user_pharmacy', 'Commerçant Pharmacie', 'Vendeur Pharmacie'],
+            $normalized === 'hardware' => ['user_quin', 'Commerçant Hardware', 'Vendeur Hardware'],
+            default => [],
+        };
+
+        foreach ($roleCandidates as $roleName) {
+            $role = Role::where('name', $roleName)->whereNull('tenant_id')->first();
+            if ($role) {
+                $user->roles()->syncWithoutDetaching([$role->id]);
+                return;
+            }
+        }
+
+        // Fallback propre: créer un rôle secteur minimal si aucun rôle système n'est trouvé.
+        $fallback = match (true) {
+            $normalized === 'ecommerce' => [
+                'name' => 'e-commerce',
+                'codes' => ['module.ecommerce', 'ecommerce.view', 'ecommerce.create', 'ecommerce.update', 'ecommerce.manage_orders'],
+            ],
+            in_array($normalized, $commerceSectors, true) => [
+                'name' => 'Global commerce',
+                'codes' => ['module.commerce', 'commerce.product.view', 'commerce.sales.view', 'commerce.sales.manage'],
+            ],
+            $normalized === 'pharmacy' => [
+                'name' => 'user_pharmacy',
+                'codes' => ['module.pharmacy', 'pharmacy.product.view', 'pharmacy.sales.view', 'pharmacy.sales.manage'],
+            ],
+            $normalized === 'hardware' => [
+                'name' => 'user_quin',
+                'codes' => ['module.hardware', 'hardware.product.view', 'hardware.sales.view', 'hardware.sales.manage'],
+            ],
+            default => null,
+        };
+
+        if ($fallback === null) {
+            return;
+        }
+
+        $role = Role::create([
+            'tenant_id' => null,
+            'name' => $fallback['name'],
+            'description' => 'Rôle par défaut créé automatiquement lors de l\'onboarding.',
+            'is_active' => true,
+        ]);
+
+        $permissionIds = Permission::where('is_old', false)
+            ->whereIn('code', $fallback['codes'])
+            ->pluck('id')
+            ->toArray();
+
+        if (!empty($permissionIds)) {
+            $role->permissions()->sync($permissionIds);
+        }
+
+        $user->roles()->syncWithoutDetaching([$role->id]);
     }
 }

@@ -16,6 +16,7 @@ use Src\Application\Quincaillerie\UseCases\Customer\CreateCustomerUseCase;
 use Src\Application\Quincaillerie\UseCases\Customer\UpdateCustomerUseCase;
 use Src\Application\Quincaillerie\UseCases\Customer\ActivateCustomerUseCase;
 use Src\Application\Quincaillerie\UseCases\Customer\DeactivateCustomerUseCase;
+use Src\Application\Billing\Services\FeatureLimitService;
 use Src\Infrastructure\Quincaillerie\Models\CustomerModel;
 use Src\Application\Quincaillerie\Services\DepotFilterService;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -36,7 +37,8 @@ class CustomerController extends Controller
         private readonly UpdateCustomerUseCase $updateCustomerUseCase,
         private readonly ActivateCustomerUseCase $activateCustomerUseCase,
         private readonly DeactivateCustomerUseCase $deactivateCustomerUseCase,
-        private readonly DepotFilterService $depotFilterService
+        private readonly DepotFilterService $depotFilterService,
+        private readonly FeatureLimitService $featureLimitService,
     ) {
     }
 
@@ -49,6 +51,7 @@ class CustomerController extends Controller
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
+        $this->featureLimitService->assertCanCreateCustomer((string) ($user->tenant_id ?? ''));
         $shopId = $user->shop_id ?? $user->tenant_id;
         $isRoot = $user->type === 'ROOT';
 

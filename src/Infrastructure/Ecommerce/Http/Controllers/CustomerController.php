@@ -10,6 +10,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Reader\Csv;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Src\Application\Billing\Services\FeatureLimitService;
 use Src\Application\Ecommerce\DTO\CreateCustomerDTO;
 use Src\Application\Ecommerce\UseCases\CreateCustomerUseCase;
 use Src\Domain\Ecommerce\Repositories\CustomerRepositoryInterface;
@@ -20,7 +21,8 @@ class CustomerController
 {
     public function __construct(
         private readonly CreateCustomerUseCase $createCustomerUseCase,
-        private readonly CustomerRepositoryInterface $customerRepository
+        private readonly CustomerRepositoryInterface $customerRepository,
+        private readonly FeatureLimitService $featureLimitService,
     ) {
     }
 
@@ -80,6 +82,7 @@ class CustomerController
         if (!$request->user()?->hasPermission('ecommerce.create')) {
             abort(403, 'Vous n\'avez pas la permission de créer des clients.');
         }
+        $this->featureLimitService->assertCanCreateCustomer((string) ($request->user()?->tenant_id ?? ''));
 
         $validated = $request->validate([
             'email' => 'required|email|max:255',

@@ -7,6 +7,7 @@ use Src\Infrastructure\Admin\Http\Controllers\AdminMailSettingsController;
 use Src\Infrastructure\Settings\Http\Controllers\AppBrandingController;
 use Src\Infrastructure\Billing\Http\Controllers\BillingAdminController;
 use Src\Infrastructure\Billing\Http\Controllers\BillingPaymentController;
+use Src\Infrastructure\Billing\Http\Controllers\MerchantWithdrawalAdminController;
 use Src\Infrastructure\Billing\Http\Controllers\MerchantWithdrawalController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\EcommerceFusionPaymentController;
 use Illuminate\Foundation\Application;
@@ -261,6 +262,8 @@ Route::middleware('auth')->group(function () {
         ->name('api.merchant.withdrawals.index');
     Route::post('/api/merchant/withdrawals', [MerchantWithdrawalController::class, 'store'])
         ->name('api.merchant.withdrawals.store');
+    Route::get('/withdrawals', [MerchantWithdrawalController::class, 'page'])
+        ->name('withdrawals.index');
     Route::get('/onboarding/payment', [BillingPaymentController::class, 'showOnboardingPaymentPage'])
         ->name('billing.onboarding.payment');
 
@@ -347,6 +350,9 @@ Route::middleware(['auth', 'verified', 'root', 'permission'])->group(function ()
     Route::get('/admin/billing/transactions', [BillingAdminController::class, 'transactions'])
         ->middleware('permission:admin.billing.manage')
         ->name('admin.billing.transactions.index');
+    Route::get('/admin/billing/withdrawals', [MerchantWithdrawalAdminController::class, 'dashboard'])
+        ->middleware('permission:admin.billing.manage')
+        ->name('admin.billing.withdrawals.index');
     Route::post('/admin/billing/subscriptions/reactivate', [BillingAdminController::class, 'reactivateExpiredSubscription'])
         ->middleware('permission:admin.billing.manage')
         ->name('admin.billing.subscriptions.reactivate');
@@ -380,6 +386,21 @@ Route::middleware(['auth', 'verified', 'root', 'permission'])->group(function ()
     Route::post('/admin/billing/marketing/send', [BillingAdminController::class, 'sendMarketing'])
         ->middleware(['permission:admin.billing.manage', 'throttle:10,1'])
         ->name('admin.billing.marketing.send');
+    Route::get('/api/admin/merchant/withdrawals', [MerchantWithdrawalAdminController::class, 'index'])
+        ->middleware('permission:admin.billing.manage')
+        ->name('api.admin.merchant.withdrawals.index');
+    Route::post('/api/admin/merchant/withdrawals/{id}/approve', [MerchantWithdrawalAdminController::class, 'approve'])
+        ->middleware('permission:admin.billing.manage')
+        ->name('api.admin.merchant.withdrawals.approve');
+    Route::post('/api/admin/merchant/withdrawals/{id}/reject', [MerchantWithdrawalAdminController::class, 'reject'])
+        ->middleware('permission:admin.billing.manage')
+        ->name('api.admin.merchant.withdrawals.reject');
+    Route::post('/api/admin/merchant/withdrawals/{id}/mark-paid', [MerchantWithdrawalAdminController::class, 'markPaid'])
+        ->middleware('permission:admin.billing.manage')
+        ->name('api.admin.merchant.withdrawals.mark-paid');
+    Route::post('/api/admin/merchant/withdrawals/{id}/mark-failed', [MerchantWithdrawalAdminController::class, 'markFailed'])
+        ->middleware('permission:admin.billing.manage')
+        ->name('api.admin.merchant.withdrawals.mark-failed');
 
     // Gestion complète des utilisateurs
     Route::prefix('admin/users')->name('admin.users.')->group(function () {

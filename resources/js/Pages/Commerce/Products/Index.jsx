@@ -216,7 +216,7 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
                             onClick={() => setViewModalOpen(true)}
                         >
                             <Eye className="h-4 w-4" />
-                            <span>View products</span>
+                            <span>Vue</span>
                         </Button>
                         {canViewMovements && (
                             <Button
@@ -239,7 +239,7 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
                                 target="_blank"
                                 rel="noopener noreferrer"
                             >
-                                <span>Exporter PDF</span>
+                                <span>PDF</span>
                             </a>
                         </Button>
                         <Button
@@ -252,7 +252,7 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
                                 target="_blank"
                                 rel="noopener noreferrer"
                             >
-                                <span>Exporter Excel</span>
+                                <span>Excel</span>
                             </a>
                         </Button>
                         <Button
@@ -262,7 +262,7 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
                             onClick={handleOpenImport}
                             disabled={confirmingImport}
                         >
-                            <span>Importer</span>
+                            <span>Import</span>
                         </Button>
                         <Button
                             type="button"
@@ -270,7 +270,7 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
                             className="inline-flex items-center gap-2"
                         >
                             <Plus className="h-4 w-4" />
-                            <span>Nouveau produit</span>
+                            <span>Nouveau</span>
                         </Button>
                     </div>
                 </div>
@@ -350,7 +350,7 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
                                     <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Aucun produit</h3>
                                     <p className="text-gray-500 dark:text-gray-400 mb-4">Créez votre premier produit.</p>
                                     <Button onClick={handleCreate} className="bg-rose-500 hover:bg-rose-600 text-white">
-                                        <Plus className="h-4 w-4 mr-2" /> Ajouter un produit
+                                        <Plus className="h-4 w-4 mr-2" /> Ajouter
                                     </Button>
                                 </div>
                             ) : (
