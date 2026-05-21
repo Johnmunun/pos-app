@@ -5,6 +5,7 @@ import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
 import { Star, Plus, Pencil, Trash2 } from 'lucide-react';
 import { Pagination } from '@/Components/ui/pagination';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function EcommerceReviewsIndex({ reviews }) {
     const renderStars = (rating) => {
@@ -23,9 +24,16 @@ export default function EcommerceReviewsIndex({ reviews }) {
     return (
         <AppLayout
             header={
-                <div className="flex items-center justify-between">
-                    <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100">Avis clients</h2>
-                    <Button asChild>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between w-full min-w-0">
+                    <div className="min-w-0">
+                        <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">
+                            Avis clients
+                        </h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 max-w-2xl hidden sm:block">
+                            Modération des avis affichés sur la vitrine.
+                        </p>
+                    </div>
+                    <Button asChild className="shrink-0 w-full sm:w-auto">
                         <Link href={route('ecommerce.reviews.create')} className="inline-flex items-center gap-2">
                             <Plus className="h-4 w-4 shrink-0" />
                             Nouvel avis
@@ -35,8 +43,9 @@ export default function EcommerceReviewsIndex({ reviews }) {
             }
         >
             <Head title="Avis - E-commerce" />
-            <div className="py-6">
-                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <Card className={cardShell}>
                     <CardContent className="p-0">
                         <table className="w-full">
                             <thead>
@@ -117,6 +126,7 @@ export default function EcommerceReviewsIndex({ reviews }) {
                         )}
                     </CardContent>
                 </Card>
+            </div>
             </div>
         </AppLayout>
     );

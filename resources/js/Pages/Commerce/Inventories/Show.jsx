@@ -23,6 +23,7 @@ import {
     User,
     Calendar
 } from 'lucide-react';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 const statusConfig = {
     draft: { label: 'Brouillon', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300', icon: FileText },
@@ -205,24 +206,29 @@ export default function InventoryShow({ inventory, items, stats, categories = []
     return (
         <AppLayout
             header={
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                     <Link
                         href={route('commerce.inventories.index')}
-                        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+                        className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors shrink-0"
                     >
                         <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
                     </Link>
-                    <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
-                        Inventaire {inventory.reference}
-                    </h2>
+                    <div className="min-w-0">
+                        <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight truncate">
+                            Inventaire {inventory.reference}
+                        </h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 hidden sm:block">
+                            Comptage physique et validation des écarts.
+                        </p>
+                    </div>
                 </div>
             }
         >
             <Head title={`Inventaire ${inventory.reference}`} />
 
-            <div className="py-6">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                    <Card className="mb-6 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
+                    <Card className={cardShell}>
                         <CardContent className="p-6">
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                                 <div>
@@ -294,7 +300,7 @@ export default function InventoryShow({ inventory, items, stats, categories = []
                     </Card>
 
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className={cardShell}>
                             <CardContent className="p-4 text-center">
                                 <ClipboardList className="h-6 w-6 text-blue-500 mx-auto mb-2" />
                                 <div className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -303,7 +309,7 @@ export default function InventoryShow({ inventory, items, stats, categories = []
                                 <div className="text-xs text-gray-500 dark:text-gray-400">Produits</div>
                             </CardContent>
                         </Card>
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className={cardShell}>
                             <CardContent className="p-4 text-center">
                                 <CheckCircle className="h-6 w-6 text-green-500 mx-auto mb-2" />
                                 <div className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -312,7 +318,7 @@ export default function InventoryShow({ inventory, items, stats, categories = []
                                 <div className="text-xs text-gray-500 dark:text-gray-400">Comptés</div>
                             </CardContent>
                         </Card>
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className={cardShell}>
                             <CardContent className="p-4 text-center">
                                 <AlertTriangle className="h-6 w-6 text-orange-500 mx-auto mb-2" />
                                 <div className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -321,7 +327,7 @@ export default function InventoryShow({ inventory, items, stats, categories = []
                                 <div className="text-xs text-gray-500 dark:text-gray-400">Écarts</div>
                             </CardContent>
                         </Card>
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className={cardShell}>
                             <CardContent className="p-4 text-center">
                                 <TrendingUp className="h-6 w-6 text-green-500 mx-auto mb-2" />
                                 <div className="text-2xl font-bold text-green-600 dark:text-green-400">
@@ -330,7 +336,7 @@ export default function InventoryShow({ inventory, items, stats, categories = []
                                 <div className="text-xs text-gray-500 dark:text-gray-400">Surplus</div>
                             </CardContent>
                         </Card>
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className={cardShell}>
                             <CardContent className="p-4 text-center">
                                 <TrendingDown className="h-6 w-6 text-red-500 mx-auto mb-2" />
                                 <div className="text-2xl font-bold text-red-600 dark:text-red-400">
@@ -342,7 +348,7 @@ export default function InventoryShow({ inventory, items, stats, categories = []
                     </div>
 
                     {isDraft ? (
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className={cardShell}>
                             <CardHeader>
                                 <CardTitle className="text-gray-900 dark:text-white">
                                     Démarrer l'inventaire
@@ -365,7 +371,7 @@ export default function InventoryShow({ inventory, items, stats, categories = []
                             </CardContent>
                         </Card>
                     ) : (
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className={cardShell}>
                             <CardHeader>
                                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                                     <CardTitle className="flex items-center text-gray-900 dark:text-white">

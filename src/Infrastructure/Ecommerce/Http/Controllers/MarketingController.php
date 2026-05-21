@@ -78,11 +78,16 @@ class MarketingController
         $marketingPro = $this->featureLimitService->isFeatureEnabled($tenantId, 'ecommerce.marketing.pro');
         $audienceAnalytics = $this->featureLimitService->isFeatureEnabled($tenantId, 'analytics.advanced');
 
+        $subdomain = trim((string) ($shop->ecommerce_subdomain ?? ''));
+        $baseDomain = config('services.ecommerce.base_domain', 'omnisolution.shop');
+        $publicStorefrontUrl = $subdomain !== '' ? 'https://' . $subdomain . '.' . $baseDomain : null;
+
         $marketing = [
             'seo_title' => $config['seo_title'] ?? null,
             'seo_description' => $config['seo_description'] ?? null,
             'seo_keywords' => $config['seo_keywords'] ?? null,
             'seo_indexing_enabled' => (bool) ($config['seo_indexing_enabled'] ?? true),
+            'google_site_verification' => $config['google_site_verification'] ?? $config['meta_verification'] ?? null,
             'facebook_pixel_id' => $marketingPro ? ($config['facebook_pixel_id'] ?? null) : null,
             'tiktok_pixel_id' => $marketingPro ? ($config['tiktok_pixel_id'] ?? null) : null,
             'google_analytics_id' => $marketingPro ? ($config['google_analytics_id'] ?? null) : null,
@@ -95,7 +100,9 @@ class MarketingController
             'shop' => [
                 'id' => $shop->id,
                 'name' => $shop->name,
+                'ecommerce_subdomain' => $shop->ecommerce_subdomain,
             ],
+            'publicStorefrontUrl' => $publicStorefrontUrl,
             'marketing' => $marketing,
             'marketingProEnabled' => $marketingPro,
             'audienceAnalyticsEnabled' => $audienceAnalytics,
@@ -121,6 +128,7 @@ class MarketingController
             'seo_description' => 'nullable|string|max:255',
             'seo_keywords' => 'nullable|string|max:255',
             'seo_indexing_enabled' => 'sometimes|boolean',
+            'google_site_verification' => 'nullable|string|max:255',
             'marketing_notes' => 'nullable|string|max:1000',
         ];
         if ($marketingPro) {

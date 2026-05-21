@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
+import StorefrontSeoHead from '@/Components/Ecommerce/StorefrontSeoHead';
 import StorefrontCurrencySelect from '@/Components/Ecommerce/StorefrontCurrencySelect';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -7,6 +8,8 @@ import { Input } from '@/Components/ui/input';
 import { CartProvider, useCart } from '@/Contexts/CartContext';
 import ShoppingCart from '@/Components/Ecommerce/ShoppingCart';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
+import AISupportFloatingWidget from '@/Components/Ecommerce/AISupportFloatingWidget';
+import { StorefrontFooterReportBar } from '@/Components/Ecommerce/StorefrontReportShop';
 import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBootstrap';
 import {
     ArrowLeft,
@@ -86,7 +89,7 @@ function StorefrontProductHeader({ shop, cmsPages = [], availableCurrencies = []
     );
 }
 
-function ProductContent({ product, reviews = [], shop, cmsPages, whatsapp = {}, links, available_currencies = [] }) {
+function ProductContent({ product, reviews = [], shop, cmsPages, whatsapp = {}, links, available_currencies = [], pageSeo = null }) {
     const { addToCart } = useCart();
     const currency = shop?.currency || 'USD';
 
@@ -127,7 +130,7 @@ function ProductContent({ product, reviews = [], shop, cmsPages, whatsapp = {}, 
 
     return (
         <>
-            <Head title={product.name} />
+            <StorefrontSeoHead pageSeo={pageSeo} />
             <StorefrontClientBootstrap />
 
             <StorefrontProductHeader shop={shop} cmsPages={cmsPages} availableCurrencies={available_currencies} />
@@ -439,6 +442,8 @@ function ProductContent({ product, reviews = [], shop, cmsPages, whatsapp = {}, 
                 </div>
             </div>
 
+            <StorefrontFooterReportBar shopName={shop?.name} />
+            <AISupportFloatingWidget />
             <WhatsAppFloatingButton phone={whatsappNumber} enabled={whatsappSupportEnabled} />
         </>
     );
@@ -452,6 +457,7 @@ export default function StorefrontProductShow({
     whatsapp = {},
     exchange_rates = {},
     available_currencies = [],
+    pageSeo = null,
 }) {
     const currency = shop?.currency || 'CDF';
     const links = useStorefrontLinks();
@@ -468,6 +474,7 @@ export default function StorefrontProductShow({
                 shop={shop}
                 cmsPages={cmsPages}
                 whatsapp={whatsapp}
+                pageSeo={pageSeo}
                 links={links}
                 available_currencies={available_currencies}
             />

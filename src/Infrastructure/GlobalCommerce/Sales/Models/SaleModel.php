@@ -53,4 +53,9 @@ class SaleModel extends Model
     {
         return $this->hasMany(SaleLineModel::class, 'sale_id');
     }
+
+    public function scopeCompleted($query)
+    {
+        return $query->whereRaw('LOWER(status) = ?', ['completed']);
+    }
 }

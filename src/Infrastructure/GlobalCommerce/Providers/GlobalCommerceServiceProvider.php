@@ -16,6 +16,7 @@ use Src\Infrastructure\GlobalCommerce\Inventory\Persistence\EloquentStockTransfe
 use Src\Infrastructure\GlobalCommerce\Sales\Persistence\EloquentSaleRepository;
 use Src\Infrastructure\GlobalCommerce\Procurement\Persistence\EloquentPurchaseRepository;
 use Src\Application\GlobalCommerce\Sales\UseCases\CreateSaleUseCase;
+use Src\Application\GlobalCommerce\Sales\UseCases\CancelGcSaleUseCase;
 use Src\Application\GlobalCommerce\Procurement\UseCases\CreatePurchaseUseCase;
 use Src\Application\GlobalCommerce\Procurement\UseCases\ReceivePurchaseUseCase;
 use Src\Application\GlobalCommerce\Inventory\UseCases\CreateProductUseCase;
@@ -100,6 +101,16 @@ class GlobalCommerceServiceProvider extends ServiceProvider
                     $app->make(SaleRepositoryInterface::class),
                     $app->make(ProductRepositoryInterface::class),
                     $app->make(\Src\Application\Referral\Services\ReferralService::class)
+                );
+            }
+        );
+
+        $this->app->bind(
+            CancelGcSaleUseCase::class,
+            function ($app) {
+                return new CancelGcSaleUseCase(
+                    $app->make(SaleRepositoryInterface::class),
+                    $app->make(ProductRepositoryInterface::class)
                 );
             }
         );

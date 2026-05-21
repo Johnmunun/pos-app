@@ -276,6 +276,7 @@ return [
         ],
         'starter' => [
             'products.max' => ['label' => 'Produits max', 'enabled' => true, 'limit' => 200],
+            'categories.max' => ['label' => 'Categories max', 'enabled' => true, 'limit' => 50],
             'users.max' => ['label' => 'Utilisateurs max', 'enabled' => true, 'limit' => 2],
             'api.payments' => ['label' => 'API paiements', 'enabled' => false, 'limit' => null],
             'analytics.advanced' => ['label' => 'Analytics avancees', 'enabled' => false, 'limit' => null],

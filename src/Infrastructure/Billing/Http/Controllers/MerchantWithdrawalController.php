@@ -51,9 +51,12 @@ class MerchantWithdrawalController extends Controller
             ->limit(50)
             ->get();
 
+        $feePercent = $this->merchantWalletService->getWithdrawalFeePercentForTenant($tenantId);
+
         return response()->json([
             'balances' => $balances,
             'withdrawals' => $requests,
+            'withdrawal_fee_percent' => $feePercent,
         ]);
     }
 

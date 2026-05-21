@@ -4,6 +4,8 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
+import { Label } from '@/Components/ui/label';
+import GrabScroll from '@/Components/GrabScroll';
 import {
     BarChart3,
     DollarSign,
@@ -12,8 +14,38 @@ import {
     TrendingUp,
     AlertTriangle,
     FileDown,
+    Calendar,
+    Search,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
+
+const cardShell =
+    'overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/80';
+
+function KpiCard({ title, value, icon: Icon, iconClass, accentBorder }) {
+    return (
+        <Card className={`${cardShell} ${accentBorder}`}>
+            <CardContent className="p-5 sm:p-6">
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 space-y-1">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            {title}
+                        </p>
+                        <p className="text-xl sm:text-2xl font-bold tabular-nums text-gray-900 dark:text-white tracking-tight">
+                            {value}
+                        </p>
+                    </div>
+                    <div
+                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 ${iconClass}`}
+                        aria-hidden
+                    >
+                        <Icon className="h-5 w-5" />
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
 
 export default function FinanceDashboardIndex({ dashboard, filters }) {
     const currency = dashboard?.currency || 'CDF';
@@ -48,21 +80,33 @@ export default function FinanceDashboardIndex({ dashboard, filters }) {
     const lowMarginProducts = dashboard?.low_margin_products || [];
 
     return (
-        <AppLayout>
+        <AppLayout
+            header={
+                <div>
+                    <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
+                        Tableau de bord Finance
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 hidden sm:block">
+                        Revenus, dépenses et rentabilité sur la période choisie.
+                    </p>
+                </div>
+            }
+        >
             <Head title="Dashboard Finance" />
 
-            <div className="container mx-auto py-6 px-4">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                    <div>
-                        <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                            <BarChart3 className="h-6 w-6 text-emerald-500" />
-                            Dashboard Finance
-                        </h1>
-                        <p className="text-gray-500 dark:text-gray-400 mt-1">
-                            Vue d&apos;ensemble des revenus, dépenses et bénéfices.
-                        </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
+            <div className="py-8 sm:py-10 space-y-6 sm:space-y-8">
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                    <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <BarChart3 className="h-7 w-7 text-emerald-500" />
+                                Vue d&apos;ensemble
+                            </h1>
+                            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 max-w-2xl leading-relaxed">
+                                Analysez la performance financière : marges, produits les plus rentables et alertes de
+                                faible marge.
+                            </p>
+                        </div>
                         <Button
                             type="button"
                             variant="outline"
@@ -76,211 +120,202 @@ export default function FinanceDashboardIndex({ dashboard, filters }) {
                                     'noopener,noreferrer'
                                 )
                             }
-                            className="border-gray-300 dark:border-slate-600"
+                            className="rounded-xl border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 shrink-0"
                         >
                             <FileDown className="h-4 w-4 mr-2" />
                             Export PDF
                         </Button>
                     </div>
-                </div>
 
-                {/* Filtres période */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <Card className="md:col-span-3 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
-                        <CardHeader>
-                            <CardTitle className="text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                                <TrendingUp className="h-5 w-5 text-emerald-500" />
+                    <Card className={`${cardShell} mb-6 sm:mb-8`}>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center text-gray-900 dark:text-white text-base sm:text-lg">
+                                <Calendar className="h-5 w-5 mr-2 text-emerald-500" />
                                 Période d&apos;analyse
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <form
                                 onSubmit={handleFilter}
-                                className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"
+                                className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end"
                             >
-                                <div className="flex-1">
-                                    <label htmlFor="from" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                <div className="md:col-span-4">
+                                    <Label htmlFor="from" className="text-gray-700 dark:text-gray-300">
                                         Du
-                                    </label>
+                                    </Label>
                                     <Input
                                         id="from"
                                         type="date"
                                         value={from}
                                         onChange={(e) => setFrom(e.target.value)}
-                                        className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-gray-100"
+                                        className="mt-1.5 rounded-xl bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-gray-100"
                                     />
                                 </div>
-                                <div className="flex-1">
-                                    <label htmlFor="to" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                <div className="md:col-span-4">
+                                    <Label htmlFor="to" className="text-gray-700 dark:text-gray-300">
                                         Au
-                                    </label>
+                                    </Label>
                                     <Input
                                         id="to"
                                         type="date"
                                         value={to}
                                         onChange={(e) => setTo(e.target.value)}
-                                        className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-gray-100"
+                                        className="mt-1.5 rounded-xl bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-gray-100"
                                     />
                                 </div>
-                                <div className="flex items-end justify-start md:justify-end w-full">
+                                <div className="md:col-span-4 flex md:justify-end">
                                     <Button
                                         type="submit"
-                                        className="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white"
+                                        className="w-full md:w-auto rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
                                     >
-                                        Filtrer
+                                        <Search className="h-4 w-4 mr-2" />
+                                        Appliquer
                                     </Button>
                                 </div>
                             </form>
                         </CardContent>
                     </Card>
-                </div>
 
-                {/* KPIs principaux */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                Total revenus
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex items-center justify-between">
-                            <div>
-                                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{fmt(totalRevenue)}</p>
-                            </div>
-                            <ArrowUpCircle className="h-8 w-8 text-emerald-500" />
-                        </CardContent>
-                    </Card>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5 mb-6 sm:mb-8">
+                        <KpiCard
+                            title="Total revenus"
+                            value={fmt(totalRevenue)}
+                            icon={ArrowUpCircle}
+                            iconClass="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 ring-emerald-500/25"
+                            accentBorder="ring-1 ring-emerald-500/10"
+                        />
+                        <KpiCard
+                            title="Total dépenses"
+                            value={fmt(totalExpenses)}
+                            icon={ArrowDownCircle}
+                            iconClass="bg-red-500/15 text-red-600 dark:text-red-400 ring-red-500/25"
+                            accentBorder="ring-1 ring-red-500/10"
+                        />
+                        <KpiCard
+                            title="Bénéfice brut"
+                            value={fmt(grossProfit)}
+                            icon={DollarSign}
+                            iconClass="bg-teal-500/15 text-teal-600 dark:text-teal-400 ring-teal-500/25"
+                            accentBorder="ring-1 ring-teal-500/10"
+                        />
+                        <KpiCard
+                            title="Marge bénéficiaire"
+                            value={`${marginPercent.toFixed(2)}%`}
+                            icon={TrendingUp}
+                            iconClass="bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 ring-indigo-500/25"
+                            accentBorder="ring-1 ring-indigo-500/10"
+                        />
+                    </div>
 
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                Total dépenses
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex items-center justify-between">
-                            <div>
-                                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{fmt(totalExpenses)}</p>
-                            </div>
-                            <ArrowDownCircle className="h-8 w-8 text-red-500" />
-                        </CardContent>
-                    </Card>
-
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                Bénéfice brut
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex items-center justify-between">
-                            <div>
-                                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{fmt(grossProfit)}</p>
-                            </div>
-                            <DollarSign className="h-8 w-8 text-emerald-500" />
-                        </CardContent>
-                    </Card>
-
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                Marge bénéficiaire
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex items-center justify-between">
-                            <div>
-                                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                                    {marginPercent.toFixed(2)}%
-                                </p>
-                            </div>
-                            <TrendingUp className="h-8 w-8 text-indigo-500" />
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Détails produits & dettes */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    <Card className="lg:col-span-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                                <BarChart3 className="h-5 w-5 text-emerald-500" />
-                                Top 10 produits les plus rentables
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {topProducts.length === 0 ? (
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    Aucune donnée de vente pour la période sélectionnée.
-                                </p>
-                            ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="min-w-full text-sm">
-                                        <thead>
-                                            <tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700">
-                                                <th className="py-2 pr-4">Produit</th>
-                                                <th className="py-2 pr-4 text-right">Qté vendue</th>
-                                                <th className="py-2 pr-4 text-right">Revenus</th>
-                                                <th className="py-2 pr-4 text-right">Bénéfice</th>
-                                                <th className="py-2 pr-4 text-right">Marge %</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {topProducts.map((p) => (
-                                                <tr key={p.product_id} className="border-b border-gray-100 dark:border-slate-800">
-                                                    <td className="py-2 pr-4 text-gray-900 dark:text-gray-100">
-                                                        {p.product_name}
-                                                    </td>
-                                                    <td className="py-2 pr-4 text-right text-gray-900 dark:text-gray-100">
-                                                        {p.quantity_sold}
-                                                    </td>
-                                                    <td className="py-2 pr-4 text-right text-gray-900 dark:text-gray-100">
-                                                        {fmt(p.revenue)}
-                                                    </td>
-                                                    <td className="py-2 pr-4 text-right text-gray-900 dark:text-gray-100">
-                                                        {fmt(p.profit)}
-                                                    </td>
-                                                    <td className="py-2 pr-4 text-right text-gray-900 dark:text-gray-100">
-                                                        {p.margin_percent.toFixed(2)}%
-                                                    </td>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                        <Card className={`lg:col-span-2 ${cardShell}`}>
+                            <CardHeader>
+                                <CardTitle className="flex items-center text-gray-900 dark:text-white">
+                                    <BarChart3 className="h-5 w-5 mr-2 text-emerald-500" />
+                                    Top 10 produits les plus rentables
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {topProducts.length === 0 ? (
+                                    <div className="text-center py-14 px-4 rounded-xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-950/30">
+                                        <BarChart3 className="h-12 w-12 text-gray-300 dark:text-slate-600 mx-auto mb-3" />
+                                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                            Aucune donnée pour cette période
+                                        </p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">
+                                            Ajustez les dates ou attendez des ventes enregistrées sur l&apos;intervalle
+                                            sélectionné.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <GrabScroll className="rounded-xl border border-gray-100/90 bg-gray-50/30 dark:border-slate-700/60 dark:bg-slate-950/30">
+                                        <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700 text-sm">
+                                            <thead className="bg-gray-50 dark:bg-slate-800">
+                                                <tr>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                                        Produit
+                                                    </th>
+                                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                                        Qté
+                                                    </th>
+                                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                                        Revenus
+                                                    </th>
+                                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                                        Bénéfice
+                                                    </th>
+                                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                                        Marge %
+                                                    </th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
+                                            </thead>
+                                            <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
+                                                {topProducts.map((p) => (
+                                                    <tr
+                                                        key={p.product_id}
+                                                        className="hover:bg-gray-50 dark:hover:bg-slate-800/80"
+                                                    >
+                                                        <td className="px-4 py-3 text-gray-900 dark:text-white font-medium">
+                                                            {p.product_name}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300 tabular-nums">
+                                                            {p.quantity_sold}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300 tabular-nums">
+                                                            {fmt(p.revenue)}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right text-emerald-700 dark:text-emerald-400 font-medium tabular-nums">
+                                                            {fmt(p.profit)}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300 tabular-nums">
+                                                            {p.margin_percent.toFixed(2)}%
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </GrabScroll>
+                                )}
+                            </CardContent>
+                        </Card>
 
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                                <AlertTriangle className="h-5 w-5 text-amber-500" />
-                                Produits à faible marge
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {lowMarginProducts.length === 0 ? (
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    Aucun produit avec une marge &lt; 10% sur la période.
-                                </p>
-                            ) : (
-                                <ul className="space-y-2 text-sm">
-                                    {lowMarginProducts.map((p) => (
-                                        <li
-                                            key={p.product_id}
-                                            className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-1"
-                                        >
-                                            <span className="text-gray-900 dark:text-gray-100">{p.product_name}</span>
-                                            <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
-                                                {p.margin_percent.toFixed(2)}% · {fmt(p.revenue)}
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </CardContent>
-                    </Card>
+                        <Card className={cardShell}>
+                            <CardHeader>
+                                <CardTitle className="flex items-center text-gray-900 dark:text-white">
+                                    <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
+                                    Faible marge
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {lowMarginProducts.length === 0 ? (
+                                    <div className="text-center py-10 px-3 rounded-xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-950/30">
+                                        <AlertTriangle className="h-10 w-10 text-amber-200 dark:text-amber-900/50 mx-auto mb-2" />
+                                        <p className="text-sm text-gray-600 dark:text-gray-300">
+                                            Aucun produit sous les 10% de marge sur cette période.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <ul className="space-y-2">
+                                        {lowMarginProducts.map((p) => (
+                                            <li
+                                                key={p.product_id}
+                                                className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 dark:border-slate-700/80 bg-white/80 dark:bg-slate-900/50 px-3 py-2.5"
+                                            >
+                                                <span className="text-sm font-medium text-gray-900 dark:text-white truncate min-w-0">
+                                                    {p.product_name}
+                                                </span>
+                                                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 shrink-0 tabular-nums">
+                                                    {p.margin_percent.toFixed(2)}% · {fmt(p.revenue)}
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
             </div>
         </AppLayout>
     );
 }
-

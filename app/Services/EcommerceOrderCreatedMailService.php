@@ -6,13 +6,15 @@ use App\Mail\EcommerceOrderCreatedMail;
 use App\Models\Shop;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Src\Application\Settings\UseCases\GetStoreSettingsUseCase;
 use Src\Domain\Ecommerce\Entities\Order;
 use Src\Infrastructure\Ecommerce\Models\OrderItemModel;
 
 final class EcommerceOrderCreatedMailService
 {
     public function __construct(
-        private readonly DynamicMailSettingsService $dynamicMailSettingsService
+        private readonly DynamicMailSettingsService $dynamicMailSettingsService,
+        private readonly GetStoreSettingsUseCase $getStoreSettingsUseCase,
     ) {
     }
 
@@ -67,12 +69,7 @@ final class EcommerceOrderCreatedMailService
             }
         }
 
-        $shopEmail = trim((string) (Shop::query()->find($order->getShopId())?->email ?? ''));
-        if (
-            $shopEmail !== ''
-            && filter_var($shopEmail, FILTER_VALIDATE_EMAIL)
-            && strcasecmp($shopEmail, $customerEmail) !== 0
-        ) {
+        foreach ($this->resolveShopRecipientEmails($order->getShopId(), $customerEmail) as $shopEmail) {
             try {
                 Mail::to($shopEmail)->send(new EcommerceOrderCreatedMail(
                     recipientLabel: 'boutique',
@@ -88,9 +85,49 @@ final class EcommerceOrderCreatedMailService
             } catch (\Throwable $e) {
                 Log::warning('EcommerceOrderCreatedMail shop failed', [
                     'order_id' => $order->getId(),
+                    'email' => $shopEmail,
                     'error' => $e->getMessage(),
                 ]);
             }
         }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function resolveShopRecipientEmails(string $shopId, string $customerEmail): array
+    {
+        $emails = [];
+        $shop = Shop::query()->find($shopId);
+        if ($shop !== null && trim((string) $shop->email) !== '') {
+            $emails[] = trim((string) $shop->email);
+        }
+
+        try {
+            $settings = $this->getStoreSettingsUseCase->execute($shopId);
+            if ($settings !== null && trim((string) $settings->getEmail()) !== '') {
+                $emails[] = trim((string) $settings->getEmail());
+            }
+        } catch (\Throwable $e) {
+            Log::debug('EcommerceOrderCreatedMail: store settings email unavailable', [
+                'shop_id' => $shopId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        $normalizedCustomer = strtolower($customerEmail);
+        $unique = [];
+        foreach ($emails as $email) {
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                continue;
+            }
+            $key = strtolower($email);
+            if ($key === $normalizedCustomer || isset($unique[$key])) {
+                continue;
+            }
+            $unique[$key] = $email;
+        }
+
+        return array_values($unique);
     }
 }

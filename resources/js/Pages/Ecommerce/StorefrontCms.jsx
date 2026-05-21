@@ -5,6 +5,7 @@ import { Input } from '@/Components/ui/input';
 import { Button } from '@/Components/ui/button';
 import { Sparkles, LayoutTemplate, Palette, Layers, Crown } from 'lucide-react';
 import RichTextEditor from '@/Components/RichTextEditor';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 const LAYOUT_PRESETS = [
     {
@@ -67,10 +68,10 @@ export default function StorefrontCms({ shop, config, storefront_pro_themes }) {
             header={
                 <div className="flex items-center justify-between gap-3">
                     <div>
-                        <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
+                        <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">
                             Vitrine e-commerce
                         </h2>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-2xl">
                             Configurez le contenu de la page boutique vue par vos clients (et en aperçu admin).
                         </p>
                     </div>
@@ -85,8 +86,9 @@ export default function StorefrontCms({ shop, config, storefront_pro_themes }) {
         >
             <Head title="CMS Vitrine E-commerce" />
 
-            <div className="py-6 max-w-4xl space-y-6">
-                <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+            <div className={pageY}>
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
+                <Card className={cardShell}>
                     <CardHeader className="pb-3">
                         <CardTitle className="flex items-center gap-2 text-base text-gray-900 dark:text-white">
                             <Layers className="h-5 w-5 text-sky-500" />
@@ -144,7 +146,7 @@ export default function StorefrontCms({ shop, config, storefront_pro_themes }) {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                <Card className={cardShell}>
                     <CardHeader className="pb-3">
                         <CardTitle className="flex items-center gap-2 text-base text-gray-900 dark:text-white">
                             <Palette className="h-5 w-5 text-violet-500" />
@@ -205,7 +207,7 @@ export default function StorefrontCms({ shop, config, storefront_pro_themes }) {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                <Card className={cardShell}>
                     <CardHeader className="pb-3">
                         <CardTitle className="flex items-center gap-2 text-base text-gray-900 dark:text-white">
                             <LayoutTemplate className="h-5 w-5 text-amber-500" />
@@ -293,7 +295,7 @@ export default function StorefrontCms({ shop, config, storefront_pro_themes }) {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                <Card className={cardShell}>
                     <CardHeader className="pb-3">
                         <CardTitle className="flex items-center gap-2 text-base text-gray-900 dark:text-white">
                             Réseaux sociaux & support WhatsApp
@@ -380,6 +382,7 @@ export default function StorefrontCms({ shop, config, storefront_pro_themes }) {
                         </form>
                     </CardContent>
                 </Card>
+            </div>
             </div>
         </AppLayout>
     );

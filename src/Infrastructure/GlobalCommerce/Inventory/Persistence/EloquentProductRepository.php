@@ -118,6 +118,48 @@ class EloquentProductRepository implements ProductRepositoryInterface
 
     public function search(string $shopId, string $query, array $filters = []): array
     {
+        $models = $this->buildSearchQuery($shopId, $query, $filters)
+            ->with('category')
+            ->orderBy('name')
+            ->get();
+
+        return $models->map(fn (ProductModel $m) => $this->toDomainEntity($m))->toArray();
+    }
+
+    public function searchPaginated(string $shopId, string $query, array $filters = [], int $page = 1, int $perPage = 25): array
+    {
+        $q = $this->buildSearchQuery($shopId, $query, $filters);
+        $perPage = max(1, min(100, $perPage));
+        $page = max(1, $page);
+
+        $paginator = $q->with('category')->orderBy('name')->paginate(
+            $perPage,
+            ['*'],
+            'page',
+            $page
+        );
+
+        $items = $paginator->getCollection()
+            ->map(fn (ProductModel $m) => $this->toDomainEntity($m))
+            ->values()
+            ->all();
+
+        return [
+            'items' => $items,
+            'total' => (int) $paginator->total(),
+            'current_page' => (int) $paginator->currentPage(),
+            'last_page' => (int) $paginator->lastPage(),
+            'per_page' => (int) $paginator->perPage(),
+            'from' => $paginator->firstItem(),
+            'to' => $paginator->lastItem(),
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function buildSearchQuery(string $shopId, string $query, array $filters): \Illuminate\Database\Eloquent\Builder
+    {
         $q = ProductModel::query();
         if (!empty($filters['shop_ids']) && is_array($filters['shop_ids'])) {
             $shopIds = array_values(array_filter(array_map('strval', $filters['shop_ids']), fn ($id) => $id !== ''));
@@ -131,23 +173,27 @@ class EloquentProductRepository implements ProductRepositoryInterface
         }
         if ($query !== '') {
             $q->where(function ($qb) use ($query) {
-                $qb->where('name', 'like', '%' . $query . '%')
-                    ->orWhere('sku', 'like', '%' . $query . '%')
-                    ->orWhere('barcode', 'like', '%' . $query . '%')
-                    ->orWhere('description', 'like', '%' . $query . '%');
+                $qb->where('name', 'like', '%'.$query.'%')
+                    ->orWhere('sku', 'like', '%'.$query.'%')
+                    ->orWhere('barcode', 'like', '%'.$query.'%')
+                    ->orWhere('description', 'like', '%'.$query.'%');
             });
         }
         if (!empty($filters['category_id'])) {
             $q->where('category_id', $filters['category_id']);
         }
-        if (isset($filters['is_active']) && $filters['is_active'] === true) {
-            $q->where('is_active', true);
+        if (isset($filters['is_active'])) {
+            if ($filters['is_active'] === true) {
+                $q->where('is_active', true);
+            } elseif ($filters['is_active'] === false) {
+                $q->where('is_active', false);
+            }
         }
         if (isset($filters['is_published_ecommerce']) && $filters['is_published_ecommerce'] === true) {
             $q->where('is_published_ecommerce', true);
         }
-        $models = $q->with('category')->orderBy('name')->get();
-        return $models->map(fn (ProductModel $m) => $this->toDomainEntity($m))->toArray();
+
+        return $q;
     }
 
     public function delete(string $id): void

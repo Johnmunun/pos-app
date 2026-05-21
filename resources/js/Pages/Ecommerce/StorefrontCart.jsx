@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
+import StorefrontSeoHead from '@/Components/Ecommerce/StorefrontSeoHead';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { CartProvider, useCart } from '@/Contexts/CartContext';
@@ -26,6 +27,7 @@ import { toast } from 'react-hot-toast';
 import axios from 'axios';
 import { formatCurrency, normalizeCurrencyCode } from '@/lib/currency';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
+import { StorefrontFooterReportBar } from '@/Components/Ecommerce/StorefrontReportShop';
 import AISupportFloatingWidget from '@/Components/Ecommerce/AISupportFloatingWidget';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
 import { cartRequiresFusionPay, paymentMethodsForCart } from '@/lib/ecommerceCartPayment';
@@ -139,6 +141,7 @@ function CartContent({
     cmsPages,
     whatsapp = {},
     config = {},
+    pageSeo = null,
     available_currencies = [],
 }) {
     const links = useStorefrontLinks();
@@ -152,7 +155,7 @@ function CartContent({
     const [couponApplied, setCouponApplied] = useState(false);
     const [couponLoading, setCouponLoading] = useState(false);
 
-    const displayCurrency = currency || shop?.currency || 'XAF';
+    const displayCurrency = currency || shop?.currency || 'CDF';
     const format = (amount) => formatCurrency(amount, displayCurrency);
     const normalizedDisplayCurrency = normalizeCurrencyCode(displayCurrency);
     const displayCurrencyLabel = normalizedDisplayCurrency === 'XAF' || normalizedDisplayCurrency === 'XOF'
@@ -299,7 +302,7 @@ function CartContent({
 
     return (
         <>
-            <Head title="Panier - Boutique" />
+            <StorefrontSeoHead pageSeo={pageSeo} />
             <StorefrontClientBootstrap />
             <StorefrontCartHeader
                 shop={shop}
@@ -707,6 +710,7 @@ function CartContent({
                 />
             )}
 
+            <StorefrontFooterReportBar shopName={shop?.name} />
             <WhatsAppFloatingButton phone={whatsappNumber} enabled={whatsappSupportEnabled} />
             <AISupportFloatingWidget />
         </>
@@ -725,6 +729,7 @@ export default function StorefrontCart({
     products = [],
     whatsapp = {},
     config = {},
+    pageSeo = null,
 }) {
     return (
         <CartProvider
@@ -742,6 +747,7 @@ export default function StorefrontCart({
                 whatsapp={whatsapp}
                 config={config}
                 available_currencies={available_currencies}
+                pageSeo={pageSeo}
             />
         </CartProvider>
     );

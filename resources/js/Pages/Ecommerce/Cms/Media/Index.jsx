@@ -6,6 +6,7 @@ import { Button } from '@/Components/ui/button';
 import { Upload, Trash2, FileText, HelpCircle, Copy, ExternalLink } from 'lucide-react';
 import CmsMediaDrawer from '@/Components/Ecommerce/Cms/CmsMediaDrawer';
 import CmsHelpModal from '@/Components/Ecommerce/Cms/CmsHelpModal';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 function formatSize(bytes) {
     if (!bytes) return '-';
@@ -64,8 +65,9 @@ export default function CmsMediaIndex({ media = [] }) {
             }
         >
             <Head title="Médias CMS - E-commerce" />
-            <div className="py-6">
-                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <Card className={cardShell}>
                     <CardContent className="p-4">
                         {media.length === 0 ? (
                             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
@@ -142,6 +144,7 @@ export default function CmsMediaIndex({ media = [] }) {
                         )}
                     </CardContent>
                 </Card>
+            </div>
             </div>
 
             <CmsMediaDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />

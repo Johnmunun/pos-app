@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { BookOpen, Compass, Package, ShoppingCart, Users, Settings, LifeBuoy, CheckCircle2 } from 'lucide-react';
+import ModuleKeyboardShortcutsCard from '@/Components/ModuleKeyboardShortcutsCard';
 
 function hasModule(permissions, key) {
     if (!Array.isArray(permissions)) return false;
@@ -27,6 +28,7 @@ const commonTips = [
     'Utiliser les filtres de date pour eviter de melanger les periodes.',
     'Ne pas supprimer un produit actif sans verifier les ventes liees.',
     'Faire une action test apres chaque changement important.',
+    'Memorisez Ctrl+Shift+V pour ouvrir la caisse (nouvelle vente) depuis n importe quelle page du module.',
 ];
 
 const onboardingSteps = [
@@ -204,6 +206,13 @@ export default function TutorialIndex() {
         return '/dashboard';
     })();
 
+    const showPosShortcuts =
+        hasModule(permissions, 'pharmacy') ||
+        hasModule(permissions, 'commerce') ||
+        hasModule(permissions, 'hardware');
+
+    const posShortcutModules = ['commerce', 'hardware', 'pharmacy'].filter((key) => hasModule(permissions, key));
+
     return (
         <AppLayout>
             <Head title="Tutoriel complet" />
@@ -243,6 +252,8 @@ export default function TutorialIndex() {
                         ))}
                     </ul>
                 </section>
+
+                {showPosShortcuts && <ModuleKeyboardShortcutsCard modules={posShortcutModules} />}
 
                 <section className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5">
                     <div className="flex items-center justify-between gap-3">

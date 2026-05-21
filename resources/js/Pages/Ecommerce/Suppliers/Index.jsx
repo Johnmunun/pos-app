@@ -11,6 +11,7 @@ import { toast } from 'react-hot-toast';
 import axios from 'axios';
 import ImportModal from '@/Components/ImportModal';
 import SupplierDrawer from '@/Components/Commerce/SupplierDrawer';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function EcommerceSuppliersIndex({ suppliers = [] }) {
     const { auth } = usePage().props;
@@ -160,9 +161,9 @@ export default function EcommerceSuppliersIndex({ suppliers = [] }) {
             }
         >
             <Head title="Fournisseurs - E-commerce" />
-            <div className="py-6">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-                    <Card className="bg-white dark:bg-slate-900">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
+                    <Card className={cardShell}>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
                                 <Truck className="h-5 w-5 shrink-0" />

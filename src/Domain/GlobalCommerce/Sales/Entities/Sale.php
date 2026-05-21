@@ -10,6 +10,10 @@ use Ramsey\Uuid\Uuid;
  */
 class Sale
 {
+    public const STATUS_DRAFT = 'draft';
+    public const STATUS_COMPLETED = 'completed';
+    public const STATUS_CANCELLED = 'cancelled';
+
     private string $id;
     private string $shopId;
     private string $status;
@@ -70,7 +74,7 @@ class Sale
         return new self(
             Uuid::uuid4()->toString(),
             $shopId,
-            $isDraft ? 'draft' : 'completed',
+            $isDraft ? self::STATUS_DRAFT : self::STATUS_COMPLETED,
             $totalAmount,
             $currency,
             $customerName,
@@ -78,5 +82,29 @@ class Sale
             $lines,
             $createdByUserId
         );
+    }
+
+    public function isCancelled(): bool
+    {
+        return strtolower($this->status) === self::STATUS_CANCELLED;
+    }
+
+    public function isCompleted(): bool
+    {
+        return strtolower($this->status) === self::STATUS_COMPLETED;
+    }
+
+    public function isDraft(): bool
+    {
+        return strtolower($this->status) === self::STATUS_DRAFT;
+    }
+
+    public function cancel(): void
+    {
+        if ($this->isCancelled()) {
+            throw new \LogicException('Cette vente est déjà annulée.');
+        }
+
+        $this->status = self::STATUS_CANCELLED;
     }
 }

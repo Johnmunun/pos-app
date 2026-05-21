@@ -30,6 +30,7 @@ class ResolveStorefrontShopBySubdomain
 
         $shop = Shop::whereRaw('LOWER(ecommerce_subdomain) = ?', [$subdomain])
             ->where('ecommerce_is_online', true)
+            ->whereNull('ecommerce_report_suspended_at')
             ->first();
 
         if (!$shop) {
@@ -40,7 +41,7 @@ class ResolveStorefrontShopBySubdomain
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ]);
-            abort(404, 'Boutique introuvable ou non publiée.');
+            abort(404, 'Boutique introuvable, non publiée ou suspendue suite à signalements.');
         }
 
         $request->attributes->set('storefront_shop', $shop);

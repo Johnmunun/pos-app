@@ -475,6 +475,25 @@ class MerchantWalletService
         return 0.0;
     }
 
+    public function getWithdrawalFeePercentForTenant(string $tenantId): float
+    {
+        return $this->resolveWithdrawalFeePercent($tenantId);
+    }
+
+    public function estimateWithdrawalNet(string $tenantId, float $requestedAmount): array
+    {
+        $amount = round(max(0, $requestedAmount), 2);
+        $feePercent = $this->resolveWithdrawalFeePercent($tenantId);
+        $feeAmount = round(($amount * $feePercent) / 100, 2);
+
+        return [
+            'requested_amount' => $amount,
+            'withdrawal_fee_percent' => $feePercent,
+            'fee_amount' => $feeAmount,
+            'net_amount' => round(max(0, $amount - $feeAmount), 2),
+        ];
+    }
+
     private function resolveWithdrawalFeePercent(string $tenantId): float
     {
         $row = DB::table('tenant_plan_subscriptions as tps')

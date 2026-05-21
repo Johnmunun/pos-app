@@ -10,6 +10,9 @@ use Symfony\Component\HttpFoundation\Response;
 use Src\Application\Settings\UseCases\GetStoreSettingsUseCase;
 use Src\Infrastructure\Settings\Services\StoreLogoService;
 use Src\Application\Billing\Services\FeatureLimitService;
+use Src\Application\Marketing\Services\ApplicationSeoService;
+use App\Support\InertiaBillingPayloadCache;
+use Src\Application\Currency\Services\TenantDisplayCurrencyService;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -41,6 +44,7 @@ class HandleInertiaRequests extends Middleware
         $permissions = [];
         $shopCurrency = 'CDF'; // Devise par défaut (Franc Congolais)
         $shopCurrencies = []; // Liste des devises configurées
+        $exchangeRatesMap = [];
         $receiptAutoPrint = false;
         $shopLogoUrl = null;
         $appLogoUrl = null;
@@ -178,6 +182,20 @@ class HandleInertiaRequests extends Middleware
                         }
                     }
 
+                    try {
+                        $shopModel = isset($shop) && $shop instanceof \App\Models\Shop ? $shop : \App\Models\Shop::find($shopId);
+                        $currencyBundle = app(TenantDisplayCurrencyService::class)->resolve(
+                            $request,
+                            (string) $tenantId,
+                            $shopModel,
+                            false
+                        );
+                        $shopCurrency = $currencyBundle['currency'];
+                        $exchangeRatesMap = $currencyBundle['exchange_rates'];
+                    } catch (\Throwable $e) {
+                        Log::debug('Display currency resolve failed', ['error' => $e->getMessage()]);
+                    }
+
                         try {
                             /** @var GetStoreSettingsUseCase $getSettings */
                             $getSettings = app(GetStoreSettingsUseCase::class);
@@ -229,7 +247,7 @@ class HandleInertiaRequests extends Middleware
         $billingSummary = null;
         if ($user && $user->tenant_id) {
             $tenantId = (string) $user->tenant_id;
-            $cacheKey = 'inertia:billing_payload:tenant:' . $tenantId;
+            $cacheKey = InertiaBillingPayloadCache::key($tenantId);
             $cachedPayload = Cache::get($cacheKey);
 
             if (is_array($cachedPayload)) {
@@ -281,7 +299,7 @@ class HandleInertiaRequests extends Middleware
                             ->join('billing_plans as bp', 'bp.id', '=', 'tps.billing_plan_id')
                             ->where('tps.tenant_id', $tenantId)
                             ->where('tps.status', 'active')
-                            ->select(['bp.name as plan_name', 'tps.starts_at', 'tps.ends_at', 'tps.trial_ends_at'])
+                            ->select(['bp.name as plan_name', 'bp.code as plan_code', 'tps.starts_at', 'tps.ends_at', 'tps.trial_ends_at'])
                             ->orderByDesc('tps.id')
                             ->first();
 
@@ -363,6 +381,7 @@ class HandleInertiaRequests extends Middleware
 
                         $billingSummary = [
                             'plan_name' => $subscription?->plan_name ?? 'Plan par defaut',
+                            'plan_code' => $subscription?->plan_code ?? null,
                             'expires_at' => $expiresAt,
                             'products_used' => (int) $productsCount,
                             'products_limit' => $productsConfig['enabled'] ? $productsConfig['limit'] : 0,
@@ -389,7 +408,7 @@ class HandleInertiaRequests extends Middleware
                     'planFeatures' => $planFeatures,
                     'planUsage' => $planUsage,
                     'billingSummary' => $billingSummary,
-                ], now()->addSeconds(45));
+                ], now()->addSeconds(InertiaBillingPayloadCache::TTL_SECONDS));
             }
         }
 
@@ -505,10 +524,13 @@ class HandleInertiaRequests extends Middleware
             'shop' => [
                 'currency' => $shopCurrency,
                 'currencies' => $shopCurrencies,
+                'exchange_rates' => $exchangeRatesMap,
                 'receipt_auto_print' => $receiptAutoPrint,
                 'logo_url' => $shopLogoUrl,
                 'whatsapp' => $whatsappSupport,
             ],
+            'displayCurrency' => $shopCurrency,
+            'exchangeRates' => $exchangeRatesMap,
             'appLogoUrl' => $appLogoUrl,
             'heroImages' => [
                 'main' => $heroMainUrl,
@@ -518,11 +540,14 @@ class HandleInertiaRequests extends Middleware
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
                 'message' => $request->session()->get('message'),
-                'trial_upgrade_prompt' => (bool) $request->session()->get('trial_upgrade_prompt', false),
+                'trial_upgrade_prompt' => (bool) $request->session()->pull('trial_upgrade_prompt', false),
             ],
             'storefrontTheme' => $storefrontTheme,
             'storefrontIsPublic' => $request->attributes->get('storefront_shop') !== null,
             'storefrontPublicBaseUrl' => $request->attributes->get('storefront_shop') ? $request->root() : null,
+            'appSeo' => $request->attributes->get('storefront_shop') === null
+                ? app(ApplicationSeoService::class)->defaults($request)
+                : null,
             'appMarketing' => [
                 'metaPixelId' => $metaPixelId,
             ],

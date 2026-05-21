@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\ApplicationSeoController;
+use App\Http\Controllers\DisplayCurrencyController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PwaIconController;
+use Src\Application\Marketing\Services\ApplicationSeoService;
 use Src\Infrastructure\Admin\Http\Controllers\AdminController;
 use Src\Infrastructure\Admin\Http\Controllers\AdminMailSettingsController;
 use Src\Infrastructure\Settings\Http\Controllers\AppBrandingController;
@@ -13,6 +16,13 @@ use Src\Infrastructure\Ecommerce\Http\Controllers\EcommerceFusionPaymentControll
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
+/**
+ * SEO site marketing (domaine principal) — en tête pour éviter tout conflit de routes.
+ * Ne pas recréer public/robots.txt : Apache servirait le fichier statique au lieu de Laravel.
+ */
+Route::get('/robots.txt', [ApplicationSeoController::class, 'robots'])->name('app.robots');
+Route::get('/sitemap.xml', [ApplicationSeoController::class, 'sitemap'])->name('app.sitemap');
 
 /**
  * DDD Pharmacy Module Routes
@@ -110,8 +120,15 @@ Route::middleware(['auth', 'verified'])->prefix('settings')->name('settings.')->
 /**
  * Public Routes - Landing Page
  */
-Route::get('/', function () {
-    return Inertia::render('Landing');
+Route::get('/', function (\Illuminate\Http\Request $request) {
+    $seo = app(ApplicationSeoService::class);
+
+    return Inertia::render('Landing', [
+        'pageSeo' => $seo->buildPage($request, [
+            'path' => '/',
+            'jsonLd' => $seo->landingJsonLd($request),
+        ]),
+    ]);
 })->name('landing');
 
 Route::get('/api/billing/plans', [BillingAdminController::class, 'publicPlansApi'])
@@ -241,6 +258,9 @@ Route::middleware('auth')->group(function () {
     // Global Search API
     Route::get('/api/search', [\Src\Infrastructure\Search\Http\Controllers\GlobalSearchController::class, 'search'])
         ->name('api.search');
+
+    Route::post('/api/display-currency', [DisplayCurrencyController::class, 'update'])
+        ->name('api.display-currency.update');
 
     // Notifications (FCM tokens)
     Route::post('/api/notifications/tokens', [\App\Http\Controllers\Api\NotificationTokenController::class, 'store'])
@@ -401,6 +421,19 @@ Route::middleware(['auth', 'verified', 'root', 'permission'])->group(function ()
     Route::post('/api/admin/merchant/withdrawals/{id}/mark-failed', [MerchantWithdrawalAdminController::class, 'markFailed'])
         ->middleware('permission:admin.billing.manage')
         ->name('api.admin.merchant.withdrawals.mark-failed');
+
+    Route::get('/admin/ecommerce/shop-reports', [\Src\Infrastructure\Admin\Http\Controllers\AdminEcommerceShopReportController::class, 'index'])
+        ->middleware('permission:admin.dashboard.view|admin.billing.manage')
+        ->name('admin.ecommerce.shop-reports.index');
+    Route::post('/api/admin/ecommerce/shop-reports/{id}/dismiss', [\Src\Infrastructure\Admin\Http\Controllers\AdminEcommerceShopReportController::class, 'dismiss'])
+        ->middleware('permission:admin.dashboard.view|admin.billing.manage')
+        ->name('api.admin.ecommerce.shop-reports.dismiss');
+    Route::post('/api/admin/ecommerce/shops/{shopId}/suspend-reports', [\Src\Infrastructure\Admin\Http\Controllers\AdminEcommerceShopReportController::class, 'suspendShop'])
+        ->middleware('permission:admin.dashboard.view|admin.billing.manage')
+        ->name('api.admin.ecommerce.shops.suspend-reports');
+    Route::post('/api/admin/ecommerce/shops/{shopId}/restore-reports', [\Src\Infrastructure\Admin\Http\Controllers\AdminEcommerceShopReportController::class, 'restoreShop'])
+        ->middleware('permission:admin.dashboard.view|admin.billing.manage')
+        ->name('api.admin.ecommerce.shops.restore-reports');
 
     // Gestion complète des utilisateurs
     Route::prefix('admin/users')->name('admin.users.')->group(function () {

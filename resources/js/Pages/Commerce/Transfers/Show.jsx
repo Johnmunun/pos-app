@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function CommerceTransferShow({ transfer, products }) {
     const { auth } = usePage().props;
@@ -195,17 +196,17 @@ export default function CommerceTransferShow({ transfer, products }) {
     return (
         <AppLayout
             header={
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h2 className="font-semibold text-xl text-gray-800 dark:text-white leading-tight">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between w-full min-w-0">
+                    <div className="min-w-0">
+                        <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">
                             Transfert {transfer.reference}
                         </h2>
-                        <div className="mt-1">
+                        <div className="mt-1.5">
                             {getStatusBadge(transfer.status)}
                         </div>
                     </div>
-                    <Link href={route('commerce.transfers.index')}>
-                        <Button variant="outline">
+                    <Link href={route('commerce.transfers.index')} className="shrink-0">
+                        <Button variant="outline" className="w-full sm:w-auto">
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Retour
                         </Button>
@@ -215,13 +216,13 @@ export default function CommerceTransferShow({ transfer, products }) {
         >
             <Head title={`Transfert ${transfer.reference}`} />
 
-            <div className="py-6">
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+            <div className={pageY}>
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
                     <div className="grid md:grid-cols-2 gap-6">
-                        <Card className="bg-white dark:bg-slate-800">
+                        <Card className={cardShell}>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
-                                    <ArrowRightLeft className="h-5 w-5 text-blue-600" />
+                                    <ArrowRightLeft className="h-5 w-5 text-amber-500" />
                                     Direction du Transfert
                                 </CardTitle>
                             </CardHeader>
@@ -237,7 +238,7 @@ export default function CommerceTransferShow({ transfer, products }) {
                                         </div>
                                     </div>
 
-                                    <ArrowRight className="h-6 w-6 text-blue-500 flex-shrink-0" />
+                                    <ArrowRight className="h-6 w-6 text-amber-500 flex-shrink-0" />
 
                                     <div className="flex-1 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                                         <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-sm font-medium mb-1">
@@ -252,7 +253,7 @@ export default function CommerceTransferShow({ transfer, products }) {
                             </CardContent>
                         </Card>
 
-                        <Card className="bg-white dark:bg-slate-800">
+                        <Card className={cardShell}>
                             <CardHeader>
                                 <CardTitle>Informations</CardTitle>
                             </CardHeader>
@@ -302,7 +303,7 @@ export default function CommerceTransferShow({ transfer, products }) {
                                         <Package className="h-4 w-4" />
                                         Total produits
                                     </span>
-                                    <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                                    <span className="text-lg font-bold text-amber-600 dark:text-amber-400">
                                         {transfer.total_items} ({transfer.total_quantity} unités)
                                     </span>
                                 </div>
@@ -319,10 +320,10 @@ export default function CommerceTransferShow({ transfer, products }) {
                         </Card>
                     )}
 
-                    <Card className="bg-white dark:bg-slate-800">
+                    <Card className={cardShell}>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <Package className="h-5 w-5 text-blue-600" />
+                                <Package className="h-5 w-5 text-amber-500" />
                                 Produits à transférer
                             </CardTitle>
                         </CardHeader>
@@ -477,7 +478,7 @@ export default function CommerceTransferShow({ transfer, products }) {
                                                 <td colSpan={canEdit ? 4 : 3} className="py-3 px-4 text-right font-bold">
                                                     TOTAL ({transfer.total_items} produit{transfer.total_items > 1 ? 's' : ''})
                                                 </td>
-                                                <td className="py-3 px-4 text-center font-bold text-xl text-blue-600">
+                                                <td className="py-3 px-4 text-center font-bold text-xl text-amber-600 dark:text-amber-400">
                                                     {transfer.total_quantity}
                                                 </td>
                                                 {canEdit && <td></td>}
@@ -490,7 +491,7 @@ export default function CommerceTransferShow({ transfer, products }) {
                     </Card>
 
                     {(canValidate || canCancel) && transfer.status === 'draft' && (
-                        <Card className="bg-white dark:bg-slate-800">
+                        <Card className={cardShell}>
                             <CardContent className="pt-4">
                                 <div className="flex justify-end gap-3">
                                     {canCancel && (

@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Src\Application\Common\Services\AssistantSalesProfitContextBuilder;
 use Src\Application\GlobalCommerce\Services\CommerceAssistantContextService;
 
 class CommerceAssistantController
@@ -21,7 +22,12 @@ class CommerceAssistantController
      */
     public function ask(Request $request): JsonResponse
     {
-        $request->validate(['message' => 'required|string|max:2000']);
+        $request->validate([
+            'message' => 'required|string|max:2000',
+            'history' => 'nullable|array|max:6',
+            'history.*.role' => 'required_with:history|in:user,assistant',
+            'history.*.content' => 'required_with:history|string|max:2000',
+        ]);
 
         $message = trim($request->input('message'));
         if ($message === '') {
@@ -54,9 +60,11 @@ class CommerceAssistantController
         $driver = config('commerce_assistant.llm_driver', 'fallback');
         $apiKey = config('services.openai.api_key');
 
+        $history = $this->normalizeHistory($request->input('history'));
+
         if ($driver === 'openai' && $apiKey !== null && $apiKey !== '') {
             try {
-                $result = $this->callOpenAI($apiKey, $systemPrompt, $context, $message);
+                $result = $this->callOpenAI($apiKey, $systemPrompt, $context, $message, $history);
                 return response()->json([
                     'answer' => $result['answer'],
                     'navigation' => $result['navigation'] ?? null,
@@ -100,19 +108,59 @@ class CommerceAssistantController
         return null;
     }
 
-    private function callOpenAI(string $apiKey, string $systemPrompt, array $context, string $userMessage): array
+    /**
+     * @return array<int, array{role: string, content: string}>
+     */
+    private function normalizeHistory(mixed $history): array
+    {
+        if (!is_array($history)) {
+            return [];
+        }
+        $out = [];
+        foreach ($history as $turn) {
+            if (!is_array($turn)) {
+                continue;
+            }
+            $role = ($turn['role'] ?? '') === 'user' ? 'user' : 'assistant';
+            $content = trim((string) ($turn['content'] ?? ''));
+            if ($content === '') {
+                continue;
+            }
+            $out[] = ['role' => $role, 'content' => mb_substr($content, 0, 2000)];
+            if (count($out) >= 6) {
+                break;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param array<int, array{role: string, content: string}> $history
+     * @return array{answer: string|null, navigation: array|null}
+     */
+    private function callOpenAI(string $apiKey, string $systemPrompt, array $context, string $userMessage, array $history): array
     {
         $contextJson = json_encode($context, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        $userContent = "Contexte (données uniquement, ne pas inventer):\n" . $contextJson . "\n\nQuestion utilisateur: " . $userMessage;
+        $userContent = "Contexte commerce (JSON — source unique pour chiffres, listes et routes ; ne rien inventer):\n"
+            . $contextJson
+            . "\n\nQuestion actuelle: "
+            . $userMessage;
+
+        $chatMessages = [['role' => 'system', 'content' => $systemPrompt]];
+        foreach ($history as $turn) {
+            $chatMessages[] = [
+                'role' => $turn['role'] === 'user' ? 'user' : 'assistant',
+                'content' => $turn['content'],
+            ];
+        }
+        $chatMessages[] = ['role' => 'user', 'content' => $userContent];
 
         $response = Http::withToken($apiKey)
             ->timeout(15)
             ->post('https://api.openai.com/v1/chat/completions', [
                 'model' => 'gpt-4o-mini',
-                'messages' => [
-                    ['role' => 'system', 'content' => $systemPrompt],
-                    ['role' => 'user', 'content' => $userContent],
-                ],
+                'messages' => $chatMessages,
                 'max_tokens' => 500,
                 'temperature' => 0.3,
             ]);
@@ -188,6 +236,11 @@ class CommerceAssistantController
             return sprintf("%s %s,\n\n%s", $hello, $userName, $body);
         };
 
+        $profitAnswer = AssistantSalesProfitContextBuilder::tryAnswerProfitQuestion($message, $context, $currency);
+        if ($profitAnswer !== null) {
+            return ['answer' => $greet($profitAnswer), 'navigation' => null];
+        }
+
         // Ventes aujourd'hui
         if (str_contains($lower, 'vente') && str_contains($lower, 'aujourd')) {
             $n = $sales['total_sales'] ?? 0;
@@ -223,13 +276,32 @@ class CommerceAssistantController
         // Produit spécifique
         if (!empty($products)) {
             $p = $products[0];
+            $curr = $p['currency'] ?? $currency;
+            $marginBlock = ($p['cost_price'] ?? null) !== null
+                ? sprintf(
+                    "\nPrix d'achat : %s %s\nMarge unitaire : %s %s",
+                    number_format((float) $p['cost_price'], 0, ',', ' '),
+                    $curr,
+                    number_format((float) ($p['unit_margin'] ?? 0), 0, ',', ' '),
+                    $curr
+                )
+                : "\nPrix d'achat : non renseigné.";
+            $movements = $p['recent_stock_movements'] ?? [];
+            $movBlock = $movements !== []
+                ? "\n\nDerniers mouvements :\n" . implode("\n", array_map(
+                    fn ($mv) => sprintf('- %s %s %s', $mv['date'] ?? '', $mv['type'] ?? '', $mv['quantity'] ?? ''),
+                    array_slice($movements, 0, 5)
+                ))
+                : '';
             $body = sprintf(
-                "💊 %s (code %s)\n📦 Stock : %s\n💰 Prix : %s %s",
+                "%s (code %s)\nStock : %s\nPrix de vente : %s %s%s%s",
                 $p['name'],
                 $p['code'] ?? '—',
                 $p['stock_quantity'] ?? 0,
                 number_format($p['selling_price'] ?? 0, 0, ',', ' '),
-                $p['currency'] ?? $currency
+                $curr,
+                $marginBlock,
+                $movBlock
             );
             return ['answer' => $greet($body), 'navigation' => null];
         }

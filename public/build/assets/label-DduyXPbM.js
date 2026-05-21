@@ -1,0 +1,1 @@
+import{r as t,j as s}from"./vendor-react-CIt--7wk.js";import{c as o}from"./utils-DWV2y3jU.js";const l=t.forwardRef(({className:e,...a},r)=>s.jsx("label",{ref:r,className:o("text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-gray-700 dark:text-gray-300",e),...a}));l.displayName="Label";export{l as L};

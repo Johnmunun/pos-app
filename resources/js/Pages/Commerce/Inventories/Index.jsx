@@ -19,6 +19,7 @@ import {
     FileText,
     XCircle as XCircleIcon
 } from 'lucide-react';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 const statusConfig = {
     draft: { label: 'Brouillon', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300', icon: FileText },
@@ -82,15 +83,20 @@ export default function InventoryIndex({ inventories, filters = {}, pagination, 
     return (
         <AppLayout
             header={
-                <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
-                    Inventaires
-                </h2>
+                <div>
+                    <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">
+                        Inventaires
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 max-w-2xl hidden sm:block">
+                        Inventaires physiques Global Commerce.
+                    </p>
+                </div>
             }
         >
             <Head title="Inventaires" />
 
-            <div className="py-6">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
                     <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div>
                             <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -112,7 +118,7 @@ export default function InventoryIndex({ inventories, filters = {}, pagination, 
                         )}
                     </div>
 
-                    <Card className="mb-6 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <Card className={`mb-6 ${cardShell}`}>
                         <CardHeader>
                             <CardTitle className="flex items-center text-gray-900 dark:text-white">
                                 <Filter className="h-5 w-5 mr-2 text-amber-500" />
@@ -179,7 +185,7 @@ export default function InventoryIndex({ inventories, filters = {}, pagination, 
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <Card className={cardShell}>
                         <CardHeader>
                             <CardTitle className="flex items-center text-gray-900 dark:text-white">
                                 <ClipboardList className="h-5 w-5 mr-2 text-blue-500" />

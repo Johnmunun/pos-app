@@ -42,6 +42,7 @@ use Src\Application\Pharmacy\Services\StockTransferService;
 use Src\Application\Pharmacy\UseCases\Product\CreateProductUseCase;
 use Src\Application\Pharmacy\UseCases\Product\UpdateProductUseCase;
 use Src\Application\Pharmacy\UseCases\Inventory\UpdateStockUseCase;
+use Src\Application\Pharmacy\Services\OpeningBatchAligner;
 use Src\Application\Pharmacy\UseCases\Category\CreateCategoryUseCase;
 use Src\Application\Pharmacy\UseCases\Category\UpdateCategoryUseCase;
 use Src\Application\Pharmacy\UseCases\Category\DeleteCategoryUseCase;
@@ -250,7 +251,8 @@ class PharmacyServiceProvider extends ServiceProvider
                 return new UpdateStockUseCase(
                     $app->make(ProductRepositoryInterface::class),
                     $app->make(BatchRepositoryInterface::class),
-                    $app->make(StockMovementRepositoryInterface::class)
+                    $app->make(StockMovementRepositoryInterface::class),
+                    $app->make(OpeningBatchAligner::class),
                 );
             }
         );

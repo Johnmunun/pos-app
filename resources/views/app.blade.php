@@ -6,6 +6,9 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title inertia>{{ config('app.name', 'OmniPOS') }}</title>
+        @if(empty($sfTheme) && config('app_seo.description'))
+        <meta name="description" content="{{ Str::limit(strip_tags(config('app_seo.description')), 160, '') }}">
+        @endif
 
         {{-- Thème storefront : variables CSS inline pour éviter le flash couleur au refresh --}}
         @php

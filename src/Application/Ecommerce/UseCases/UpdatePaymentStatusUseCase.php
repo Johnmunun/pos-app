@@ -7,6 +7,7 @@ use Src\Application\Ecommerce\Services\GenerateDownloadTokensService;
 use Src\Application\Referral\Services\ReferralService;
 use Src\Domain\Ecommerce\Entities\Order;
 use Src\Domain\Ecommerce\Repositories\OrderRepositoryInterface;
+use Src\Infrastructure\Billing\Services\MerchantWalletService;
 
 class UpdatePaymentStatusUseCase
 {
@@ -15,6 +16,7 @@ class UpdatePaymentStatusUseCase
         private readonly GenerateDownloadTokensService $generateDownloadTokensService,
         private readonly ReferralService $referralService,
         private readonly EcommerceOrderPaidCustomerMailService $ecommerceOrderPaidCustomerMailService,
+        private readonly MerchantWalletService $merchantWalletService,
     ) {
     }
 
@@ -62,6 +64,10 @@ class UpdatePaymentStatusUseCase
             && $previousPaymentStatus !== Order::PAYMENT_STATUS_PAID
         ) {
             $this->ecommerceOrderPaidCustomerMailService->notifyOrderJustPaid($order);
+            $this->merchantWalletService->applySettlementFromEcommerceOrderId(
+                $order->getId(),
+                'payment_status_update'
+            );
         }
 
         return $order;

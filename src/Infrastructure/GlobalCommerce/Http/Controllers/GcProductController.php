@@ -73,11 +73,15 @@ class GcProductController
             $isActive = false;
         }
         
-        $products = $this->productRepository->search($shopId, $search, array_filter([
+        $perPage = max(10, min(100, (int) $request->input('per_page', 25)));
+        $page = max(1, (int) $request->input('page', 1));
+
+        $paginated = $this->productRepository->searchPaginated($shopId, $search, array_filter([
             'category_id' => $categoryId,
             'is_active' => $isActive,
             'shop_ids' => $gcIds,
-        ]));
+        ]), $page, $perPage);
+        $products = $paginated['items'];
 
         // L'écran Index ouvre un drawer d'édition. On doit donc inclure les champs nécessaires
         // (prix d'achat/vente, description, etc.) et les champs avancés stockés sur gc_products.
@@ -175,7 +179,20 @@ class GcProductController
         return Inertia::render('Commerce/Products/Index', [
             'products' => $list,
             'categories' => $categories,
-            'filters' => ['search' => $search, 'category_id' => $categoryId],
+            'filters' => [
+                'search' => $search,
+                'category_id' => $categoryId,
+                'status' => $status,
+                'per_page' => $perPage,
+            ],
+            'pagination' => [
+                'current_page' => $paginated['current_page'],
+                'last_page' => $paginated['last_page'],
+                'per_page' => $paginated['per_page'],
+                'total' => $paginated['total'],
+                'from' => $paginated['from'],
+                'to' => $paginated['to'],
+            ],
         ]);
     }
 

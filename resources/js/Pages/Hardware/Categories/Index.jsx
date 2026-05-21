@@ -9,6 +9,8 @@ import Modal from '@/Components/Modal';
 import HardwareCategoryDrawer from '@/Components/Hardware/CategoryDrawer';
 import { Search, Plus, Edit, Trash2, Tag, RefreshCw, Upload, X, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import axios from 'axios';
+import GrabScroll from '@/Components/GrabScroll';
 
 /**
  * Pagination pour la liste Hardware (route hardware.categories.index).
@@ -195,7 +197,7 @@ export default function HardwareCategoriesIndex({ categories = [], pagination, f
                                 </div>
                             ) : (
                                 <>
-                                    <div className="overflow-x-auto">
+                                    <GrabScroll className="rounded-xl border border-gray-100/90 bg-gray-50/30 dark:border-slate-700/60 dark:bg-slate-950/30">
                                         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                             <thead className="bg-gray-50 dark:bg-gray-800">
                                                 <tr>
@@ -247,7 +249,7 @@ export default function HardwareCategoriesIndex({ categories = [], pagination, f
                                                 ))}
                                             </tbody>
                                         </table>
-                                    </div>
+                                    </GrabScroll>
                                     <HardwareCategoriesPagination pagination={pagination} filters={filters} />
                                 </>
                             )}
@@ -370,7 +372,7 @@ export default function HardwareCategoriesIndex({ categories = [], pagination, f
                                     </div>
 
                                     {importPreview.sample && importPreview.sample.header && importPreview.sample.header.length > 0 && (
-                                        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-x-auto max-h-64">
+                                        <GrabScroll className="max-h-64 overflow-y-auto rounded-xl border border-gray-200/80 dark:border-gray-700/80">
                                             <table className="min-w-full text-xs">
                                                 <thead className="bg-gray-50 dark:bg-gray-800">
                                                     <tr>
@@ -396,7 +398,7 @@ export default function HardwareCategoriesIndex({ categories = [], pagination, f
                                                     ))}
                                                 </tbody>
                                             </table>
-                                        </div>
+                                        </GrabScroll>
                                     )}
 
                                     {importPreview.errors && importPreview.errors.length > 0 && (

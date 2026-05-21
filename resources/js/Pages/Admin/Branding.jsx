@@ -1,10 +1,13 @@
 import AppLayout from '@/Layouts/AppLayout';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
-import { Image as ImageIcon, MonitorSmartphone, Printer, Trash2, UploadCloud } from 'lucide-react';
+import { Image as ImageIcon, MonitorSmartphone, Printer, Search, Trash2, UploadCloud } from 'lucide-react';
+import { Label } from '@/Components/ui/label';
+import { Textarea } from '@/Components/ui/textarea';
 
 export default function Branding() {
     const { props } = usePage();
+    const appSeoSettings = props.appSeoSettings || {};
     const initialLogoUrl = props.appLogoUrl || props.appLogoUrl === '' ? props.appLogoUrl : props.appLogoUrl;
     const initialHeroMainUrl = props.heroMainUrl || null;
     const initialHeroDevicesUrl = props.heroDevicesUrl || null;
@@ -24,6 +27,15 @@ export default function Branding() {
         hero_devices: null,
         remove_hero_main: false,
         remove_hero_devices: false,
+        seo_site_name: appSeoSettings.site_name ?? '',
+        seo_title: appSeoSettings.title ?? '',
+        seo_description: appSeoSettings.description ?? '',
+        seo_keywords: appSeoSettings.keywords ?? '',
+        seo_indexing_enabled: appSeoSettings.indexing_enabled ?? true,
+        seo_google_site_verification: appSeoSettings.google_site_verification ?? '',
+        seo_og_image: appSeoSettings.og_image ?? '',
+        seo_twitter_handle: appSeoSettings.twitter_handle ?? '',
+        seo_locale: appSeoSettings.locale ?? 'fr_FR',
     });
 
     const handleFileChange = (e) => {
@@ -99,7 +111,7 @@ export default function Branding() {
                             Branding application
                         </h2>
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            Téléchargez le logo global d&apos;OmniPOS utilisé dans l&apos;interface.
+                            Logo, visuels landing et référencement Google du site omnisolution.shop
                         </p>
                     </div>
                 </div>
@@ -309,13 +321,112 @@ export default function Branding() {
                             </div>
                         </section>
 
+                        <section className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <Search className="h-5 w-5 text-emerald-500" />
+                                    Référencement site OmniSolution
+                                </h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                    Landing page, Google Search Console — distinct des boutiques e-commerce (sous-domaines).
+                                </p>
+                            </div>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div>
+                                    <Label htmlFor="seo_site_name">Nom du site</Label>
+                                    <input
+                                        id="seo_site_name"
+                                        type="text"
+                                        value={data.seo_site_name}
+                                        onChange={(e) => setData('seo_site_name', e.target.value)}
+                                        className="mt-1 flex h-9 w-full rounded-md border border-input bg-white dark:bg-slate-800 px-3 text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="seo_title">Titre SEO</Label>
+                                    <input
+                                        id="seo_title"
+                                        type="text"
+                                        value={data.seo_title}
+                                        onChange={(e) => setData('seo_title', e.target.value)}
+                                        maxLength={150}
+                                        className="mt-1 flex h-9 w-full rounded-md border border-input bg-white dark:bg-slate-800 px-3 text-sm"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <Label htmlFor="seo_description">Description</Label>
+                                <Textarea
+                                    id="seo_description"
+                                    value={data.seo_description}
+                                    onChange={(e) => setData('seo_description', e.target.value)}
+                                    rows={3}
+                                    className="mt-1"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="seo_keywords">Mots-clés</Label>
+                                <input
+                                    id="seo_keywords"
+                                    type="text"
+                                    value={data.seo_keywords}
+                                    onChange={(e) => setData('seo_keywords', e.target.value)}
+                                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-white dark:bg-slate-800 px-3 text-sm"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="seo_google_site_verification">Google Search Console</Label>
+                                <input
+                                    id="seo_google_site_verification"
+                                    type="text"
+                                    value={data.seo_google_site_verification}
+                                    onChange={(e) => setData('seo_google_site_verification', e.target.value)}
+                                    placeholder="Code meta google-site-verification"
+                                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-white dark:bg-slate-800 px-3 text-sm"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="seo_og_image">Image Open Graph (URL)</Label>
+                                <input
+                                    id="seo_og_image"
+                                    type="url"
+                                    value={data.seo_og_image}
+                                    onChange={(e) => setData('seo_og_image', e.target.value)}
+                                    placeholder="https://… (vide = logo application)"
+                                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-white dark:bg-slate-800 px-3 text-sm"
+                                />
+                            </div>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={!!data.seo_indexing_enabled}
+                                    onChange={(e) => setData('seo_indexing_enabled', e.target.checked)}
+                                    className="rounded"
+                                />
+                                <span className="text-sm text-gray-700 dark:text-gray-200">
+                                    Autoriser l&apos;indexation Google (landing)
+                                </span>
+                            </label>
+                            {appSeoSettings.sitemap_url && data.seo_indexing_enabled && (
+                                <p className="text-xs text-emerald-700 dark:text-emerald-300 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 p-3">
+                                    Plan du site :{' '}
+                                    <code className="bg-white/60 dark:bg-black/30 px-1 rounded">{appSeoSettings.sitemap_url}</code>
+                                    {' '}— à soumettre dans{' '}
+                                    <a href="https://search.google.com/search-console" target="_blank" rel="noopener noreferrer" className="underline">
+                                        Search Console
+                                    </a>
+                                    {' '}pour <code className="bg-white/60 dark:bg-black/30 px-1 rounded">{appSeoSettings.public_base_url || 'votre domaine'}</code>
+                                </p>
+                            )}
+                        </section>
+
                         <div className="flex items-center justify-end gap-3 pt-2">
                             <button
                                 type="submit"
                                 disabled={processing}
                                 className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-colors"
                             >
-                                {processing ? 'Enregistrement...' : 'Enregistrer le branding'}
+                                {processing ? 'Enregistrement...' : 'Enregistrer'}
                             </button>
                         </div>
                     </form>

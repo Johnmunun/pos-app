@@ -34,6 +34,8 @@ import {
     Legend,
 } from 'recharts';
 import { formatCurrency } from '@/lib/currency';
+import { cn } from '@/lib/utils';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 import ModuleOnboarding from '@/Components/ModuleOnboarding/ModuleOnboarding';
 
 function countryLabel(code) {
@@ -112,11 +114,16 @@ export default function EcommerceDashboard({
     return (
         <AppLayout
             header={
-                <div data-onboarding="ecommerce-dashboard-welcome" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <h2 className="font-semibold text-lg sm:text-xl text-gray-800 dark:text-gray-100 leading-tight break-words min-w-0">
-                        Tableau de bord E-commerce
-                    </h2>
-                    <div className="flex flex-wrap items-center gap-2">
+                <div data-onboarding="ecommerce-dashboard-welcome" className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 w-full min-w-0">
+                    <div className="min-w-0">
+                        <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight break-words">
+                            Tableau de bord E-commerce
+                        </h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 max-w-2xl hidden sm:block">
+                            Ventes, audience vitrine et accès rapides au module.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
                         <Button
                             variant="outline"
                             size="sm"
@@ -142,10 +149,11 @@ export default function EcommerceDashboard({
             <Head title="Dashboard E-commerce" />
             <ModuleOnboarding moduleName="ecommerce" />
 
-            <div className="py-6 space-y-6">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
                 {/* Panneau filtre (dates) */}
                 {showFilters && (
-                    <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                    <Card className={cardShell}>
                         <CardContent className="pt-6">
                             <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                                 Filtrer par période (graphiques, export PDF et statistiques visiteurs par zone)
@@ -325,7 +333,7 @@ export default function EcommerceDashboard({
                         </h3>
                     </div>
                     {!audienceEnabled ? (
-                        <Card className="bg-white dark:bg-slate-900 border border-dashed border-indigo-200 dark:border-indigo-800 p-5">
+                        <Card className={cn(cardShell, 'border-dashed border-indigo-200 dark:border-indigo-700 p-5')}>
                             <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
                                 <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center shrink-0">
                                     <Lock className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
@@ -346,7 +354,7 @@ export default function EcommerceDashboard({
                         </Card>
                     ) : (
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                            <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-4 xl:col-span-1">
+                            <Card className={cn(cardShell, 'p-4 xl:col-span-1')}>
                                 <CardHeader className="pb-3 px-0 pt-0">
                                     <CardTitle className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                                         <BarChart3 className="h-4 w-4 text-indigo-500" />
@@ -381,7 +389,7 @@ export default function EcommerceDashboard({
                                 </CardContent>
                             </Card>
 
-                            <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-4 xl:col-span-1">
+                            <Card className={cn(cardShell, 'p-4 xl:col-span-1')}>
                                 <CardHeader className="pb-3 px-0 pt-0">
                                     <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
                                         Par région / État
@@ -413,7 +421,7 @@ export default function EcommerceDashboard({
                                 </CardContent>
                             </Card>
 
-                            <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-4 xl:col-span-1">
+                            <Card className={cn(cardShell, 'p-4 xl:col-span-1')}>
                                 <CardHeader className="pb-3 px-0 pt-0">
                                     <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
                                         Top villes
@@ -459,7 +467,7 @@ export default function EcommerceDashboard({
                 {/* Graphiques Recharts - Style Global Commerce */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Évolution des revenus */}
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-4">
+                    <Card className={cn(cardShell, 'p-4')}>
                         <CardHeader className="pb-3">
                             <div>
                                 <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
@@ -508,7 +516,7 @@ export default function EcommerceDashboard({
                     </Card>
 
                     {/* Commandes par jour */}
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-4">
+                    <Card className={cn(cardShell, 'p-4')}>
                         <CardHeader className="pb-3">
                             <div>
                                 <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
@@ -547,7 +555,7 @@ export default function EcommerceDashboard({
                     </Card>
 
                     {/* Répartition des statuts (sur 2 colonnes si lg) */}
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-4 lg:col-span-2">
+                    <Card className={cn(cardShell, 'p-4 lg:col-span-2')}>
                         <CardHeader className="pb-3">
                             <div>
                                 <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
@@ -595,7 +603,7 @@ export default function EcommerceDashboard({
                 </div>
 
                 {/* Actions rapides - Style Global Commerce */}
-                <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                <Card className={cardShell}>
                     <CardHeader className="pb-3">
                         <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
                             ACTIONS RAPIDES
@@ -650,6 +658,7 @@ export default function EcommerceDashboard({
                         </div>
                     </CardContent>
                 </Card>
+            </div>
             </div>
         </AppLayout>
     );

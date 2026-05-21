@@ -150,13 +150,33 @@ export default function CommerceSalesCreate({
     exchangeRates: pageExchangeRates = {},
     routePrefix = 'commerce',
 }) {
-    const { shop } = usePage().props;
-    const defaultCurrency = (pageCurrency ?? shop?.currency ?? 'CDF').toString().toUpperCase();
+    const { shop, displayCurrency, exchangeRates: sharedExchangeRates = {} } = usePage().props;
+    const defaultCurrency = (pageCurrency ?? displayCurrency ?? shop?.currency ?? 'CDF').toString().toUpperCase();
     const currencies = pageCurrencies?.length ? pageCurrencies : shop?.currencies ?? [];
-    const exchangeRates = Object.keys(pageExchangeRates || {}).length ? pageExchangeRates : { [defaultCurrency]: 1 };
+    const exchangeRates = Object.keys(pageExchangeRates || {}).length
+        ? pageExchangeRates
+        : Object.keys(sharedExchangeRates || {}).length
+          ? sharedExchangeRates
+          : shop?.exchange_rates && Object.keys(shop.exchange_rates).length
+            ? shop.exchange_rates
+            : { [defaultCurrency]: 1 };
 
     const [selectedCurrency, setSelectedCurrency] = useState(defaultCurrency);
     const currency = selectedCurrency;
+
+    useEffect(() => {
+        setSelectedCurrency(defaultCurrency);
+    }, [defaultCurrency]);
+
+    const onDisplayCurrencyChange = async (e) => {
+        const next = e.target.value;
+        setSelectedCurrency(next);
+        try {
+            await axios.post(route('api.display-currency.update'), { currency: next });
+        } catch {
+            /* session optionnelle */
+        }
+    };
 
     const convertToSelected = (amount, fromCurrencyCode) => {
         if (amount == null || amount === 0) return 0;
@@ -842,6 +862,7 @@ export default function CommerceSalesCreate({
                 customer_id: customerId || null,
                 currency,
                 sale_mode: saleMode,
+                draft: false,
                 lines: payloadLines,
             };
 
@@ -900,15 +921,6 @@ export default function CommerceSalesCreate({
             });
 
             const saleId = storeRes.data.sale.id;
-
-            const finalizeAmount = Number(paidAmount) || Number(total) || 0;
-            if (finalizeAmount <= 0) {
-                throw new Error('Le montant payé doit être supérieur à 0');
-            }
-            await axios.post(route(`${routePrefix}.sales.finalize`, saleId), {
-                paid_amount: finalizeAmount,
-            });
-
             const saleTotal = total;
             toast.success('Vente finalisée avec succès!');
             setShowPaymentModal(false);
@@ -993,7 +1005,7 @@ export default function CommerceSalesCreate({
         <AppLayout fullWidth>
             <Head title="Point de Vente - Commerce" />
 
-            <div className="min-h-[calc(100vh-64px)] flex flex-col lg:flex-row relative">
+            <div className="h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)] flex flex-col lg:flex-row relative overflow-hidden">
                 {/* Bandeau succès après validation */}
                 {showSuccessBanner && (
                     <div className="absolute top-0 left-0 right-0 z-40 bg-green-600 dark:bg-green-700 text-white py-3 px-4 text-center shadow-lg animate-in fade-in duration-300">
@@ -1003,9 +1015,9 @@ export default function CommerceSalesCreate({
                 )}
 
                 {/* Colonne gauche - produits */}
-                <div className="w-full lg:flex-1 flex flex-col bg-gray-50 dark:bg-slate-950 min-w-0">
+                <div className="w-full lg:flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden bg-gray-50 dark:bg-slate-950">
                     {/* Header */}
-                    <div className="p-3 sm:p-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
+                    <div className="shrink-0 p-3 sm:p-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                             <Button
                                 variant="ghost"
@@ -1022,7 +1034,7 @@ export default function CommerceSalesCreate({
                             {availableCurrencies.length >= 1 && (
                                 <select
                                     value={currency}
-                                    onChange={(e) => setSelectedCurrency(e.target.value)}
+                                    onChange={onDisplayCurrencyChange}
                                     className="h-9 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 text-sm font-medium px-3 w-full sm:w-auto min-w-0 sm:min-w-[100px]"
                                     title="Devise d'affichage (conversion selon le taux configuré)"
                                 >
@@ -1096,12 +1108,13 @@ export default function CommerceSalesCreate({
                             </div>
 
                             <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline shrink-0">
-                                Raccourcis: <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">1</kbd>{' '}
-                                ventes ·{' '}
-                                <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">2</kbd>{' '}
-                                ici ·{' '}
+                                Raccourcis:{' '}
+                                <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">Ctrl+Shift+V</kbd>{' '}
+                                vente ·{' '}
                                 <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">P</kbd>{' '}
-                                paiement
+                                paiement ·{' '}
+                                <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">+/-</kbd>{' '}
+                                qté
                             </span>
                             <div className="w-full sm:flex-1 min-w-0 relative flex items-center gap-2">
                                 <div className="flex-1 relative">
@@ -1172,7 +1185,7 @@ export default function CommerceSalesCreate({
                     </div>
 
                     {/* Catégories */}
-                    <div className="p-3 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 overflow-x-auto">
+                    <div className="shrink-0 p-3 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 overflow-x-auto">
                         <div className="flex gap-2">
                             <button
                                 type="button"
@@ -1204,7 +1217,7 @@ export default function CommerceSalesCreate({
 
                     {/* Derniers produits */}
                     {recentProductIds.length > 0 && (
-                        <div className="px-4 py-2 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
+                        <div className="shrink-0 px-4 py-2 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
                             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
                                 Derniers produits
                             </p>
@@ -1249,22 +1262,22 @@ export default function CommerceSalesCreate({
                     )}
 
                     {/* Grille / liste de produits */}
-                    <div className="flex-1 overflow-y-auto p-4">
+                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-3 sm:p-4">
                         {viewMode === 'thumbnails' ? (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5 sm:gap-3 md:gap-4">
                                 {filteredProducts.map((product) => (
                                     <button
                                         key={product.id}
                                         type="button"
                                         onClick={() => addToCart(product)}
                                         disabled={product.stock < 1}
-                                        className={`bg-white dark:bg-slate-800 rounded-xl p-3 text-center shadow-sm hover:shadow-md transition-all border border-gray-200 dark:border-slate-700 ${
+                                        className={`bg-white dark:bg-slate-800 rounded-lg sm:rounded-xl p-1.5 sm:p-3 text-center shadow-sm hover:shadow-md transition-all border border-gray-200 dark:border-slate-700 ${
                                             product.stock < 1
                                                 ? 'opacity-50 cursor-not-allowed'
                                                 : 'hover:border-amber-300 dark:hover:border-amber-500'
                                         }`}
                                     >
-                                        <div className="aspect-square mb-2 rounded-lg bg-gray-100 dark:bg-slate-700 overflow-hidden flex items-center justify-center">
+                                        <div className="aspect-square mb-1 sm:mb-2 rounded-md sm:rounded-lg bg-gray-100 dark:bg-slate-700 overflow-hidden flex items-center justify-center">
                                             {product.image_url ? (
                                                 <img
                                                     src={product.image_url}
@@ -1281,13 +1294,13 @@ export default function CommerceSalesCreate({
                                                     product.image_url ? 'hidden' : ''
                                                 }`}
                                             >
-                                                <Package className="h-10 w-10 text-gray-400" />
+                                                <Package className="h-6 w-6 sm:h-10 sm:w-10 text-gray-400" />
                                             </div>
                                         </div>
-                                        <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2 mb-1">
+                                        <p className="text-[10px] sm:text-sm font-medium text-gray-900 dark:text-white line-clamp-2 mb-0.5 sm:mb-1 leading-tight">
                                             {product.name}
                                         </p>
-                                        <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold">
+                                        <p className="text-[10px] sm:text-xs text-amber-600 dark:text-amber-400 font-semibold">
                                             {fmt(
                                                 convertToSelected(
                                                     getProductPrice(product),
@@ -1386,9 +1399,9 @@ export default function CommerceSalesCreate({
                 </div>
 
                 {/* Colonne droite - panier */}
-                <div className="w-full lg:w-96 lg:min-w-[22rem] lg:max-w-md bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-slate-700 flex flex-col flex-shrink-0 lg:flex-shrink-0">
+                <div className="w-full lg:w-96 lg:min-w-[22rem] lg:max-w-md bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-slate-700 flex flex-col flex-shrink-0 min-h-0 overflow-hidden max-lg:max-h-[min(46dvh,440px)] lg:h-full lg:max-h-none">
                     {/* En-tête panier */}
-                    <div className="p-4 border-b border-gray-200 dark:border-slate-700">
+                    <div className="shrink-0 p-4 border-b border-gray-200 dark:border-slate-700">
                         <div className="flex items-center gap-2 mb-2">
                             <Badge
                                 className={
@@ -1453,7 +1466,7 @@ export default function CommerceSalesCreate({
                     </div>
 
                     {cart.length > 0 && (
-                        <p className="px-4 py-1 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-slate-800">
+                        <p className="shrink-0 px-4 py-1 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-slate-800">
                             Cliquez une ligne ·{' '}
                             <kbd className="px-1 rounded bg-gray-200 dark:bg-gray-700 font-mono">
                                 +
@@ -1474,7 +1487,7 @@ export default function CommerceSalesCreate({
                     )}
 
                     {/* Lignes panier */}
-                    <div className="flex-1 overflow-y-auto p-4">
+                    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-4">
                         {cart.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full text-gray-400">
                                 <ShoppingCart className="h-16 w-16 mb-4 opacity-50" />
@@ -1638,7 +1651,7 @@ export default function CommerceSalesCreate({
                     </div>
 
                     {/* Pied de page panier */}
-                    <div className="border-t border-gray-200 dark:border-slate-700 p-4 space-y-3">
+                    <div className="shrink-0 border-t border-gray-200 dark:border-slate-700 p-3 sm:p-4 space-y-3 bg-white dark:bg-slate-900">
                         {/* Remise commande */}
                         <button
                             type="button"

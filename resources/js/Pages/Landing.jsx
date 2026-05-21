@@ -1,3 +1,4 @@
+import AppSeoHead from '@/Components/AppSeoHead';
 import Header from '../Components/Header';
 import Hero from '../Components/Hero';
 import Features from '../Components/Features';
@@ -18,7 +19,7 @@ import SupportPublicChatWidget from '../Components/Support/SupportPublicChatWidg
  * - Tarifs
  * - Footer avec CTA
  */
-export default function Landing() {
+export default function Landing({ pageSeo = null }) {
     // Gestion du scroll vers les sections
     const handleScrollToSection = (id) => {
         const element = document.getElementById(id);
@@ -33,7 +34,8 @@ export default function Landing() {
     };
 
     return (
-        <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-200">
+        <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 antialiased selection:bg-amber-500/25 selection:text-gray-900 dark:selection:text-white transition-colors duration-200">
+            <AppSeoHead pageSeo={pageSeo} />
             {/* Header */}
             <Header onScrollToSection={handleScrollToSection} />
 

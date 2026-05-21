@@ -20,6 +20,7 @@ use Src\Infrastructure\Ecommerce\Http\Controllers\StockController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\ReportController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\SettingsController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\StorefrontController;
+use Src\Infrastructure\Ecommerce\Http\Controllers\StorefrontSeoController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\CmsPageController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\CmsBannerController;
 use Src\Infrastructure\Ecommerce\Http\Controllers\CmsBlogController;
@@ -95,6 +96,9 @@ Route::prefix('ecommerce')
         Route::post('/storefront/support/ai/ask', [StorefrontAiSupportController::class, 'ask'])
             ->middleware('permission:ecommerce.catalog.view|ecommerce.view|module.ecommerce')
             ->name('storefront.support.ai.ask');
+        Route::post('/storefront/support/ai/feedback', [StorefrontAiSupportController::class, 'feedback'])
+            ->middleware('permission:ecommerce.catalog.view|ecommerce.view|module.ecommerce')
+            ->name('storefront.support.ai.feedback');
         Route::post('/storefront/search/semantic', [StorefrontAiSemanticSearchController::class, 'search'])
             ->middleware('permission:ecommerce.catalog.view|ecommerce.view|module.ecommerce')
             ->name('storefront.search.semantic');
@@ -419,6 +423,15 @@ Route::prefix('ecommerce')
         Route::put('/settings/ai-support', [SettingsController::class, 'updateAiSupport'])
             ->middleware('permission:ecommerce.settings.view|module.ecommerce')
             ->name('settings.ai-support.update');
+        Route::get('/settings/ai-support/export', [SettingsController::class, 'exportAiSupportStats'])
+            ->middleware('permission:ecommerce.settings.view|module.ecommerce')
+            ->name('settings.ai-support.export');
+        Route::post('/settings/ai-support/suggest-faq', [SettingsController::class, 'suggestAiSupportFaq'])
+            ->middleware('permission:ecommerce.settings.view|module.ecommerce')
+            ->name('settings.ai-support.suggest-faq');
+        Route::put('/settings/featured-products', [SettingsController::class, 'updateFeaturedProducts'])
+            ->middleware('permission:ecommerce.settings.view|module.ecommerce')
+            ->name('settings.featured-products.update');
 
         // Marketing (SEO, Pixels, Tracking)
         Route::get('/marketing', [MarketingController::class, 'index'])
@@ -565,6 +578,8 @@ Route::domain('{subdomain}.'.$ecommerceBaseDomain)
         Route::post('/_storefront/v', StorefrontVisitController::class)
             ->middleware('throttle:120,1')
             ->name('public.storefront.visit');
+        Route::get('/robots.txt', [StorefrontSeoController::class, 'robots'])->name('public.storefront.robots');
+        Route::get('/sitemap.xml', [StorefrontSeoController::class, 'sitemap'])->name('public.storefront.sitemap');
         Route::get('/', [StorefrontController::class, 'index'])->name('public.storefront.index');
         Route::get('/page/{slug}', [StorefrontController::class, 'showPage'])->name('public.storefront.page');
         Route::get('/blog', [StorefrontController::class, 'blog'])->name('public.storefront.blog');
@@ -579,5 +594,9 @@ Route::domain('{subdomain}.'.$ecommerceBaseDomain)
             ->middleware('throttle:30,1')
             ->name('public.storefront.payments.fusionpay.initiate');
         Route::post('/support/ai/ask', [StorefrontAiSupportController::class, 'ask'])->name('public.storefront.support.ai.ask');
+        Route::post('/support/ai/feedback', [StorefrontAiSupportController::class, 'feedback'])->name('public.storefront.support.ai.feedback');
         Route::post('/search/semantic', [StorefrontAiSemanticSearchController::class, 'search'])->name('public.storefront.search.semantic');
+        Route::post('/report-shop', [\Src\Infrastructure\Ecommerce\Http\Controllers\StorefrontShopReportController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('public.storefront.shop-report.store');
     });

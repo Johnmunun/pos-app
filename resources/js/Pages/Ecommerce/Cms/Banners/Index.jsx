@@ -7,6 +7,7 @@ import { Badge } from '@/Components/ui/badge';
 import { Image, Plus, Pencil, Trash2, HelpCircle } from 'lucide-react';
 import CmsBannerDrawer from '@/Components/Ecommerce/Cms/CmsBannerDrawer';
 import CmsHelpModal from '@/Components/Ecommerce/Cms/CmsHelpModal';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function CmsBannersIndex({ banners = [], positions = [] }) {
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -47,8 +48,9 @@ export default function CmsBannersIndex({ banners = [], positions = [] }) {
             }
         >
             <Head title="Bannières CMS - E-commerce" />
-            <div className="py-6">
-                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <Card className={cardShell}>
                     <CardContent className="p-0">
                         <div className="overflow-x-auto">
                             <table className="w-full">
@@ -92,6 +94,7 @@ export default function CmsBannersIndex({ banners = [], positions = [] }) {
                         </div>
                     </CardContent>
                 </Card>
+            </div>
             </div>
 
             <CmsBannerDrawer isOpen={drawerOpen} onClose={handleCloseDrawer} banner={editingBanner} positions={positions} />

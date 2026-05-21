@@ -5,8 +5,10 @@ namespace Src\Application\GlobalCommerce\Services;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Src\Application\Common\Services\AssistantSalesProfitContextBuilder;
 use Src\Infrastructure\GlobalCommerce\Sales\Models\SaleModel;
 use Src\Infrastructure\GlobalCommerce\Inventory\Models\ProductModel;
+use Src\Infrastructure\GlobalCommerce\Support\GcShopResolver;
 use App\Models\Customer;
 
 /**
@@ -29,8 +31,8 @@ class CommerceAssistantContextService
         }
         $permissions = $permissions ?? [];
 
-        $shopId = $this->resolveShopId($request);
-        if (!$shopId) {
+        $shopId = GcShopResolver::tryResolveShopId($request);
+        if ($shopId === null) {
             return ['error' => 'no_shop', 'navigation' => $this->getNavigation($permissions, $user)];
         }
 
@@ -50,6 +52,7 @@ class CommerceAssistantContextService
             'products_out_of_stock' => $this->getProductsOutOfStock($shopId),
             'products_low_stock' => $this->getProductsLowStock($shopId),
             'currency' => $currency,
+            ...$this->getCachedOrCompute($cacheKey . ':profit', fn () => AssistantSalesProfitContextBuilder::forCommerce($shopId, $currency)),
         ];
 
         if ($productSearch !== null && $productSearch !== '') {
@@ -66,20 +69,24 @@ class CommerceAssistantContextService
         return Cache::remember($key, self::CACHE_TTL_SECONDS, $callback);
     }
 
-    private function resolveShopId(Request $request): ?string
+    private function getShopCurrency(Request $request, string $shopId): string
     {
-        $user = $request->user();
-        $depotId = $request->session()->get('current_depot_id');
-        if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
-            $shop = \App\Models\Shop::where('depot_id', (int) $depotId)->where('tenant_id', $user->tenant_id)->first();
-            if ($shop) {
-                return (string) $shop->id;
+        $shop = \App\Models\Shop::find($shopId);
+        $tenantId = GcShopResolver::resolveTenantId($request) ?? ($shop !== null ? (int) $shop->tenant_id : null);
+        if ($tenantId) {
+            $defaultCurrency = \App\Models\Currency::where('tenant_id', $tenantId)
+                ->where('is_active', true)
+                ->where('is_default', true)
+                ->first();
+            if ($defaultCurrency && ! empty($defaultCurrency->code)) {
+                return $defaultCurrency->code;
             }
         }
-        if ($user->shop_id !== null && $user->shop_id !== '') {
-            return (string) $user->shop_id;
+        if ($shop && ! empty($shop->currency)) {
+            return $shop->currency;
         }
-        return $user->tenant_id ? (string) $user->tenant_id : null;
+
+        return 'CDF';
     }
 
     private function getSalesToday(string $shopId): array
@@ -87,7 +94,7 @@ class CommerceAssistantContextService
         $today = now()->format('Y-m-d');
         $row = SaleModel::query()
             ->where('shop_id', $shopId)
-            ->where('status', 'COMPLETED')
+            ->completed()
             ->whereRaw('DATE(created_at) = ?', [$today])
             ->selectRaw('COUNT(*) as total_sales, COALESCE(SUM(total_amount), 0) as total_revenue')
             ->first();
@@ -106,7 +113,7 @@ class CommerceAssistantContextService
     {
         $row = SaleModel::query()
             ->where('shop_id', $shopId)
-            ->where('status', 'COMPLETED')
+            ->completed()
             ->selectRaw('COUNT(*) as total_sales, COALESCE(SUM(total_amount), 0) as total_revenue')
             ->first();
 
@@ -124,7 +131,7 @@ class CommerceAssistantContextService
 
         $rows = SaleModel::query()
             ->where('shop_id', $shopId)
-            ->where('status', 'COMPLETED')
+            ->completed()
             ->whereBetween('created_at', [$start, $end])
             ->selectRaw('DATE(created_at) as date, COUNT(*) as total_sales, COALESCE(SUM(total_amount), 0) as total_revenue')
             ->groupByRaw('DATE(created_at)')
@@ -136,23 +143,6 @@ class CommerceAssistantContextService
             'total_sales' => (int) ($r->total_sales ?? 0),
             'total_revenue' => (float) ($r->total_revenue ?? 0),
         ])->toArray();
-    }
-
-    private function getShopCurrency(Request $request, string $shopId): string
-    {
-        $shop = \App\Models\Shop::find($shopId);
-        $tenantId = $shop !== null ? ($shop->tenant_id ?? $shopId) : $shopId;
-        $defaultCurrency = \App\Models\Currency::where('tenant_id', $tenantId)
-            ->where('is_active', true)
-            ->where('is_default', true)
-            ->first();
-        if ($defaultCurrency && !empty($defaultCurrency->code)) {
-            return $defaultCurrency->code;
-        }
-        if ($shop && !empty($shop->currency)) {
-            return $shop->currency;
-        }
-        return 'CDF';
     }
 
     private function getStockAlerts(string $shopId): array
@@ -174,9 +164,8 @@ class CommerceAssistantContextService
 
     private function getCustomersCount(string $shopId): array
     {
-        $user = request()->user();
-        $tenantId = $user->tenant_id ?? null;
-        if (!$tenantId) {
+        $tenantId = GcShopResolver::resolveTenantId(request());
+        if (! $tenantId) {
             return ['total_active' => 0];
         }
         $total = Customer::where('tenant_id', $tenantId)
@@ -233,22 +222,37 @@ class CommerceAssistantContextService
                 $builder->where('name', 'like', $like)->orWhere('sku', 'like', $like);
             })
             ->limit(5)
-            ->get(['id', 'name', 'sku', 'stock', 'sale_price_amount', 'sale_price_currency', 'minimum_stock', 'unit']);
+            ->get(['id', 'name', 'sku', 'stock', 'sale_price_amount', 'sale_price_currency', 'purchase_price_amount', 'minimum_stock', 'unit']);
 
         if ($models->isEmpty()) {
             return [];
         }
 
-        return $models->map(fn ($m) => [
-            'id' => $m->id,
-            'name' => $m->name,
-            'code' => $m->sku ?? '',
-            'stock_quantity' => (float) $m->stock,
-            'selling_price' => (float) $m->sale_price_amount,
-            'currency' => $m->sale_price_currency ?? $currency,
-            'minimum_stock' => (float) ($m->minimum_stock ?? 0),
-            'unit' => $m->unit ?? 'unité',
-        ])->toArray();
+        $shopIdInt = (int) $shopId;
+
+        return $models->map(function ($m) use ($shopIdInt, $currency) {
+            $sell = (float) $m->sale_price_amount;
+            $cost = $m->purchase_price_amount !== null ? (float) $m->purchase_price_amount : null;
+            $unitMargin = ($cost !== null && $sell > 0) ? round($sell - $cost, 2) : null;
+            $marginPercent = ($unitMargin !== null && $sell > 0) ? round(($unitMargin / $sell) * 100, 1) : null;
+            $stockQty = (float) $m->stock;
+
+            return [
+                'id' => $m->id,
+                'name' => $m->name,
+                'code' => $m->sku ?? '',
+                'stock_quantity' => $stockQty,
+                'selling_price' => $sell,
+                'cost_price' => $cost,
+                'unit_margin' => $unitMargin,
+                'margin_percent' => $marginPercent,
+                'profit_on_stock' => ($unitMargin !== null) ? round($unitMargin * $stockQty, 2) : null,
+                'currency' => $m->sale_price_currency ?? $currency,
+                'minimum_stock' => (float) ($m->minimum_stock ?? 0),
+                'unit' => $m->unit ?? 'unité',
+                'recent_stock_movements' => AssistantSalesProfitContextBuilder::commerceStockMovements($shopIdInt, (string) $m->id, 8),
+            ];
+        })->toArray();
     }
 
     private function getNavigation(array $permissions, $user): array

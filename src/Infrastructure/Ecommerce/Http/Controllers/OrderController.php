@@ -377,15 +377,25 @@ class OrderController
             $baseTax = (float) $validated['tax_amount'];
             $baseDiscount = (float) $validated['discount_amount'];
 
-            $createAndNotify = function (CreateOrderDTO $createDto, ?string $mailNote = null) use ($request, &$createdOrders) {
+            $tenantIdForNotify = $tenantId !== null && $tenantId !== '' ? (int) $tenantId : null;
+
+            $createAndNotify = function (CreateOrderDTO $createDto, ?string $mailNote = null) use (&$createdOrders, $tenantIdForNotify) {
                 $order = $this->createOrderUseCase->execute($createDto);
                 $createdOrders[] = $order;
+
                 app(\App\Services\AppNotificationService::class)->notifyEcommerceOrder(
                     'Nouvelle commande e-commerce',
-                    'Commande '.$order->getOrderNumber().' creee pour '.$order->getCustomerName().'.',
-                    $request->user()?->tenant_id ? (int) $request->user()->tenant_id : null
+                    'Commande '.$order->getOrderNumber().' créée pour '.$order->getCustomerName().'.',
+                    $tenantIdForNotify
                 );
                 $this->ecommerceOrderCreatedMailService->notifyOrderCreated($order, $mailNote);
+
+                if ($order->getPaymentStatus() === Order::PAYMENT_STATUS_PAID) {
+                    $this->merchantWalletService->applySettlementFromEcommerceOrderId(
+                        $order->getId(),
+                        'order_created_paid'
+                    );
+                }
 
                 return $order;
             };
@@ -588,13 +598,12 @@ class OrderController
             if (($validated['payment_status'] ?? '') === 'paid') {
                 $wasAlreadyPaid = strtolower((string) ($before?->payment_status ?? '')) === 'paid';
                 if (!$wasAlreadyPaid) {
-                    $this->merchantWalletService->applySettlementFromEcommerceOrderId((string) $id);
+                    app(\App\Services\AppNotificationService::class)->notifyEcommerceOrder(
+                        'Paiement e-commerce confirmé',
+                        'La commande '.$order->getOrderNumber().' est marquée payée.',
+                        $request->user()?->tenant_id ? (int) $request->user()->tenant_id : null
+                    );
                 }
-                app(\App\Services\AppNotificationService::class)->notifyEcommerceOrder(
-                    'Paiement e-commerce confirme',
-                    'La commande '.$order->getOrderNumber().' est marquee payee.',
-                    $request->user()?->tenant_id ? (int) $request->user()->tenant_id : null
-                );
             }
 
             return response()->json([

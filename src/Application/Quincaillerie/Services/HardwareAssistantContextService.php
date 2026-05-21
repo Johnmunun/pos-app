@@ -4,6 +4,7 @@ namespace Src\Application\Quincaillerie\Services;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Src\Application\Common\Services\AssistantSalesProfitContextBuilder;
 use Src\Infrastructure\Quincaillerie\Models\ProductModel;
 use Src\Infrastructure\Pharmacy\Models\SaleModel;
 
@@ -45,6 +46,7 @@ class HardwareAssistantContextService
             'navigation' => $this->getNavigation($permissions, $user),
             'currency' => $currency,
             'sales_today' => $this->getSalesToday($shopId),
+            ...$this->getCachedOrCompute($cacheKey . ':profit', fn () => AssistantSalesProfitContextBuilder::forHardware($shopId, $currency)),
         ];
 
         // Comptages et résumés légers
@@ -246,10 +248,15 @@ class HardwareAssistantContextService
             'barcode' => $m->barcode ?? '',
             'stock_quantity' => (float) ($m->stock ?? 0),
             'selling_price' => (float) ($m->price_amount ?? 0),
+            'cost_price' => null,
+            'unit_margin' => null,
+            'margin_percent' => null,
+            'profit_on_stock' => null,
             'currency' => $m->price_currency ?? $currency,
             'minimum_stock' => (float) ($m->minimum_stock ?? 0),
             'unit' => $m->type_unite ?? 'UNITE',
             'quantity_per_unit' => (int) ($m->quantite_par_unite ?? 1),
+            'recent_stock_movements' => AssistantSalesProfitContextBuilder::quincaillerieStockMovements($shopId, (string) $m->id, 8),
         ])->toArray();
     }
 

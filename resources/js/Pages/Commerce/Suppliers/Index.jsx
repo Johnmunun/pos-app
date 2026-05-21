@@ -10,6 +10,7 @@ import axios from 'axios';
 import ImportModal from '@/Components/ImportModal';
 import SupplierDrawer from '@/Components/Commerce/SupplierDrawer';
 import { Input } from '@/Components/ui/input';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function CommerceSuppliersIndex({ suppliers = [] }) {
     const { auth } = usePage().props;
@@ -96,9 +97,14 @@ export default function CommerceSuppliersIndex({ suppliers = [] }) {
         <AppLayout
             header={
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
-                        Fournisseurs — Global Commerce
-                    </h2>
+                    <div>
+                        <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">
+                            Fournisseurs — Global Commerce
+                        </h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 max-w-2xl hidden sm:block">
+                            Import, export et fiches fournisseurs.
+                        </p>
+                    </div>
                     <div className="flex flex-wrap items-center gap-2">
                         <Button
                             type="button"
@@ -149,9 +155,9 @@ export default function CommerceSuppliersIndex({ suppliers = [] }) {
             }
         >
             <Head title="Fournisseurs - Commerce" />
-            <div className="py-6">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-                    <Card className="bg-white dark:bg-slate-900">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
+                    <Card className={cardShell}>
                         <CardHeader>
                             <CardTitle className="flex items-center text-gray-900 dark:text-white">
                                 <Truck className="h-5 w-5 mr-2" /> Liste des fournisseurs
@@ -323,7 +329,7 @@ export default function CommerceSuppliersIndex({ suppliers = [] }) {
                         <div className="md:hidden fixed bottom-20 right-4 z-30">
                             <Button
                                 onClick={handleOpenCreate}
-                                className="h-14 w-14 rounded-full bg-rose-500 hover:bg-rose-600 text-white shadow-lg flex items-center justify-center"
+                            className="h-14 w-14 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg shadow-amber-500/30 flex items-center justify-center"
                                 size="icon"
                             >
                                 <Plus className="h-6 w-6" />

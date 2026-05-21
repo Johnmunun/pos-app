@@ -6,6 +6,7 @@ import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { Textarea } from '@/Components/ui/textarea';
 import { ArrowLeft, BookOpen } from 'lucide-react';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function CmsBlogForm({ article, categories = [] }) {
     const isEdit = !!article?.id;
@@ -43,9 +44,10 @@ export default function CmsBlogForm({ article, categories = [] }) {
             }
         >
             <Head title={isEdit ? 'Modifier article' : 'Nouvel article'} />
-            <div className="py-6 max-w-2xl">
+            <div className={pageY}>
+                <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
                 <form onSubmit={handleSubmit}>
-                    <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                    <Card className={cardShell}>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2"><BookOpen className="h-5 w-5" /> Article</CardTitle>
                         </CardHeader>
@@ -94,6 +96,7 @@ export default function CmsBlogForm({ article, categories = [] }) {
                         </CardContent>
                     </Card>
                 </form>
+            </div>
             </div>
         </AppLayout>
     );

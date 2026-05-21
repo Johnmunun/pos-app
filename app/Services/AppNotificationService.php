@@ -147,6 +147,32 @@ class AppNotificationService
         return $notification;
     }
 
+    public function notifyEcommerceShopReport(string $title, string $body, ?int $tenantId = null): void
+    {
+        $notification = AppNotification::create([
+            'user_id' => (int) (Auth::id() ?? 0),
+            'tenant_id' => $tenantId,
+            'type' => 'ecommerce.shop.report',
+            'title' => $title,
+            'body' => $body,
+            'data' => [
+                'tenant_id' => $tenantId,
+            ],
+        ]);
+
+        $this->sendToAdminsSafe($notification);
+        $this->emailPlatformModerators($title, $body);
+        if ($tenantId !== null && $tenantId > 0) {
+            $this->emailTenantUsersByPermissions(
+                $tenantId,
+                $title,
+                $body,
+                ['ecommerce.settings.view', 'module.ecommerce', 'admin.dashboard.view']
+            );
+        }
+        AdminNotificationBroadcast::dispatch($notification);
+    }
+
     public function notifyEcommerceOrder(string $title, string $body, ?int $tenantId = null): void
     {
         $notification = AppNotification::create([
@@ -290,6 +316,32 @@ class AppNotificationService
                 return;
             }
             Mail::to($user->email)->send(new EventNotificationMail($title, $body));
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
+    private function emailPlatformModerators(string $title, string $body): void
+    {
+        try {
+            if (!$this->dynamicMailSettingsService->applyFromStorage()) {
+                return;
+            }
+
+            $users = User::query()
+                ->where('status', 'active')
+                ->get()
+                ->filter(function (User $u) {
+                    if (empty($u->email)) {
+                        return false;
+                    }
+
+                    return $u->isRoot() || $u->hasPermission('admin.dashboard.view');
+                });
+
+            foreach ($users as $u) {
+                Mail::to($u->email)->send(new EventNotificationMail($title, $body));
+            }
         } catch (\Throwable $e) {
             report($e);
         }

@@ -61,7 +61,7 @@ class GcCategoryController
             'parent_id' => $m->parent_id,
             'sort_order' => $m->sort_order,
             'is_active' => $m->is_active,
-        ]);
+        ])->values()->all();
         return Inertia::render('Commerce/Categories/Index', [
             'tree' => $tree,
             'categories' => $flat,

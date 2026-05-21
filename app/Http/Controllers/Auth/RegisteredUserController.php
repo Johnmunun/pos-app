@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Support\TenantBillingUpgradePrompt;
 use App\Models\User;
 use App\Mail\PostRegistrationPaymentReminderMail;
 use App\Mail\WelcomeRegistrationMail;
@@ -116,7 +117,9 @@ class RegisteredUserController extends Controller
         $this->sendRegistrationEmails($user, (string) $request->company_name);
 
         Auth::login($user);
-        $request->session()->flash('trial_upgrade_prompt', true);
+        if (TenantBillingUpgradePrompt::tenantHasEntryPlan($user)) {
+            $request->session()->flash('trial_upgrade_prompt', true);
+        }
 
         return redirect(route('dashboard', absolute: false));
     }

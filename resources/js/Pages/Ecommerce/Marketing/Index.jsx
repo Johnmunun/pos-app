@@ -8,10 +8,13 @@ import { Label } from '@/Components/ui/label';
 import { Textarea } from '@/Components/ui/textarea';
 import { Search, Code2, Activity, Sparkles, Lock, BarChart3 } from 'lucide-react';
 import axios from 'axios';
+import { cn } from '@/lib/utils';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function EcommerceMarketingIndex({
     shop,
     marketing,
+    publicStorefrontUrl = null,
     marketingProEnabled = false,
     audienceAnalyticsEnabled = false,
 }) {
@@ -27,6 +30,7 @@ export default function EcommerceMarketingIndex({
         seo_description: marketing?.seo_description ?? '',
         seo_keywords: marketing?.seo_keywords ?? '',
         seo_indexing_enabled: marketing?.seo_indexing_enabled ?? true,
+        google_site_verification: marketing?.google_site_verification ?? '',
         facebook_pixel_id: marketing?.facebook_pixel_id ?? '',
         tiktok_pixel_id: marketing?.tiktok_pixel_id ?? '',
         google_analytics_id: marketing?.google_analytics_id ?? '',
@@ -117,9 +121,10 @@ export default function EcommerceMarketingIndex({
         >
             <Head title="Marketing & SEO - E-commerce" />
 
-            <div className="py-6 space-y-6 max-w-5xl">
+            <div className={pageY}>
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 lg:col-span-2">
+                    <Card className={cn(cardShell, 'lg:col-span-2')}>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base">
                                 <Search className="h-5 w-5 text-emerald-500" />
@@ -180,6 +185,53 @@ export default function EcommerceMarketingIndex({
                                     </span>
                                 </label>
 
+                                <div className="space-y-2 pt-2">
+                                    <Label htmlFor="google_site_verification">Vérification Google Search Console</Label>
+                                    <Input
+                                        id="google_site_verification"
+                                        value={data.google_site_verification}
+                                        onChange={(e) => setData('google_site_verification', e.target.value)}
+                                        placeholder="Code du meta google-site-verification"
+                                    />
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Collez uniquement la valeur du contenu (sans les balises HTML).
+                                    </p>
+                                </div>
+
+                                {publicStorefrontUrl && data.seo_indexing_enabled && (
+                                    <div className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/80 dark:bg-emerald-950/30 p-3 text-sm text-emerald-900 dark:text-emerald-100 space-y-2">
+                                        <p className="font-medium">Référencer la vitrine sur Google</p>
+                                        <ol className="list-decimal list-inside space-y-1 text-emerald-800/90 dark:text-emerald-200/90">
+                                            <li>
+                                                Ouvrez{' '}
+                                                <a
+                                                    href="https://search.google.com/search-console"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="underline"
+                                                >
+                                                    Google Search Console
+                                                </a>
+                                                {' '}et ajoutez la propriété :{' '}
+                                                <code className="text-xs bg-white/60 dark:bg-black/30 px-1 rounded">{publicStorefrontUrl}</code>
+                                            </li>
+                                            <li>Vérifiez le site avec le code ci-dessus, puis enregistrez.</li>
+                                            <li>
+                                                Soumettez le plan du site :{' '}
+                                                <code className="text-xs bg-white/60 dark:bg-black/30 px-1 rounded">
+                                                    {publicStorefrontUrl}/sitemap.xml
+                                                </code>
+                                            </li>
+                                        </ol>
+                                    </div>
+                                )}
+
+                                {!publicStorefrontUrl && (
+                                    <p className="text-xs text-amber-700 dark:text-amber-300">
+                                        Définissez un sous-domaine e-commerce dans les paramètres boutique pour activer la vitrine publique et le sitemap.
+                                    </p>
+                                )}
+
                                 <div className="flex justify-end pt-4">
                                     <Button type="submit" disabled={processing}>
                                         Enregistrer
@@ -189,7 +241,7 @@ export default function EcommerceMarketingIndex({
                         </CardContent>
                     </Card>
 
-                    <Card className={`bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 ${!marketingProEnabled ? 'relative' : ''}`}>
+                    <Card className={cn(cardShell, !marketingProEnabled && 'relative')}>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base">
                                 <Code2 className="h-5 w-5 text-sky-500" />
@@ -283,7 +335,7 @@ export default function EcommerceMarketingIndex({
                     </Card>
                 </div>
 
-                <Card className={`bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 ${!marketingProEnabled ? '' : ''}`}>
+                <Card className={cardShell}>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-base">
                             <Sparkles className="h-5 w-5 text-violet-500" />
@@ -371,7 +423,7 @@ export default function EcommerceMarketingIndex({
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                <Card className={cardShell}>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-base">
                             <Activity className="h-5 w-5 text-amber-500" />
@@ -407,6 +459,7 @@ export default function EcommerceMarketingIndex({
                     </Link>
                     {' — '}statistiques de visites par pays (période des filtres) si votre plan inclut les analytics avancés.
                 </p>
+            </div>
             </div>
         </AppLayout>
     );

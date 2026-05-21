@@ -21,6 +21,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import Modal from '@/Components/Modal';
 import ExportButtons from '@/Components/Pharmacy/ExportButtons';
+import GrabScroll from '@/Components/GrabScroll';
 
 export default function StockManagement({ products, lowStock, expiringSoon, categories = [], filters = {}, pagination, routePrefix = 'pharmacy' }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -140,19 +141,19 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
     return (
         <AppLayout
             header={
-                <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
+                <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-2xl">
                     Gestion du Stock
                 </h2>
             }
         >
             <Head title="Gestion du Stock" />
 
-            <div className="py-12">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div className="space-y-8 py-8 sm:py-10">
+                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     
                     {/* Stats Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <div className="mb-8 grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-4">
+                        <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">Total Produits</CardTitle>
                                 <Package className="h-4 w-4 text-blue-500" />
@@ -165,7 +166,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
                             </CardContent>
                         </Card>
 
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">Stock Faible</CardTitle>
                                 <AlertTriangle className="h-4 w-4 text-orange-500" />
@@ -179,7 +180,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
                         </Card>
 
                         {routePrefix === 'pharmacy' && (
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">Expirations Proches</CardTitle>
                                 <Calendar className="h-4 w-4 text-red-500" />
@@ -200,7 +201,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
                         </Card>
                         )}
 
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">Actions rapides</CardTitle>
                                 <History className="h-4 w-4 text-purple-500" />
@@ -218,7 +219,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
                     </div>
 
                     {/* Filtres */}
-                    <Card className="mb-6 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <Card className="mb-6 overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle className="flex items-center text-gray-900 dark:text-white">
                                 <Filter className="h-5 w-5 mr-2 text-amber-500" />
@@ -356,7 +357,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
 
                     {/* Formulaire de mise à jour du stock */}
                     {showStockForm && selectedProduct && (
-                        <Card className="mb-6 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className="mb-6 overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                             <CardHeader>
                                 <CardTitle className="text-gray-900 dark:text-white">Mettre à jour le stock de {selectedProduct.name}</CardTitle>
                             </CardHeader>
@@ -442,7 +443,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
                     )}
 
                     {/* Liste des produits */}
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         <CardHeader>
                             <CardTitle className="flex items-center text-gray-900 dark:text-white">
                                 <Package className="h-5 w-5 mr-2 text-blue-500" />
@@ -450,7 +451,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="overflow-x-auto">
+                            <GrabScroll className="rounded-xl border border-gray-100/90 bg-gray-50/30 dark:border-slate-700/60 dark:bg-slate-950/30">
                                 <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
                                     <thead className="bg-gray-50 dark:bg-slate-800">
                                         <tr>
@@ -542,7 +543,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
                                         })}
                                     </tbody>
                                 </table>
-                            </div>
+                            </GrabScroll>
                         </CardContent>
                     </Card>
 
@@ -610,7 +611,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
                         {movements.length === 0 ? (
                             <p className="text-sm text-gray-500 dark:text-gray-400">Aucun mouvement enregistré.</p>
                         ) : (
-                            <div className="overflow-x-auto max-h-80">
+                            <GrabScroll className="max-h-80 overflow-y-auto rounded-lg border border-gray-200/80 dark:border-slate-700/80">
                                 <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700 text-sm">
                                     <thead className="bg-gray-50 dark:bg-slate-800">
                                         <tr>
@@ -631,7 +632,7 @@ export default function StockManagement({ products, lowStock, expiringSoon, cate
                                         ))}
                                     </tbody>
                                 </table>
-                            </div>
+                            </GrabScroll>
                         )}
                     </div>
                 </Modal>

@@ -3,14 +3,39 @@ window.axios = axios;
 
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
-// CSRF for Laravel session-authenticated POST/PUT/DELETE requests
-function syncAxiosCsrfFromDom() {
-    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    if (token) {
-        window.axios.defaults.headers.common['X-CSRF-TOKEN'] = token;
-    }
+/** Cookie non-httpOnly que Laravel met à jour à chaque réponse (y compris après session()->regenerate() au login). */
+function readCookie(name) {
+    const parts = `; ${document.cookie}`.split(`; ${name}=`);
+    if (parts.length < 2) return null;
+    return parts.pop().split(';').shift() || null;
 }
-syncAxiosCsrfFromDom();
+
+/**
+ * CSRF pour les requêtes axios (hors Inertia).
+ * Après login Inertia, le <meta name="csrf-token"> reste celui de la page initiale alors que la session a un nouveau jeton :
+ * les POST axios (FCM, onboarding, etc.) renvoyaient 419 puis rechargement complet via l'intercepteur ci-dessous.
+ * Le cookie XSRF-TOKEN est toujours aligné sur la session — on l'envoie en X-XSRF-TOKEN à chaque requête.
+ */
+window.axios.interceptors.request.use((config) => {
+    delete config.headers['X-CSRF-TOKEN'];
+    delete config.headers['X-XSRF-TOKEN'];
+
+    const xsrfRaw = readCookie('XSRF-TOKEN');
+    if (xsrfRaw) {
+        try {
+            config.headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfRaw);
+        } catch {
+            config.headers['X-XSRF-TOKEN'] = xsrfRaw;
+        }
+        return config;
+    }
+
+    const meta = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (meta) {
+        config.headers['X-CSRF-TOKEN'] = meta;
+    }
+    return config;
+});
 
 window.axios.interceptors.response.use(
     (response) => response,

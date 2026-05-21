@@ -8,6 +8,7 @@ import { Badge } from '@/Components/ui/badge';
 import Modal from '@/Components/Modal';
 import { Warehouse, Plus, Edit, Power, PowerOff, MapPin, Building2, Phone, Mail } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function CommerceDepotsIndex({ depots = [] }) {
     const { auth } = usePage().props;
@@ -109,15 +110,20 @@ export default function CommerceDepotsIndex({ depots = [] }) {
     return (
         <AppLayout
             header={
-                <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-4">
-                        <Warehouse className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                        <h2 className="font-semibold text-xl text-gray-800 dark:text-white leading-tight">
-                            Dépôts
-                        </h2>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full min-w-0">
+                    <div className="min-w-0 flex items-center gap-3">
+                        <Warehouse className="h-6 w-6 text-amber-500 shrink-0" />
+                        <div>
+                            <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">
+                                Dépôts
+                            </h2>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 hidden sm:block">
+                                Lieux de stock et ventes par entrepôt.
+                            </p>
+                        </div>
                     </div>
                     {canManage && (
-                        <Button onClick={handleOpenCreate} className="gap-2">
+                        <Button onClick={handleOpenCreate} className="gap-2 shrink-0 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-md">
                             <Plus className="h-4 w-4" />
                             Nouveau dépôt
                         </Button>
@@ -127,13 +133,13 @@ export default function CommerceDepotsIndex({ depots = [] }) {
         >
             <Head title="Dépôts - Commerce" />
 
-            <div className="py-6">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <p className="text-gray-600 dark:text-gray-400 mb-6">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
+                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
                         Gérez vos dépôts. Sélectionnez un dépôt dans la barre de navigation pour accéder aux produits, ventes et stock de ce dépôt.
                     </p>
 
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div className={cardShell}>
                         {depots.length === 0 ? (
                             <div className="py-12 text-center">
                                 <Warehouse className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />

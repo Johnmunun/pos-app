@@ -7,6 +7,7 @@ import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { Textarea } from '@/Components/ui/textarea';
 import { ArrowLeft, Truck } from 'lucide-react';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function CommerceSuppliersCreate() {
     const { data, setData, post, processing, errors } = useForm({
@@ -30,16 +31,16 @@ export default function CommerceSuppliersCreate() {
                             <ArrowLeft className="h-4 w-4 mr-2" /> Retour
                         </Link>
                     </Button>
-                    <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
-                        Nouveau fournisseur — Global Commerce
+                    <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">
+                        Nouveau fournisseur
                     </h2>
                 </div>
             }
         >
             <Head title="Nouveau fournisseur - Commerce" />
-            <div className="py-6">
+            <div className={pageY}>
                 <div className="max-w-xl mx-auto sm:px-6 lg:px-8">
-                    <Card>
+                    <Card className={cardShell}>
                         <CardHeader>
                             <CardTitle className="flex items-center">
                                 <Truck className="h-5 w-5 mr-2" /> Créer un fournisseur

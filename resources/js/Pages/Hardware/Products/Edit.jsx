@@ -131,8 +131,8 @@ export default function HardwareProductEdit({ product, categories = [] }) {
         return (
             <AppLayout>
                 <Head title="Produit - Quincaillerie" />
-                <div className="py-6 text-center">
-                    <p className="text-gray-500">Produit introuvable.</p>
+                <div className="py-8 sm:py-10 text-center">
+                    <p className="text-gray-500 dark:text-gray-400">Produit introuvable.</p>
                     <Button asChild className="mt-4"><Link href={route('hardware.products')}>Retour</Link></Button>
                 </div>
             </AppLayout>
@@ -142,27 +142,30 @@ export default function HardwareProductEdit({ product, categories = [] }) {
     return (
         <AppLayout
             header={
-                <div className="flex items-center">
-                    <Button variant="ghost" asChild className="mr-4">
+                <div className="flex flex-wrap items-center gap-3">
+                    <Button variant="ghost" asChild className="shrink-0">
                         <Link href={route('hardware.products.show', product.id)}><ArrowLeft className="h-4 w-4 mr-2" /> Retour</Link>
                     </Button>
-                    <h2 className="font-semibold text-xl text-gray-800 dark:text-white leading-tight">
+                    <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight min-w-0">
                         Modifier — {product.name}
                     </h2>
                 </div>
             }
         >
             <Head title={`Modifier ${product.name} - Quincaillerie`} />
-            <div className="py-12">
-                <div className="max-w-4xl mx-auto sm:px-6 lg:px-8">
+            <div className="py-8 sm:py-10">
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
                     <form onSubmit={handleSubmit}>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center">
-                                    <Package className="h-5 w-5 mr-2" /> Modifier le produit
+                        <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/80">
+                            <CardHeader className="border-b border-gray-100/90 dark:border-slate-700/80 pb-4">
+                                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
+                                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-400/15 dark:text-amber-300">
+                                        <Package className="h-5 w-5" />
+                                    </span>
+                                    Modifier le produit
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-6">
+                            <CardContent className="space-y-6 pt-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <Label htmlFor="name">Nom *</Label>

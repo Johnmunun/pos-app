@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
 import ModuleOnboarding from '@/Components/ModuleOnboarding/ModuleOnboarding';
+import { cardShell } from '@/lib/layoutClasses';
 import {
   LineChart,
   Line,
@@ -203,59 +204,66 @@ export default function Dashboard({
     count: Number(d.count),
   }));
 
-  // Calculs pour mobile (basés sur les données existantes)
-  const salesTodayTotal = salesChartData.length > 0 
-    ? salesChartData[salesChartData.length - 1]?.total || 0 
-    : 0;
-  const salesTodayCount = salesChartData.length > 0 
-    ? salesChartData[salesChartData.length - 1]?.count || 0 
-    : 0;
-  const salesLast7Total = salesChartData.slice(-7).reduce((sum, d) => sum + (d.total || 0), 0);
-  const salesLast7Count = salesChartData.slice(-7).reduce((sum, d) => sum + (d.count || 0), 0);
-  
-  // Calculs pour métriques supplémentaires
-  const averageBasket = salesTodayCount > 0 ? salesTodayTotal / salesTodayCount : 0;
-  const conversionRate = 24.8; // Mock data - devrait venir du backend
+  // KPI ventes : source backend (fiable) avec repli graphique
+  const todayKey = toYMD(new Date());
+  const todayChartRow = (chartSalesLastDays || []).find((d) => d.date === todayKey);
+  const salesTodayTotal = Number(
+    stats?.sales?.today_total ?? todayChartRow?.total ?? 0
+  );
+  const salesTodayCount = Number(
+    stats?.sales?.today_count ?? todayChartRow?.count ?? 0
+  );
+  const salesLast7Total = Number(
+    stats?.sales?.last_7_days_total
+      ?? (chartSalesLastDays || []).slice(-7).reduce((sum, d) => sum + (Number(d.total) || 0), 0)
+  );
+  const salesLast7Count = Number(
+    stats?.sales?.last_7_days_count
+      ?? (chartSalesLastDays || []).slice(-7).reduce((sum, d) => sum + (Number(d.count) || 0), 0)
+  );
 
-  // Données d'activité récente (mock - devrait venir du backend)
-  const recentActivities = [
-    {
-      id: 1,
-      type: 'sale',
-      name: 'Samuel Bwanga',
-      reference: '#7281',
-      time: '14:20',
-      amount: 81500,
-      currency: currency,
+  const purchasesTodayTotal = Number(stats?.purchases?.today_total ?? 0);
+  const purchasesTodayCount = Number(stats?.purchases?.today_count ?? 0);
+
+  const averageBasket = Number(
+    stats?.sales?.average_basket_today
+      ?? (salesTodayCount > 0 ? salesTodayTotal / salesTodayCount : 0)
+  );
+
+  const salesGrowthPercent = stats?.sales?.growth_percent;
+  const growthLabel = (() => {
+    if (salesGrowthPercent === null || salesGrowthPercent === undefined) {
+      return salesTodayCount > 0 ? 'Première vente du jour' : 'Aucune vente hier';
+    }
+    const sign = salesGrowthPercent >= 0 ? '+' : '';
+    return `${sign}${salesGrowthPercent}% vs hier`;
+  })();
+  const growthIsPositive = salesGrowthPercent === null || salesGrowthPercent === undefined
+    ? salesTodayCount > 0
+    : salesGrowthPercent >= 0;
+
+  const activityStyle = {
+    sale: {
       icon: TrendingUp,
       color: 'text-green-500',
       bgColor: 'bg-green-100 dark:bg-green-900/20',
     },
-    {
-      id: 2,
-      type: 'purchase',
-      name: 'Fournisseur Alim',
-      reference: '#AC-99',
-      time: '12:15',
-      amount: -45000,
-      currency: currency,
+    purchase: {
       icon: ShoppingCart,
       color: 'text-purple-500',
       bgColor: 'bg-purple-100 dark:bg-purple-900/20',
     },
-    {
-      id: 3,
-      type: 'sale',
-      name: 'Client Comptoir',
-      reference: '#7280',
-      time: '10:45',
-      amount: 2500,
-      currency: currency,
-      icon: TrendingUp,
-      color: 'text-green-500',
-      bgColor: 'bg-green-100 dark:bg-green-900/20',
-    },
-  ];
+  };
+
+  const recentActivities = (stats?.recent_activities ?? []).map((activity) => {
+    const style = activityStyle[activity.type] ?? activityStyle.sale;
+    return {
+      ...activity,
+      icon: style.icon,
+      color: style.color,
+      bgColor: style.bgColor,
+    };
+  });
 
   const mediaStorage = stats?.media_storage || { images_count: 0, used_mb: null, limit_mb: 100 };
   const imagesCount = Number(mediaStorage.images_count ?? 0);
@@ -263,40 +271,28 @@ export default function Dashboard({
   return (
     <AppLayout
       header={
-        <>
-          {/* Mobile Header */}
-          <div className="md:hidden">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Dashboard Commerce
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Vue rapide des ventes et achats Global Commerce.
-            </p>
-          </div>
-          {/* Desktop Header */}
-          <div className="hidden md:block">
-            <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
-              Tableau de bord — Commerce
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Gérez vos performances et stocks en temps réel.
-            </p>
-          </div>
-        </>
+        <div data-onboarding="commerce-dashboard-welcome">
+          <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">
+            Tableau de bord — Commerce
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed max-w-2xl">
+            Vue d&apos;ensemble des ventes, stocks et activité — même ergonomie que les autres modules.
+          </p>
+        </div>
       }
     >
       <Head title="Tableau de bord Commerce" />
       <ModuleOnboarding moduleName="commerce" />
 
-      <div className="py-4 md:py-6 space-y-4 md:space-y-6 lg:space-y-8">
-        {/* Filtres compacts avec icônes uniquement */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Période rapide - Icône seulement */}
-          <div className="relative">
+      <div className="py-8 sm:py-10 space-y-6 sm:space-y-8">
+        <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
+        {/* Filtres — barre compacte (alignée Pharmacie) */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap gap-3 rounded-2xl border border-gray-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/50 backdrop-blur-sm shadow-landing-soft p-4">
+          <div className="relative flex-1 min-w-[10rem] sm:min-w-0 sm:max-w-[11rem]">
             <select
               value={currentPeriod}
               onChange={handlePeriodChange}
-              className="appearance-none rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent cursor-pointer"
+              className="w-full appearance-none rounded-xl border border-gray-200/90 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 pl-10 pr-3 py-2.5 text-sm shadow-sm focus:ring-2 focus:ring-amber-500/70 focus:border-amber-400/50 cursor-pointer transition-shadow"
               title="Période rapide"
             >
               {PERIOD_OPTIONS.map((opt) => (
@@ -305,38 +301,35 @@ export default function Dashboard({
                 </option>
               ))}
             </select>
-            <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
+            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-600/80 dark:text-amber-400/80 pointer-events-none" />
           </div>
 
-          {/* Date début - Icône seulement */}
-          <div className="relative">
+          <div className="relative flex-1 min-w-[10rem] sm:min-w-0 sm:max-w-[11rem]">
             <input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="appearance-none rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent w-40"
+              className="w-full appearance-none rounded-xl border border-gray-200/90 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 pl-10 pr-3 py-2.5 text-sm shadow-sm focus:ring-2 focus:ring-amber-500/70 focus:border-amber-400/50 min-w-0"
               title="Date début"
             />
-            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-600/80 dark:text-amber-400/80 pointer-events-none" />
           </div>
 
-          {/* Date fin - Icône seulement */}
-          <div className="relative">
+          <div className="relative flex-1 min-w-[10rem] sm:min-w-0 sm:max-w-[11rem]">
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="appearance-none rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent w-40"
+              className="w-full appearance-none rounded-xl border border-gray-200/90 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 pl-10 pr-3 py-2.5 text-sm shadow-sm focus:ring-2 focus:ring-amber-500/70 focus:border-amber-400/50 min-w-0"
               title="Date fin"
             />
-            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-600/80 dark:text-amber-400/80 pointer-events-none" />
           </div>
 
-          {/* Bouton appliquer - Icône seulement */}
           <Button
             type="button"
             onClick={handleDateRangeApply}
-            className="bg-amber-600 hover:bg-amber-700 text-white p-2 rounded-lg"
+            className="shrink-0 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white p-2.5 rounded-xl shadow-md shadow-amber-500/20 hover:shadow-lg border-0"
             title="Appliquer les filtres"
           >
             <Filter className="h-4 w-4" />
@@ -353,8 +346,12 @@ export default function Dashboard({
                   <p className="text-purple-100 text-sm font-medium mb-1">VENTES DU JOUR</p>
                   <p className="text-white text-2xl font-bold mb-2">{fmt(salesTodayTotal)}</p>
                   <div className="flex items-center gap-1 text-purple-100 text-xs">
-                    <ArrowUp className="h-3 w-3" />
-                    <span>12% vs hier</span>
+                    {growthIsPositive ? (
+                      <ArrowUp className="h-3 w-3" />
+                    ) : (
+                      <ArrowDown className="h-3 w-3" />
+                    )}
+                    <span>{growthLabel}</span>
                   </div>
                   <p className="text-purple-100 text-xs mt-2">{salesTodayCount} vente(s) validées</p>
                 </div>
@@ -387,8 +384,10 @@ export default function Dashboard({
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <p className="text-blue-100 text-sm font-medium mb-1">ACHATS DU JOUR</p>
-                  <p className="text-white text-2xl font-bold mb-2">{fmt(0)}</p>
-                  <p className="text-blue-100 text-xs mt-2">3 bons de commande</p>
+                  <p className="text-white text-2xl font-bold mb-2">{fmt(purchasesTodayTotal)}</p>
+                  <p className="text-blue-100 text-xs mt-2">
+                    {purchasesTodayCount} bon{purchasesTodayCount !== 1 ? 's' : ''} de commande
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
                   <ShoppingCart className="h-6 w-6 text-white" />
@@ -424,8 +423,12 @@ export default function Dashboard({
                   <p className="text-emerald-100 text-sm font-medium mb-2">VENTES DU JOUR</p>
                   <p className="text-white text-3xl font-bold mb-2">{fmt(salesTodayTotal)}</p>
                   <div className="flex items-center gap-1 text-emerald-100 text-xs mb-2">
-                    <ArrowUp className="h-3 w-3" />
-                    <span>+12.5% vs hier</span>
+                    {growthIsPositive ? (
+                      <ArrowUp className="h-3 w-3" />
+                    ) : (
+                      <ArrowDown className="h-3 w-3" />
+                    )}
+                    <span>{growthLabel}</span>
                   </div>
                   <p className="text-emerald-100 text-xs">{salesTodayCount} vente(s) validées</p>
                 </div>
@@ -513,7 +516,7 @@ export default function Dashboard({
 
         {/* Mobile Chart - Ventes/Achats combiné */}
         <div className="md:hidden">
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+          <Card className={cardShell}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -574,7 +577,7 @@ export default function Dashboard({
 
         {/* Desktop Graphiques */}
         <div className="hidden md:grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-4">
+          <Card className={`${cardShell} p-4`}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -728,7 +731,7 @@ export default function Dashboard({
             </CardContent>
           </Card>
 
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-4">
+          <Card className={`${cardShell} p-4`}>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-white">
                 <BarChart3 className="h-5 w-5 text-violet-500" />
@@ -772,7 +775,7 @@ export default function Dashboard({
 
         {/* Statistiques supplémentaires */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+          <Card className={cardShell}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">
                 Catégories
@@ -789,7 +792,7 @@ export default function Dashboard({
             </CardContent>
           </Card>
 
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+          <Card className={cardShell}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">
                 Fournisseurs
@@ -806,7 +809,7 @@ export default function Dashboard({
             </CardContent>
           </Card>
 
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+          <Card className={cardShell}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">
                 Clients
@@ -877,7 +880,7 @@ export default function Dashboard({
 
         {/* Mobile - Activité récente */}
         <div className="md:hidden">
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+          <Card className={cardShell}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
@@ -889,7 +892,12 @@ export default function Dashboard({
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {recentActivities.map((activity) => {
+              {recentActivities.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-6">
+                  Aucune activité récente
+                </p>
+              ) : (
+                recentActivities.map((activity) => {
                 const Icon = activity.icon;
                 const isPositive = activity.amount > 0;
                 return (
@@ -919,39 +927,37 @@ export default function Dashboard({
                     </div>
                   </div>
                 );
-              })}
+              })
+              )}
             </CardContent>
           </Card>
         </div>
 
         {/* Mobile - Métriques supplémentaires */}
         <div className="md:hidden grid grid-cols-2 gap-4">
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
-            <CardContent className="p-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">TAUX CONVERSION</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{conversionRate}%</p>
-              <div className="flex items-center gap-1 mt-2">
-                <ArrowUp className="h-3 w-3 text-green-500" />
-                <span className="text-xs text-green-600 dark:text-green-400">+2.4% vs hier</span>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+          <Card className={cardShell}>
             <CardContent className="p-4">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">PANIER MOYEN</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{fmt(averageBasket)}</p>
-              <div className="mt-2">
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
-                  Stable
-                </span>
-              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                {salesTodayCount > 0 ? 'Sur les ventes du jour' : 'Aucune vente aujourd&apos;hui'}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className={cardShell}>
+            <CardContent className="p-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">ACHATS DU JOUR</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{fmt(purchasesTodayTotal)}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                {purchasesTodayCount} bon{purchasesTodayCount !== 1 ? 's' : ''} créé{purchasesTodayCount !== 1 ? 's' : ''}
+              </p>
             </CardContent>
           </Card>
         </div>
 
         {/* Desktop Actions rapides - Design Visily */}
         {visibleActions.length > 0 && (
-          <Card className="hidden md:block bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+          <Card className={`hidden md:block ${cardShell}`}>
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
                 ACTIONS RAPIDES
@@ -983,7 +989,7 @@ export default function Dashboard({
 
         {/* Desktop Activités récentes */}
         <div className="hidden md:block">
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+          <Card className={cardShell}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
@@ -995,10 +1001,15 @@ export default function Dashboard({
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {recentActivities.map((activity) => {
+              {recentActivities.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-6">
+                  Aucune activité récente
+                </p>
+              ) : (
+                recentActivities.map((activity) => {
                 const Icon = activity.icon;
                 const isPositive = activity.amount > 0;
-                const timeAgo = activity.time === 'HIER' ? 'Hier' : activity.time;
+                const timeAgo = activity.time;
                 return (
                   <div key={activity.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
                     <div className={`w-10 h-10 rounded-lg ${activity.bgColor} flex items-center justify-center flex-shrink-0`}>
@@ -1007,7 +1018,7 @@ export default function Dashboard({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {activity.type === 'sale' ? 'Completed sale' : 'Purchase'} {activity.reference}
+                          {activity.type === 'sale' ? 'Vente' : 'Achat'} {activity.reference}
                         </p>
                         <p className={`text-sm font-semibold ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                           {isPositive ? '+' : ''}{fmt(Math.abs(activity.amount))}
@@ -1021,7 +1032,8 @@ export default function Dashboard({
                     </div>
                   </div>
                 );
-              })}
+              })
+              )}
             </CardContent>
           </Card>
         </div>
@@ -1030,11 +1042,12 @@ export default function Dashboard({
         {hasPermission(permissions, 'commerce.sales.manage') && (
           <Link
             href={route('commerce.sales.create')}
-            className="md:hidden fixed bottom-20 right-4 z-50 w-14 h-14 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all"
+            className="md:hidden fixed bottom-20 right-4 z-50 w-14 h-14 bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-full shadow-lg shadow-amber-500/30 flex items-center justify-center transition-all"
           >
             <Plus className="h-6 w-6" />
           </Link>
         )}
+        </div>
       </div>
     </AppLayout>
   );

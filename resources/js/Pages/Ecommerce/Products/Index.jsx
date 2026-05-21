@@ -13,6 +13,7 @@ import EcommerceActionButton from '@/Components/Ecommerce/EcommerceActionButton'
 import Dropdown from '@/Components/Dropdown';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 function formatCurrency(amount, currency = 'USD') {
     return new Intl.NumberFormat('fr-FR', {
@@ -23,7 +24,7 @@ function formatCurrency(amount, currency = 'USD') {
     }).format(amount);
 }
 
-export default function EcommerceProductsIndex({ products = [], categories = [], filters = {} }) {
+export default function EcommerceProductsIndex({ products = [], categories = [], filters = {}, pagination }) {
     const { auth } = usePage().props;
     const permissions = auth?.permissions || [];
 
@@ -217,9 +218,23 @@ export default function EcommerceProductsIndex({ products = [], categories = [],
     const handleSearch = (e) => {
         e.preventDefault();
         const form = e.target;
-        const search = form.search?.value || '';
-        const categoryId = form.category_id?.value || '';
-        router.get(route('ecommerce.products.index'), { search: search || undefined, category_id: categoryId || undefined }, { preserveState: true });
+        const searchVal = form.search?.value || '';
+        const categoryVal = form.category_id?.value || '';
+        router.get(route('ecommerce.products.index'), {
+            search: searchVal || undefined,
+            category_id: categoryVal || undefined,
+            per_page: filters?.per_page || pagination?.per_page || 25,
+            page: 1,
+        }, { preserveState: true });
+    };
+
+    const handlePageChange = (page) => {
+        router.get(route('ecommerce.products.index'), {
+            search: filters?.search || undefined,
+            category_id: filters?.category_id || undefined,
+            per_page: filters?.per_page || pagination?.per_page || 25,
+            page,
+        }, { preserveState: true, preserveScroll: true });
     };
 
     const getCategoryName = (id) => categories.find((c) => c.id === id)?.name ?? '—';
@@ -257,7 +272,8 @@ export default function EcommerceProductsIndex({ products = [], categories = [],
         >
             <Head title="Produits - E-commerce" />
 
-            <div className="py-6 space-y-4">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4 sm:space-y-6">
                 <form onSubmit={handleSearch} className="flex flex-wrap gap-3 items-center">
                     <Input
                         name="search"
@@ -281,11 +297,11 @@ export default function EcommerceProductsIndex({ products = [], categories = [],
                     </Button>
                 </form>
 
-                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                <Card className={cardShell}>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Package className="h-5 w-5" />
-                            {products.length} produit(s)
+                            {pagination ? `${pagination.total} produit(s)` : `${products.length} produit(s)`}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -538,10 +554,38 @@ export default function EcommerceProductsIndex({ products = [], categories = [],
                                         </tbody>
                                     </table>
                                 </div>
+                                {pagination && pagination.last_page > 1 && (
+                                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-4 border-t border-gray-200 dark:border-slate-700 text-sm text-gray-600 dark:text-gray-400">
+                                        <span>
+                                            {pagination.from}–{pagination.to} sur {pagination.total}
+                                        </span>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                disabled={pagination.current_page <= 1}
+                                                onClick={() => handlePageChange(pagination.current_page - 1)}
+                                            >
+                                                Précédent
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                disabled={pagination.current_page >= pagination.last_page}
+                                                onClick={() => handlePageChange(pagination.current_page + 1)}
+                                            >
+                                                Suivant
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
                             </>
                         )}
                     </CardContent>
                 </Card>
+            </div>
             </div>
 
             <ImportModal

@@ -21,9 +21,12 @@ import {
     Wallet as CashRegister,
     Mail,
     Share2,
+    CheckCircle2,
 } from 'lucide-react';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/currency';
 import ExportButtons from '@/Components/Pharmacy/ExportButtons';
+import GrabScroll from '@/Components/GrabScroll';
+import SaleFinalizeConfirmModal from '@/Components/SaleFinalizeConfirmModal';
 
 export default function SalesIndex({ sales = [], filters = {}, canViewAllSales = true, routePrefix = 'pharmacy' }) {
     const { shop } = usePage().props;
@@ -33,6 +36,8 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
     const [status, setStatus] = useState(filters.status || '');
     const [saleType, setSaleType] = useState(filters.sale_type || '');
     const [emailingSaleId, setEmailingSaleId] = useState(null);
+    const [finalizingSaleId, setFinalizingSaleId] = useState(null);
+    const [saleToConfirm, setSaleToConfirm] = useState(null);
 
     // route() est fourni globalement par Ziggy. Certaines pages réutilisent ce composant
     // avec des préfixes différents ; on protège donc les liens/actions si la route n'existe pas.
@@ -47,10 +52,12 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
     const receiptRouteName = `${routePrefix}.sales.receipt`;
     const emailReceiptRouteName = `${routePrefix}.sales.email-receipt`;
     const cashRegistersRouteName = `${routePrefix}.cash-registers.index`;
+    const finalizeRouteName = `${routePrefix}.sales.finalize`;
 
     const canReceipt = hasRoute(receiptRouteName);
     const canEmailReceipt = hasRoute(emailReceiptRouteName);
     const canCashRegisters = hasRoute(cashRegistersRouteName);
+    const canFinalize = hasRoute(finalizeRouteName);
 
     // Resynchroniser les champs avec l’URL quand on charge la page avec ?from=&to= ou après navigation
     useEffect(() => {
@@ -164,16 +171,45 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
         }
     };
 
+    const handleFinalizeSale = async () => {
+        const sale = saleToConfirm;
+        if (!canFinalize || !sale?.id || finalizingSaleId) return;
+
+        const paidAmount =
+            Number(sale.paid_amount) > 0 ? Number(sale.paid_amount) : Number(sale.total_amount);
+        if (paidAmount <= 0) {
+            toast.error('Impossible de confirmer une vente sans montant.');
+            return;
+        }
+
+        setFinalizingSaleId(sale.id);
+        try {
+            await axios.post(route(finalizeRouteName, sale.id), { paid_amount: paidAmount });
+            setSaleToConfirm(null);
+            toast.success('Vente confirmée avec succès.');
+            router.reload({ preserveScroll: true });
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Erreur lors de la confirmation.');
+        } finally {
+            setFinalizingSaleId(null);
+        }
+    };
+
+    const openFinalizeConfirm = (sale) => {
+        if (!canFinalize || !sale?.id) return;
+        setSaleToConfirm(sale);
+    };
+
     return (
         <AppLayout>
             <Head title="Ventes" />
             
-            <div className="py-6 space-y-6">
+            <div className="space-y-6 py-8 sm:py-10">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                     <div>
-                        <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                            <ShoppingCart className="h-6 w-6" />
+                        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+                            <ShoppingCart className="h-7 w-7 text-amber-500" />
                             Gestion des Ventes
                         </h1>
                         <p className="text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-3 flex-wrap">
@@ -181,7 +217,7 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                             {!canViewAllSales && (
                                 <span className="text-amber-600 dark:text-amber-400 text-sm font-medium">Vous consultez uniquement vos ventes.</span>
                             )}
-                            <span className="text-xs text-gray-400 dark:text-gray-500">Raccourci: <kbd className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono">1</kbd> cette page · <kbd className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono">2</kbd> nouvelle vente</span>
+                            <span className="text-xs text-gray-400 dark:text-gray-500">Raccourcis: <kbd className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono">Ctrl+Shift+V</kbd> nouvelle vente · voir Tutoriel pour la liste complète</span>
                         </p>
                     </div>
                     <div className="flex flex-wrap lg:flex-nowrap items-center gap-2">
@@ -231,9 +267,9 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
                     {/* Total Ventes */}
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+                    <div className="rounded-2xl border border-gray-200/80 bg-white/95 p-5 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Ventes</p>
@@ -247,7 +283,7 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                     </div>
 
                     {/* Ventes Terminées */}
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+                    <div className="rounded-2xl border border-gray-200/80 bg-white/95 p-5 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Terminées</p>
@@ -261,7 +297,7 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                     </div>
 
                     {/* Brouillons */}
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+                    <div className="rounded-2xl border border-gray-200/80 bg-white/95 p-5 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Brouillons</p>
@@ -275,7 +311,7 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                     </div>
 
                     {/* Chiffre d'affaires */}
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+                    <div className="rounded-2xl border border-gray-200/80 bg-white/95 p-5 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Chiffre d'affaires</p>
@@ -290,10 +326,10 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                 </div>
 
                 {/* Filtres */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
-                    <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                            <Filter className="h-5 w-5 text-gray-500" />
+                <div className="mb-6 overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
+                    <div className="border-b border-gray-200/80 px-6 py-4 dark:border-slate-700/80">
+                        <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            <Filter className="h-5 w-5 text-amber-500" />
                             Filtres
                         </h2>
                     </div>
@@ -351,10 +387,10 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                 </div>
 
                 {/* Liste des ventes */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                            <ShoppingCart className="h-5 w-5 text-gray-500" />
+                <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
+                    <div className="border-b border-gray-200/80 px-6 py-4 dark:border-slate-700/80">
+                        <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            <ShoppingCart className="h-5 w-5 text-amber-500" />
                             Liste des ventes ({sales.length})
                         </h2>
                     </div>
@@ -452,6 +488,21 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                                             
                                             {/* Actions */}
                                             <div className="flex items-center gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                                                {isDraft(sale) && canFinalize && (
+                                                    <Button
+                                                        variant="default"
+                                                        size="sm"
+                                                        onClick={() => openFinalizeConfirm(sale)}
+                                                        disabled={finalizingSaleId === sale.id}
+                                                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                                                        title="Confirmer la vente"
+                                                    >
+                                                        <CheckCircle2 className="h-4 w-4 mr-1" />
+                                                        <span className="text-xs">
+                                                            {finalizingSaleId === sale.id ? '...' : 'Confirmer'}
+                                                        </span>
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
@@ -490,7 +541,7 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                             </div>
 
                             {/* Vue Desktop - Tableau */}
-                            <div className="hidden md:block overflow-x-auto">
+                            <GrabScroll className="hidden md:block rounded-xl border border-gray-100/90 bg-gray-50/30 dark:border-slate-700/60 dark:bg-slate-950/30">
                                 <table className="w-full">
                                     <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
                                         <tr>
@@ -569,6 +620,18 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right">
                                                     <div className="flex items-center justify-end gap-1">
+                                                        {isDraft(sale) && canFinalize && (
+                                                            <Button
+                                                                variant="default"
+                                                                size="sm"
+                                                                onClick={() => openFinalizeConfirm(sale)}
+                                                                disabled={finalizingSaleId === sale.id}
+                                                                className="bg-green-600 hover:bg-green-700 text-white"
+                                                                title="Confirmer la vente"
+                                                            >
+                                                                <CheckCircle2 className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
@@ -613,11 +676,20 @@ export default function SalesIndex({ sales = [], filters = {}, canViewAllSales =
                                         ))}
                                     </tbody>
                                 </table>
-                            </div>
+                            </GrabScroll>
                         </>
                     )}
                 </div>
             </div>
+
+            <SaleFinalizeConfirmModal
+                show={!!saleToConfirm}
+                onClose={() => !finalizingSaleId && setSaleToConfirm(null)}
+                onConfirm={handleFinalizeSale}
+                loading={!!finalizingSaleId}
+                sale={saleToConfirm}
+                currency={currency}
+            />
         </AppLayout>
     );
 }

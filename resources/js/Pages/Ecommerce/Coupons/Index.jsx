@@ -5,6 +5,7 @@ import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
 import { Tag, Plus, Pencil, Trash2 } from 'lucide-react';
 import EcommercePageHeader from '@/Components/Ecommerce/EcommercePageHeader';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function EcommerceCouponsIndex({ coupons }) {
     const typeLabels = {
@@ -33,8 +34,9 @@ export default function EcommerceCouponsIndex({ coupons }) {
             }
         >
             <Head title="Coupons - E-commerce" />
-            <div className="py-6">
-                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <Card className={cardShell}>
                     <CardContent className="p-0">
                         {/* Mobile: cartes */}
                         <div className="md:hidden divide-y divide-gray-200 dark:divide-slate-700">
@@ -139,6 +141,7 @@ export default function EcommerceCouponsIndex({ coupons }) {
                         </div>
                     </CardContent>
                 </Card>
+            </div>
             </div>
         </AppLayout>
     );

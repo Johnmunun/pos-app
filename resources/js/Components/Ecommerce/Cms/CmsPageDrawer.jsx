@@ -5,10 +5,11 @@ import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import RichTextEditor from '@/Components/RichTextEditor';
-import { HelpCircle, Image as ImageIcon } from 'lucide-react';
+import { HelpCircle, Image as ImageIcon, Search } from 'lucide-react';
+import { Textarea } from '@/Components/ui/textarea';
 import CmsHelpModal from './CmsHelpModal';
 
-const METADATA_DEFAULT = { address: '', phone: '', email: '', hours: '' };
+const METADATA_DEFAULT = { address: '', phone: '', email: '', hours: '', seo_title: '', seo_description: '' };
 
 export default function CmsPageDrawer({ isOpen, onClose, page = null, media = [] }) {
     const isEdit = !!page?.id;
@@ -184,6 +185,39 @@ export default function CmsPageDrawer({ isOpen, onClose, page = null, media = []
                             </div>
                         </div>
                     )}
+
+                    <div className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 p-4 space-y-3">
+                        <h4 className="text-sm font-semibold text-emerald-800 dark:text-emerald-200 flex items-center gap-2">
+                            <Search className="h-4 w-4" />
+                            Référencement (Google)
+                        </h4>
+                        <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                            Optionnel. Si vide, le titre de la page et le début du contenu sont utilisés sur la vitrine publique.
+                        </p>
+                        <div>
+                            <Label htmlFor="seo_title">Meta title (max 60 car.)</Label>
+                            <Input
+                                id="seo_title"
+                                value={data.metadata?.seo_title ?? ''}
+                                onChange={(e) => updateMetadata('seo_title', e.target.value)}
+                                maxLength={60}
+                                placeholder="Titre pour Google et les partages"
+                                className="mt-1 placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="seo_description">Meta description (max 160 car.)</Label>
+                            <Textarea
+                                id="seo_description"
+                                value={data.metadata?.seo_description ?? ''}
+                                onChange={(e) => updateMetadata('seo_description', e.target.value)}
+                                maxLength={160}
+                                rows={2}
+                                placeholder="Courte description pour les résultats de recherche"
+                                className="mt-1 placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                            />
+                        </div>
+                    </div>
 
                     <div>
                         <Label>Contenu de la page</Label>

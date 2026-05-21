@@ -7,6 +7,7 @@ import { Badge } from '@/Components/ui/badge';
 import { FileText, Plus, Pencil, Trash2, HelpCircle } from 'lucide-react';
 import CmsPageDrawer from '@/Components/Ecommerce/Cms/CmsPageDrawer';
 import CmsHelpModal from '@/Components/Ecommerce/Cms/CmsHelpModal';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function CmsPagesIndex({ pages = [], media = [] }) {
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -67,8 +68,9 @@ export default function CmsPagesIndex({ pages = [], media = [] }) {
             }
         >
             <Head title="Pages CMS - E-commerce" />
-            <div className="py-6">
-                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <Card className={cardShell}>
                     <CardContent className="p-0">
                         <div className="overflow-x-auto">
                             <table className="w-full">
@@ -116,6 +118,7 @@ export default function CmsPagesIndex({ pages = [], media = [] }) {
                         </div>
                     </CardContent>
                 </Card>
+            </div>
             </div>
 
             <CmsPageDrawer key={editingPage?.id ?? 'new'} isOpen={drawerOpen} onClose={handleCloseDrawer} page={pageForDrawer} media={media} />

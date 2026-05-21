@@ -6,6 +6,7 @@ import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { Badge } from '@/Components/ui/badge';
+import GrabScroll from '@/Components/GrabScroll';
 import {
     DollarSign,
     Filter,
@@ -13,8 +14,15 @@ import {
     Search,
     XCircle,
     FileDown,
+    Wallet,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
+
+const cardShell =
+    'overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/80';
+
+const selectClass =
+    'w-full h-10 rounded-xl border border-gray-200/90 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-400/50';
 
 const CATEGORIES = [
     { value: '', label: 'Toutes les catégories' },
@@ -95,12 +103,24 @@ export default function FinanceExpensesIndex({ expenses = [], filters = {}, pagi
 
     const statusBadge = (s) => {
         if (s === 'approved') {
-            return <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 text-xs">Approuvée</Badge>;
+            return (
+                <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 text-xs rounded-lg">
+                    Approuvée
+                </Badge>
+            );
         }
         if (s === 'rejected') {
-            return <Badge className="bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 text-xs">Rejetée</Badge>;
+            return (
+                <Badge className="bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 text-xs rounded-lg">
+                    Rejetée
+                </Badge>
+            );
         }
-        return <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-xs">En attente</Badge>;
+        return (
+            <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-xs rounded-lg">
+                En attente
+            </Badge>
+        );
     };
 
     const currentPage = pagination?.current_page ?? 1;
@@ -118,22 +138,33 @@ export default function FinanceExpensesIndex({ expenses = [], filters = {}, pagi
     };
 
     return (
-        <AppLayout>
+        <AppLayout
+            header={
+                <div>
+                    <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
+                        Dépenses
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 hidden sm:block">
+                        Catégories, validation et export comptable.
+                    </p>
+                </div>
+            }
+        >
             <Head title="Dépenses" />
 
-            <div className="container mx-auto py-6 px-4">
-                {/* Header */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                    <div>
-                        <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                            <DollarSign className="h-6 w-6 text-emerald-500" />
-                            Gestion des Dépenses
-                        </h1>
-                        <p className="text-gray-500 dark:text-gray-400 mt-1">
-                            Suivi des dépenses par catégorie, période et statut.
-                        </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
+            <div className="py-8 sm:py-10 space-y-6 sm:space-y-8">
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                    <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <DollarSign className="h-7 w-7 text-emerald-500" />
+                                Gestion des dépenses
+                            </h1>
+                            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 max-w-2xl leading-relaxed">
+                                Suivez vos sorties par catégorie, filtrez par période et statut, enregistrez de nouvelles
+                                dépenses.
+                            </p>
+                        </div>
                         <Button
                             type="button"
                             variant="outline"
@@ -149,264 +180,302 @@ export default function FinanceExpensesIndex({ expenses = [], filters = {}, pagi
                                     'noopener,noreferrer'
                                 )
                             }
-                            className="border-gray-300 dark:border-slate-600"
+                            className="rounded-xl border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 shrink-0"
                         >
                             <FileDown className="h-4 w-4 mr-2" />
                             Export PDF
                         </Button>
                     </div>
-                </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    {/* Filtres */}
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                        <Card className={cardShell}>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="flex items-center text-gray-900 dark:text-white text-base sm:text-lg">
+                                    <Filter className="h-5 w-5 mr-2 text-emerald-500" />
+                                    Filtres
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <form onSubmit={filterSubmit} className="space-y-4">
+                                    <div>
+                                        <Label htmlFor="category" className="text-gray-700 dark:text-gray-300">
+                                            Catégorie
+                                        </Label>
+                                        <select
+                                            id="category"
+                                            value={category}
+                                            onChange={(e) => setCategory(e.target.value)}
+                                            className={`mt-1.5 ${selectClass}`}
+                                        >
+                                            {CATEGORIES.map((c) => (
+                                                <option key={c.value} value={c.value}>
+                                                    {c.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="status" className="text-gray-700 dark:text-gray-300">
+                                            Statut
+                                        </Label>
+                                        <select
+                                            id="status"
+                                            value={status}
+                                            onChange={(e) => setStatus(e.target.value)}
+                                            className={`mt-1.5 ${selectClass}`}
+                                        >
+                                            {STATUS.map((s) => (
+                                                <option key={s.value} value={s.value}>
+                                                    {s.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <Label htmlFor="from" className="text-gray-700 dark:text-gray-300">
+                                                Du
+                                            </Label>
+                                            <Input
+                                                id="from"
+                                                type="date"
+                                                value={from}
+                                                onChange={(e) => setFrom(e.target.value)}
+                                                className="mt-1.5 rounded-xl bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-gray-100"
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="to" className="text-gray-700 dark:text-gray-300">
+                                                Au
+                                            </Label>
+                                            <Input
+                                                id="to"
+                                                type="date"
+                                                value={to}
+                                                onChange={(e) => setTo(e.target.value)}
+                                                className="mt-1.5 rounded-xl bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-gray-100"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 pt-1">
+                                        <Button
+                                            type="submit"
+                                            className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                                        >
+                                            <Search className="h-4 w-4 mr-2" />
+                                            Filtrer
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={resetFilters}
+                                            className="rounded-xl border-gray-300 dark:border-slate-600 shrink-0"
+                                            title="Réinitialiser"
+                                        >
+                                            <XCircle className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </form>
+                            </CardContent>
+                        </Card>
+
+                        <Card className={`lg:col-span-2 ${cardShell}`}>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="flex items-center text-gray-900 dark:text-white text-base sm:text-lg">
+                                    <Plus className="h-5 w-5 mr-2 text-emerald-500" />
+                                    Enregistrer une dépense
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <Label htmlFor="amount" className="text-gray-700 dark:text-gray-300">
+                                            Montant
+                                        </Label>
+                                        <Input
+                                            id="amount"
+                                            type="number"
+                                            step="0.01"
+                                            value={data.amount}
+                                            onChange={(e) => setData('amount', e.target.value)}
+                                            className="mt-1.5 rounded-xl bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-gray-100"
+                                        />
+                                        {errors.amount && (
+                                            <p className="text-xs text-red-500 mt-1">{errors.amount}</p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="category_create" className="text-gray-700 dark:text-gray-300">
+                                            Catégorie
+                                        </Label>
+                                        <select
+                                            id="category_create"
+                                            value={data.category}
+                                            onChange={(e) => setData('category', e.target.value)}
+                                            className={`mt-1.5 ${selectClass}`}
+                                        >
+                                            <option value="">Sélectionner</option>
+                                            {CATEGORIES.filter((c) => c.value).map((c) => (
+                                                <option key={c.value} value={c.value}>
+                                                    {c.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {errors.category && (
+                                            <p className="text-xs text-red-500 mt-1">{errors.category}</p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="description" className="text-gray-700 dark:text-gray-300">
+                                            Description
+                                        </Label>
+                                        <Input
+                                            id="description"
+                                            value={data.description}
+                                            onChange={(e) => setData('description', e.target.value)}
+                                            className="mt-1.5 rounded-xl bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-gray-100"
+                                        />
+                                        {errors.description && (
+                                            <p className="text-xs text-red-500 mt-1">{errors.description}</p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="supplier_id" className="text-gray-700 dark:text-gray-300">
+                                            Fournisseur (optionnel)
+                                        </Label>
+                                        <Input
+                                            id="supplier_id"
+                                            value={data.supplier_id}
+                                            onChange={(e) => setData('supplier_id', e.target.value)}
+                                            className="mt-1.5 rounded-xl bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-gray-100"
+                                        />
+                                        {errors.supplier_id && (
+                                            <p className="text-xs text-red-500 mt-1">{errors.supplier_id}</p>
+                                        )}
+                                    </div>
+                                    <div className="md:col-span-2 flex justify-end pt-1">
+                                        <Button
+                                            type="submit"
+                                            disabled={processing}
+                                            className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                                        >
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            Enregistrer
+                                        </Button>
+                                    </div>
+                                </form>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <Card className={`${cardShell} mt-6 sm:mt-8`}>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                                <Filter className="h-5 w-5 text-emerald-500" />
-                                Filtres
+                            <CardTitle className="flex items-center text-gray-900 dark:text-white">
+                                <Wallet className="h-5 w-5 mr-2 text-emerald-500" />
+                                Liste des dépenses ({pagination?.total ?? expenses.length})
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <form onSubmit={filterSubmit} className="space-y-4">
-                                <div>
-                                    <Label htmlFor="category" className="text-gray-700 dark:text-gray-300">
-                                        Catégorie
-                                    </Label>
-                                    <select
-                                        id="category"
-                                        value={category}
-                                        onChange={(e) => setCategory(e.target.value)}
-                                        className="mt-1 w-full h-10 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 px-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                    >
-                                        {CATEGORIES.map((c) => (
-                                            <option key={c.value} value={c.value}>
-                                                {c.label}
-                                            </option>
-                                        ))}
-                                    </select>
+                            {expenses.length === 0 ? (
+                                <div className="text-center py-14 px-4 rounded-xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-950/30">
+                                    <Wallet className="h-12 w-12 text-gray-300 dark:text-slate-600 mx-auto mb-3" />
+                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                        Aucune dépense trouvée
+                                    </p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-md mx-auto">
+                                        Modifiez les filtres ou enregistrez une première dépense avec le formulaire
+                                        ci-dessus.
+                                    </p>
                                 </div>
-                                <div>
-                                    <Label htmlFor="status" className="text-gray-700 dark:text-gray-300">
-                                        Statut
-                                    </Label>
-                                    <select
-                                        id="status"
-                                        value={status}
-                                        onChange={(e) => setStatus(e.target.value)}
-                                        className="mt-1 w-full h-10 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 px-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                    >
-                                        {STATUS.map((s) => (
-                                            <option key={s.value} value={s.value}>
-                                                {s.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <Label htmlFor="from" className="text-gray-700 dark:text-gray-300">
-                                            Du
-                                        </Label>
-                                        <Input
-                                            id="from"
-                                            type="date"
-                                            value={from}
-                                            onChange={(e) => setFrom(e.target.value)}
-                                            className="mt-1 bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-gray-100"
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="to" className="text-gray-700 dark:text-gray-300">
-                                            Au
-                                        </Label>
-                                        <Input
-                                            id="to"
-                                            type="date"
-                                            value={to}
-                                            onChange={(e) => setTo(e.target.value)}
-                                            className="mt-1 bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-gray-100"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Button type="submit" className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white">
-                                        <Search className="h-4 w-4 mr-2" />
-                                        Filtrer
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={resetFilters}
-                                        className="border-gray-300 dark:border-slate-600"
-                                    >
-                                        <XCircle className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </form>
-                        </CardContent>
-                    </Card>
-
-                    {/* Formulaire création */}
-                    <Card className="lg:col-span-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                                <Plus className="h-5 w-5 text-emerald-500" />
-                                Enregistrer une dépense
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <Label htmlFor="amount" className="text-gray-700 dark:text-gray-300">
-                                        Montant
-                                    </Label>
-                                    <Input
-                                        id="amount"
-                                        type="number"
-                                        step="0.01"
-                                        value={data.amount}
-                                        onChange={(e) => setData('amount', e.target.value)}
-                                        className="mt-1 bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-gray-100"
-                                    />
-                                    {errors.amount && <p className="text-xs text-red-500 mt-1">{errors.amount}</p>}
-                                </div>
-                                <div>
-                                    <Label htmlFor="category_create" className="text-gray-700 dark:text-gray-300">
-                                        Catégorie
-                                    </Label>
-                                    <select
-                                        id="category_create"
-                                        value={data.category}
-                                        onChange={(e) => setData('category', e.target.value)}
-                                        className="mt-1 w-full h-10 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 px-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                    >
-                                        <option value="">Sélectionner</option>
-                                        {CATEGORIES.filter(c => c.value).map((c) => (
-                                            <option key={c.value} value={c.value}>
-                                                {c.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {errors.category && <p className="text-xs text-red-500 mt-1">{errors.category}</p>}
-                                </div>
-                                <div>
-                                    <Label htmlFor="description" className="text-gray-700 dark:text-gray-300">
-                                        Description
-                                    </Label>
-                                    <Input
-                                        id="description"
-                                        value={data.description}
-                                        onChange={(e) => setData('description', e.target.value)}
-                                        className="mt-1 bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-gray-100"
-                                    />
-                                    {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description}</p>}
-                                </div>
-                                <div>
-                                    <Label htmlFor="supplier_id" className="text-gray-700 dark:text-gray-300">
-                                        Fournisseur (optionnel)
-                                    </Label>
-                                    <Input
-                                        id="supplier_id"
-                                        value={data.supplier_id}
-                                        onChange={(e) => setData('supplier_id', e.target.value)}
-                                        className="mt-1 bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-gray-100"
-                                    />
-                                    {errors.supplier_id && <p className="text-xs text-red-500 mt-1">{errors.supplier_id}</p>}
-                                </div>
-                                <div className="md:col-span-2 flex justify-end">
-                                    <Button
-                                        type="submit"
-                                        disabled={processing}
-                                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                                    >
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Enregistrer
-                                    </Button>
-                                </div>
-                            </form>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Liste des dépenses */}
-                <Card className="mt-6 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
-                    <CardHeader>
-                        <CardTitle className="flex items-center justify-between text-gray-900 dark:text-gray-100">
-                            <span>Liste des dépenses ({pagination?.total ?? expenses.length})</span>
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {expenses.length === 0 ? (
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Aucune dépense trouvée pour les filtres sélectionnés.
-                            </p>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full text-sm">
-                                    <thead>
-                                        <tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700">
-                                            <th className="py-2 pr-4">Date</th>
-                                            <th className="py-2 pr-4">Catégorie</th>
-                                            <th className="py-2 pr-4">Description</th>
-                                            <th className="py-2 pr-4 text-right">Montant</th>
-                                            <th className="py-2 pr-4 text-center">Statut</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {expenses.map((e) => (
-                                            <tr key={e.id} className="border-b border-gray-100 dark:border-slate-800">
-                                                <td className="py-2 pr-4 text-gray-900 dark:text-gray-100">
-                                                    {e.created_at?.slice(0, 16) || ''}
-                                                </td>
-                                                <td className="py-2 pr-4 text-gray-900 dark:text-gray-100">
-                                                    {CATEGORIES.find((c) => c.value === e.category)?.label || e.category}
-                                                </td>
-                                                <td className="py-2 pr-4 text-gray-900 dark:text-gray-100">
-                                                    {e.description || '-'}
-                                                </td>
-                                                <td className="py-2 pr-4 text-right text-gray-900 dark:text-gray-100">
-                                                    {fmt(e.amount)}
-                                                </td>
-                                                <td className="py-2 pr-4 text-center">{statusBadge(e.status)}</td>
+                            ) : (
+                                <GrabScroll className="rounded-xl border border-gray-100/90 bg-gray-50/30 dark:border-slate-700/60 dark:bg-slate-950/30">
+                                    <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700 text-sm">
+                                        <thead className="bg-gray-50 dark:bg-slate-800">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                                    Date
+                                                </th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                                    Catégorie
+                                                </th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                                    Description
+                                                </th>
+                                                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                                    Montant
+                                                </th>
+                                                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                                    Statut
+                                                </th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
+                                        </thead>
+                                        <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
+                                            {expenses.map((e) => (
+                                                <tr
+                                                    key={e.id}
+                                                    className="hover:bg-gray-50 dark:hover:bg-slate-800/80"
+                                                >
+                                                    <td className="px-4 py-3 whitespace-nowrap text-gray-900 dark:text-white">
+                                                        {e.created_at?.slice(0, 16) || '—'}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
+                                                        {CATEGORIES.find((c) => c.value === e.category)?.label ||
+                                                            e.category}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-gray-700 dark:text-gray-300 max-w-xs truncate">
+                                                        {e.description || '—'}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right font-medium text-gray-900 dark:text-white tabular-nums">
+                                                        {fmt(e.amount)}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">{statusBadge(e.status)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </GrabScroll>
+                            )}
 
-                        {/* Pagination simple */}
-                        {lastPage > 1 && (
-                            <div className="mt-4 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                                <div>
-                                    Page {currentPage} sur {lastPage}
+                            {lastPage > 1 && (
+                                <div className="mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-gray-600 dark:text-gray-400">
+                                    <p>
+                                        Page{' '}
+                                        <span className="font-semibold text-gray-900 dark:text-white">
+                                            {currentPage}
+                                        </span>{' '}
+                                        sur{' '}
+                                        <span className="font-semibold text-gray-900 dark:text-white">
+                                            {lastPage}
+                                        </span>
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={currentPage <= 1}
+                                            onClick={() => goToPage(currentPage - 1)}
+                                            className="rounded-xl border-gray-300 dark:border-slate-600"
+                                        >
+                                            Précédent
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={currentPage >= lastPage}
+                                            onClick={() => goToPage(currentPage + 1)}
+                                            className="rounded-xl border-gray-300 dark:border-slate-600"
+                                        >
+                                            Suivant
+                                        </Button>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        disabled={currentPage <= 1}
-                                        onClick={() => goToPage(currentPage - 1)}
-                                    >
-                                        Précédent
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        disabled={currentPage >= lastPage}
-                                        onClick={() => goToPage(currentPage + 1)}
-                                    >
-                                        Suivant
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         </AppLayout>
     );
 }
-

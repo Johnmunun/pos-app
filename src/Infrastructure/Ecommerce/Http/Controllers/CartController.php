@@ -2,11 +2,10 @@
 
 namespace Src\Infrastructure\Ecommerce\Http\Controllers;
 
-use App\Models\Currency;
-use App\Models\ExchangeRate;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Src\Application\Currency\Services\TenantDisplayCurrencyService;
 use Src\Infrastructure\Ecommerce\Models\PaymentMethodModel;
 use Src\Infrastructure\Ecommerce\Models\ShippingMethodModel;
 
@@ -23,51 +22,6 @@ class CartController
         return (string) $shopId;
     }
 
-    /**
-     * Devise et taux de change depuis les paramètres (settings/currencies).
-     */
-    private function getCurrencyAndRates(string $tenantId): array
-    {
-        $currenciesList = Currency::where('tenant_id', $tenantId)
-            ->where('is_active', true)
-            ->orderByDesc('is_default')
-            ->orderBy('code')
-            ->get();
-        $defaultCurrencyModel = $currenciesList->firstWhere('is_default', true) ?? $currenciesList->first();
-        $defaultCode = $defaultCurrencyModel ? strtoupper($defaultCurrencyModel->code) : 'USD';
-
-        $exchangeRatesMap = [$defaultCode => 1.0];
-        if ($defaultCurrencyModel) {
-            foreach ($currenciesList as $c) {
-                $code = strtoupper($c->code);
-                if ($code === $defaultCode) {
-                    continue;
-                }
-                $fromDefault = ExchangeRate::where('tenant_id', $tenantId)
-                    ->where('from_currency_id', $defaultCurrencyModel->id)
-                    ->where('to_currency_id', $c->id)
-                    ->orderByDesc('effective_date')
-                    ->first();
-                if ($fromDefault && (float) $fromDefault->rate > 0) {
-                    $exchangeRatesMap[$code] = (float) $fromDefault->rate;
-                } else {
-                    $toDefault = ExchangeRate::where('tenant_id', $tenantId)
-                        ->where('from_currency_id', $c->id)
-                        ->where('to_currency_id', $defaultCurrencyModel->id)
-                        ->orderByDesc('effective_date')
-                        ->first();
-                    if ($toDefault && (float) $toDefault->rate > 0) {
-                        $exchangeRatesMap[$code] = 1.0 / (float) $toDefault->rate;
-                    } else {
-                        $exchangeRatesMap[$code] = 1.0;
-                    }
-                }
-            }
-        }
-
-        return ['currency' => $defaultCode, 'exchange_rates' => $exchangeRatesMap];
-    }
-
     public function index(Request $request): Response
     {
         $shopId = $this->getShopId($request);
@@ -77,9 +31,14 @@ class CartController
         $shop = \App\Models\Shop::find($shopId);
         $taxRate = $shop && $shop->default_tax_rate ? (float) $shop->default_tax_rate : 0;
 
-        $currencyConfig = $this->getCurrencyAndRates((string) $tenantId);
-        $currency = $currencyConfig['currency'];
-        $exchangeRates = $currencyConfig['exchange_rates'];
+        $currencyBundle = app(TenantDisplayCurrencyService::class)->resolve(
+            $request,
+            (string) $tenantId,
+            $shop,
+            false
+        );
+        $currency = $currencyBundle['currency'];
+        $exchangeRates = $currencyBundle['exchange_rates'];
 
         $shippingMethods = ShippingMethodModel::where('shop_id', $shopId)
             ->where('is_active', true)

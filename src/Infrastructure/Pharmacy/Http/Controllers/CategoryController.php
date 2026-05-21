@@ -19,6 +19,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Reader\Csv;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Models\Shop;
 use App\Models\User as UserModel;
 use Src\Application\Billing\Services\FeatureLimitService;
 
@@ -28,6 +29,50 @@ class CategoryController
     {
         $prefix = request()->route()?->getPrefix();
         return $prefix === 'hardware' ? 'Hardware' : 'Pharmacy';
+    }
+
+    /**
+     * Shop ID selon le dépôt sélectionné en session (ou fallback user), aligné sur ProductController.
+     */
+    private function getShopId(Request $request): ?string
+    {
+        $user = $request->user();
+        if ($user === null) {
+            abort(403, 'User not authenticated.');
+        }
+
+        $shopId = null;
+        $depotId = $request->session()->get('current_depot_id');
+        if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
+            $shopByDepot = Shop::where('depot_id', $depotId)->where('tenant_id', $user->tenant_id)->first();
+            if ($shopByDepot) {
+                $shopId = (string) $shopByDepot->id;
+            }
+        }
+
+        if ($shopId === null) {
+            if (! empty($user->shop_id)) {
+                $candidate = Shop::find($user->shop_id);
+                if ($candidate && (string) $candidate->tenant_id === (string) $user->tenant_id) {
+                    $shopId = (string) $candidate->id;
+                }
+            }
+            if ($shopId === null && $user->tenant_id) {
+                $fallback = Shop::where('tenant_id', $user->tenant_id)->where('is_active', true)->orderBy('id')->first();
+                $shopId = $fallback ? (string) $fallback->id : (string) $user->tenant_id;
+            }
+        }
+
+        $userModel = UserModel::query()->find($user->id);
+        $isRoot = $userModel ? $userModel->isRoot() : false;
+        if (! $shopId && ! $isRoot) {
+            abort(403, 'Shop ID not found. Please contact administrator.');
+        }
+        if ($isRoot && ! $shopId) {
+            return null;
+        }
+
+        return $shopId ? (string) $shopId : null;
     }
 
     public function __construct(
@@ -45,7 +90,7 @@ class CategoryController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        $shopId = $this->getShopId($request);
         
         // Recherche
         $search = $request->input('search', '');
@@ -126,7 +171,7 @@ class CategoryController
             if ($user === null) {
                 abort(403, 'User not authenticated.');
             }
-            $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+            $shopId = $this->getShopId($request);
             
             if (!$shopId && !$user->isRoot()) {
                 return redirect()->back()
@@ -179,7 +224,7 @@ class CategoryController
             if ($user === null) {
                 abort(403, 'User not authenticated.');
             }
-            $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+            $shopId = $this->getShopId($request);
             $isRoot = $user->isRoot();
             
             // Vérifier que la catégorie appartient à cette pharmacie
@@ -243,7 +288,7 @@ class CategoryController
             if ($user === null) {
                 abort(403, 'User not authenticated.');
             }
-            $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+            $shopId = $this->getShopId($request);
             $isRoot = $user->isRoot();
             
             // Vérifier que la catégorie appartient à cette pharmacie
@@ -284,7 +329,7 @@ class CategoryController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        $shopId = $this->getShopId($request);
         if ($shopId === null) {
             abort(403, 'Shop ID not found.');
         }
@@ -304,7 +349,7 @@ class CategoryController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        $shopId = $this->getShopId($request);
         $search = $request->input('search');
         
         try {
@@ -383,7 +428,7 @@ class CategoryController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        $shopId = $this->getShopId($request);
         if (!$shopId && !$user->isRoot()) {
             return response()->json(['message' => 'Shop ID introuvable. Veuillez sélectionner un dépôt.'], 403);
         }
@@ -570,7 +615,7 @@ class CategoryController
         if ($user === null) {
             abort(403, 'User not authenticated.');
         }
-        $shopId = $user->shop_id ?? ($user->tenant_id ? (string) $user->tenant_id : null);
+        $shopId = $this->getShopId($request);
         if (!$shopId && !$user->isRoot()) {
             return response()->json(['message' => 'Shop ID introuvable. Veuillez sélectionner un dépôt.'], 403);
         }

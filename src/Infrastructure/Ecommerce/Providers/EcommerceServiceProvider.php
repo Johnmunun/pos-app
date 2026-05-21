@@ -13,11 +13,27 @@ use Src\Application\Ecommerce\UseCases\CreateOrderUseCase;
 use Src\Application\Ecommerce\UseCases\UpdateOrderStatusUseCase;
 use Src\Application\Ecommerce\UseCases\UpdatePaymentStatusUseCase;
 use Src\Application\Ecommerce\UseCases\CreateCustomerUseCase;
+use Src\Application\Ecommerce\Services\EcommerceAiSupportAnalyticsService;
+use Src\Application\Ecommerce\Services\EcommerceAiSupportFaqMatcher;
+use Src\Application\Ecommerce\Services\EcommerceAiSupportFaqSuggestionService;
+use Src\Application\Ecommerce\Services\EcommerceShopReportService;
+use Src\Application\Ecommerce\Services\StorefrontAiSemanticSearchService;
 
 class EcommerceServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(EcommerceShopReportService::class, function ($app) {
+            return new EcommerceShopReportService(
+                $app->make(\App\Services\AppNotificationService::class)
+            );
+        });
+
+        $this->app->singleton(StorefrontAiSemanticSearchService::class);
+        $this->app->singleton(EcommerceAiSupportAnalyticsService::class);
+        $this->app->singleton(EcommerceAiSupportFaqMatcher::class);
+        $this->app->singleton(EcommerceAiSupportFaqSuggestionService::class);
+
         // Repositories
         $this->app->bind(
             OrderRepositoryInterface::class,
@@ -56,7 +72,8 @@ class EcommerceServiceProvider extends ServiceProvider
                 $app->make(OrderRepositoryInterface::class),
                 $app->make(\Src\Application\Ecommerce\Services\GenerateDownloadTokensService::class),
                 $app->make(\Src\Application\Referral\Services\ReferralService::class),
-                $app->make(\App\Services\EcommerceOrderPaidCustomerMailService::class)
+                $app->make(\App\Services\EcommerceOrderPaidCustomerMailService::class),
+                $app->make(\Src\Infrastructure\Billing\Services\MerchantWalletService::class)
             );
         });
 

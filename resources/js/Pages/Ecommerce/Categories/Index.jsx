@@ -10,6 +10,7 @@ import EcommercePageHeader from '@/Components/Ecommerce/EcommercePageHeader';
 import EcommerceActionButton from '@/Components/Ecommerce/EcommerceActionButton';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function EcommerceCategoriesIndex({ categories = [] }) {
     const { auth } = usePage().props;
@@ -132,8 +133,9 @@ export default function EcommerceCategoriesIndex({ categories = [] }) {
         >
             <Head title="Catégories - E-commerce" />
 
-            <div className="py-6">
-                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <Card className={cardShell}>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <FolderOpen className="h-5 w-5" />
@@ -170,6 +172,7 @@ export default function EcommerceCategoriesIndex({ categories = [] }) {
                         )}
                     </CardContent>
                 </Card>
+            </div>
             </div>
 
             <ImportModal

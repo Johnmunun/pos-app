@@ -10,6 +10,7 @@ import { toast } from 'react-hot-toast';
 import CommerceCategoryDrawer from '@/Components/Commerce/CategoryDrawer';
 import ImportModal from '@/Components/ImportModal';
 import axios from 'axios';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 function CategoryTree({ nodes, level = 0 }) {
     if (!nodes?.length) return null;
@@ -148,9 +149,14 @@ export default function CommerceCategoriesIndex({ tree = [], categories = [] }) 
         <AppLayout
             header={
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <h2 className="font-semibold text-lg sm:text-xl text-gray-800 dark:text-gray-100 leading-tight">
-                        Catégories — GlobalCommerce
-                    </h2>
+                    <div>
+                        <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">
+                            Catégories — Global Commerce
+                        </h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 max-w-2xl hidden sm:block">
+                            Arborescence, import / export et recherche.
+                        </p>
+                    </div>
                     <div className="flex flex-wrap items-center gap-2">
                         <Button
                             type="button"
@@ -200,10 +206,10 @@ export default function CommerceCategoriesIndex({ tree = [], categories = [] }) 
             }
         >
             <Head title="Catégories - Commerce" />
-            <div className="py-6">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
                     {/* Recherche - Mobile optimisée */}
-                    <Card className="mb-6 bg-white dark:bg-gray-800">
+                    <Card className={`mb-6 ${cardShell}`}>
                         <CardHeader className="pb-3">
                             <CardTitle className="flex items-center text-gray-900 dark:text-white text-base sm:text-lg">
                                 <Search className="h-4 w-4 sm:h-5 sm:w-5 mr-2" /> 
@@ -227,7 +233,7 @@ export default function CommerceCategoriesIndex({ tree = [], categories = [] }) 
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-white dark:bg-slate-900">
+                    <Card className={cardShell}>
                         <CardHeader>
                             <CardTitle className="flex items-center text-gray-900 dark:text-white">
                                 <FolderTree className="h-5 w-5 mr-2" /> Arborescence
@@ -238,7 +244,7 @@ export default function CommerceCategoriesIndex({ tree = [], categories = [] }) 
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-white dark:bg-slate-900">
+                    <Card className={cardShell}>
                         <CardHeader>
                             <CardTitle className="text-gray-900 dark:text-white">Liste des catégories</CardTitle>
                         </CardHeader>
@@ -393,7 +399,7 @@ export default function CommerceCategoriesIndex({ tree = [], categories = [] }) 
                     <div className="md:hidden fixed bottom-20 right-4 z-30">
                         <Button
                             onClick={handleCreate}
-                            className="h-14 w-14 rounded-full bg-rose-500 hover:bg-rose-600 text-white shadow-lg flex items-center justify-center"
+                            className="h-14 w-14 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg shadow-amber-500/30 flex items-center justify-center"
                             size="icon"
                         >
                             <Plus className="h-6 w-6" />

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import PurchaseOrderDrawer from '@/Components/Pharmacy/PurchaseOrderDrawer';
 import ExportButtons from '@/Components/Pharmacy/ExportButtons';
+import GrabScroll from '@/Components/GrabScroll';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/currency';
 
 export default function PurchasesIndex({ 
@@ -123,12 +124,12 @@ export default function PurchasesIndex({
         <AppLayout>
             <Head title="Bons de Commande" />
             
-            <div className="container mx-auto py-6 px-4">
+            <div className="container mx-auto space-y-6 px-4 py-8 sm:py-10">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                     <div>
-                        <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                            <Truck className="h-6 w-6" />
+                        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+                            <Truck className="h-7 w-7 text-amber-500" />
                             Bons de Commande
                         </h1>
                         <p className="text-gray-500 dark:text-gray-400 mt-1">
@@ -149,9 +150,9 @@ export default function PurchasesIndex({
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
                     {/* Total Commandes */}
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+                    <div className="rounded-2xl border border-gray-200/80 bg-white/95 p-5 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total</p>
@@ -165,7 +166,7 @@ export default function PurchasesIndex({
                     </div>
 
                     {/* Reçus */}
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+                    <div className="rounded-2xl border border-gray-200/80 bg-white/95 p-5 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Reçus</p>
@@ -179,7 +180,7 @@ export default function PurchasesIndex({
                     </div>
 
                     {/* En attente */}
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+                    <div className="rounded-2xl border border-gray-200/80 bg-white/95 p-5 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">En attente</p>
@@ -193,7 +194,7 @@ export default function PurchasesIndex({
                     </div>
 
                     {/* Montant total */}
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+                    <div className="rounded-2xl border border-gray-200/80 bg-white/95 p-5 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total achats</p>
@@ -208,10 +209,10 @@ export default function PurchasesIndex({
                 </div>
 
                 {/* Filtres */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
-                    <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                            <Filter className="h-5 w-5 text-gray-500" />
+                <div className="mb-6 overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
+                    <div className="border-b border-gray-200/80 px-6 py-4 dark:border-slate-700/80">
+                        <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            <Filter className="h-5 w-5 text-amber-500" />
                             Filtres
                         </h2>
                     </div>
@@ -259,10 +260,10 @@ export default function PurchasesIndex({
                 </div>
 
                 {/* Liste des bons de commande */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                            <Truck className="h-5 w-5 text-gray-500" />
+                <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
+                    <div className="border-b border-gray-200/80 px-6 py-4 dark:border-slate-700/80">
+                        <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            <Truck className="h-5 w-5 text-amber-500" />
                             Liste des bons ({purchase_orders.length})
                         </h2>
                     </div>
@@ -282,7 +283,7 @@ export default function PurchasesIndex({
                             </Button>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
+                        <GrabScroll className="rounded-none border-0 bg-gray-50/30 dark:bg-slate-950/20">
                             <table className="w-full">
                                 <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
                                     <tr>
@@ -353,7 +354,7 @@ export default function PurchasesIndex({
                                     ))}
                                 </tbody>
                             </table>
-                        </div>
+                        </GrabScroll>
                     )}
                 </div>
             </div>

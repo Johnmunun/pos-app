@@ -19,6 +19,7 @@ import {
     XCircle,
     Clock,
 } from 'lucide-react';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function CommerceTransfersIndex({ transfers = [], shops = [], filters = {}, stats = {} }) {
     const [searchFilters, setSearchFilters] = useState({
@@ -82,14 +83,19 @@ export default function CommerceTransfersIndex({ transfers = [], shops = [], fil
     return (
         <AppLayout
             header={
-                <div className="flex justify-between items-center">
-                    <h2 className="font-semibold text-xl text-gray-800 dark:text-white leading-tight">
-                        Transferts Inter-Magasins — Commerce
-                    </h2>
-                    <Link href={route('commerce.transfers.create')}>
-                        <Button className="bg-blue-600 hover:bg-blue-700">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 w-full min-w-0">
+                    <div className="min-w-0">
+                        <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">
+                            Transferts inter-magasins
+                        </h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 max-w-2xl hidden sm:block">
+                            Mouvements de stock entre magasins Global Commerce.
+                        </p>
+                    </div>
+                    <Link href={route('commerce.transfers.create')} className="shrink-0">
+                        <Button className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-md">
                             <Plus className="h-4 w-4 mr-2" />
-                            Nouveau Transfert
+                            Nouveau transfert
                         </Button>
                     </Link>
                 </div>
@@ -97,10 +103,10 @@ export default function CommerceTransfersIndex({ transfers = [], shops = [], fil
         >
             <Head title="Transferts — Commerce" />
 
-            <div className="py-6">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <Card className="bg-white dark:bg-slate-800">
+                        <Card className={cardShell}>
                             <CardContent className="pt-4">
                                 <div className="flex items-center gap-3">
                                     <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
@@ -113,7 +119,7 @@ export default function CommerceTransfersIndex({ transfers = [], shops = [], fil
                                 </div>
                             </CardContent>
                         </Card>
-                        <Card className="bg-white dark:bg-slate-800">
+                        <Card className={cardShell}>
                             <CardContent className="pt-4">
                                 <div className="flex items-center gap-3">
                                     <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
@@ -126,7 +132,7 @@ export default function CommerceTransfersIndex({ transfers = [], shops = [], fil
                                 </div>
                             </CardContent>
                         </Card>
-                        <Card className="bg-white dark:bg-slate-800">
+                        <Card className={cardShell}>
                             <CardContent className="pt-4">
                                 <div className="flex items-center gap-3">
                                     <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
@@ -139,7 +145,7 @@ export default function CommerceTransfersIndex({ transfers = [], shops = [], fil
                                 </div>
                             </CardContent>
                         </Card>
-                        <Card className="bg-white dark:bg-slate-800">
+                        <Card className={cardShell}>
                             <CardContent className="pt-4">
                                 <div className="flex items-center gap-3">
                                     <div className="h-10 w-10 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
@@ -154,7 +160,7 @@ export default function CommerceTransfersIndex({ transfers = [], shops = [], fil
                         </Card>
                     </div>
 
-                    <Card className="bg-white dark:bg-slate-800">
+                    <Card className={cardShell}>
                         <CardContent className="pt-4">
                             <form onSubmit={handleSearch} className="flex flex-wrap items-end gap-4">
                                 <div className="w-[150px]">
@@ -223,10 +229,10 @@ export default function CommerceTransfersIndex({ transfers = [], shops = [], fil
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-white dark:bg-slate-800">
+                    <Card className={cardShell}>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <ArrowRightLeft className="h-5 w-5 text-blue-600" />
+                                <ArrowRightLeft className="h-5 w-5 text-amber-500" />
                                 Liste des Transferts
                             </CardTitle>
                         </CardHeader>

@@ -3,6 +3,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Card, CardContent } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { BarChart3, Download, FileSpreadsheet, ArrowRight } from 'lucide-react';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 function formatCurrency(amount, currency = 'USD') {
     return new Intl.NumberFormat('fr-FR', {
@@ -27,9 +28,16 @@ export default function EcommerceReportsIndex({
     return (
         <AppLayout
             header={
-                <div className="flex items-center justify-between">
-                    <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100">Rapports E-commerce</h2>
-                    <div className="flex gap-2">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between w-full min-w-0">
+                    <div className="min-w-0">
+                        <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">
+                            Rapports E-commerce
+                        </h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 max-w-2xl hidden sm:block">
+                            Synthèse des ventes et exports sur la période filtrée.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 shrink-0">
                         <Button variant="outline" size="sm" asChild>
                             <a
                                 href={route('ecommerce.reports.export-sales-excel') + exportParams}
@@ -60,9 +68,10 @@ export default function EcommerceReportsIndex({
         >
             <Head title="Rapports - E-commerce" />
 
-            <div className="py-6 space-y-6">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                    <Card className={cardShell}>
                         <CardContent className="pt-6">
                             <p className="text-sm text-gray-500 dark:text-gray-400">Revenus (commandes payées)</p>
                             <p className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -70,7 +79,7 @@ export default function EcommerceReportsIndex({
                             </p>
                         </CardContent>
                     </Card>
-                    <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                    <Card className={cardShell}>
                         <CardContent className="pt-6">
                             <p className="text-sm text-gray-500 dark:text-gray-400">Nombre de commandes</p>
                             <p className="text-3xl font-bold text-gray-900 dark:text-white">{orderCount}</p>
@@ -80,7 +89,7 @@ export default function EcommerceReportsIndex({
 
                 {/* Graphique barres */}
                 {chartData.length > 0 && (
-                    <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                    <Card className={cardShell}>
                         <CardContent className="pt-6">
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                                 <BarChart3 className="h-5 w-5" />
@@ -109,7 +118,7 @@ export default function EcommerceReportsIndex({
 
                 {/* Top produits */}
                 {topProducts.length > 0 && (
-                    <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                    <Card className={cardShell}>
                         <CardContent className="pt-6">
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                                 Produits les plus vendus
@@ -139,7 +148,7 @@ export default function EcommerceReportsIndex({
                 )}
 
                 {chartData.length === 0 && topProducts.length === 0 && (
-                    <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                    <Card className={cardShell}>
                         <CardContent className="py-12 text-center text-gray-500">
                             Aucune donnée sur la période. Modifiez les filtres de date ou consultez le tableau de bord.
                             <div className="mt-4">
@@ -150,6 +159,7 @@ export default function EcommerceReportsIndex({
                         </CardContent>
                     </Card>
                 )}
+            </div>
             </div>
         </AppLayout>
     );

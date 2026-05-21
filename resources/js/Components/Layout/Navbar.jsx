@@ -117,14 +117,14 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
     }, [isRoot]);
 
     return (
-        <nav className="sticky top-0 z-40 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm max-md:pt-[env(safe-area-inset-top,0px)]">
+        <nav className="sticky top-0 z-40 border-b border-gray-200/80 bg-white/80 shadow-landing-soft backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-900/85 max-md:pt-[env(safe-area-inset-top,0px)]">
             {/* Ligne principale — zones tactiles plus grandes sur petit écran */}
-            <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 lg:px-8 py-2.5 min-w-0 max-md:py-3.5 max-md:px-3">
+            <div className="flex min-w-0 items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 lg:px-8 max-md:px-3 max-md:py-3.5">
                 {/* Bouton menu mobile */}
                 <button
                     type="button"
                     onClick={onMenuClick}
-                    className="flex-shrink-0 p-2 text-gray-700 dark:text-gray-300 lg:hidden -ml-1 max-md:min-h-11 max-md:min-w-11 max-md:inline-flex max-md:items-center max-md:justify-center max-md:rounded-xl max-md:active:bg-gray-100 dark:max-md:active:bg-slate-700/80"
+                    className="-ml-1 flex-shrink-0 rounded-xl border border-transparent p-2 text-gray-700 transition hover:border-gray-200 hover:bg-amber-50/80 hover:text-amber-900 dark:text-gray-200 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:hover:text-amber-200 lg:hidden max-md:inline-flex max-md:min-h-11 max-md:min-w-11 max-md:items-center max-md:justify-center max-md:active:bg-amber-100/60 dark:max-md:active:bg-slate-700/80"
                 >
                     <span className="sr-only">Ouvrir le menu</span>
                     <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
@@ -133,7 +133,7 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
                 </button>
 
                 {/* Séparateur */}
-                <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 lg:hidden flex-shrink-0" />
+                <div className="hidden h-6 w-px flex-shrink-0 bg-gradient-to-b from-transparent via-gray-200 to-transparent dark:via-slate-600 lg:hidden" />
 
                 {/* Sélecteur de dépôt (affiché dès qu'il y a des dépôts) */}
                 {depots && depots.length > 0 && (
@@ -151,13 +151,13 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
                 <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-3 flex-shrink-0">
                     <Link
                         href={route('billing.onboarding.payment')}
-                        className="hidden md:inline-flex items-center rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-700"
+                        className="hidden rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-3 py-2 text-xs font-semibold text-white shadow-md shadow-amber-500/20 transition hover:from-amber-600 hover:to-orange-700 md:inline-flex md:items-center"
                     >
                         Upgrade
                     </Link>
                     {/* Indicateur d'impersonation */}
                     {isImpersonating && (
-                        <div className="hidden md:flex items-center gap-2 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 rounded-lg text-xs font-medium">
+                        <div className="hidden items-center gap-2 rounded-xl border border-amber-200/90 bg-amber-50/90 px-2.5 py-1.5 text-xs font-medium text-amber-900 shadow-sm backdrop-blur-sm dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-100 md:flex">
                             <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
@@ -170,7 +170,7 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
                         <Link
                             href={route('ecommerce.storefront.index')}
                             target="_blank"
-                            className="hidden sm:inline-flex rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0 items-center justify-center"
+                            className="hidden flex-shrink-0 items-center justify-center rounded-xl border border-transparent p-2 text-gray-500 transition hover:border-gray-200 hover:bg-white/80 hover:text-amber-700 dark:text-gray-400 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:hover:text-amber-300 sm:inline-flex"
                             title="Prévisualiser la boutique"
                         >
                             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -184,7 +184,7 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
                     <button
                         type="button"
                         onClick={toggleDarkMode}
-                        className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0"
+                        className="flex-shrink-0 rounded-xl border border-transparent p-2 text-gray-500 transition hover:border-gray-200 hover:bg-amber-50/60 hover:text-amber-800 dark:text-gray-400 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:hover:text-amber-200"
                         title={isDarkMode ? 'Mode clair' : 'Mode sombre'}
                     >
                         {isDarkMode ? (
@@ -203,7 +203,7 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
                         <div className="relative">
                             <button
                                 type="button"
-                                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors relative flex-shrink-0"
+                                className="relative flex-shrink-0 rounded-xl border border-transparent p-2 text-gray-500 transition hover:border-gray-200 hover:bg-amber-50/60 hover:text-amber-800 dark:text-gray-400 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:hover:text-amber-200"
                                 title="Notifications"
                                 onClick={async () => {
                                     await fetchNotifications();
@@ -214,15 +214,15 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                                 </svg>
                                 {notificationCount > 0 && (
-                                    <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-white">
+                                    <div className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-[10px] font-bold text-white shadow-sm ring-2 ring-white dark:ring-slate-900">
                                         {notificationCount > 9 ? '9+' : notificationCount}
-                                    </span>
+                                    </div>
                                 )}
                             </button>
                             {showNotifications && (
-                                <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg z-50">
-                                    <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                                        <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                                <div className="absolute right-0 z-50 mt-2 max-h-96 w-80 overflow-y-auto rounded-2xl border border-gray-200/90 bg-white/95 shadow-landing-soft-lg backdrop-blur-md dark:border-slate-700/80 dark:bg-slate-900/95">
+                                    <div className="flex items-center justify-between border-b border-gray-100/90 px-3 py-2.5 dark:border-slate-700/80">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
                                             Notifications
                                         </span>
                                         <span className="text-[11px] text-gray-400">
@@ -240,7 +240,7 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
                                                 key={n.id}
                                                 type="button"
                                                 onClick={() => markNotificationAsRead(n)}
-                                                className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors ${n.read_at ? 'opacity-70' : ''}`}
+                                                className={`w-full px-3 py-2.5 text-left text-xs transition-colors hover:bg-amber-50/70 dark:hover:bg-slate-800/80 ${n.read_at ? 'opacity-70' : ''}`}
                                             >
                                                 <div className="font-semibold text-gray-800 dark:text-gray-100">
                                                     {n.title}
@@ -264,7 +264,7 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
                     {/* Aide / Support */}
                     <button
                         type="button"
-                        className="hidden sm:block rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0"
+                        className="hidden flex-shrink-0 rounded-xl border border-transparent p-2 text-gray-500 transition hover:border-gray-200 hover:bg-amber-50/60 hover:text-amber-800 dark:text-gray-400 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:hover:text-amber-200 sm:block"
                         title="Aide"
                     >
                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -273,7 +273,7 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
                     </button>
 
                     {/* Séparateur */}
-                    <div className="hidden lg:block h-6 w-px bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+                    <div className="hidden h-6 w-px flex-shrink-0 bg-gradient-to-b from-transparent via-gray-200 to-transparent dark:via-slate-600 lg:block" />
 
                     {/* Menu utilisateur */}
                     <Dropdown>
@@ -281,9 +281,9 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
                             <span className="flex items-center">
                                 <button
                                     type="button"
-                                    className="flex items-center gap-x-2 sm:gap-x-3 rounded-lg p-1.5 sm:p-2 text-sm font-semibold leading-6 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+                                    className="flex flex-shrink-0 items-center gap-x-2 rounded-xl border border-transparent p-1.5 text-sm font-semibold leading-6 text-gray-900 transition hover:border-gray-200/90 hover:bg-white/90 hover:shadow-sm dark:text-white dark:hover:border-slate-600 dark:hover:bg-slate-800/90 sm:gap-x-3 sm:p-2"
                                 >
-                                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-sm font-bold text-white shadow-md shadow-amber-500/20 ring-2 ring-white/30 dark:ring-slate-900/50">
                                         {user?.first_name?.[0] || user?.name?.[0] || 'U'}
                                     </div>
                                     <span className="hidden lg:block">

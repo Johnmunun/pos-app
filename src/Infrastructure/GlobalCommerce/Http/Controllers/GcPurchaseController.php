@@ -13,36 +13,15 @@ use Src\Domain\GlobalCommerce\Procurement\Repositories\PurchaseRepositoryInterfa
 use Src\Domain\GlobalCommerce\Inventory\Repositories\ProductRepositoryInterface;
 use Src\Infrastructure\GlobalCommerce\Procurement\Models\PurchaseModel;
 use Src\Infrastructure\GlobalCommerce\Procurement\Models\SupplierModel;
+use Src\Infrastructure\GlobalCommerce\Support\GcShopResolver;
+use Src\Application\Currency\Services\TenantDisplayCurrencyService;
+use App\Models\Shop;
 
 class GcPurchaseController
 {
     private function getShopId(Request $request): string
     {
-        $user = $request->user();
-        if ($user === null) {
-            abort(403);
-        }
-
-        $depotId = $request->session()->get('current_depot_id');
-
-        if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
-            $shop = \App\Models\Shop::where('depot_id', (int) $depotId)
-                ->where('tenant_id', $user->tenant_id)
-                ->first();
-            if ($shop) {
-                return (string) $shop->id;
-            }
-        }
-
-        if ($user->shop_id !== null && $user->shop_id !== '') {
-            return (string) $user->shop_id;
-        }
-
-        if ($user->tenant_id) {
-            return (string) $user->tenant_id;
-        }
-
-        abort(403, 'Shop ID not found.');
+        return GcShopResolver::resolveShopId($request);
     }
 
     public function __construct(
@@ -135,6 +114,10 @@ class GcPurchaseController
         $shopId = $this->getShopId($request);
         $suppliers = SupplierModel::byShop($shopId)->where('is_active', true)->orderBy('name')->get();
         $products = $this->productRepository->search($shopId, '', ['is_active' => true]);
+        $shop = Shop::find($shopId);
+        $tenantId = (string) ($shop?->tenant_id ?? GcShopResolver::resolveTenantId($request) ?? 0);
+        $currencyBundle = app(TenantDisplayCurrencyService::class)->resolve($request, $tenantId, $shop, false);
+
         return Inertia::render('Commerce/Purchases/Create', [
             'suppliers' => $suppliers->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->values()->all(),
             'products' => array_map(fn ($p) => [
@@ -143,7 +126,9 @@ class GcPurchaseController
                 'name' => $p->getName(),
                 'currency' => $p->getPurchasePrice()->getCurrency(),
             ], $products),
-            'currency' => $products[0]->getPurchasePrice()->getCurrency() ?? 'USD',
+            'currency' => $currencyBundle['currency'],
+            'currencies' => $currencyBundle['available_currencies'],
+            'exchangeRates' => $currencyBundle['exchange_rates'],
         ]);
     }
 

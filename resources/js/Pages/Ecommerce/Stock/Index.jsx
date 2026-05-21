@@ -5,6 +5,8 @@ import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
 import { Package, AlertTriangle, AlertCircle, ArrowRight } from 'lucide-react';
 import EcommercePageHeader from '@/Components/Ecommerce/EcommercePageHeader';
+import { cn } from '@/lib/utils';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function EcommerceStockIndex({ products = [], out_of_stock_count = 0, low_stock_count = 0, filters = {} }) {
     const formatCurrency = (amount, currency) => {
@@ -35,10 +37,11 @@ export default function EcommerceStockIndex({ products = [], out_of_stock_count 
         >
             <Head title="Stock - E-commerce" />
 
-            <div className="py-6 space-y-6">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
                 {/* KPIs */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                    <Card className={cardShell}>
                         <CardContent className="pt-6">
                             <div className="flex items-center justify-between">
                                 <div>
@@ -49,7 +52,7 @@ export default function EcommerceStockIndex({ products = [], out_of_stock_count 
                             </div>
                         </CardContent>
                     </Card>
-                    <Card className="bg-white dark:bg-slate-800 border border-red-200 dark:border-red-900/50">
+                    <Card className={cn(cardShell, 'border-red-200 dark:border-red-900/50')}>
                         <CardContent className="pt-6">
                             <div className="flex items-center justify-between">
                                 <div>
@@ -60,7 +63,7 @@ export default function EcommerceStockIndex({ products = [], out_of_stock_count 
                             </div>
                         </CardContent>
                     </Card>
-                    <Card className="bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-900/50">
+                    <Card className={cn(cardShell, 'border-amber-200 dark:border-amber-900/50')}>
                         <CardContent className="pt-6">
                             <div className="flex items-center justify-between">
                                 <div>
@@ -99,7 +102,7 @@ export default function EcommerceStockIndex({ products = [], out_of_stock_count 
                 </div>
 
                 {/* Liste */}
-                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                <Card className={cn(cardShell, 'p-0')}>
                     <CardContent className="p-0">
                         {/* Mobile: cartes */}
                         <div className="md:hidden divide-y divide-gray-200 dark:divide-slate-700">
@@ -176,6 +179,7 @@ export default function EcommerceStockIndex({ products = [], out_of_stock_count 
                         </div>
                     </CardContent>
                 </Card>
+            </div>
             </div>
         </AppLayout>
     );

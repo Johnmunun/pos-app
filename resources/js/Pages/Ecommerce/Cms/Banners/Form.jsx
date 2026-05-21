@@ -5,6 +5,7 @@ import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { ArrowLeft, Image } from 'lucide-react';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function CmsBannersForm({ banner, positions = [] }) {
     const isEdit = !!banner?.id;
@@ -39,9 +40,10 @@ export default function CmsBannersForm({ banner, positions = [] }) {
             }
         >
             <Head title={isEdit ? 'Modifier bannière' : 'Nouvelle bannière'} />
-            <div className="py-6 max-w-xl">
+            <div className={pageY}>
+                <div className="max-w-xl mx-auto px-4 sm:px-6 lg:px-8">
                 <form onSubmit={handleSubmit}>
-                    <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+                    <Card className={cardShell}>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2"><Image className="h-5 w-5" /> Bannière</CardTitle>
                         </CardHeader>
@@ -77,6 +79,7 @@ export default function CmsBannersForm({ banner, positions = [] }) {
                         </CardContent>
                     </Card>
                 </form>
+            </div>
             </div>
         </AppLayout>
     );

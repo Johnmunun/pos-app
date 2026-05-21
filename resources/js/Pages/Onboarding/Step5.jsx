@@ -1,6 +1,8 @@
 import { Head, useForm } from '@inertiajs/react';
 import OnboardingStepper from '@/Components/OnboardingStepper';
 import OnboardingNavigationButtons from '@/Components/OnboardingNavigationButtons';
+import OnboardingPageChrome from '@/Components/OnboardingPageChrome';
+import { authCardClassName } from '@/Components/AuthPageShell';
 
 export default function Step5({ sessionData }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -13,59 +15,22 @@ export default function Step5({ sessionData }) {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-amber-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+        <>
             <Head title="Mode de démarrage" />
-
-            <header className="fixed top-0 left-0 right-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 z-50">
-                <div className="max-w-4xl mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
-                                <span className="text-white font-bold text-sm">OP</span>
-                            </div>
-                            <div>
-                                <h1 className="text-xl font-bold text-gray-900 dark:text-white">OmniPOS</h1>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">Inscription marchand</p>
-                            </div>
-                        </div>
-
-                        <div className="hidden md:block">
-                            <div className="flex items-center space-x-2">
-                                {[1, 2, 3, 4, 5].map((s) => (
-                                    <div
-                                        key={s}
-                                        className={`w-3 h-3 rounded-full transition-all ${
-                                            s <= 5 ? 'bg-amber-500' : 'bg-gray-300 dark:bg-gray-600'
-                                        }`}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </header>
-
-            <div className="fixed top-16 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700 z-40">
-                <div
-                    className="h-full bg-amber-500 transition-all duration-500 ease-out"
-                    style={{ width: '100%' }}
-                />
-            </div>
-
-            <main className="pt-20 pb-8">
+            <OnboardingPageChrome currentStep={5}>
                 <div className="max-w-2xl mx-auto px-4">
                     <OnboardingStepper currentStep={5} totalSteps={5} />
 
                     <div className="text-center mb-8">
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white mb-2">
                             Comment démarrer votre boutique ?
                         </h2>
-                        <p className="text-gray-600 dark:text-gray-400">
+                        <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base leading-relaxed">
                             Dernière étape avant la création de votre compte — vous pourrez ensuite régler votre abonnement.
                         </p>
                     </div>
 
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6">
+                    <div className={`${authCardClassName} p-6 sm:p-8`}>
                         <form onSubmit={submit} className="space-y-8">
                             <div>
                                 <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
@@ -75,10 +40,10 @@ export default function Step5({ sessionData }) {
                                     <div
                                         onClick={() => setData('start_mode', 'empty_store')}
                                         className={`
-                                            p-4 rounded-xl border-2 cursor-pointer transition-all duration-200
+                                            p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200
                                             ${data.start_mode === 'empty_store'
-                                                ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 shadow-lg'
-                                                : 'border-gray-200 dark:border-gray-700 hover:border-amber-300 dark:hover:border-amber-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                                ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 shadow-md ring-1 ring-amber-500/15'
+                                                : 'border-gray-100 dark:border-gray-800 hover:border-amber-300 dark:hover:border-amber-600/50 hover:bg-gray-50/80 dark:hover:bg-gray-800/50'
                                             }
                                         `}
                                     >
@@ -92,10 +57,10 @@ export default function Step5({ sessionData }) {
                                     <div
                                         onClick={() => setData('start_mode', 'preconfigured_store')}
                                         className={`
-                                            p-4 rounded-xl border-2 cursor-pointer transition-all duration-200
+                                            p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200
                                             ${data.start_mode === 'preconfigured_store'
-                                                ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 shadow-lg'
-                                                : 'border-gray-200 dark:border-gray-700 hover:border-amber-300 dark:hover:border-amber-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                                ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 shadow-md ring-1 ring-amber-500/15'
+                                                : 'border-gray-100 dark:border-gray-800 hover:border-amber-300 dark:hover:border-amber-600/50 hover:bg-gray-50/80 dark:hover:bg-gray-800/50'
                                             }
                                         `}
                                     >
@@ -112,7 +77,7 @@ export default function Step5({ sessionData }) {
                                 )}
                             </div>
 
-                            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+                            <div className="bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 rounded-2xl p-4 shadow-sm">
                                 <p className="text-sm text-amber-800 dark:text-amber-200">
                                     En validant, votre compte est créé. Vous serez ensuite invité à finaliser l’abonnement si nécessaire.
                                 </p>
@@ -128,7 +93,7 @@ export default function Step5({ sessionData }) {
                         </form>
                     </div>
                 </div>
-            </main>
-        </div>
+            </OnboardingPageChrome>
+        </>
     );
 }

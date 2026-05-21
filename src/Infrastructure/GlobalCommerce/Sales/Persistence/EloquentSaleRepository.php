@@ -15,7 +15,7 @@ class EloquentSaleRepository implements SaleRepositoryInterface
     {
         $data = [
             'shop_id' => $sale->getShopId(),
-            'status' => strtoupper((string) ($sale->getStatus() ?: 'completed')),
+            'status' => strtolower((string) ($sale->getStatus() ?: 'completed')),
             'total_amount' => $sale->getTotalAmount(),
             'currency' => $sale->getCurrency(),
             'customer_name' => $sale->getCustomerName(),

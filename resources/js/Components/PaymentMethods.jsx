@@ -1,4 +1,5 @@
 import { Coins, Landmark, Smartphone } from 'lucide-react';
+import LandingReveal from './LandingReveal';
 
 export default function PaymentMethods() {
     const methods = [
@@ -41,55 +42,68 @@ export default function PaymentMethods() {
     ];
 
     return (
-        <section id="payments" className="py-20 px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-900 transition-colors duration-200">
+        <section
+            id="payments"
+            className="py-24 sm:py-28 lg:py-32 px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-900 transition-colors duration-200"
+        >
             <div className="max-w-7xl mx-auto">
-                <div className="text-center mb-12">
-                    <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+                <LandingReveal className="text-center max-w-3xl mx-auto mb-14 sm:mb-16">
+                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-gray-900 dark:text-white mb-5">
                         Moyens de paiement
                     </h2>
-                    <p className="text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
-                        Payez facilement via Mobile Money ou crypto. <span className="font-semibold text-gray-900 dark:text-white">Vous pouvez payer sans carte bancaire</span> (M-Pesa, Orange Money, MTN MoMo, Airtel Money, Moov Money ou USDT).
+                    <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 leading-relaxed">
+                        Payez facilement via Mobile Money ou crypto.{' '}
+                        <span className="font-semibold text-gray-900 dark:text-white">
+                            Vous pouvez payer sans carte bancaire
+                        </span>{' '}
+                        (M-Pesa, Orange Money, MTN MoMo, Airtel Money, Moov Money ou USDT).
                     </p>
-                </div>
+                </LandingReveal>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                    {methods.map((m) => (
-                        <div
-                            key={m.name}
-                            className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow"
-                            title={m.name}
-                        >
-                            {(() => {
-                                const Icon = m.icon;
-                                return (
-                            <div className="w-full flex flex-col items-center text-center gap-2">
-                                <Icon className="h-5 w-5 text-gray-500 dark:text-gray-300" />
-                                <span className={`inline-flex items-center justify-center min-w-12 h-8 px-3 rounded-full text-xs font-bold ${m.tone}`}>
-                                    {m.short}
-                                </span>
-                                <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                                    {m.name}
-                                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+                    {methods.map((m, idx) => (
+                        <LandingReveal key={m.name} delay={idx * 40}>
+                            <div
+                                className="group h-full rounded-2xl sm:rounded-3xl border border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/40 backdrop-blur-sm p-4 sm:p-5 shadow-sm hover:shadow-md hover:border-amber-200/60 dark:hover:border-amber-500/20 transition-all duration-300 hover:-translate-y-0.5"
+                                title={m.name}
+                            >
+                                {(() => {
+                                    const Icon = m.icon;
+                                    return (
+                                        <div className="w-full flex flex-col items-center text-center gap-2.5">
+                                            <Icon className="h-5 w-5 text-gray-500 dark:text-gray-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors" />
+                                            <span
+                                                className={`inline-flex items-center justify-center min-w-12 h-8 px-3 rounded-full text-xs font-bold ${m.tone}`}
+                                            >
+                                                {m.short}
+                                            </span>
+                                            <span className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-100 leading-tight">
+                                                {m.name}
+                                            </span>
+                                        </div>
+                                    );
+                                })()}
                             </div>
-                                );
-                            })()}
-                        </div>
+                        </LandingReveal>
                     ))}
                 </div>
 
-                <div className="mt-10 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-6 text-center">
-                    <p className="text-sm sm:text-base text-amber-900 dark:text-amber-100">
-                        Astuce: si vous n’avez pas de carte bancaire, choisissez simplement un <span className="font-semibold">paiement Mobile Money</span> ou <span className="font-semibold">USDT</span> au moment du paiement.
-                    </p>
-                    <div className="mt-4">
-                        <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                            Paiements disponibles 24/7
-                        </span>
+                <LandingReveal className="mt-10 sm:mt-12" delay={120}>
+                    <div className="rounded-3xl border border-amber-200/70 dark:border-amber-500/20 bg-gradient-to-br from-amber-50/90 to-orange-50/40 dark:from-amber-950/40 dark:to-gray-900/40 backdrop-blur-sm p-6 sm:p-8 text-center shadow-sm">
+                        <p className="text-sm sm:text-base text-amber-950/90 dark:text-amber-100/95 leading-relaxed max-w-2xl mx-auto">
+                            Astuce : si vous n’avez pas de carte bancaire, choisissez simplement un{' '}
+                            <span className="font-semibold">paiement Mobile Money</span> ou{' '}
+                            <span className="font-semibold">USDT</span> au moment du paiement.
+                        </p>
+                        <div className="mt-5 flex justify-center">
+                            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200/80 dark:border-emerald-800/80 bg-emerald-50/90 dark:bg-emerald-950/30 px-4 py-2 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                                <span className="h-2 w-2 rounded-full bg-emerald-500 motion-safe:animate-pulse" />
+                                Paiements disponibles 24/7
+                            </span>
+                        </div>
                     </div>
-                </div>
+                </LandingReveal>
             </div>
         </section>
     );
 }
-

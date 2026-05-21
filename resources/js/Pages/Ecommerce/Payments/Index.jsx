@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
 import { CreditCard, Plus, Pencil, Trash2 } from 'lucide-react';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 function formatCurrency(amount) {
     return new Intl.NumberFormat('fr-FR', {
@@ -26,11 +27,16 @@ export default function EcommercePaymentsIndex({ methods = [] }) {
     return (
         <AppLayout
             header={
-                <div className="flex items-center justify-between">
-                    <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
-                        Méthodes de paiement
-                    </h2>
-                    <Button asChild size="sm">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between w-full min-w-0">
+                    <div className="min-w-0">
+                        <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">
+                            Méthodes de paiement
+                        </h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 hidden sm:block">
+                            Options proposées sur la vitrine et au checkout.
+                        </p>
+                    </div>
+                    <Button asChild size="sm" className="shrink-0 w-full sm:w-auto">
                         <Link href={route('ecommerce.payments.create')} className="inline-flex items-center gap-2">
                             <Plus className="h-4 w-4 shrink-0" />
                             Ajouter
@@ -41,8 +47,9 @@ export default function EcommercePaymentsIndex({ methods = [] }) {
         >
             <Head title="Paiements - E-commerce" />
 
-            <div className="py-6">
-                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <Card className={cardShell}>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <CreditCard className="h-5 w-5" />
@@ -114,6 +121,7 @@ export default function EcommercePaymentsIndex({ methods = [] }) {
                         )}
                     </CardContent>
                 </Card>
+            </div>
             </div>
         </AppLayout>
     );

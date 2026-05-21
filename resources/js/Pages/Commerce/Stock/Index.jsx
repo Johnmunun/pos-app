@@ -9,6 +9,7 @@ import { Package, AlertTriangle, BarChart, Search } from 'lucide-react';
 import ExportButtons from '@/Components/Pharmacy/ExportButtons';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function CommerceStockIndex({
     products = [],
@@ -96,10 +97,10 @@ export default function CommerceStockIndex({
         >
             <Head title="Stock - Commerce" />
 
-            <div className="py-6">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Card className="bg-white dark:bg-slate-900">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
+                        <Card className={cardShell}>
                             <CardHeader>
                                 <CardTitle className="flex items-center justify-between text-sm text-gray-700 dark:text-gray-200">
                                     <span>Total produits</span>
@@ -115,7 +116,7 @@ export default function CommerceStockIndex({
                                 </p>
                             </CardContent>
                         </Card>
-                        <Card className="bg-white dark:bg-slate-900">
+                        <Card className={cardShell}>
                             <CardHeader>
                                 <CardTitle className="flex items-center justify-between text-sm text-gray-700 dark:text-gray-200">
                                     <span>Stock faible</span>
@@ -131,7 +132,7 @@ export default function CommerceStockIndex({
                                 </p>
                             </CardContent>
                         </Card>
-                        <Card className="bg-white dark:bg-slate-900">
+                        <Card className={cardShell}>
                             <CardHeader>
                                 <CardTitle className="text-sm text-gray-700 dark:text-gray-200">
                                     Vue d’ensemble
@@ -146,7 +147,7 @@ export default function CommerceStockIndex({
                         </Card>
                     </div>
 
-                    <Card className="bg-white dark:bg-slate-900">
+                    <Card className={cardShell}>
                         <CardHeader>
                             <CardTitle className="flex items-center justify-between text-sm text-gray-900 dark:text-white">
                                 <span>Filtres</span>
@@ -197,7 +198,7 @@ export default function CommerceStockIndex({
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-white dark:bg-slate-900">
+                    <Card className={cardShell}>
                         <CardHeader>
                             <CardTitle className="flex items-center text-gray-900 dark:text-white">
                                 <Package className="h-5 w-5 mr-2" />

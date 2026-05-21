@@ -24,6 +24,7 @@ import {
     User,
     Calendar
 } from 'lucide-react';
+import GrabScroll from '@/Components/GrabScroll';
 
 const statusConfig = {
     draft: { label: 'Brouillon', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300', icon: FileText },
@@ -417,7 +418,7 @@ export default function InventoryShow({ inventory, items, stats, availableProduc
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="overflow-x-auto">
+                                <GrabScroll className="rounded-xl border border-gray-100/90 bg-gray-50/30 dark:border-slate-700/60 dark:bg-slate-950/30">
                                     <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
                                         <thead className="bg-gray-50 dark:bg-slate-800">
                                             <tr>
@@ -481,7 +482,7 @@ export default function InventoryShow({ inventory, items, stats, availableProduc
                                             ))}
                                         </tbody>
                                     </table>
-                                </div>
+                                </GrabScroll>
                                 {filteredItems.length === 0 && (
                                     <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                                         Aucun produit ne correspond aux filtres

@@ -2,8 +2,6 @@
 
 namespace Src\Infrastructure\Ecommerce\Http\Controllers;
 
-use App\Models\Currency;
-use App\Models\ExchangeRate;
 use App\Models\Shop;
 use App\Models\Tenant;
 use Illuminate\Http\Request;
@@ -23,6 +21,8 @@ use Src\Infrastructure\Ecommerce\Models\PaymentMethodModel;
 use Src\Infrastructure\Ecommerce\Models\ShippingMethodModel;
 use Src\Infrastructure\GlobalCommerce\Inventory\Models\ProductModel;
 use Src\Application\Billing\Services\FeatureLimitService;
+use Src\Application\Currency\Services\TenantDisplayCurrencyService;
+use Src\Application\Ecommerce\Services\StorefrontSeoService;
 
 class StorefrontController
 {
@@ -403,6 +403,31 @@ class StorefrontController
     }
 
     /**
+     * @param  mixed  $raw
+     * @return list<string>
+     */
+    private function normalizeFeaturedProductIds(mixed $raw): array
+    {
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        $ids = [];
+        foreach ($raw as $id) {
+            $id = trim((string) $id);
+            if ($id === '' || in_array($id, $ids, true)) {
+                continue;
+            }
+            $ids[] = $id;
+            if (count($ids) >= 12) {
+                break;
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
      * @return list<string>
      */
     private function storefrontLayoutPresetCodes(): array
@@ -463,10 +488,19 @@ class StorefrontController
 
             $imageService = app(\Src\Infrastructure\GlobalCommerce\Services\ProductImageService::class);
 
-            $featuredModels = (clone $baseQuery)
-                ->orderByDesc('created_at')
-                ->limit(8)
-                ->get();
+            $featuredIds = $this->normalizeFeaturedProductIds($config['featured_product_ids'] ?? []);
+            if ($featuredIds !== []) {
+                $featuredModels = (clone $baseQuery)
+                    ->whereIn('id', $featuredIds)
+                    ->get()
+                    ->sortBy(fn (ProductModel $m) => array_search((string) $m->id, $featuredIds, true))
+                    ->values();
+            } else {
+                $featuredModels = (clone $baseQuery)
+                    ->orderByDesc('created_at')
+                    ->limit(8)
+                    ->get();
+            }
 
             $newArrivalModels = (clone $baseQuery)
                 ->orderByDesc('updated_at')
@@ -553,7 +587,7 @@ class StorefrontController
             }
         }
 
-        $currencyBundle = $this->resolveStorefrontDisplayCurrency($request, $tenantId, $shop);
+        $currencyBundle = app(TenantDisplayCurrencyService::class)->resolve($request, $tenantId, $shop);
         $displayCurrency = $currencyBundle['currency'];
 
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
@@ -584,6 +618,22 @@ class StorefrontController
             $payload['storefrontShops'] = Shop::orderBy('name')->get(['id', 'name'])->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->values()->toArray();
             $payload['currentStorefrontShopId'] = (int) $request->session()->get('current_storefront_shop_id', $shop->id);
         }
+
+        $seoService = app(StorefrontSeoService::class);
+        $payload = $this->attachPageSeo($request, $shop, $payload, [
+            'path' => '/',
+            'jsonLd' => [
+                '@context' => 'https://schema.org',
+                '@graph' => [
+                    $seoService->organizationJsonLd($request, $shop),
+                    [
+                        '@type' => 'WebSite',
+                        'name' => (string) $shop->name,
+                        'url' => $seoService->publicBaseUrl($request, $shop),
+                    ],
+                ],
+            ],
+        ]);
 
         return Inertia::render('Ecommerce/Storefront', $this->mergeStorefrontClientProps($request, $shop, $payload));
     }
@@ -737,7 +787,7 @@ class StorefrontController
 
         $user = $request->user();
         $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
-        $currencyBundle = $this->resolveStorefrontDisplayCurrency($request, $tenantId, $shop);
+        $currencyBundle = app(TenantDisplayCurrencyService::class)->resolve($request, $tenantId, $shop);
         $displayCurrency = $currencyBundle['currency'];
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);
@@ -766,6 +816,20 @@ class StorefrontController
                 'enabled' => (bool) ($storefrontConfig['whatsapp_support_enabled'] ?? false),
             ],
         ];
+
+        $pageMeta = is_array($page->metadata) ? $page->metadata : [];
+        $cmsSeoTitle = trim((string) ($pageMeta['seo_title'] ?? ''));
+        $cmsSeoDesc = trim((string) ($pageMeta['seo_description'] ?? ''));
+        $seoService = app(StorefrontSeoService::class);
+
+        $pagePayload = $this->attachPageSeo($request, $shop, $pagePayload, [
+            'title' => $cmsSeoTitle !== '' ? $cmsSeoTitle : (string) $page->title,
+            'description' => $cmsSeoDesc !== '' ? $cmsSeoDesc : ($page->content ?? ''),
+            'path' => '/page/' . $page->slug,
+            'ogImage' => $imageUrl,
+            'ogType' => 'article',
+            'jsonLd' => $seoService->cmsPageJsonLd($request, $shop, $page, $imageUrl),
+        ]);
 
         return Inertia::render('Ecommerce/StorefrontPage', $this->mergeStorefrontClientProps($request, $shop, $pagePayload));
     }
@@ -865,7 +929,7 @@ class StorefrontController
         } catch (\Throwable) {
         }
 
-        $currencyBundle = $this->resolveStorefrontDisplayCurrency($request, $tenantId, $shop);
+        $currencyBundle = app(TenantDisplayCurrencyService::class)->resolve($request, $tenantId, $shop);
         $displayCurrency = $currencyBundle['currency'];
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
 
@@ -913,6 +977,12 @@ class StorefrontController
                 'enabled' => (bool) ($storefrontConfig['whatsapp_support_enabled'] ?? false),
             ],
         ];
+
+        $catalogPayload = $this->attachPageSeo($request, $shop, $catalogPayload, [
+            'title' => 'Catalogue',
+            'description' => 'Découvrez tous les produits de ' . $shop->name . '.',
+            'path' => '/catalog',
+        ]);
 
         return Inertia::render('Ecommerce/StorefrontCatalog', $this->mergeStorefrontClientProps($request, $shop, $catalogPayload));
     }
@@ -1013,6 +1083,8 @@ class StorefrontController
             'discount_percent' => $productModel?->discount_percent ?? null,
             'has_promotion' => $productModel ? $this->hasActivePromotion($productModel, $promotionTargets) : false,
             'promotion_percent' => $productModel ? $this->getActivePromotionPercent($productModel, $promotionTargets) : null,
+            'meta_title' => $productModel?->meta_title,
+            'meta_description' => $productModel?->meta_description,
         ];
 
         $reviews = [];
@@ -1035,7 +1107,7 @@ class StorefrontController
                 ->toArray();
         }
 
-        $currencyBundle = $this->resolveStorefrontDisplayCurrency($request, $tenantId, $shop);
+        $currencyBundle = app(TenantDisplayCurrencyService::class)->resolve($request, $tenantId, $shop);
         $displayCurrency = $currencyBundle['currency'];
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);
@@ -1058,6 +1130,18 @@ class StorefrontController
             ],
         ];
 
+        $seoService = app(StorefrontSeoService::class);
+        $productSeoTitle = trim((string) ($productModel?->meta_title ?? ''));
+        $productSeoDesc = trim((string) ($productModel?->meta_description ?? ''));
+        $productPayload = $this->attachPageSeo($request, $shop, $productPayload, [
+            'title' => $productSeoTitle !== '' ? $productSeoTitle : $productData['name'],
+            'description' => $productSeoDesc !== '' ? $productSeoDesc : ($productData['description'] ?? ''),
+            'path' => '/product/' . $productData['id'],
+            'ogType' => 'product',
+            'ogImage' => $imageUrl,
+            'jsonLd' => $seoService->productJsonLd($request, $shop, $productData),
+        ]);
+
         return Inertia::render('Ecommerce/StorefrontProductShow', $this->mergeStorefrontClientProps($request, $shop, $productPayload));
     }
 
@@ -1075,7 +1159,7 @@ class StorefrontController
         $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
         $taxRate = $shop->default_tax_rate ? (float) $shop->default_tax_rate : 0;
 
-        $currencyBundle = $this->resolveStorefrontDisplayCurrency($request, $tenantId, $shop);
+        $currencyBundle = app(TenantDisplayCurrencyService::class)->resolve($request, $tenantId, $shop);
         $currency = $currencyBundle['currency'];
         $exchangeRates = $currencyBundle['exchange_rates'];
 
@@ -1138,91 +1222,14 @@ class StorefrontController
             ],
         ];
 
+        $cartPayload = $this->attachPageSeo($request, $shop, $cartPayload, [
+            'title' => 'Panier',
+            'description' => 'Votre panier sur ' . $shop->name,
+            'path' => '/cart',
+            'noindex' => true,
+        ]);
+
         return Inertia::render('Ecommerce/StorefrontCart', $this->mergeStorefrontClientProps($request, $shop, $cartPayload));
-    }
-
-    private function getCurrencyAndRates(string $tenantId, ?string $fallbackCurrency = null): array
-    {
-        $currenciesList = Currency::where('tenant_id', $tenantId)
-            ->where('is_active', true)
-            ->orderByDesc('is_default')
-            ->orderBy('code')
-            ->get();
-        $defaultCurrencyModel = $currenciesList->firstWhere('is_default', true) ?? $currenciesList->first();
-        $fallbackCode = strtoupper((string) ($fallbackCurrency ?: 'USD'));
-        $defaultCode = $defaultCurrencyModel ? strtoupper($defaultCurrencyModel->code) : $fallbackCode;
-
-        $exchangeRatesMap = [$defaultCode => 1.0];
-        if ($defaultCurrencyModel) {
-            foreach ($currenciesList as $c) {
-                $code = strtoupper($c->code);
-                if ($code === $defaultCode) {
-                    continue;
-                }
-                $fromDefault = ExchangeRate::where('tenant_id', $tenantId)
-                    ->where('from_currency_id', $defaultCurrencyModel->id)
-                    ->where('to_currency_id', $c->id)
-                    ->orderByDesc('effective_date')
-                    ->first();
-                if ($fromDefault && (float) $fromDefault->rate > 0) {
-                    $exchangeRatesMap[$code] = (float) $fromDefault->rate;
-                } else {
-                    $toDefault = ExchangeRate::where('tenant_id', $tenantId)
-                        ->where('from_currency_id', $c->id)
-                        ->where('to_currency_id', $defaultCurrencyModel->id)
-                        ->orderByDesc('effective_date')
-                        ->first();
-                    if ($toDefault && (float) $toDefault->rate > 0) {
-                        $exchangeRatesMap[$code] = 1.0 / (float) $toDefault->rate;
-                    } else {
-                        $exchangeRatesMap[$code] = 1.0;
-                    }
-                }
-            }
-        }
-
-        return ['currency' => $defaultCode, 'exchange_rates' => $exchangeRatesMap];
-    }
-
-    /**
-     * Devise affichée vitrine : paramètre ?currency=, session, sinon devise par défaut du tenant.
-     * Aligne shop.currency (colonne) avec les taux pour conversion côté client.
-     *
-     * @return array{currency: string, exchange_rates: array<string, float>, available_currencies: array<int, array{code: string}>}
-     */
-    private function resolveStorefrontDisplayCurrency(Request $request, string $tenantId, Shop $shop): array
-    {
-        $config = $this->getCurrencyAndRates($tenantId, $shop->currency);
-        $sessionKey = 'storefront_display_currency_'.$tenantId;
-
-        $activeCodes = Currency::where('tenant_id', $tenantId)
-            ->where('is_active', true)
-            ->orderBy('code')
-            ->pluck('code')
-            ->map(fn ($c) => strtoupper((string) $c))
-            ->values()
-            ->all();
-
-        $requested = strtoupper(trim((string) $request->query('currency', '')));
-        if ($requested !== '' && in_array($requested, $activeCodes, true)) {
-            $request->session()->put($sessionKey, $requested);
-        }
-
-        $fromSession = $request->session()->get($sessionKey);
-        $picked = is_string($fromSession) ? strtoupper(trim($fromSession)) : '';
-        $display = ($picked !== '' && in_array($picked, $activeCodes, true)) ? $picked : $config['currency'];
-
-        $rates = $config['exchange_rates'];
-        if (!isset($rates[$display])) {
-            $display = $config['currency'];
-            $request->session()->forget($sessionKey);
-        }
-
-        return [
-            'currency' => $display,
-            'exchange_rates' => $rates,
-            'available_currencies' => array_map(fn ($code) => ['code' => $code], $activeCodes),
-        ];
     }
 
     private function getProductsForOrderDrawer(string $shopId): array
@@ -1335,7 +1342,7 @@ class StorefrontController
 
         $user = $request->user();
         $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
-        $currencyBundle = $this->resolveStorefrontDisplayCurrency($request, $tenantId, $shop);
+        $currencyBundle = app(TenantDisplayCurrencyService::class)->resolve($request, $tenantId, $shop);
         $displayCurrency = $currencyBundle['currency'];
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);
@@ -1356,6 +1363,12 @@ class StorefrontController
                 'enabled' => (bool) ($storefrontConfig['whatsapp_support_enabled'] ?? false),
             ],
         ];
+
+        $blogPayload = $this->attachPageSeo($request, $shop, $blogPayload, [
+            'title' => 'Blog',
+            'description' => 'Articles et actualités de ' . $shop->name,
+            'path' => '/blog',
+        ]);
 
         return Inertia::render('Ecommerce/StorefrontBlog', $this->mergeStorefrontClientProps($request, $shop, $blogPayload));
     }
@@ -1396,7 +1409,7 @@ class StorefrontController
 
         $user = $request->user();
         $tenantId = $this->resolveBillingTenantIdForStorefront($request, $shop);
-        $currencyBundle = $this->resolveStorefrontDisplayCurrency($request, $tenantId, $shop);
+        $currencyBundle = app(TenantDisplayCurrencyService::class)->resolve($request, $tenantId, $shop);
         $displayCurrency = $currencyBundle['currency'];
         $shopLogoUrl = $this->getShopLogoUrl($shopId);
         $storefrontConfig = $this->getStorefrontConfig($shop);
@@ -1425,6 +1438,14 @@ class StorefrontController
                 'enabled' => (bool) ($storefrontConfig['whatsapp_support_enabled'] ?? false),
             ],
         ];
+
+        $blogShowPayload = $this->attachPageSeo($request, $shop, $blogShowPayload, [
+            'title' => (string) $article->title,
+            'description' => (string) ($article->excerpt ?? $article->content ?? ''),
+            'path' => '/blog/' . $article->slug,
+            'ogType' => 'article',
+            'ogImage' => $coverUrl,
+        ]);
 
         return Inertia::render('Ecommerce/StorefrontBlogShow', $this->mergeStorefrontClientProps($request, $shop, $blogShowPayload));
     }
@@ -1497,7 +1518,17 @@ class StorefrontController
         $planAiSupportOn = $features->isFeatureEnabled($tenantId, 'ai.ecommerce.support');
         $aiSupportCanUse = $shopAiSupportOn && $planAiSupportOn;
 
+        $seoService = app(StorefrontSeoService::class);
+        $seoDefaults = $seoService->shopDefaults($request, $shop);
+        $seoDefaults['googleSiteVerification'] = $this->nonEmptyString(
+            $cfg['google_site_verification'] ?? $cfg['meta_verification'] ?? null
+        );
+        $seoDefaults['publicBaseUrl'] = $seoService->publicBaseUrl($request, $shop);
+        $seoDefaults['sitemapUrl'] = $seoDefaults['publicBaseUrl'] . '/sitemap.xml';
+        $seoDefaults['robotsUrl'] = $seoDefaults['publicBaseUrl'] . '/robots.txt';
+
         $payload['storefrontClient'] = [
+            'seo' => $seoDefaults,
             'audience' => [
                 'enabled' => $audience && $isPublicSubdomain,
                 'pingPath' => '/_storefront/v',
@@ -1516,6 +1547,10 @@ class StorefrontController
                 'enabled' => $aiSupportCanUse,
                 'askPath' => $isPublicSubdomain ? '/support/ai/ask' : '/ecommerce/storefront/support/ai/ask',
                 'tone' => (string) ($cfg['ai_support_tone'] ?? 'friendly'),
+                'welcomeMessage' => $this->nonEmptyString($cfg['ai_support_welcome_message'] ?? null),
+                'feedbackPath' => $isPublicSubdomain ? '/support/ai/feedback' : '/ecommerce/storefront/support/ai/feedback',
+                'semanticSearchEnabled' => $features->isFeatureEnabled($tenantId, 'ai.ecommerce.semantic_search')
+                    && $this->storefrontConfigBool($cfg, 'ai_semantic_search_enabled', false),
             ],
             'semanticSearch' => [
                 'enabled' => $features->isFeatureEnabled($tenantId, 'ai.ecommerce.semantic_search') && $this->storefrontConfigBool($cfg, 'ai_semantic_search_enabled', false),
@@ -1535,6 +1570,18 @@ class StorefrontController
         $s = trim((string) $value);
 
         return $s === '' ? null : $s;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function attachPageSeo(Request $request, Shop $shop, array $payload, array $overrides = []): array
+    {
+        $payload['pageSeo'] = app(StorefrontSeoService::class)->buildPage($request, $shop, $overrides);
+
+        return $payload;
     }
 }
 

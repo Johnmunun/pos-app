@@ -21,6 +21,7 @@ import {
     UserCheck,
 } from 'lucide-react';
 import axios from 'axios';
+import GrabScroll from '@/Components/GrabScroll';
 
 export default function SellersIndex({ sellers = [], availableRoles = [], availableDepots = [], stats = {}, allPermissions = {} }) {
     const { auth } = usePage().props;
@@ -159,14 +160,12 @@ export default function SellersIndex({ sellers = [], availableRoles = [], availa
     return (
         <AppLayout
             header={
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                            <Users className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                            <h2 className="font-semibold text-xl text-gray-800 dark:text-white leading-tight">
-                                Gestion des Vendeurs
-                            </h2>
-                        </div>
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                        <Users className="h-6 w-6 shrink-0 text-amber-500" />
+                        <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-2xl">
+                            Gestion des Vendeurs
+                        </h2>
                     </div>
                     {canCreate && (
                         <Button onClick={handleOpenCreate} className="gap-2">
@@ -179,8 +178,8 @@ export default function SellersIndex({ sellers = [], availableRoles = [], availa
         >
             <Head title="Gestion des Vendeurs" />
 
-            <div className="py-6">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="py-8 sm:py-10">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     {availableRoles.length === 0 && (
                         <div className="mb-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3 flex items-start gap-2 text-sm text-amber-800 dark:text-amber-200">
                             <Info className="h-5 w-5 shrink-0 mt-0.5" />
@@ -199,20 +198,20 @@ export default function SellersIndex({ sellers = [], availableRoles = [], availa
                     )}
                     {/* Stats */}
                     {stats && Object.keys(stats).length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
+                            <div className="rounded-2xl border border-gray-200/80 bg-white/95 p-4 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                                 <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Total</div>
                                 <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{stats.total ?? 0}</div>
                             </div>
-                            <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-4 border border-emerald-200 dark:border-emerald-800">
+                            <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/90 p-4 shadow-landing-soft dark:border-emerald-800/60 dark:bg-emerald-950/30">
                                 <div className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Actifs</div>
                                 <div className="mt-1 text-2xl font-bold text-emerald-900 dark:text-emerald-300">{stats.active ?? 0}</div>
                             </div>
-                            <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
+                            <div className="rounded-2xl border border-amber-200/80 bg-amber-50/90 p-4 shadow-landing-soft dark:border-amber-800/60 dark:bg-amber-950/25">
                                 <div className="text-sm font-medium text-amber-700 dark:text-amber-400">En attente</div>
                                 <div className="mt-1 text-2xl font-bold text-amber-900 dark:text-amber-300">{stats.pending ?? 0}</div>
                             </div>
-                            <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
+                            <div className="rounded-2xl border border-red-200/80 bg-red-50/90 p-4 shadow-landing-soft dark:border-red-800/60 dark:bg-red-950/25">
                                 <div className="text-sm font-medium text-red-700 dark:text-red-400">Bloqués</div>
                                 <div className="mt-1 text-2xl font-bold text-red-900 dark:text-red-300">{stats.blocked ?? 0}</div>
                             </div>
@@ -246,7 +245,7 @@ export default function SellersIndex({ sellers = [], availableRoles = [], availa
                     </div>
 
                     {/* Liste des vendeurs */}
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         {filteredSellers.length === 0 ? (
                             <div className="py-12 text-center">
                                 <Users className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
@@ -266,7 +265,7 @@ export default function SellersIndex({ sellers = [], availableRoles = [], availa
                                 )}
                             </div>
                         ) : (
-                            <div className="overflow-x-auto">
+                            <GrabScroll className="rounded-none border-0 bg-gray-50/30 dark:bg-slate-950/20">
                                 <table className="w-full">
                                     <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
                                         <tr>
@@ -401,7 +400,7 @@ export default function SellersIndex({ sellers = [], availableRoles = [], availa
                                         ))}
                                     </tbody>
                                 </table>
-                            </div>
+                            </GrabScroll>
                         )}
                     </div>
                 </div>

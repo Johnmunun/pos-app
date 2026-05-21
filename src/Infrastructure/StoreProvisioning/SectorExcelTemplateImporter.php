@@ -2,6 +2,7 @@
 
 namespace Src\Infrastructure\StoreProvisioning;
 
+use App\Support\PreconfiguredStoreSeedLimits;
 use App\Models\Currency;
 use App\Models\ExchangeRate;
 use App\Models\Shop;
@@ -14,6 +15,8 @@ use Src\Infrastructure\Pharmacy\Models\ProductModel as PharmacyProductModel;
 use Src\Infrastructure\Quincaillerie\Models\CategoryModel as HardwareCategoryModel;
 use Src\Infrastructure\Quincaillerie\Models\ProductModel as HardwareProductModel;
 use Src\Infrastructure\StoreProvisioning\Excel\WorkbookTableReader;
+use Src\Application\Pharmacy\Services\OpeningBatchAligner;
+use Src\Domain\Quincaillerie\ValueObjects\TypeUnite;
 
 /**
  * Importe les classeurs du dossier database/data-templates/{secteur}/ pour la boutique donnée.
@@ -22,7 +25,8 @@ use Src\Infrastructure\StoreProvisioning\Excel\WorkbookTableReader;
 final class SectorExcelTemplateImporter
 {
     public function __construct(
-        private readonly WorkbookTableReader $reader = new WorkbookTableReader
+        private readonly WorkbookTableReader $reader,
+        private readonly OpeningBatchAligner $openingBatchAligner,
     ) {}
 
     public function import(int $tenantId, Shop $shop, ?int $depotId, string $sector): void
@@ -45,7 +49,16 @@ final class SectorExcelTemplateImporter
 
         $this->importCurrencies($tenantId, $currenciesPath);
         $this->importExchangeRates($tenantId, $ratesPath);
-        $this->importCategoriesAndProducts($tenantId, $shop, $depotId, $sector, $categoriesPath, $productsPath);
+        $this->importCategoriesAndProducts(
+            $tenantId,
+            $shop,
+            $depotId,
+            $sector,
+            $categoriesPath,
+            $productsPath,
+            PreconfiguredStoreSeedLimits::maxCategories(),
+            PreconfiguredStoreSeedLimits::maxProducts(),
+        );
     }
 
     private function importCurrencies(int $tenantId, string $path): void
@@ -116,18 +129,20 @@ final class SectorExcelTemplateImporter
         ?int $depotId,
         string $sector,
         string $categoriesPath,
-        string $productsPath
+        string $productsPath,
+        ?int $maxCategories = null,
+        ?int $maxProducts = null,
     ): void {
         match (SectorTemplateDirectory::folderForSector($sector)) {
-            'pharmacy' => $this->importPharmacy($shop, $categoriesPath, $productsPath),
-            'hardware' => $this->importHardware($shop, $depotId, $categoriesPath, $productsPath),
-            'global-commerce' => $this->importGc($shop, $categoriesPath, $productsPath, false),
-            'ecommerce' => $this->importGc($shop, $categoriesPath, $productsPath, true),
+            'pharmacy' => $this->importPharmacy($shop, $depotId, $categoriesPath, $productsPath, $maxCategories, $maxProducts),
+            'hardware' => $this->importHardware($shop, $depotId, $categoriesPath, $productsPath, $maxCategories, $maxProducts),
+            'global-commerce' => $this->importGc($shop, $categoriesPath, $productsPath, false, $maxCategories, $maxProducts),
+            'ecommerce' => $this->importGc($shop, $categoriesPath, $productsPath, true, $maxCategories, $maxProducts),
             default => throw new \InvalidArgumentException('Import non implémenté'),
         };
     }
 
-    private function importPharmacy(Shop $shop, string $categoriesPath, string $productsPath): void
+    private function importPharmacy(Shop $shop, ?int $depotId, string $categoriesPath, string $productsPath, ?int $maxCategories, ?int $maxProducts): void
     {
         $shopKey = (string) $shop->id;
         $catRows = $this->reader->readSheet($categoriesPath);
@@ -160,11 +175,16 @@ final class SectorExcelTemplateImporter
                     'is_active' => true,
                 ]);
                 $model->save();
-            }
+            },
+            $maxCategories,
         );
 
         $prodRows = $this->reader->readSheet($productsPath);
+        $importedProducts = 0;
         foreach ($prodRows as $row) {
+            if ($maxProducts !== null && $importedProducts >= $maxProducts) {
+                break;
+            }
             $sku = trim((string) ($row['product_code'] ?? ''));
             if ($sku === '') {
                 continue;
@@ -199,10 +219,21 @@ final class SectorExcelTemplateImporter
                 'unit' => $row['unit'] ?? 'UNITE',
             ]);
             $model->save();
+            $stock = (float) $model->stock;
+            if ($stock > 0) {
+                $this->openingBatchAligner->ensureProductStockCoveredByBatches(
+                    $shopKey,
+                    (string) $model->id,
+                    $stock,
+                    $depotId,
+                    'SEED'
+                );
+            }
+            $importedProducts++;
         }
     }
 
-    private function importHardware(Shop $shop, ?int $depotId, string $categoriesPath, string $productsPath): void
+    private function importHardware(Shop $shop, ?int $depotId, string $categoriesPath, string $productsPath, ?int $maxCategories, ?int $maxProducts): void
     {
         $catRows = $this->reader->readSheet($categoriesPath);
         $this->upsertCategoriesIterative(
@@ -235,11 +266,16 @@ final class SectorExcelTemplateImporter
                     'is_active' => true,
                 ]);
                 $model->save();
-            }
+            },
+            $maxCategories,
         );
 
         $prodRows = $this->reader->readSheet($productsPath);
+        $importedProducts = 0;
         foreach ($prodRows as $row) {
+            if ($maxProducts !== null && $importedProducts >= $maxProducts) {
+                break;
+            }
             $code = trim((string) (
                 $row['product_code']
                 ?? $row['code']
@@ -293,7 +329,7 @@ final class SectorExcelTemplateImporter
                     ?? 'USD'
                 ))) ?: 'USD',
                 'stock' => (float) str_replace(',', '.', (string) ($row['stock'] ?? '0')),
-                'type_unite' => strtoupper(trim((string) ($row['type_unite'] ?? 'UNITE'))) ?: 'UNITE',
+                'type_unite' => TypeUnite::normalizeValue($row['type_unite'] ?? null),
                 'quantite_par_unite' => (int) ($row['quantite_par_unite'] ?? 1),
                 'est_divisible' => $this->truthy($row['est_divisible'] ?? '1'),
                 'minimum_stock' => (float) str_replace(',', '.', (string) ($row['minimum_stock'] ?? '0')),
@@ -301,10 +337,11 @@ final class SectorExcelTemplateImporter
                 'is_active' => true,
             ]);
             $model->save();
+            $importedProducts++;
         }
     }
 
-    private function importGc(Shop $shop, string $categoriesPath, string $productsPath, bool $ecommercePublish): void
+    private function importGc(Shop $shop, string $categoriesPath, string $productsPath, bool $ecommercePublish, ?int $maxCategories, ?int $maxProducts): void
     {
         $catRows = $this->reader->readSheet($categoriesPath);
         $this->upsertCategoriesIterative(
@@ -336,11 +373,16 @@ final class SectorExcelTemplateImporter
                     'is_active' => true,
                 ]);
                 $model->save();
-            }
+            },
+            $maxCategories,
         );
 
         $prodRows = $this->reader->readSheet($productsPath);
+        $importedProducts = 0;
         foreach ($prodRows as $row) {
+            if ($maxProducts !== null && $importedProducts >= $maxProducts) {
+                break;
+            }
             $sku = trim((string) ($row['sku'] ?? ''));
             if ($sku === '') {
                 continue;
@@ -378,6 +420,7 @@ final class SectorExcelTemplateImporter
                 'product_type' => 'physical',
             ]);
             $model->save();
+            $importedProducts++;
         }
     }
 
@@ -386,22 +429,31 @@ final class SectorExcelTemplateImporter
      * @param  callable(string): bool  $parentExists
      * @param  callable(string, ?string, array): void  $upsertOne
      */
-    private function upsertCategoriesIterative(array $catRows, callable $parentExists, callable $upsertOne): void
+    private function upsertCategoriesIterative(array $catRows, callable $parentExists, callable $upsertOne, ?int $maxCategories = null): void
     {
         $pending = array_values(array_filter($catRows, fn ($r) => trim((string) ($r['category_code'] ?? '')) !== ''));
+        $imported = 0;
         $guard = 0;
         while ($pending !== [] && $guard < 500) {
+            if ($maxCategories !== null && $imported >= $maxCategories) {
+                break;
+            }
             $guard++;
             $next = [];
             $progress = false;
             foreach ($pending as $row) {
+                if ($maxCategories !== null && $imported >= $maxCategories) {
+                    break;
+                }
                 $code = trim((string) ($row['category_code'] ?? ''));
                 $pcode = trim((string) ($row['parent_category_code'] ?? ''));
                 if ($pcode === '') {
                     $upsertOne($code, null, $row);
+                    $imported++;
                     $progress = true;
                 } elseif ($parentExists($pcode)) {
                     $upsertOne($code, $pcode, $row);
+                    $imported++;
                     $progress = true;
                 } else {
                     $next[] = $row;

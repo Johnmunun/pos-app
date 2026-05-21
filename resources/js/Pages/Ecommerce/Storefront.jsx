@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Head, Link, usePage } from '@inertiajs/react';
-import { ShieldCheck, Truck, Clock, Headphones, ArrowRight, Sparkles, Facebook, Instagram, Youtube, Banknote, CreditCard } from 'lucide-react';
+import { Link, usePage } from '@inertiajs/react';
+import StorefrontSeoHead from '@/Components/Ecommerce/StorefrontSeoHead';
+import { ShieldCheck, Truck, Clock, Headphones, ArrowRight, Sparkles, Facebook, Instagram, Youtube, Banknote, CreditCard, Star } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
 import { convertAmountToCurrency } from '@/lib/exchangeConvert';
 import { CartProvider } from '@/Contexts/CartContext';
 import ShoppingCart from '@/Components/Ecommerce/ShoppingCart';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
+import AISupportFloatingWidget from '@/Components/Ecommerce/AISupportFloatingWidget';
+import { StorefrontFooterReportBar } from '@/Components/Ecommerce/StorefrontReportShop';
 import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBootstrap';
 import StorefrontHeaderHero from '@/Components/Ecommerce/StorefrontHeaderHero';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
@@ -37,7 +40,7 @@ function shouldShowPageInNav(page) {
     return !isCgv && !isPrivacy;
 }
 
-function ProductCardSimple({ product, currency, productUrl, exchangeRates = {} }) {
+function getProductPricing(product, currency, exchangeRates = {}) {
     const amount =
         exchangeRates && Object.keys(exchangeRates).length > 0
             ? convertAmountToCurrency(
@@ -59,11 +62,86 @@ function ProductCardSimple({ product, currency, productUrl, exchangeRates = {} }
           ? 'Vendeur : à la livraison'
           : 'Vendeur : paiement immédiat en ligne';
 
+    return { price, promotionPercent, hasPromotion, PaymentIcon, paymentCaption };
+}
+
+function ProductCardFeaturedHero({ product, currency, productUrl, exchangeRates = {} }) {
+    const { price, promotionPercent, hasPromotion, PaymentIcon, paymentCaption } = getProductPricing(
+        product,
+        currency,
+        exchangeRates
+    );
+
     return (
-        <Link
-            href={productUrl(product.id)}
-            className="group block h-full"
-        >
+        <Link href={productUrl(product.id)} className="group block h-full min-h-[320px] lg:min-h-[420px]">
+            <div className="relative h-full rounded-3xl overflow-hidden border border-slate-200/80 dark:border-slate-700/80 shadow-xl shadow-slate-900/10 dark:shadow-black/30 hover:shadow-2xl hover:shadow-[var(--sf-primary)]/15 transition-all duration-500">
+                {product.image_url ? (
+                    <img
+                        src={product.image_url}
+                        alt={product.name}
+                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
+                ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-slate-200 to-slate-100 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center text-slate-400 dark:text-slate-500">
+                        Aucune image
+                    </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/50 to-slate-950/10" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[var(--sf-primary)]/20 to-transparent opacity-60" />
+
+                <div className="relative z-10 flex h-full flex-col justify-end p-5 sm:p-7 lg:p-8">
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400 text-amber-950 text-[11px] font-bold uppercase tracking-wide shadow-lg">
+                            <Star className="h-3.5 w-3.5 fill-current" />
+                            En vedette
+                        </span>
+                        {product.is_new && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-full bg-emerald-500 text-white">
+                                <Sparkles className="h-3 w-3" /> Nouveau
+                            </span>
+                        )}
+                        {hasPromotion && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-full bg-white/20 text-white backdrop-blur-sm">
+                                Promo{promotionPercent > 0 ? ` -${promotionPercent}%` : ''}
+                            </span>
+                        )}
+                    </div>
+
+                    <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2 line-clamp-2 max-w-lg group-hover:text-[var(--sf-primary)] transition-colors">
+                        {product.name}
+                    </h3>
+
+                    <div className="flex flex-wrap items-end justify-between gap-4">
+                        <div>
+                            <p className="text-xs text-white/70 mb-1">Prix</p>
+                            <p className="text-2xl sm:text-3xl font-bold text-white">{price}</p>
+                            {PaymentIcon && paymentCaption && (
+                                <p className="mt-2 text-[11px] sm:text-xs text-white/80 flex items-center gap-1.5">
+                                    <PaymentIcon className="h-3.5 w-3.5 shrink-0" />
+                                    {paymentCaption}
+                                </p>
+                            )}
+                        </div>
+                        <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-slate-900 text-sm font-semibold group-hover:bg-[var(--sf-primary)] group-hover:text-white transition-colors">
+                            Découvrir
+                            <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </Link>
+    );
+}
+
+function ProductCardSimple({ product, currency, productUrl, exchangeRates = {}, featured = false }) {
+    const { price, promotionPercent, hasPromotion, PaymentIcon, paymentCaption } = getProductPricing(
+        product,
+        currency,
+        exchangeRates
+    );
+
+    return (
+        <Link href={productUrl(product.id)} className="group block h-full">
             <div className="h-full bg-white dark:bg-slate-900/80 rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-700/80 hover:border-[var(--sf-primary)]/80 dark:hover:border-[var(--sf-primary)] hover:shadow-xl hover:shadow-[var(--sf-primary)]/10 transition-all duration-300">
                 <div className="relative aspect-[4/5] sm:aspect-[4/3] bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900 overflow-hidden">
                     {product.image_url ? (
@@ -78,13 +156,19 @@ function ProductCardSimple({ product, currency, productUrl, exchangeRates = {} }
                         </div>
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    {product.is_new && (
+                    {featured && (
+                        <span className="absolute left-3 top-3 inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-full bg-amber-400 text-amber-950 shadow-md">
+                            <Star className="h-3 w-3 fill-current" />
+                            Vedette
+                        </span>
+                    )}
+                    {!featured && product.is_new && (
                         <span className="absolute left-3 top-3 inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
                             <Sparkles className="h-3 w-3" /> Nouveau
                         </span>
                     )}
                     {hasPromotion && (
-                        <span className="absolute right-3 top-3 inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-full bg-amber-500 text-white shadow-lg shadow-amber-500/30">
+                        <span className={`absolute ${featured ? 'right-3 top-3' : 'right-3 top-3'} inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-full bg-amber-500 text-white shadow-lg shadow-amber-500/30`}>
                             Promo{promotionPercent > 0 ? ` -${promotionPercent}%` : ''}
                         </span>
                     )}
@@ -95,9 +179,7 @@ function ProductCardSimple({ product, currency, productUrl, exchangeRates = {} }
                     </h3>
                     <div className="mt-auto pt-3 sm:pt-4 space-y-1">
                         <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm sm:text-base font-bold text-[var(--sf-primary)]">
-                                {price}
-                            </span>
+                            <span className="text-sm sm:text-base font-bold text-[var(--sf-primary)]">{price}</span>
                             <span className="inline-flex items-center text-xs font-medium text-slate-700 dark:text-slate-300 group-hover:text-[var(--sf-primary)] transition-colors">
                                 Voir
                                 <ArrowRight className="h-3.5 w-3 ml-1 group-hover:translate-x-0.5 transition-transform" />
@@ -127,6 +209,7 @@ export default function EcommerceStorefront({
     currentStorefrontShopId,
     exchange_rates = {},
     available_currencies = [],
+    pageSeo = null,
 }) {
     const links = useStorefrontLinks();
     const { shop: sharedShop } = usePage().props;
@@ -163,7 +246,7 @@ export default function EcommerceStorefront({
 
     const content = (
         <div className="min-h-screen bg-white dark:bg-gradient-to-b dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-950 dark:text-slate-50">
-            <Head title="Boutique en ligne" />
+            <StorefrontSeoHead pageSeo={pageSeo} />
             <StorefrontClientBootstrap />
 
             <StorefrontHeaderHero
@@ -274,42 +357,68 @@ export default function EcommerceStorefront({
                 </section>
 
                 {/* Produits en vedette */}
-                <section className="py-12 lg:py-16">
-                    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="flex items-end justify-between mb-5">
+                <section className="relative py-14 lg:py-20 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-[var(--sf-primary)]/[0.06] via-white to-amber-50/60 dark:from-[var(--sf-primary)]/10 dark:via-slate-950 dark:to-slate-900 pointer-events-none" />
+                    <div className="absolute -top-32 -right-32 h-72 w-72 rounded-full bg-[var(--sf-primary)]/10 blur-3xl pointer-events-none" />
+                    <div className="absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-amber-400/10 blur-3xl pointer-events-none" />
+
+                    <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 lg:mb-10">
                             <div>
-                                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+                                <p className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 text-xs font-semibold mb-3">
+                                    <Star className="h-3.5 w-3.5 fill-current" />
+                                    Sélection du moment
+                                </p>
+                                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
                                     Produits en vedette
                                 </h2>
-                                <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300">
-                                    Une sélection courte pour mettre en avant vos meilleurs articles.
+                                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300 max-w-xl">
+                                    Les articles choisis par votre boutique pour accueillir vos visiteurs.
                                 </p>
                             </div>
                             <Link
                                 href={links.catalog()}
-                                className="hidden sm:inline-flex items-center text-xs font-medium text-[var(--sf-primary)] hover:text-[var(--sf-secondary)]"
+                                className="inline-flex items-center self-start sm:self-auto px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 text-sm font-medium text-[var(--sf-primary)] hover:border-[var(--sf-primary)] hover:bg-[var(--sf-primary)]/5 transition-colors backdrop-blur-sm"
                             >
                                 Voir tout le catalogue
-                                <ArrowRight className="h-3 w-3 ml-1" />
+                                <ArrowRight className="h-4 w-4 ml-2" />
                             </Link>
                         </div>
 
                         {featuredProducts.length === 0 ? (
-                            <div className="text-sm text-slate-800 dark:text-slate-200">
-                                Aucun produit publié pour le moment. Activez l&apos;option &quot;Publier sur e-commerce&quot; dans vos
-                                produits pour remplir cette section.
+                            <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-white/60 dark:bg-slate-900/40 px-6 py-10 text-center">
+                                <Star className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-600 mb-3" />
+                                <p className="text-sm text-slate-700 dark:text-slate-300">
+                                    Aucun produit en vedette pour le moment.
+                                </p>
+                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                    Publiez des produits sur e-commerce, puis choisissez-les dans{' '}
+                                    <span className="font-medium">E-commerce → Paramètres → Produits en vedette</span>.
+                                </p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
-                                {featuredProducts.map((p) => (
-                                    <ProductCardSimple
-                                        key={p.id}
-                                        product={p}
-                                        currency={currency}
-                                        productUrl={links.product}
-                                        exchangeRates={exchange_rates}
-                                    />
-                                ))}
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+                                {featuredProducts.map((p, index) =>
+                                    index === 0 ? (
+                                        <div key={p.id} className="col-span-2 row-span-2">
+                                            <ProductCardFeaturedHero
+                                                product={p}
+                                                currency={currency}
+                                                productUrl={links.product}
+                                                exchangeRates={exchange_rates}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <ProductCardSimple
+                                            key={p.id}
+                                            product={p}
+                                            currency={currency}
+                                            productUrl={links.product}
+                                            exchangeRates={exchange_rates}
+                                            featured
+                                        />
+                                    )
+                                )}
                             </div>
                         )}
                     </div>
@@ -608,9 +717,11 @@ export default function EcommerceStorefront({
                             </div>
                         </div>
                     </div>
+                    <StorefrontFooterReportBar shopName={shop?.name} />
                 </footer>
             </main>
 
+            <AISupportFloatingWidget />
             <WhatsAppFloatingButton phone={whatsappNumber} enabled={whatsappSupportEnabled} iconOnly />
         </div>
     );

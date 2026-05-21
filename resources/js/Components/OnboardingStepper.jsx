@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function OnboardingStepper({ currentStep, totalSteps = 5 }) {
     const steps = [
         { number: 1, title: 'Compte', description: 'Identifiants' },
@@ -13,24 +11,25 @@ export default function OnboardingStepper({ currentStep, totalSteps = 5 }) {
         <div className="mb-8">
             <div className="flex justify-between items-center relative">
                 {/* Barre de progression */}
-                <div className="absolute top-4 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div 
-                        className="h-full bg-amber-500 transition-all duration-500 ease-out"
+                <div className="absolute top-4 left-0 right-0 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden ring-1 ring-gray-200/50 dark:ring-gray-700/50">
+                    <div
+                        className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-500 ease-out rounded-full"
                         style={{ width: `${(currentStep / totalSteps) * 100}%` }}
-                    ></div>
+                    />
                 </div>
 
-                {/* Étapes */}
-                {steps.map((step, index) => (
+                {steps.map((step) => (
                     <div key={step.number} className="relative flex flex-col items-center z-10">
-                        {/* Cercle */}
-                        <div className={`
-                            w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300
-                            ${step.number <= currentStep 
-                                ? 'bg-amber-500 text-white shadow-lg' 
-                                : 'bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-2 border-gray-200 dark:border-gray-700'
+                        <div
+                            className={`
+                            w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 shadow-sm
+                            ${
+                                step.number <= currentStep
+                                    ? 'bg-gradient-to-br from-amber-500 to-orange-600 text-white ring-2 ring-white dark:ring-gray-950'
+                                    : 'bg-white dark:bg-gray-900 text-gray-400 dark:text-gray-500 border-2 border-gray-200 dark:border-gray-700'
                             }
-                        `}>
+                        `}
+                        >
                             {step.number < currentStep ? (
                                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />

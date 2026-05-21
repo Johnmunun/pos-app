@@ -1,5 +1,5 @@
-import React from 'react';
-import { Head, Link, usePage } from '@inertiajs/react';
+import React, { useState } from 'react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -13,23 +13,64 @@ import {
     CheckCircle,
     XCircle,
     Receipt,
-    DollarSign
+    DollarSign,
+    CheckCircle2,
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/currency';
+import SaleFinalizeConfirmModal from '@/Components/SaleFinalizeConfirmModal';
 
 export default function SalesShow({ auth, sale, lines = [], customer, routePrefix = 'pharmacy' }) {
     const { shop } = usePage().props;
     const currency = sale.currency || shop?.currency || 'CDF';
-    const isDraft = sale.status === 'DRAFT';
+    const isDraft = (sale.status ?? '').toUpperCase() === 'DRAFT';
+    const [finalizing, setFinalizing] = useState(false);
+    const [showFinalizeModal, setShowFinalizeModal] = useState(false);
+
+    const ziggyRoutes =
+        (typeof window !== 'undefined' && window.Ziggy?.routes) ||
+        (typeof Ziggy !== 'undefined' && Ziggy?.routes) ||
+        null;
+
+    const hasRoute = (name) =>
+        !!ziggyRoutes && Object.prototype.hasOwnProperty.call(ziggyRoutes, name);
+
+    const canFinalize = hasRoute(`${routePrefix}.sales.finalize`);
+    const canCancel = hasRoute(`${routePrefix}.sales.cancel`);
+
+    const handleFinalize = async () => {
+        if (!canFinalize || finalizing) return;
+
+        const paidAmount =
+            Number(sale.paid_amount) > 0 ? Number(sale.paid_amount) : Number(sale.total_amount);
+        if (paidAmount <= 0 && lines.length === 0) {
+            toast.error('Impossible de confirmer une vente vide.');
+            return;
+        }
+
+        setFinalizing(true);
+        try {
+            await axios.post(route(`${routePrefix}.sales.finalize`, sale.id), {
+                paid_amount: paidAmount,
+            });
+            setShowFinalizeModal(false);
+            toast.success('Vente confirmée avec succès.');
+            router.reload();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Erreur lors de la confirmation.');
+        } finally {
+            setFinalizing(false);
+        }
+    };
 
     const handleCancel = () => {
+        if (!canCancel) return;
         if (!confirm('Annuler cette vente (brouillon) ?')) return;
         axios.post(route(`${routePrefix}.sales.cancel`, sale.id))
             .then(() => {
                 toast.success('Vente annulée');
-                window.location.reload();
+                router.reload();
             })
             .catch((err) => toast.error(err.response?.data?.message || 'Erreur lors de l\'annulation'));
     };
@@ -84,11 +125,26 @@ export default function SalesShow({ auth, sale, lines = [], customer, routePrefi
                         </div>
                         {getStatusBadge(sale.status)}
                     </div>
-                    {isDraft && (
-                        <Button variant="destructive" size="sm" onClick={handleCancel}>
-                            <XCircle className="h-4 w-4 mr-1" />
-                            Annuler la vente
-                        </Button>
+                    {isDraft && (canFinalize || canCancel) && (
+                        <div className="flex flex-wrap items-center gap-2">
+                            {canFinalize && (
+                                <Button
+                                    size="sm"
+                                    onClick={() => setShowFinalizeModal(true)}
+                                    disabled={finalizing}
+                                    className="inline-flex items-center bg-green-600 hover:bg-green-700 text-white"
+                                >
+                                    <CheckCircle2 className="h-4 w-4 mr-1" />
+                                    Confirmer la vente
+                                </Button>
+                            )}
+                            {canCancel && (
+                                <Button variant="destructive" size="sm" onClick={handleCancel}>
+                                    <XCircle className="h-4 w-4 mr-1" />
+                                    Annuler la vente
+                                </Button>
+                            )}
+                        </div>
                     )}
                 </div>
 
@@ -285,6 +341,15 @@ export default function SalesShow({ auth, sale, lines = [], customer, routePrefi
                     </div>
                 </div>
             </div>
+
+            <SaleFinalizeConfirmModal
+                show={showFinalizeModal}
+                onClose={() => !finalizing && setShowFinalizeModal(false)}
+                onConfirm={handleFinalize}
+                loading={finalizing}
+                sale={sale}
+                currency={currency}
+            />
         </AppLayout>
     );
 }

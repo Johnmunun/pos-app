@@ -29,17 +29,53 @@ final class TypeUnite
         self::UNITE,
     ];
 
+    /** Synonymes des templates Excel boutique pré-configurée / imports métier. */
+    private const TEMPLATE_ALIASES = [
+        'TUBE' => self::PIECE,
+        'POT' => self::PIECE,
+        'BARRE' => self::PIECE,
+        'BOBINE' => self::PIECE,
+        'ROULEAU' => self::PIECE,
+        'SAC' => self::CARTON,
+        'PAQUET' => self::LOT,
+        'PACK' => self::LOT,
+    ];
+
     private string $value;
 
     public function __construct(string $type)
     {
         $type = strtoupper(trim($type));
-        if (!in_array($type, self::VALID_TYPES, true)) {
+        if (isset(self::TEMPLATE_ALIASES[$type])) {
+            $type = self::TEMPLATE_ALIASES[$type];
+        }
+        if (! in_array($type, self::VALID_TYPES, true)) {
             throw new InvalidArgumentException(
-                'Type d\'unité invalide. Valides : ' . implode(', ', self::VALID_TYPES)
+                'Type d\'unité invalide. Valides : '.implode(', ', self::VALID_TYPES)
             );
         }
         $this->value = $type;
+    }
+
+    /**
+     * Normalise un libellé d'unité (template seed, import Excel) vers une valeur métier valide.
+     */
+    public static function normalizeValue(?string $type, string $default = self::UNITE): string
+    {
+        $type = strtoupper(trim((string) $type));
+        if ($type === '') {
+            return $default;
+        }
+
+        if (isset(self::TEMPLATE_ALIASES[$type])) {
+            $type = self::TEMPLATE_ALIASES[$type];
+        }
+
+        if (! in_array($type, self::VALID_TYPES, true)) {
+            return $default;
+        }
+
+        return $type;
     }
 
     public function getValue(): string

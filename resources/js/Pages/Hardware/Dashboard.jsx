@@ -21,8 +21,6 @@ import {
   Clock,
   Filter,
   Database,
-  ArrowUp,
-  ArrowDown,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
 import ModuleOnboarding from '@/Components/ModuleOnboarding/ModuleOnboarding';
@@ -216,168 +214,165 @@ export default function Dashboard({
     <AppLayout
       header={
         <div data-onboarding="hardware-dashboard-welcome">
-          <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
+          <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">
             Tableau de bord — Quincaillerie
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed max-w-2xl">
             Gérez vos performances et stocks en temps réel.
           </p>
         </div>
       }
     >
-      <>
-        <Head title="Tableau de bord Quincaillerie" />
-        <ModuleOnboarding moduleName="hardware" />
-        <div className="py-6 space-y-6 sm:space-y-8">
-        {/* Filtres compacts avec icônes uniquement */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Période rapide - Icône seulement */}
-          <div className="relative">
-            <select
-              value={currentPeriod}
-              onChange={handlePeriodChange}
-              className="appearance-none rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent cursor-pointer"
-              title="Période rapide"
+      <Head title="Tableau de bord Quincaillerie" />
+      <ModuleOnboarding moduleName="hardware" />
+
+      <div className="py-8 sm:py-10 space-y-8 sm:space-y-10">
+          {/* Filtres */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap gap-3 rounded-2xl border border-gray-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/50 backdrop-blur-sm shadow-landing-soft p-4">
+            <div className="relative flex-1 min-w-[10rem] sm:min-w-0 sm:max-w-[11rem]">
+              <select
+                value={currentPeriod}
+                onChange={handlePeriodChange}
+                className="w-full appearance-none rounded-xl border border-gray-200/90 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 pl-10 pr-3 py-2.5 text-sm shadow-sm focus:ring-2 focus:ring-amber-500/70 focus:border-amber-400/50 cursor-pointer transition-shadow"
+                title="Période rapide"
+              >
+                {PERIOD_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-600/80 dark:text-amber-400/80 pointer-events-none" />
+            </div>
+
+            <div className="relative flex-1 min-w-[10rem] sm:min-w-0 sm:max-w-[11rem]">
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-full appearance-none rounded-xl border border-gray-200/90 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 pl-10 pr-3 py-2.5 text-sm shadow-sm focus:ring-2 focus:ring-amber-500/70 focus:border-amber-400/50 min-w-0"
+                title="Date début"
+              />
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-600/80 dark:text-amber-400/80 pointer-events-none" />
+            </div>
+
+            <div className="relative flex-1 min-w-[10rem] sm:min-w-0 sm:max-w-[11rem]">
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-full appearance-none rounded-xl border border-gray-200/90 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 pl-10 pr-3 py-2.5 text-sm shadow-sm focus:ring-2 focus:ring-amber-500/70 focus:border-amber-400/50 min-w-0"
+                title="Date fin"
+              />
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-600/80 dark:text-amber-400/80 pointer-events-none" />
+            </div>
+
+            <Button
+              type="button"
+              onClick={handleDateRangeApply}
+              className="shrink-0 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white p-2.5 rounded-xl shadow-md shadow-amber-500/20 hover:shadow-lg border-0"
+              title="Appliquer les filtres"
             >
-              {PERIOD_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
+              <Filter className="h-4 w-4" />
+            </Button>
           </div>
 
-          {/* Date début - Icône seulement */}
-          <div className="relative">
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="appearance-none rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent w-40"
-              title="Date début"
-            />
-            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
-          </div>
-
-          {/* Date fin - Icône seulement */}
-          <div className="relative">
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="appearance-none rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent w-40"
-              title="Date fin"
-            />
-            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
-          </div>
-
-          {/* Bouton appliquer - Icône seulement */}
-          <Button
-            type="button"
-            onClick={handleDateRangeApply}
-            className="bg-amber-600 hover:bg-amber-700 text-white p-2 rounded-lg"
-            title="Appliquer les filtres"
+          {/* Stats KPI */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-5">
+          <Card
+            data-onboarding="hardware-sales-card"
+            className="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-600 dark:to-emerald-800 shadow-landing-soft-lg"
           >
-            <Filter className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Stats Cards - Design Visily */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* VENTES DU JOUR */}
-          <Card data-onboarding="hardware-sales-card" className="bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-600 dark:to-emerald-700 border-0 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <p className="text-emerald-100 text-sm font-medium mb-2">VENTES DU JOUR</p>
-                  <p className="text-white text-3xl font-bold mb-2">
+            <CardContent className="p-5 sm:p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-emerald-100/95 text-xs font-semibold uppercase tracking-wide mb-2">Ventes du jour</p>
+                  <p className="text-white text-2xl sm:text-3xl font-bold tabular-nums mb-2">
                     {fmt(salesChartData.length > 0 ? (salesChartData[salesChartData.length - 1]?.total || 0) : 0)}
                   </p>
-                  <div className="flex items-center gap-1 text-emerald-100 text-xs mb-2">
-                    <ArrowUp className="h-3 w-3" />
+                  <div className="flex items-center gap-1 text-emerald-100/90 text-xs mb-1.5">
+                    <TrendingUp className="h-3.5 w-3.5 shrink-0" />
                     <span>+12.5% vs hier</span>
                   </div>
-                  <p className="text-emerald-100 text-xs">
+                  <p className="text-emerald-100/85 text-xs">
                     {salesChartData.length > 0 ? (salesChartData[salesChartData.length - 1]?.count || 0) : 0} vente(s) validées
                   </p>
                 </div>
-                <div className="w-14 h-14 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <ShoppingCart className="h-7 w-7 text-white" />
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+                  <ShoppingCart className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* VALEUR DU STOCK */}
-          <Card data-onboarding="hardware-stock-value" className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 border-0 shadow-lg overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between gap-3 min-w-0">
-                <div className="flex-1 min-w-0">
-                  <p className="text-blue-100 text-sm font-medium mb-2">VALEUR DU STOCK</p>
-                  <p className="text-white text-2xl sm:text-3xl font-bold mb-2 break-all">{fmt(stats?.inventory?.total_value ?? 0)}</p>
-                  <div className="flex items-center gap-1 text-blue-100 text-xs mb-2">
-                    <ArrowDown className="h-3 w-3 flex-shrink-0" />
-                    <span>-2.1% Valeur totale</span>
+          <Card
+            data-onboarding="hardware-stock-value"
+            className="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-800 shadow-landing-soft-lg"
+          >
+            <CardContent className="p-5 sm:p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-blue-100/95 text-xs font-semibold uppercase tracking-wide mb-2">Valeur du stock</p>
+                  <p className="text-white text-2xl sm:text-3xl font-bold tabular-nums mb-2 break-all">{fmt(stats?.inventory?.total_value ?? 0)}</p>
+                  <div className="flex items-center gap-1 text-blue-100/90 text-xs mb-1.5">
+                    <DollarSign className="h-3.5 w-3.5 shrink-0" />
+                    <span>Valeur totale</span>
                   </div>
-                  <p className="text-blue-100 text-xs">Stock actuel</p>
+                  <p className="text-blue-100/85 text-xs">Stock actuel</p>
                 </div>
-                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Database className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* PRODUITS EN STOCK */}
-          <Card className="bg-gradient-to-br from-amber-500 to-amber-600 dark:from-amber-600 dark:to-amber-700 border-0 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <p className="text-amber-100 text-sm font-medium mb-2">PRODUITS EN STOCK</p>
-                  <p className="text-white text-3xl font-bold mb-2">{stats?.products?.total ?? 0}</p>
-                  <p className="text-amber-100 text-xs mt-2">{stats?.products?.active ?? 0} actifs</p>
-                </div>
-                <div className="w-14 h-14 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Package className="h-7 w-7 text-white" />
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+                  <Database className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* RUPTURES IMMINENTES */}
-          <Card className="bg-gradient-to-br from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 border-0 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <p className="text-red-100 text-sm font-medium mb-2">RUPTURES IMMINENTES</p>
-                  <p className="text-white text-3xl font-bold mb-2">{stats?.inventory?.out_of_stock_count ?? 0}</p>
-                  <p className="text-red-100 text-xs mt-2">
-                    {stats?.inventory?.low_stock_count ?? 0} critiques Articles à commander
+          <Card className="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-amber-500 to-orange-600 dark:from-amber-600 dark:to-orange-800 shadow-landing-soft-lg">
+            <CardContent className="p-5 sm:p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-amber-100/95 text-xs font-semibold uppercase tracking-wide mb-2">Produits en stock</p>
+                  <p className="text-white text-2xl sm:text-3xl font-bold tabular-nums mb-2">{stats?.products?.total ?? 0}</p>
+                  <p className="text-amber-100/85 text-xs">{stats?.products?.active ?? 0} actifs</p>
+                </div>
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+                  <Package className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-red-500 to-red-600 dark:from-red-600 dark:to-red-800 shadow-landing-soft-lg">
+            <CardContent className="p-5 sm:p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-red-100/95 text-xs font-semibold uppercase tracking-wide mb-2">Ruptures / critiques</p>
+                  <p className="text-white text-2xl sm:text-3xl font-bold tabular-nums mb-2">{stats?.inventory?.out_of_stock_count ?? 0}</p>
+                  <p className="text-red-100/85 text-xs">
+                    {stats?.inventory?.low_stock_count ?? 0} article(s) en stock critique
                   </p>
                 </div>
-                <div className="w-14 h-14 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <AlertTriangle className="h-7 w-7 text-white" />
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+                  <AlertTriangle className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* STOCKAGE MÉDIAS */}
-          <Card className="bg-gradient-to-br from-slate-600 to-slate-700 dark:from-slate-700 dark:to-slate-800 border-0 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <p className="text-slate-100 text-sm font-medium mb-2">STOCKAGE MÉDIAS</p>
-                  <p className="text-white text-3xl font-bold mb-1">
+          <Card className="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-slate-600 to-slate-800 dark:from-slate-700 dark:to-slate-900 shadow-landing-soft-lg sm:col-span-2 lg:col-span-1 xl:col-span-1">
+            <CardContent className="p-5 sm:p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-slate-100/95 text-xs font-semibold uppercase tracking-wide mb-2">Stockage médias</p>
+                  <p className="text-white text-2xl sm:text-3xl font-bold tabular-nums mb-1">
                     {imagesCount}
                   </p>
-                  <p className="text-slate-100 text-xs">
+                  <p className="text-slate-100/85 text-xs">
                     Images produits quincaillerie
                   </p>
                 </div>
-                <div className="w-14 h-14 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Database className="h-7 w-7 text-white" />
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+                  <Database className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardContent>
@@ -385,8 +380,8 @@ export default function Dashboard({
         </div>
 
         {/* Graphiques */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
+          <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 p-4 shadow-landing-soft backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/80">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -401,7 +396,7 @@ export default function Dashboard({
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="text-xs"
+                  className="shrink-0 rounded-xl border-gray-200/90 text-xs shadow-sm hover:bg-amber-50/80 dark:border-slate-600 dark:hover:bg-slate-800"
                   onClick={() => {
                     // Fonction pour formater les nombres avec séparateurs
                     const formatNumber = (num) => {
@@ -540,10 +535,12 @@ export default function Dashboard({
             </CardContent>
           </Card>
 
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-4">
+          <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 p-4 shadow-landing-soft backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/80">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-white">
-                <BarChart3 className="h-5 w-5 text-violet-500" />
+              <CardTitle className="text-base flex items-center gap-2 font-semibold text-gray-900 dark:text-white">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/10 text-violet-600 dark:bg-violet-400/15 dark:text-violet-300">
+                  <BarChart3 className="h-5 w-5" />
+                </span>
                 Répartition du stock
               </CardTitle>
             </CardHeader>
@@ -583,8 +580,8 @@ export default function Dashboard({
         </div>
 
         {/* Statistiques supplémentaires */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
+          <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/80">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">
                 Catégories
@@ -592,7 +589,7 @@ export default function Dashboard({
               <Tag className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-2xl font-bold tabular-nums text-gray-900 dark:text-white">
                 {stats?.categories?.total ?? 0}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -601,7 +598,7 @@ export default function Dashboard({
             </CardContent>
           </Card>
 
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+          <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/80">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">
                 Fournisseurs
@@ -609,7 +606,7 @@ export default function Dashboard({
               <Truck className="h-4 w-4 text-indigo-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-2xl font-bold tabular-nums text-gray-900 dark:text-white">
                 {stats?.suppliers?.total ?? 0}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -618,7 +615,7 @@ export default function Dashboard({
             </CardContent>
           </Card>
 
-          <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+          <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/80">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">
                 Clients
@@ -626,7 +623,7 @@ export default function Dashboard({
               <Users className="h-4 w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-2xl font-bold tabular-nums text-gray-900 dark:text-white">
                 {stats?.customers?.total ?? 0}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -638,43 +635,43 @@ export default function Dashboard({
 
         {/* Alerts */}
         {stats?.alerts?.length > 0 && (
-          <div>
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">
               Alertes
             </h3>
             <div className="space-y-3">
               {stats.alerts.map((alert, index) => (
                 <div
                   key={index}
-                  className={`p-4 rounded-lg border ${
+                  className={`rounded-2xl border p-4 shadow-landing-soft ${
                     alert.type === 'danger'
-                      ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                      : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                      ? 'border-red-200/80 bg-red-50/90 dark:border-red-800/60 dark:bg-red-950/30'
+                      : 'border-amber-200/80 bg-amber-50/90 dark:border-amber-800/50 dark:bg-amber-950/25'
                   }`}
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-start gap-3">
                     <AlertTriangle
-                      className={`h-5 w-5 mr-3 ${
+                      className={`mt-0.5 h-5 w-5 shrink-0 ${
                         alert.type === 'danger'
                           ? 'text-red-600 dark:text-red-400'
-                          : 'text-yellow-600 dark:text-yellow-400'
+                          : 'text-amber-600 dark:text-amber-400'
                       }`}
                     />
-                    <div>
+                    <div className="min-w-0">
                       <p
-                        className={`font-medium ${
+                        className={`font-semibold leading-snug ${
                           alert.type === 'danger'
-                            ? 'text-red-800 dark:text-red-300'
-                            : 'text-yellow-800 dark:text-yellow-300'
+                            ? 'text-red-900 dark:text-red-200'
+                            : 'text-amber-900 dark:text-amber-200'
                         }`}
                       >
                         {alert.message}
                       </p>
                       <p
-                        className={`text-sm ${
+                        className={`mt-1 text-sm ${
                           alert.type === 'danger'
-                            ? 'text-red-600 dark:text-red-400'
-                            : 'text-yellow-600 dark:text-yellow-400'
+                            ? 'text-red-700/90 dark:text-red-400/90'
+                            : 'text-amber-800/90 dark:text-amber-400/90'
                         }`}
                       >
                         Priorité : {alert.priority}
@@ -687,28 +684,33 @@ export default function Dashboard({
           </div>
         )}
 
-        {/* Actions rapides - Design Visily */}
+        {/* Actions rapides */}
         {visibleActions.length > 0 && (
-          <Card data-onboarding="hardware-quick-actions" className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+          <Card
+            data-onboarding="hardware-quick-actions"
+            className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/80"
+          >
             <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
-                ACTIONS RAPIDES
+              <CardTitle className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                Actions rapides
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
                 {visibleActions.slice(0, 4).map((action) => {
                   const Icon = action.icon;
                   return (
                     <Link
                       key={action.route}
                       href={route(action.route)}
-                      className="flex flex-col items-center justify-center p-4 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                      className="group flex flex-col items-center justify-center rounded-2xl border border-gray-200/70 bg-gradient-to-b from-white to-gray-50/80 p-4 shadow-sm transition-all hover:border-amber-200/80 hover:shadow-md dark:border-slate-700/70 dark:from-slate-800/90 dark:to-slate-900/80 dark:hover:border-amber-700/50"
                     >
-                      <div className={`w-12 h-12 rounded-lg ${COLOR_MAP[action.color] || 'bg-gray-500'} flex items-center justify-center mb-2`}>
+                      <div
+                        className={`mb-2 flex h-12 w-12 items-center justify-center rounded-xl shadow-md ring-1 ring-black/5 transition-transform group-hover:scale-[1.03] dark:ring-white/10 ${COLOR_MAP[action.color] || 'bg-gray-500'}`}
+                      >
                         <Icon className="h-6 w-6 text-white" />
                       </div>
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">
+                      <span className="text-center text-sm font-medium text-gray-800 dark:text-gray-200">
                         {action.label}
                       </span>
                     </Link>
@@ -718,8 +720,7 @@ export default function Dashboard({
             </CardContent>
           </Card>
         )}
-        </div>
-      </>
+      </div>
     </AppLayout>
   );
 }

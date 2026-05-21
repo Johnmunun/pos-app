@@ -19,6 +19,7 @@ use Src\Infrastructure\Quincaillerie\Models\ProductModel;
 use Src\Infrastructure\Quincaillerie\Models\CategoryModel;
 use Src\Infrastructure\Quincaillerie\Services\ProductImageService;
 use Src\Infrastructure\Quincaillerie\Persistence\EloquentProductRepository;
+use Src\Domain\Quincaillerie\ValueObjects\TypeUnite;
 use Src\Application\Quincaillerie\Services\DepotFilterService;
 use Illuminate\Support\Facades\Log;
 use App\Models\Depot;
@@ -1159,13 +1160,7 @@ class ProductController
                 $lineErrors[] = 'Unité obligatoire.';
             }
 
-            $typeUnite = $rowAssoc['type_unite'] ?? '';
-            if ($typeUnite !== '') {
-                $allowedTypes = ['PIECE', 'LOT', 'METRE', 'KG', 'LITRE', 'BOITE', 'CARTON', 'UNITE'];
-                if (!in_array(strtoupper($typeUnite), $allowedTypes, true)) {
-                    $lineErrors[] = "Type d'unité invalide : {$typeUnite}.";
-                }
-            }
+            $typeUnite = TypeUnite::normalizeValue($rowAssoc['type_unite'] ?? null);
 
             $qtyRaw = $rowAssoc['quantite_par_unite'] ?? '';
             if ($qtyRaw !== '') {
@@ -1363,12 +1358,7 @@ class ProductController
                 $lineErrors[] = 'Unité obligatoire.';
             }
 
-            $typeUnite = $rowAssoc['type_unite'] ?? 'UNITE';
-            $allowedTypes = ['PIECE', 'LOT', 'METRE', 'KG', 'LITRE', 'BOITE', 'CARTON', 'UNITE'];
-            $typeUniteUpper = strtoupper($typeUnite);
-            if (!in_array($typeUniteUpper, $allowedTypes, true)) {
-                $lineErrors[] = "Type d'unité invalide : {$typeUnite}.";
-            }
+            $typeUnite = TypeUnite::normalizeValue($rowAssoc['type_unite'] ?? null);
 
             $qtyRaw = $rowAssoc['quantite_par_unite'] ?? '1';
             $qty = 1;
@@ -1433,7 +1423,7 @@ class ProductController
                     $rowAssoc['description'] !== '' ? $rowAssoc['description'] : null,
                     null,
                     null,
-                    $typeUniteUpper,
+                    $typeUnite,
                     $qty,
                     $estDivisible,
                     null,

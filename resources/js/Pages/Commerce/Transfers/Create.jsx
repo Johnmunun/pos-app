@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function CommerceTransferCreate({ depots = [], products = [], currentShopId }) {
     const [loading, setLoading] = useState(false);
@@ -116,12 +117,17 @@ export default function CommerceTransferCreate({ depots = [], products = [], cur
     return (
         <AppLayout
             header={
-                <div className="flex justify-between items-center">
-                    <h2 className="font-semibold text-xl text-gray-800 dark:text-white leading-tight">
-                        Nouveau Transfert — Commerce
-                    </h2>
-                    <Link href={route('commerce.transfers.index')}>
-                        <Button variant="outline">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full min-w-0">
+                    <div className="min-w-0">
+                        <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">
+                            Nouveau transfert
+                        </h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 hidden sm:block">
+                            Choisissez les magasins source et destination, puis les produits à déplacer.
+                        </p>
+                    </div>
+                    <Link href={route('commerce.transfers.index')} className="shrink-0">
+                        <Button variant="outline" className="w-full sm:w-auto">
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Retour
                         </Button>
@@ -131,13 +137,13 @@ export default function CommerceTransferCreate({ depots = [], products = [], cur
         >
             <Head title="Nouveau Transfert — Commerce" />
 
-            <div className="py-6">
+            <div className={pageY}>
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <Card className="bg-white dark:bg-slate-800">
+                    <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
+                        <Card className={cardShell}>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
-                                    <Building2 className="h-5 w-5 text-blue-600" />
+                                    <Building2 className="h-5 w-5 text-amber-500" />
                                     Dépôts
                                 </CardTitle>
                             </CardHeader>
@@ -168,8 +174,8 @@ export default function CommerceTransferCreate({ depots = [], products = [], cur
                                     </div>
 
                                     <div className="hidden md:flex justify-center">
-                                        <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
-                                            <ArrowRight className="h-5 w-5 text-blue-600" />
+                                        <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
+                                            <ArrowRight className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                                         </div>
                                     </div>
 
@@ -200,10 +206,10 @@ export default function CommerceTransferCreate({ depots = [], products = [], cur
                             </CardContent>
                         </Card>
 
-                        <Card className="bg-white dark:bg-slate-800">
+                        <Card className={cardShell}>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
-                                    <Package className="h-5 w-5 text-blue-600" />
+                                    <Package className="h-5 w-5 text-amber-500" />
                                     Produits à transférer
                                 </CardTitle>
                             </CardHeader>
@@ -329,7 +335,7 @@ export default function CommerceTransferCreate({ depots = [], products = [], cur
                             </CardContent>
                         </Card>
 
-                        <Card className="bg-white dark:bg-slate-800">
+                        <Card className={cardShell}>
                             <CardHeader>
                                 <CardTitle>Notes</CardTitle>
                             </CardHeader>
@@ -353,7 +359,7 @@ export default function CommerceTransferCreate({ depots = [], products = [], cur
                             <Button
                                 type="submit"
                                 disabled={loading || items.length === 0}
-                                className="bg-blue-600 hover:bg-blue-700"
+                                className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-md"
                             >
                                 {loading ? (
                                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />

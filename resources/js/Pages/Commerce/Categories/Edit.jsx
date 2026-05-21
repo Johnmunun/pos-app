@@ -8,6 +8,7 @@ import { Label } from '@/Components/ui/label';
 import { Textarea } from '@/Components/ui/textarea';
 import { ArrowLeft, Save, Tag } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function CommerceCategoriesEdit({ category, parentOptions = [] }) {
     const { data, setData, put, processing, errors } = useForm({
@@ -35,17 +36,17 @@ export default function CommerceCategoriesEdit({ category, parentOptions = [] })
                             <ArrowLeft className="h-4 w-4 mr-2" /> Retour
                         </Link>
                     </Button>
-                    <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
-                        Modifier la catégorie — GlobalCommerce
+                    <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">
+                        Modifier la catégorie
                     </h2>
                 </div>
             }
         >
             <Head title="Modifier catégorie - Commerce" />
-            <div className="py-6">
+            <div className={pageY}>
                 <div className="max-w-2xl mx-auto sm:px-6 lg:px-8">
                     <form onSubmit={handleSubmit}>
-                        <Card>
+                        <Card className={cardShell}>
                             <CardHeader>
                                 <CardTitle className="flex items-center">
                                     <Tag className="h-5 w-5 mr-2" /> Informations

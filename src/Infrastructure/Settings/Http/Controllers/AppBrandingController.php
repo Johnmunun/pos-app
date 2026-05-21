@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Src\Application\Marketing\Services\ApplicationSeoService;
 
 class AppBrandingController extends Controller
 {
@@ -42,10 +43,26 @@ class AppBrandingController extends Controller
             $heroDevicesUrl = $disk->url($heroDevicesPath);
         }
 
+        $seoService = app(ApplicationSeoService::class);
+        $seoSettings = $seoService->settings();
+
         return Inertia::render('Admin/Branding', [
             'appLogoUrl' => $logoUrl,
             'heroMainUrl' => $heroMainUrl,
             'heroDevicesUrl' => $heroDevicesUrl,
+            'appSeoSettings' => [
+                'site_name' => $seoSettings['site_name'] ?? '',
+                'title' => $seoSettings['title'] ?? '',
+                'description' => $seoSettings['description'] ?? '',
+                'keywords' => $seoSettings['keywords'] ?? '',
+                'indexing_enabled' => (bool) ($seoSettings['indexing_enabled'] ?? true),
+                'google_site_verification' => $seoSettings['google_site_verification'] ?? '',
+                'og_image' => $seoSettings['og_image'] ?? '',
+                'twitter_handle' => $seoSettings['twitter_handle'] ?? '',
+                'locale' => $seoSettings['locale'] ?? 'fr_FR',
+                'public_base_url' => config('app.url'),
+                'sitemap_url' => rtrim((string) config('app.url'), '/') . '/sitemap.xml',
+            ],
         ]);
     }
 
@@ -58,6 +75,15 @@ class AppBrandingController extends Controller
             'hero_devices' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:4096',
             'remove_hero_main' => 'nullable|boolean',
             'remove_hero_devices' => 'nullable|boolean',
+            'seo_site_name' => 'nullable|string|max:80',
+            'seo_title' => 'nullable|string|max:150',
+            'seo_description' => 'nullable|string|max:300',
+            'seo_keywords' => 'nullable|string|max:255',
+            'seo_indexing_enabled' => 'sometimes|boolean',
+            'seo_google_site_verification' => 'nullable|string|max:255',
+            'seo_og_image' => 'nullable|url|max:500',
+            'seo_twitter_handle' => 'nullable|string|max:50',
+            'seo_locale' => 'nullable|string|max:10',
         ]);
 
         /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
@@ -93,8 +119,20 @@ class AppBrandingController extends Controller
             }
         }
 
+        app(ApplicationSeoService::class)->saveSettings([
+            'site_name' => $request->input('seo_site_name'),
+            'title' => $request->input('seo_title'),
+            'description' => $request->input('seo_description'),
+            'keywords' => $request->input('seo_keywords'),
+            'indexing_enabled' => $request->boolean('seo_indexing_enabled'),
+            'google_site_verification' => $request->input('seo_google_site_verification'),
+            'og_image' => $request->input('seo_og_image'),
+            'twitter_handle' => $request->input('seo_twitter_handle'),
+            'locale' => $request->input('seo_locale'),
+        ]);
+
         return redirect()->route('admin.branding')
-            ->with('success', 'Branding de l’application mis à jour avec succès.');
+            ->with('success', 'Branding et référencement de l’application mis à jour avec succès.');
     }
 }
 

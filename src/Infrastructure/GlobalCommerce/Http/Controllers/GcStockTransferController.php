@@ -12,6 +12,7 @@ use Inertia\Response;
 use Src\Application\GlobalCommerce\Inventory\Services\GcStockTransferService;
 use Src\Domain\GlobalCommerce\Inventory\Repositories\ProductRepositoryInterface;
 use Src\Infrastructure\GlobalCommerce\Inventory\Models\ProductModel;
+use Src\Infrastructure\GlobalCommerce\Support\GcShopResolver;
 
 /**
  * Contrôleur des transferts de stock inter-magasins - Module GlobalCommerce.
@@ -25,42 +26,17 @@ class GcStockTransferController
 
     private function getShopId(Request $request): string
     {
-        $user = $request->user();
-        if ($user === null) {
-            abort(403, 'User not authenticated.');
-        }
-
-        $depotId = $request->filled('depot_id') ? (int) $request->input('depot_id') : null;
-        if (!$depotId && $request->hasSession()) {
-            $depotId = $request->session()->get('current_depot_id');
-        }
-        if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
-            $shop = Shop::where('depot_id', (int) $depotId)
-                ->where('tenant_id', $user->tenant_id)
-                ->first();
-            if ($shop) {
-                return (string) $shop->id;
-            }
-        }
-
-        if ($user->shop_id !== null && $user->shop_id !== '') {
-            return (string) $user->shop_id;
-        }
-
-        if ($user->tenant_id) {
-            return (string) $user->tenant_id;
-        }
-
-        abort(403, 'Shop ID not found.');
+        return GcShopResolver::resolveShopId($request);
     }
 
     private function getTenantId(Request $request): string
     {
-        $user = $request->user();
-        if ($user === null || !$user->tenant_id) {
+        $tenantId = GcShopResolver::resolveTenantId($request);
+        if ($tenantId === null) {
             abort(403, 'Tenant not found.');
         }
-        return (string) $user->tenant_id;
+
+        return (string) $tenantId;
     }
 
     private function isRoot(Request $request): bool

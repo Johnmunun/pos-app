@@ -14,8 +14,9 @@ import ProductDetailsModal from '@/Components/Commerce/ProductDetailsModal';
 import ImportModal from '@/Components/ImportModal';
 import axios from 'axios';
 import { formatCurrency } from '@/lib/currency';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
-export default function CommerceProductsIndex({ products = [], categories = [], filters = {} }) {
+export default function CommerceProductsIndex({ products = [], categories = [], filters = {}, pagination }) {
     const { shop, auth } = usePage().props;
     const currency = shop?.currency || 'CDF';
     const fmt = (amount) => formatCurrency(amount, currency);
@@ -43,13 +44,21 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
     
     const canViewMovements = hasPermission('commerce.stock.movement.view') || hasPermission('module.commerce');
 
+    const listRouteParams = (page = pagination?.current_page || 1) => ({
+        search: search || undefined,
+        category_id: categoryId || undefined,
+        status: selectedStatus || undefined,
+        per_page: filters?.per_page || pagination?.per_page || 25,
+        page,
+    });
+
     const handleSearch = (e) => {
         e.preventDefault();
-        router.get(route('commerce.products.index'), { 
-            search, 
-            category_id: categoryId || undefined,
-            status: selectedStatus || undefined
-        }, { preserveState: true });
+        router.get(route('commerce.products.index'), listRouteParams(1), { preserveState: true });
+    };
+
+    const handlePageChange = (page) => {
+        router.get(route('commerce.products.index'), listRouteParams(page), { preserveState: true, preserveScroll: true });
     };
     
     const handleViewMovements = (product = null) => {
@@ -205,14 +214,19 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
         <AppLayout
             header={
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <h2 className="font-semibold text-lg sm:text-xl text-gray-800 dark:text-gray-100 leading-tight">
-                        Produits — GlobalCommerce
-                    </h2>
+                    <div>
+                        <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">
+                            Produits — Global Commerce
+                        </h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed max-w-2xl hidden sm:block">
+                            Catalogue, import, exports et mouvements de stock.
+                        </p>
+                    </div>
                     <div className="flex flex-wrap items-center gap-2">
                         <Button
                             type="button"
                             variant="outline"
-                            className="inline-flex items-center gap-2"
+                            className="inline-flex items-center gap-2 rounded-xl border-gray-300 dark:border-slate-600"
                             onClick={() => setViewModalOpen(true)}
                         >
                             <Eye className="h-4 w-4" />
@@ -222,7 +236,7 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
                             <Button
                                 type="button"
                                 variant="outline"
-                                className="inline-flex items-center gap-2"
+                                className="inline-flex items-center gap-2 rounded-xl border-gray-300 dark:border-slate-600"
                                 onClick={() => handleViewMovements(null)}
                             >
                                 <History className="h-4 w-4" />
@@ -232,7 +246,7 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
                         <Button
                             type="button"
                             asChild
-                            className="inline-flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white"
+                            className="inline-flex items-center gap-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white shadow-sm"
                         >
                             <a
                                 href={route('commerce.exports.products.pdf')}
@@ -245,7 +259,7 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
                         <Button
                             type="button"
                             asChild
-                            className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white"
+                            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm"
                         >
                             <a
                                 href={route('commerce.exports.products.excel')}
@@ -258,7 +272,7 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
                         <Button
                             type="button"
                             variant="outline"
-                            className="inline-flex items-center gap-2"
+                            className="inline-flex items-center gap-2 rounded-xl border-gray-300 dark:border-slate-600"
                             onClick={handleOpenImport}
                             disabled={confirmingImport}
                         >
@@ -267,7 +281,7 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
                         <Button
                             type="button"
                             onClick={handleCreate}
-                            className="inline-flex items-center gap-2"
+                            className="inline-flex items-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white shadow-sm"
                         >
                             <Plus className="h-4 w-4" />
                             <span>Nouveau</span>
@@ -277,10 +291,10 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
             }
         >
             <Head title="Produits - Commerce" />
-            <div className="py-6">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
                     {/* Recherche - Mobile optimisée */}
-                    <Card className="mb-6 bg-white dark:bg-gray-800">
+                    <Card className={`mb-6 ${cardShell}`}>
                         <CardHeader className="pb-3">
                             <CardTitle className="flex items-center text-gray-900 dark:text-white text-base sm:text-lg">
                                 <Search className="h-4 w-4 sm:h-5 sm:w-5 mr-2" /> 
@@ -296,7 +310,7 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
                                         placeholder="Rechercher produits, SKU..."
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
-                                        className="pl-10"
+                                        className="pl-10 rounded-xl border-gray-200 dark:border-slate-600"
                                     />
                                 </div>
                                 <div className="flex flex-col sm:flex-row gap-3">
@@ -304,7 +318,7 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
                                         <select
                                             value={categoryId}
                                             onChange={(e) => setCategoryId(e.target.value)}
-                                            className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-rose-500 focus:ring-rose-500 text-sm py-2"
+                                        className="w-full rounded-xl border border-gray-200/90 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 shadow-sm focus:ring-2 focus:ring-amber-500/70 focus:border-amber-400/50 text-sm py-2"
                                         >
                                             <option value="">Toutes les catégories</option>
                                             {categories.map((c) => (
@@ -316,27 +330,31 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
                                         <select
                                             value={selectedStatus}
                                             onChange={(e) => setSelectedStatus(e.target.value)}
-                                            className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-rose-500 focus:ring-rose-500 text-sm py-2"
+                                        className="w-full rounded-xl border border-gray-200/90 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 shadow-sm focus:ring-2 focus:ring-amber-500/70 focus:border-amber-400/50 text-sm py-2"
                                         >
                                             <option value="">Tous les statuts</option>
                                             <option value="active">Actif</option>
                                             <option value="inactive">Inactif</option>
                                         </select>
                                     </div>
-                                    <Button type="submit" className="w-full sm:w-auto">
+                                    <Button type="submit" className="w-full sm:w-auto rounded-xl bg-amber-500 hover:bg-amber-600 text-white shadow-sm">
                                         <Search className="h-4 w-4 mr-2" />
                                         <span className="hidden sm:inline">Filtrer</span>
                                         <span className="sm:hidden">Rechercher</span>
                                     </Button>
                                 </div>
                                 <div className="md:hidden flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700">
-                                    <span>Affichage de {products.length} produit{products.length > 1 ? 's' : ''}</span>
+                                    <span>
+                                        {pagination
+                                            ? `${pagination.from ?? 0}–${pagination.to ?? 0} sur ${pagination.total}`
+                                            : `${products.length} produit${products.length > 1 ? 's' : ''}`}
+                                    </span>
                                 </div>
                             </form>
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-white dark:bg-slate-900">
+                    <Card className={cardShell}>
                         <CardHeader>
                             <CardTitle className="flex items-center text-gray-900 dark:text-white">
                                 <Package className="h-5 w-5 mr-2" />
@@ -349,7 +367,7 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
                                     <Package className="h-12 w-12 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
                                     <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Aucun produit</h3>
                                     <p className="text-gray-500 dark:text-gray-400 mb-4">Créez votre premier produit.</p>
-                                    <Button onClick={handleCreate} className="bg-rose-500 hover:bg-rose-600 text-white">
+                                    <Button onClick={handleCreate} className="rounded-xl bg-amber-500 hover:bg-amber-600 text-white shadow-sm">
                                         <Plus className="h-4 w-4 mr-2" /> Ajouter
                                     </Button>
                                 </div>
@@ -621,6 +639,35 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
                                     </tbody>
                                 </table>
                                     </div>
+                                    {pagination && pagination.last_page > 1 && (
+                                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
+                                            <span>
+                                                Affichage de <span className="font-medium text-gray-900 dark:text-white">{pagination.from}</span> à{' '}
+                                                <span className="font-medium text-gray-900 dark:text-white">{pagination.to}</span> sur{' '}
+                                                <span className="font-medium text-gray-900 dark:text-white">{pagination.total}</span> produit(s)
+                                            </span>
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    disabled={pagination.current_page <= 1}
+                                                    onClick={() => handlePageChange(pagination.current_page - 1)}
+                                                >
+                                                    Précédent
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    disabled={pagination.current_page >= pagination.last_page}
+                                                    onClick={() => handlePageChange(pagination.current_page + 1)}
+                                                >
+                                                    Suivant
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </>
                             )}
                         </CardContent>
@@ -630,7 +677,7 @@ export default function CommerceProductsIndex({ products = [], categories = [], 
                     <div className="md:hidden fixed bottom-20 right-4 z-30">
                         <Button
                             onClick={handleCreate}
-                            className="h-14 w-14 rounded-full bg-rose-500 hover:bg-rose-600 text-white shadow-lg flex items-center justify-center"
+                            className="h-14 w-14 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg shadow-amber-500/30 flex items-center justify-center"
                             size="icon"
                         >
                             <Plus className="h-6 w-6" />

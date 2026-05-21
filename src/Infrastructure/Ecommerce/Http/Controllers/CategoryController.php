@@ -40,7 +40,6 @@ class CategoryController
         $shop = $this->ecommerceInventoryShop($request);
         $shopId = (string) $shop->id;
         $gcShopIds = $this->ecommerceGcShopIds($request, $shop);
-        $this->featureLimitService->assertCanCreateCategory((string) ($user->tenant_id ?? ''));
 
         // Récupérer les catégories à partir du modèle Eloquent (liste plate)
         $categoryModels = CategoryModel::whereIn('shop_id', $gcShopIds)
@@ -75,6 +74,8 @@ class CategoryController
         $shop = $this->ecommerceInventoryShop($request);
         $shopId = (string) $shop->id;
         $gcShopIds = $this->ecommerceGcShopIds($request, $shop);
+
+        $this->featureLimitService->assertCanCreateCategory((string) ($user->tenant_id ?? ''));
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',

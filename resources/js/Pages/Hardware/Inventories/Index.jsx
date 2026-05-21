@@ -20,6 +20,7 @@ import {
     Package,
     XCircle as XCircleIcon
 } from 'lucide-react';
+import GrabScroll from '@/Components/GrabScroll';
 
 const statusConfig = {
     draft: { label: 'Brouillon', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300', icon: FileText },
@@ -90,7 +91,7 @@ export default function InventoryIndex({ inventories, filters = {}, pagination, 
         >
             <Head title="Inventaires" />
 
-            <div className="py-6">
+            <div className="py-8 sm:py-10">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     {/* Header avec bouton créer */}
                     <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -115,7 +116,7 @@ export default function InventoryIndex({ inventories, filters = {}, pagination, 
                     </div>
 
                     {/* Filtres */}
-                    <Card className="mb-6 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <Card className="mb-6 overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/80">
                         <CardHeader>
                             <CardTitle className="flex items-center text-gray-900 dark:text-white">
                                 <Filter className="h-5 w-5 mr-2 text-amber-500" />
@@ -183,10 +184,10 @@ export default function InventoryIndex({ inventories, filters = {}, pagination, 
                     </Card>
 
                     {/* Liste des inventaires */}
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/80">
                         <CardHeader>
                             <CardTitle className="flex items-center text-gray-900 dark:text-white">
-                                <ClipboardList className="h-5 w-5 mr-2 text-blue-500" />
+                                <ClipboardList className="h-5 w-5 mr-2 text-amber-500" />
                                 Liste des inventaires ({pagination?.total ?? inventories.length})
                             </CardTitle>
                         </CardHeader>
@@ -210,7 +211,7 @@ export default function InventoryIndex({ inventories, filters = {}, pagination, 
                                     )}
                                 </div>
                             ) : (
-                                <div className="overflow-x-auto">
+                                <GrabScroll className="rounded-xl border border-gray-100/90 bg-gray-50/30 dark:border-slate-700/60 dark:bg-slate-950/30">
                                     <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
                                         <thead className="bg-gray-50 dark:bg-slate-800">
                                             <tr>
@@ -293,7 +294,7 @@ export default function InventoryIndex({ inventories, filters = {}, pagination, 
                                             ))}
                                         </tbody>
                                     </table>
-                                </div>
+                                </GrabScroll>
                             )}
                         </CardContent>
                     </Card>

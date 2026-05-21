@@ -11,6 +11,7 @@ import { Search, Plus, Edit, Trash2, Package, AlertTriangle, Eye, X, Copy, Check
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
 import { formatCurrency } from '@/lib/currency';
+import GrabScroll from '@/Components/GrabScroll';
 
 /**
  * Page liste des produits — Module Quincaillerie.
@@ -296,9 +297,9 @@ export default function HardwareProductsIndex({ products = [], categories = [], 
             }
         >
             <Head title="Produits - Quincaillerie" />
-            <div className="py-6 space-y-6">
+            <div className="py-8 sm:py-10 space-y-6 sm:space-y-8">
                 {/* Recherche - Mobile optimisée */}
-                <Card className="mb-6 bg-white dark:bg-gray-800">
+                <Card className="mb-6 overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/80">
                     <CardHeader className="pb-3">
                         <CardTitle className="flex items-center text-gray-900 dark:text-white text-base sm:text-lg">
                             <Search className="h-4 w-4 sm:h-5 sm:w-5 mr-2" /> 
@@ -359,10 +360,11 @@ export default function HardwareProductsIndex({ products = [], categories = [], 
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white dark:bg-gray-800">
+                <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/80">
                     <CardHeader>
                         <CardTitle className="flex items-center text-gray-900 dark:text-white">
-                            <Package className="h-5 w-5 mr-2" /> Liste des produits ({products.length})
+                            <Package className="h-5 w-5 mr-2 text-amber-500" />
+                            Liste des produits ({products.length})
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -489,8 +491,8 @@ export default function HardwareProductsIndex({ products = [], categories = [], 
                                     })}
                                 </div>
 
-                                {/* Vue Desktop - Tableau */}
-                                <div className="hidden md:block overflow-x-auto">
+                                {/* Vue Desktop — scroll horizontal : molette + clic-glisser */}
+                                <GrabScroll className="hidden md:block rounded-xl border border-gray-100/90 bg-gray-50/30 dark:border-slate-700/60 dark:bg-slate-950/30">
                                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                     <thead className="bg-gray-50 dark:bg-gray-800">
                                         <tr>
@@ -599,7 +601,7 @@ export default function HardwareProductsIndex({ products = [], categories = [], 
                                         })}
                                     </tbody>
                                 </table>
-                                </div>
+                                </GrabScroll>
                             </>
                         )}
                     </CardContent>
@@ -897,7 +899,7 @@ export default function HardwareProductsIndex({ products = [], categories = [], 
                                     </div>
 
                                     {importPreview.sample && importPreview.sample.header && importPreview.sample.header.length > 0 && (
-                                        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-x-auto max-h-64">
+                                        <GrabScroll className="max-h-64 overflow-y-auto rounded-xl border border-gray-200/80 dark:border-gray-700/80">
                                             <table className="min-w-full text-xs">
                                                 <thead className="bg-gray-50 dark:bg-gray-800">
                                                     <tr>
@@ -923,7 +925,7 @@ export default function HardwareProductsIndex({ products = [], categories = [], 
                                                     ))}
                                                 </tbody>
                                             </table>
-                                        </div>
+                                        </GrabScroll>
                                     )}
 
                                     {importPreview.errors && importPreview.errors.length > 0 && (

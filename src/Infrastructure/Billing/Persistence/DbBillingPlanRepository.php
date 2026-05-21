@@ -2,6 +2,7 @@
 
 namespace Src\Infrastructure\Billing\Persistence;
 
+use App\Support\InertiaBillingPayloadCache;
 use Illuminate\Support\Facades\DB;
 use Src\Domain\Billing\Repositories\BillingPlanRepositoryInterface;
 
@@ -182,6 +183,8 @@ class DbBillingPlanRepository implements BillingPlanRepositoryInterface
                 'created_at' => now(),
             ]
         );
+
+        InertiaBillingPayloadCache::forget($tenantId);
     }
 
     public function getTenantFeatureConfig(string $tenantId, string $featureCode): array

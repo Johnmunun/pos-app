@@ -8,6 +8,7 @@ import { Badge } from '@/Components/ui/badge';
 import Modal from '@/Components/Modal';
 import { Warehouse, Plus, Edit, Power, PowerOff, MapPin, Building2, Phone, Mail } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import GrabScroll from '@/Components/GrabScroll';
 
 export default function HardwareDepotsIndex({ depots = [] }) {
     const { auth } = usePage().props;
@@ -169,13 +170,13 @@ export default function HardwareDepotsIndex({ depots = [] }) {
         >
             <Head title="Dépôts - Hardware" />
 
-            <div className="py-6">
+            <div className="py-8 sm:py-10">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <p className="text-gray-600 dark:text-gray-400 mb-6">
                         Gérez vos dépôts. Sélectionnez un dépôt dans la barre de navigation pour accéder aux produits et au stock de ce dépôt.
                     </p>
 
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/80">
                         {depots.length === 0 ? (
                             <div className="py-12 text-center">
                                 <Warehouse className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
@@ -193,7 +194,7 @@ export default function HardwareDepotsIndex({ depots = [] }) {
                                 )}
                             </div>
                         ) : (
-                            <div className="overflow-x-auto">
+                            <GrabScroll className="rounded-none border-0 bg-transparent dark:bg-transparent">
                                 <table className="w-full">
                                     <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
                                         <tr>
@@ -314,7 +315,7 @@ export default function HardwareDepotsIndex({ depots = [] }) {
                                         ))}
                                     </tbody>
                                 </table>
-                            </div>
+                            </GrabScroll>
                         )}
                     </div>
                 </div>

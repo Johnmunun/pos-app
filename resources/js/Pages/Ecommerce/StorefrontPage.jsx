@@ -1,16 +1,18 @@
-import { Head, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
+import StorefrontSeoHead from '@/Components/Ecommerce/StorefrontSeoHead';
 import { ShoppingCart, ArrowLeft, MapPin, Phone, Mail, Clock } from 'lucide-react';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
 import AISupportFloatingWidget from '@/Components/Ecommerce/AISupportFloatingWidget';
 import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBootstrap';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
+import { StorefrontFooterReportBar } from '@/Components/Ecommerce/StorefrontReportShop';
 
 function normalizeHtmlSpaces(value) {
     if (!value) return '';
     return String(value).replace(/&nbsp;/gi, ' ').replace(/\u00A0/g, ' ');
 }
 
-export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {} }) {
+export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {}, pageSeo = null }) {
     const links = useStorefrontLinks();
     const isContact = page?.template === 'contact';
     const meta = page?.metadata && typeof page.metadata === 'object' ? page.metadata : {};
@@ -26,7 +28,7 @@ export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-50">
-            <Head title={page?.title || 'Page'} />
+            <StorefrontSeoHead pageSeo={pageSeo} />
             <StorefrontClientBootstrap />
 
             {/* Header */}
@@ -284,12 +286,7 @@ export default function StorefrontPage({ shop, page, cmsPages = [], whatsapp = {
                         </div>
                     </div>
 
-                    <div className="mt-10 pt-8 border-t border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                            © {new Date().getFullYear()} {shop?.name || 'Ma Boutique'}. Tous droits réservés.
-                        </p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Mentions & pages d’aide via le CMS</p>
-                    </div>
+                    <StorefrontFooterReportBar shopName={shop?.name} />
                 </div>
             </footer>
 

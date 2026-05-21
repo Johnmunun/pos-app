@@ -57,6 +57,7 @@ import {
     FolderOpen,
     Eye,
     Mail as MailIcon,
+    Flag,
 } from 'lucide-react';
 
 /**
@@ -339,6 +340,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                 { label: 'Plans & Limitations', href: '/admin/billing/plans', permission: 'admin.billing.manage', icon: CreditCard },
                 { label: 'Transactions (abonnements)', href: '/admin/billing/transactions', permission: 'admin.billing.manage', icon: Scroll },
                 { label: 'Retraits marchands', href: '/admin/billing/withdrawals', permission: 'admin.billing.manage', icon: Building },
+                { label: 'Signalements boutiques', href: '/admin/ecommerce/shop-reports', permission: 'admin.dashboard.view|admin.billing.manage', icon: Flag },
                 { label: 'Préférences UI', href: '#', permission: 'settings.ui', icon: Palette },
                 { label: 'Referral / Parrainage', href: '/referrals/settings', permission: 'referral.settings.view|referral.settings.manage', icon: Users },
             ]
@@ -415,13 +417,13 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
     return (
         <>
             {/* Sidebar Desktop - Fixe */}
-            <aside className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col sidebar-scrollbar">
-                <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 px-6 pb-4">
+            <aside className="sidebar-scrollbar hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
+                <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-gray-200/70 bg-gradient-to-b from-white via-white to-amber-50/[0.14] px-5 pb-4 shadow-[4px_0_32px_-14px_rgba(15,23,42,0.08)] dark:border-slate-700/70 dark:from-slate-900 dark:via-slate-900 dark:to-amber-950/[0.12] dark:shadow-[4px_0_32px_-14px_rgba(0,0,0,0.45)]">
                     {/* Logo */}
-                    <div className="flex h-16 shrink-0 items-center">
-                        <Link href="/" className="flex items-center space-x-2 group">
+                    <div className="flex h-[4.25rem] shrink-0 items-center border-b border-gray-100/90 pb-3 dark:border-slate-800/80">
+                        <Link href="/" className="group flex items-center gap-2.5">
                             {appLogoUrl ? (
-                                <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex items-center justify-center overflow-hidden shadow-lg group-hover:shadow-xl transition-shadow">
+                                <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-gray-200/90 bg-white shadow-md ring-1 ring-black/5 transition-shadow group-hover:shadow-lg dark:border-slate-600 dark:bg-slate-900 dark:ring-white/5">
                                     <img
                                         src={appLogoUrl}
                                         alt="OmniPOS"
@@ -429,11 +431,13 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                                     />
                                 </div>
                             ) : (
-                                <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
-                                    <span className="text-white font-bold text-lg">OP</span>
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-md shadow-amber-500/25 ring-1 ring-white/20 transition-transform group-hover:scale-[1.02] group-hover:shadow-lg">
+                                    <span className="text-lg font-bold text-white">OP</span>
                                 </div>
                             )}
-                            <span className="text-xl font-bold text-gray-900 dark:text-white">OmniPOS</span>
+                            <span className="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-xl font-bold tracking-tight text-transparent dark:from-white dark:to-gray-300">
+                                OmniPOS
+                            </span>
                         </Link>
                     </div>
 
@@ -465,16 +469,20 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
 
                                 return (
                                     <li key={group.key}>
-                                        <div className="flex items-center gap-2 text-xs font-semibold leading-6 text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
-                                            {group.icon && <group.icon className="h-4 w-4" />}
+                                        <div className="mb-2 flex items-center gap-2 rounded-lg bg-gray-100/80 px-2 py-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:bg-slate-800/70 dark:text-gray-400">
+                                            {group.icon && (
+                                                <group.icon className="h-3.5 w-3.5 text-amber-600/90 dark:text-amber-400/90" />
+                                            )}
                                             {group.label}
                                         </div>
-                                        <ul role="list" className="-mx-2 space-y-1">
+                                        <ul role="list" className="-mx-1 space-y-0.5">
                                             {visibleItems.map((item) => {
                                                 if (item.header) {
                                                     return (
-                                                        <li key={item.label} className="pt-3 mt-2 border-t border-gray-200 dark:border-gray-600 first:border-0 first:pt-0 first:mt-0">
-                                                            <div className="px-2 py-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{item.label}</div>
+                                                        <li key={item.label} className="mt-2 border-t border-gray-200/80 pt-3 first:mt-0 first:border-0 first:pt-0 dark:border-slate-700/80">
+                                                            <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                                                                {item.label}
+                                                            </div>
                                                         </li>
                                                     );
                                                 }
@@ -484,12 +492,12 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                                                 return (
                                                     <li key={item.label}>
                                                         <div
-                                                            className={`group flex items-center justify-between gap-x-2 rounded-lg p-2 text-sm leading-6 font-medium transition-colors ${
+                                                            className={`group flex items-center justify-between gap-x-2 rounded-xl p-2 text-sm font-medium leading-6 transition-all ${
                                                                 isLocked
-                                                                    ? 'bg-gray-50 dark:bg-gray-700/40 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                                                                    : (isActive
-                                                                        ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'
-                                                                        : 'text-gray-700 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-700')
+                                                                    ? 'cursor-not-allowed bg-gray-50/90 text-gray-500 dark:bg-slate-800/50 dark:text-gray-400'
+                                                                    : isActive
+                                                                        ? 'bg-gradient-to-r from-amber-500/18 to-orange-500/10 text-amber-900 shadow-sm ring-1 ring-amber-500/25 dark:from-amber-500/22 dark:to-orange-600/12 dark:text-amber-200 dark:ring-amber-400/25'
+                                                                        : 'text-gray-700 ring-1 ring-transparent hover:bg-white/90 hover:text-amber-800 hover:ring-gray-200/70 dark:text-gray-300 dark:hover:bg-slate-800/80 dark:hover:text-amber-300 dark:hover:ring-slate-600/50'
                                                             }`}
                                                         >
                                                             {isLocked ? (
@@ -531,8 +539,8 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
 
                     {/* Footer plan indicator */}
                     {billingSummary && (
-                        <div className="mt-auto pt-4 border-t border-gray-200 dark:border-gray-700">
-                            <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3">
+                        <div className="mt-auto border-t border-gray-200/80 pt-4 dark:border-slate-700/80">
+                            <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50 to-orange-50/50 p-3 shadow-landing-soft dark:border-amber-800/50 dark:from-amber-950/40 dark:to-orange-950/20">
                                 <p className="text-xs text-amber-700 dark:text-amber-300 font-semibold">
                                     Plan: {billingSummary.plan_name}
                                 </p>
@@ -554,7 +562,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                                         </div>
                                         <Link
                                             href="/onboarding/payment"
-                                            className="mt-2 inline-flex w-full items-center justify-center rounded-lg bg-amber-600 px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-amber-700"
+                                            className="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-2 py-2 text-[11px] font-semibold text-white shadow-md shadow-amber-500/20 transition hover:from-amber-600 hover:to-orange-700"
                                         >
                                             Upgrade
                                         </Link>
@@ -568,16 +576,16 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
 
             {/* Sidebar Mobile - Drawer */}
             <aside
-                className={`fixed inset-y-0 z-50 w-[min(20rem,calc(100vw-1rem))] max-w-[100vw] sm:w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:hidden max-md:shadow-2xl max-md:pt-[env(safe-area-inset-top,0px)] max-md:pb-[env(safe-area-inset-bottom,0px)] ${
+                className={`fixed inset-y-0 z-50 w-[min(20rem,calc(100vw-1rem))] max-w-[100vw] transform border-r border-gray-200/70 bg-gradient-to-b from-white via-white to-amber-50/[0.12] shadow-2xl shadow-black/10 transition-transform duration-300 ease-in-out dark:border-slate-700/70 dark:from-slate-900 dark:via-slate-900 dark:to-amber-950/[0.1] dark:shadow-black/40 sm:w-64 lg:hidden max-md:pb-[env(safe-area-inset-bottom,0px)] max-md:pt-[env(safe-area-inset-top,0px)] ${
                     isOpen ? 'translate-x-0' : '-translate-x-full'
                 }`}
             >
-                <div className="flex h-full flex-col gap-y-5 overflow-y-auto px-6 pb-4">
+                <div className="flex h-full flex-col gap-y-5 overflow-y-auto px-5 pb-4">
                     {/* Header avec bouton fermer */}
-                    <div className="flex h-16 shrink-0 items-center justify-between">
-                        <Link href="/" className="flex items-center space-x-2">
+                    <div className="flex h-[4.25rem] shrink-0 items-center justify-between border-b border-gray-100/90 pb-3 dark:border-slate-800/80">
+                        <Link href="/" className="flex items-center gap-2.5">
                             {appLogoUrl ? (
-                                <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex items-center justify-center overflow-hidden shadow-lg">
+                                <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-gray-200/90 bg-white shadow-md dark:border-slate-600 dark:bg-slate-900">
                                     <img
                                         src={appLogoUrl}
                                         alt="OmniPOS"
@@ -585,15 +593,18 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                                     />
                                 </div>
                             ) : (
-                                <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
-                                    <span className="text-white font-bold text-lg">OP</span>
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-md shadow-amber-500/25">
+                                    <span className="text-lg font-bold text-white">OP</span>
                                 </div>
                             )}
-                            <span className="text-xl font-bold text-gray-900 dark:text-white">OmniPOS</span>
+                            <span className="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-xl font-bold tracking-tight text-transparent dark:from-white dark:to-gray-300">
+                                OmniPOS
+                            </span>
                         </Link>
                         <button
+                            type="button"
                             onClick={onClose}
-                            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300"
+                            className="rounded-xl border border-transparent p-2 text-gray-500 transition hover:border-gray-200 hover:bg-white/90 hover:text-gray-800 dark:text-gray-400 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:hover:text-gray-200"
                         >
                             <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -602,7 +613,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                     </div>
 
                     {billingSummary && (
-                        <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3">
+                        <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50 to-orange-50/50 p-3 shadow-landing-soft dark:border-amber-800/50 dark:from-amber-950/40 dark:to-orange-950/20">
                             <p className="text-xs text-amber-700 dark:text-amber-300 font-semibold">
                                 Plan: {billingSummary.plan_name}
                             </p>
@@ -631,7 +642,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                                     <Link
                                         href="/onboarding/payment"
                                         onClick={onClose}
-                                        className="mt-2 inline-flex w-full items-center justify-center rounded-lg bg-amber-600 px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-amber-700"
+                                        className="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-2 py-2 text-[11px] font-semibold text-white shadow-md shadow-amber-500/20 transition hover:from-amber-600 hover:to-orange-700"
                                     >
                                         Upgrade
                                     </Link>
@@ -667,16 +678,20 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
 
                                 return (
                                     <li key={group.key}>
-                                        <div className="flex items-center gap-2 text-xs font-semibold leading-6 text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
-                                            {group.icon && <group.icon className="h-4 w-4" />}
+                                        <div className="mb-2 flex items-center gap-2 rounded-lg bg-gray-100/80 px-2 py-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:bg-slate-800/70 dark:text-gray-400">
+                                            {group.icon && (
+                                                <group.icon className="h-3.5 w-3.5 text-amber-600/90 dark:text-amber-400/90" />
+                                            )}
                                             {group.label}
                                         </div>
-                                        <ul role="list" className="-mx-2 space-y-1">
+                                        <ul role="list" className="-mx-1 space-y-0.5">
                                             {visibleItems.map((item) => {
                                                 if (item.header) {
                                                     return (
-                                                        <li key={item.label} className="pt-3 mt-2 border-t border-gray-200 dark:border-gray-600 first:border-0 first:pt-0 first:mt-0">
-                                                            <div className="px-2 py-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{item.label}</div>
+                                                        <li key={item.label} className="mt-2 border-t border-gray-200/80 pt-3 first:mt-0 first:border-0 first:pt-0 dark:border-slate-700/80">
+                                                            <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                                                                {item.label}
+                                                            </div>
                                                         </li>
                                                     );
                                                 }
@@ -686,12 +701,12 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                                                 return (
                                                     <li key={item.label}>
                                                         <div
-                                                            className={`group flex items-center justify-between gap-x-2 rounded-lg p-3 max-md:min-h-[52px] max-md:py-3.5 text-sm leading-6 font-medium transition-colors active:bg-gray-100/80 dark:active:bg-gray-700/60 ${
+                                                            className={`group flex max-md:min-h-[52px] max-md:py-3.5 items-center justify-between gap-x-2 rounded-xl p-3 text-sm font-medium leading-6 transition-all active:scale-[0.99] dark:active:bg-slate-800/60 ${
                                                                 isLocked
-                                                                    ? 'bg-gray-50 dark:bg-gray-700/40 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                                                                    : (isActive
-                                                                        ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'
-                                                                        : 'text-gray-700 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-700')
+                                                                    ? 'cursor-not-allowed bg-gray-50/90 text-gray-500 dark:bg-slate-800/50 dark:text-gray-400'
+                                                                    : isActive
+                                                                        ? 'bg-gradient-to-r from-amber-500/18 to-orange-500/10 text-amber-900 shadow-sm ring-1 ring-amber-500/25 dark:from-amber-500/22 dark:to-orange-600/12 dark:text-amber-200 dark:ring-amber-400/25'
+                                                                        : 'text-gray-700 ring-1 ring-transparent hover:bg-white/90 hover:text-amber-800 hover:ring-gray-200/70 dark:text-gray-300 dark:hover:bg-slate-800/80 dark:hover:text-amber-300 dark:hover:ring-slate-600/50'
                                                             }`}
                                                         >
                                                             {isLocked ? (

@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Src\Application\Common\Services\AssistantSalesProfitContextBuilder;
 use Src\Application\Quincaillerie\Services\HardwareAssistantContextService;
 
 /**
@@ -26,7 +27,12 @@ class HardwareAssistantController
      */
     public function ask(Request $request): JsonResponse
     {
-        $request->validate(['message' => 'required|string|max:2000']);
+        $request->validate([
+            'message' => 'required|string|max:2000',
+            'history' => 'nullable|array|max:6',
+            'history.*.role' => 'required_with:history|in:user,assistant',
+            'history.*.content' => 'required_with:history|string|max:2000',
+        ]);
 
         $message = trim($request->input('message'));
         if ($message === '') {
@@ -62,9 +68,11 @@ class HardwareAssistantController
         $driver = (string) config('hardware_assistant.llm_driver', 'fallback');
         $apiKey = (string) config('services.openai.api_key', '');
 
+        $history = $this->normalizeHistory($request->input('history'));
+
         if ($driver === 'openai' && $apiKey !== '') {
             try {
-                $result = $this->callOpenAI($apiKey, $systemPrompt, $context, $message);
+                $result = $this->callOpenAI($apiKey, $systemPrompt, $context, $message, $history);
                 return response()->json([
                     'answer' => $result['answer'],
                     'navigation' => $result['navigation'] ?? null,
@@ -112,22 +120,60 @@ class HardwareAssistantController
     }
 
     /**
+     * @param array<int, array{role: string, content: string}> $history
+     * @return array<int, array{role: string, content: string}>
+     */
+    private function normalizeHistory(mixed $history): array
+    {
+        if (!is_array($history)) {
+            return [];
+        }
+        $out = [];
+        foreach ($history as $turn) {
+            if (!is_array($turn)) {
+                continue;
+            }
+            $role = ($turn['role'] ?? '') === 'user' ? 'user' : 'assistant';
+            $content = trim((string) ($turn['content'] ?? ''));
+            if ($content === '') {
+                continue;
+            }
+            $out[] = ['role' => $role, 'content' => mb_substr($content, 0, 2000)];
+            if (count($out) >= 6) {
+                break;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param array<int, array{role: string, content: string}> $history
      * @return array{answer: string|null, navigation: array|null}
      */
-    private function callOpenAI(string $apiKey, string $systemPrompt, array $context, string $userMessage): array
+    private function callOpenAI(string $apiKey, string $systemPrompt, array $context, string $userMessage, array $history): array
     {
         $contextJson = json_encode($context, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        $userContent = "Contexte (quincaillerie, données uniquement, ne pas inventer):\n" . $contextJson . "\n\nQuestion utilisateur: " . $userMessage;
+        $userContent = "Contexte quincaillerie (JSON — source unique pour chiffres, listes et routes ; ne rien inventer):\n"
+            . $contextJson
+            . "\n\nQuestion actuelle: "
+            . $userMessage;
+
+        $chatMessages = [['role' => 'system', 'content' => $systemPrompt]];
+        foreach ($history as $turn) {
+            $chatMessages[] = [
+                'role' => $turn['role'] === 'user' ? 'user' : 'assistant',
+                'content' => $turn['content'],
+            ];
+        }
+        $chatMessages[] = ['role' => 'user', 'content' => $userContent];
 
         /** @var \Illuminate\Http\Client\Response $response */
         $response = Http::withToken($apiKey)
             ->timeout(15)
             ->post('https://api.openai.com/v1/chat/completions', [
                 'model' => 'gpt-4o-mini',
-                'messages' => [
-                    ['role' => 'system', 'content' => $systemPrompt],
-                    ['role' => 'user', 'content' => $userContent],
-                ],
+                'messages' => $chatMessages,
                 'max_tokens' => 500,
                 'temperature' => 0.3,
             ]);
@@ -219,11 +265,13 @@ class HardwareAssistantController
         $salesToday = $context['sales_today'] ?? null;
 
         $greet = function (string $body): string {
-            // Pour éviter les répétitions de "Bonjour ..." à chaque message,
-            // on retourne le corps tel quel côté fallback. Le LLM peut gérer
-            // la salutation s'il est activé.
             return $body;
         };
+
+        $profitAnswer = AssistantSalesProfitContextBuilder::tryAnswerProfitQuestion($message, $context, $currency);
+        if ($profitAnswer !== null) {
+            return ['answer' => $greet($profitAnswer), 'navigation' => null];
+        }
 
         // Ventes du jour (combien de ventes aujourd'hui ?)
         if ($salesToday !== null

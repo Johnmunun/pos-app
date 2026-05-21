@@ -31,6 +31,7 @@ export default function Withdrawals() {
     const [submitting, setSubmitting] = useState(false);
     const [balances, setBalances] = useState([]);
     const [withdrawals, setWithdrawals] = useState([]);
+    const [withdrawalFeePercent, setWithdrawalFeePercent] = useState(0);
     const [form, setForm] = useState({
         currency_code: 'USD',
         requested_amount: '',
@@ -45,6 +46,7 @@ export default function Withdrawals() {
             const listBalances = Array.isArray(data?.balances) ? data.balances : [];
             setBalances(listBalances);
             setWithdrawals(Array.isArray(data?.withdrawals) ? data.withdrawals : []);
+            setWithdrawalFeePercent(Number(data?.withdrawal_fee_percent ?? 0));
             if (listBalances.length > 0 && !listBalances.find((b) => b.currency_code === form.currency_code)) {
                 setForm((prev) => ({ ...prev, currency_code: String(listBalances[0].currency_code || 'USD').toUpperCase() }));
             }
@@ -67,6 +69,10 @@ export default function Withdrawals() {
     const requestedAmount = Number(form.requested_amount || 0);
     const availableAmount = Number(selectedBalance?.available_balance || 0);
     const isAmountInvalid = requestedAmount > 0 && selectedBalance !== null && requestedAmount > availableAmount;
+    const estimatedFee = requestedAmount > 0
+        ? Math.round((requestedAmount * withdrawalFeePercent) / 100 * 100) / 100
+        : 0;
+    const estimatedNet = requestedAmount > 0 ? Math.max(0, Math.round((requestedAmount - estimatedFee) * 100) / 100) : 0;
 
     const submit = async (e) => {
         e.preventDefault();
@@ -182,6 +188,15 @@ export default function Withdrawals() {
                                 {isAmountInvalid ? (
                                     <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">
                                         Le montant saisi depasse votre solde disponible.
+                                    </p>
+                                ) : null}
+                                {requestedAmount > 0 && withdrawalFeePercent > 0 ? (
+                                    <p className="mt-2 text-xs text-slate-600 dark:text-slate-300 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 px-3 py-2">
+                                        Frais de retrait ({withdrawalFeePercent.toLocaleString('fr-FR')}% configurés par la plateforme) :{' '}
+                                        <strong>{formatMoney(estimatedFee, form.currency_code)}</strong>
+                                        <br />
+                                        Montant net estimé reçu :{' '}
+                                        <strong>{formatMoney(estimatedNet, form.currency_code)}</strong>
                                     </p>
                                 ) : null}
                             </div>

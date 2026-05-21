@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
+import GrabScroll from '@/Components/GrabScroll';
 
 export default function CategoriesIndex({ auth, categories, pagination, filters, permissions, routePrefix = 'pharmacy' }) {
     const { url } = usePage();
@@ -231,8 +232,8 @@ export default function CategoriesIndex({ auth, categories, pagination, filters,
     return (
         <AppLayout
             header={
-                <div className="flex justify-between items-center">
-                    <h2 className="font-semibold text-xl text-gray-800 dark:text-white leading-tight">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-2xl">
                         Gestion des Catégories
                     </h2>
                     <div className="flex gap-2">
@@ -279,10 +280,10 @@ export default function CategoriesIndex({ auth, categories, pagination, filters,
         >
             <Head title="Gestion des Catégories" />
 
-            <div className="py-12">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div className="space-y-6 py-8 sm:py-10">
+                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     {/* Search */}
-                    <Card className="mb-6 bg-white dark:bg-gray-800">
+                    <Card className="mb-6 overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         <CardHeader>
                             <CardTitle className="flex items-center text-gray-900 dark:text-white">
                                 <Search className="h-5 w-5 mr-2" />
@@ -309,7 +310,7 @@ export default function CategoriesIndex({ auth, categories, pagination, filters,
                     </Card>
 
                     {/* Categories List */}
-                    <Card className="bg-white dark:bg-gray-800">
+                    <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         <CardHeader>
                             <CardTitle className="text-gray-900 dark:text-white">
                                 Catégories {pagination ? `(${pagination.total})` : `(${categories.length})`}
@@ -328,7 +329,7 @@ export default function CategoriesIndex({ auth, categories, pagination, filters,
                                 </div>
                             ) : (
                                 <>
-                                    <div className="overflow-x-auto">
+                                    <GrabScroll className="rounded-none border-0 bg-transparent">
                                         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                             <thead className="bg-gray-50 dark:bg-gray-800">
                                                 <tr>
@@ -410,7 +411,7 @@ export default function CategoriesIndex({ auth, categories, pagination, filters,
                                                 ))}
                                             </tbody>
                                         </table>
-                                    </div>
+                                    </GrabScroll>
                                     {pagination && <Pagination pagination={pagination} filters={filters} />}
                                 </>
                             )}

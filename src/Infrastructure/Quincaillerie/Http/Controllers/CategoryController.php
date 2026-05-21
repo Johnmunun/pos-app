@@ -93,10 +93,7 @@ class CategoryController
         } elseif (!$user->isRoot()) {
             abort(403, 'Shop ID not found.');
         }
-        
-        // Appliquer le filtrage par dépôt selon les permissions
-        $query = $this->depotFilterService->applyDepotFilter($query, $request, 'depot_id');
-        
+
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")

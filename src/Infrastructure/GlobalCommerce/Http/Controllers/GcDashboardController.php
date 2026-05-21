@@ -8,37 +8,14 @@ use Inertia\Response;
 use Src\Infrastructure\GlobalCommerce\Sales\Models\SaleModel;
 use Src\Infrastructure\GlobalCommerce\Procurement\Models\PurchaseModel;
 use Src\Infrastructure\GlobalCommerce\Inventory\Models\ProductModel as GcProductModel;
+use Src\Infrastructure\GlobalCommerce\Support\GcShopResolver;
 use Carbon\Carbon;
 
 class GcDashboardController
 {
     private function getShopId(Request $request): string
     {
-        $user = $request->user();
-        if ($user === null) {
-            abort(403);
-        }
-
-        $depotId = $request->session()->get('current_depot_id');
-
-        if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
-            $shop = \App\Models\Shop::where('depot_id', (int) $depotId)
-                ->where('tenant_id', $user->tenant_id)
-                ->first();
-            if ($shop) {
-                return (string) $shop->id;
-            }
-        }
-
-        if ($user->shop_id !== null && $user->shop_id !== '') {
-            return (string) $user->shop_id;
-        }
-
-        if ($user->tenant_id) {
-            return (string) $user->tenant_id;
-        }
-
-        abort(403, 'Shop ID not found.');
+        return GcShopResolver::resolveShopId($request);
     }
 
     public function index(Request $request): Response
@@ -56,32 +33,28 @@ class GcDashboardController
         $productsTotal = (int) $productModel::where('shop_id', $shopId)->count();
         $productsActive = (int) $productModel::where('shop_id', $shopId)->where('is_active', true)->count();
 
-        // Stats stock
-        $products = $productModel::where('shop_id', $shopId)->where('is_active', true)->get();
-        $totalValue = 0.0;
-        $lowStockCount = 0;
-        $outOfStockCount = 0;
-        $stockStatus = ['out_of_stock' => 0, 'low_stock' => 0, 'medium_stock' => 0, 'good_stock' => 0];
-        
-        foreach ($products as $product) {
-            $stock = (float) ($product->stock ?? 0);
-            $minStock = (float) ($product->minimum_stock ?? 0);
-            $purchasePrice = (float) ($product->purchase_price_amount ?? 0);
-            
-            $totalValue += $purchasePrice * $stock;
-            
-            if ($stock <= 0) {
-                $outOfStockCount++;
-                $stockStatus['out_of_stock']++;
-            } elseif ($stock <= $minStock) {
-                $lowStockCount++;
-                $stockStatus['low_stock']++;
-            } elseif ($stock <= $minStock * 2) {
-                $stockStatus['medium_stock']++;
-            } else {
-                $stockStatus['good_stock']++;
-            }
-        }
+        // Stats stock (agrégats SQL — évite de charger tous les produits actifs)
+        $stockRow = $productModel::query()
+            ->where('shop_id', $shopId)
+            ->where('is_active', true)
+            ->selectRaw('
+                COALESCE(SUM(COALESCE(purchase_price_amount, 0) * COALESCE(stock, 0)), 0) as total_value,
+                COALESCE(SUM(CASE WHEN COALESCE(stock, 0) <= 0 THEN 1 ELSE 0 END), 0) as out_of_stock,
+                COALESCE(SUM(CASE WHEN COALESCE(stock, 0) > 0 AND COALESCE(stock, 0) <= COALESCE(minimum_stock, 0) THEN 1 ELSE 0 END), 0) as low_stock,
+                COALESCE(SUM(CASE WHEN COALESCE(stock, 0) > COALESCE(minimum_stock, 0) AND COALESCE(stock, 0) <= COALESCE(minimum_stock, 0) * 2 THEN 1 ELSE 0 END), 0) as medium_stock,
+                COALESCE(SUM(CASE WHEN COALESCE(stock, 0) > COALESCE(minimum_stock, 0) * 2 THEN 1 ELSE 0 END), 0) as good_stock
+            ')
+            ->first();
+
+        $totalValue = (float) ($stockRow->total_value ?? 0);
+        $outOfStockCount = (int) ($stockRow->out_of_stock ?? 0);
+        $lowStockCount = (int) ($stockRow->low_stock ?? 0);
+        $stockStatus = [
+            'out_of_stock' => $outOfStockCount,
+            'low_stock' => $lowStockCount,
+            'medium_stock' => (int) ($stockRow->medium_stock ?? 0),
+            'good_stock' => (int) ($stockRow->good_stock ?? 0),
+        ];
 
         // Stats catégories
         $categoryModel = \Src\Infrastructure\GlobalCommerce\Inventory\Models\CategoryModel::class;
@@ -118,17 +91,60 @@ class GcDashboardController
             }
         }
 
-        // Stats ventes
-        $salesTodayTotal = (float) SaleModel::where('shop_id', $shopId)
-            ->where('status', 'completed')
+        // Stats ventes (statut completed, insensible à la casse pour compat COMPLETED/completed)
+        $salesTodayTotal = (float) SaleModel::query()
+            ->where('shop_id', $shopId)
+            ->completed()
             ->where('created_at', '>=', $todayStart)
             ->sum('total_amount');
-        $salesTodayCount = (int) SaleModel::where('shop_id', $shopId)
-            ->where('status', 'completed')
+        $salesTodayCount = (int) SaleModel::query()
+            ->where('shop_id', $shopId)
+            ->completed()
             ->where('created_at', '>=', $todayStart)
             ->count();
+        $salesLast7Total = (float) SaleModel::query()
+            ->where('shop_id', $shopId)
+            ->completed()
+            ->where('created_at', '>=', $last7)
+            ->sum('total_amount');
+        $salesLast7Count = (int) SaleModel::query()
+            ->where('shop_id', $shopId)
+            ->completed()
+            ->where('created_at', '>=', $last7)
+            ->count();
 
-        // Période pour graphique
+        $yesterdayStart = $now->copy()->subDay()->startOfDay();
+        $yesterdayEnd = $now->copy()->subDay()->endOfDay();
+        $salesYesterdayTotal = (float) SaleModel::query()
+            ->where('shop_id', $shopId)
+            ->completed()
+            ->whereBetween('created_at', [$yesterdayStart, $yesterdayEnd])
+            ->sum('total_amount');
+        $salesGrowthPercent = null;
+        if ($salesYesterdayTotal > 0.0001) {
+            $salesGrowthPercent = round((($salesTodayTotal - $salesYesterdayTotal) / $salesYesterdayTotal) * 100, 1);
+        } elseif ($salesTodayTotal > 0) {
+            $salesGrowthPercent = 100.0;
+        }
+
+        $averageBasketToday = $salesTodayCount > 0
+            ? round($salesTodayTotal / $salesTodayCount, 2)
+            : 0.0;
+
+        $purchasesTodayTotal = 0.0;
+        $purchasesTodayCount = 0;
+        if (\Illuminate\Support\Facades\Schema::hasTable('gc_purchases')) {
+            $purchasesTodayTotal = (float) PurchaseModel::query()
+                ->where('shop_id', $shopId)
+                ->where('created_at', '>=', $todayStart)
+                ->sum('total_amount');
+            $purchasesTodayCount = (int) PurchaseModel::query()
+                ->where('shop_id', $shopId)
+                ->where('created_at', '>=', $todayStart)
+                ->count();
+        }
+
+        $recentActivities = $this->buildRecentActivities($shopId, 8);
         $period = (int) $request->input('period', 14);
         if (!in_array($period, [7, 14, 30], true)) {
             $period = 14;
@@ -197,6 +213,20 @@ class GcDashboardController
                     'total' => $customersTotal,
                     'active' => $customersActive,
                 ],
+                'sales' => [
+                    'today_total' => round($salesTodayTotal, 2),
+                    'today_count' => $salesTodayCount,
+                    'yesterday_total' => round($salesYesterdayTotal, 2),
+                    'growth_percent' => $salesGrowthPercent,
+                    'average_basket_today' => $averageBasketToday,
+                    'last_7_days_total' => round($salesLast7Total, 2),
+                    'last_7_days_count' => $salesLast7Count,
+                ],
+                'purchases' => [
+                    'today_total' => round($purchasesTodayTotal, 2),
+                    'today_count' => $purchasesTodayCount,
+                ],
+                'recent_activities' => $recentActivities,
                 'alerts' => $alerts,
                 'media_storage' => [
                     'images_count' => $productImageCount,
@@ -225,7 +255,7 @@ class GcDashboardController
 
         $rows = SaleModel::query()
             ->where('shop_id', $shopId)
-            ->where('status', 'completed')
+            ->completed()
             ->whereBetween('created_at', [$start, $end])
             ->selectRaw('DATE(created_at) as date, COUNT(*) as count, COALESCE(SUM(total_amount), 0) as total')
             ->groupBy(\Illuminate\Support\Facades\DB::raw('DATE(created_at)'))
@@ -260,7 +290,7 @@ class GcDashboardController
 
         $rows = SaleModel::query()
             ->where('shop_id', $shopId)
-            ->where('status', 'completed')
+            ->completed()
             ->whereBetween('created_at', [$start, $end])
             ->selectRaw('DATE(created_at) as date, COUNT(*) as count, COALESCE(SUM(total_amount), 0) as total')
             ->groupBy(\Illuminate\Support\Facades\DB::raw('DATE(created_at)'))
@@ -284,6 +314,69 @@ class GcDashboardController
             $current->addDay();
         }
         return $result;
+    }
+
+    /**
+     * Dernières ventes et bons d'achat pour le fil d'activité du dashboard.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildRecentActivities(string $shopId, int $limit = 8): array
+    {
+        $items = [];
+
+        $sales = SaleModel::query()
+            ->where('shop_id', $shopId)
+            ->completed()
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get(['id', 'customer_name', 'total_amount', 'currency', 'created_at']);
+
+        foreach ($sales as $sale) {
+            $createdAt = $sale->created_at ? Carbon::parse($sale->created_at) : Carbon::now();
+            $items[] = [
+                'id' => 'sale-'.$sale->id,
+                'type' => 'sale',
+                'name' => $sale->customer_name ?: 'Client comptoir',
+                'reference' => '#'.strtoupper(substr((string) $sale->id, 0, 8)),
+                'time' => $createdAt->format('H:i'),
+                'amount' => (float) $sale->total_amount,
+                'currency' => (string) ($sale->currency ?? 'USD'),
+                'sort_at' => $createdAt->timestamp,
+            ];
+        }
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('gc_purchases')) {
+            $purchases = PurchaseModel::query()
+                ->with('supplier:id,name')
+                ->where('shop_id', $shopId)
+                ->orderByDesc('created_at')
+                ->limit($limit)
+                ->get(['id', 'supplier_id', 'total_amount', 'currency', 'status', 'created_at']);
+
+            foreach ($purchases as $purchase) {
+                $createdAt = $purchase->created_at ? Carbon::parse($purchase->created_at) : Carbon::now();
+                $supplierName = $purchase->supplier?->name ?? 'Fournisseur';
+                $items[] = [
+                    'id' => 'purchase-'.$purchase->id,
+                    'type' => 'purchase',
+                    'name' => $supplierName,
+                    'reference' => '#'.strtoupper(substr((string) $purchase->id, 0, 8)),
+                    'time' => $createdAt->format('H:i'),
+                    'amount' => -1 * abs((float) $purchase->total_amount),
+                    'currency' => (string) ($purchase->currency ?? 'USD'),
+                    'sort_at' => $createdAt->timestamp,
+                ];
+            }
+        }
+
+        usort($items, fn (array $a, array $b) => ($b['sort_at'] ?? 0) <=> ($a['sort_at'] ?? 0));
+
+        return array_values(array_map(function (array $row) {
+            unset($row['sort_at']);
+
+            return $row;
+        }, array_slice($items, 0, $limit)));
     }
 
     /**

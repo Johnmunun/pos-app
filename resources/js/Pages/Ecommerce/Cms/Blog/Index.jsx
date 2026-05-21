@@ -7,6 +7,7 @@ import { Badge } from '@/Components/ui/badge';
 import { Plus, Pencil, Trash2, FolderOpen, HelpCircle } from 'lucide-react';
 import CmsBlogDrawer from '@/Components/Ecommerce/Cms/CmsBlogDrawer';
 import CmsHelpModal from '@/Components/Ecommerce/Cms/CmsHelpModal';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function CmsBlogIndex({ articles = [], categories = [] }) {
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -50,8 +51,9 @@ export default function CmsBlogIndex({ articles = [], categories = [] }) {
             }
         >
             <Head title="Blog CMS - E-commerce" />
-            <div className="py-6">
-                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <Card className={cardShell}>
                     <CardContent className="p-0">
                         <div className="overflow-x-auto">
                             <table className="w-full">
@@ -95,6 +97,7 @@ export default function CmsBlogIndex({ articles = [], categories = [] }) {
                         </div>
                     </CardContent>
                 </Card>
+            </div>
             </div>
 
             <CmsBlogDrawer isOpen={drawerOpen} onClose={handleCloseDrawer} article={editingArticle} categories={categories} />

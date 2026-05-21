@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
+import StorefrontSeoHead from '@/Components/Ecommerce/StorefrontSeoHead';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { CartProvider, useCart } from '@/Contexts/CartContext';
@@ -8,6 +9,7 @@ import ProductCard from '@/Components/Ecommerce/ProductCard';
 import { Search, Package, Filter, Grid, List, SlidersHorizontal, X, ArrowLeft, Sparkles, ArrowRight } from 'lucide-react';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
 import AISupportFloatingWidget from '@/Components/Ecommerce/AISupportFloatingWidget';
+import { StorefrontFooterReportBar } from '@/Components/Ecommerce/StorefrontReportShop';
 import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBootstrap';
 import StorefrontCurrencySelect from '@/Components/Ecommerce/StorefrontCurrencySelect';
 import useStorefrontLinks from '@/hooks/useStorefrontLinks';
@@ -95,7 +97,7 @@ function StorefrontHeader({ shop, cmsPages = [], availableCurrencies = [] }) {
     );
 }
 
-function CatalogContent({ products = [], categories = [], filters = {}, shop, cmsPages, banners = [], whatsapp = {}, exchangeRates = {}, availableCurrencies = [] }) {
+function CatalogContent({ products = [], categories = [], filters = {}, shop, cmsPages, banners = [], whatsapp = {}, exchangeRates = {}, availableCurrencies = [], pageSeo = null }) {
     const links = useStorefrontLinks();
     const { addToCart } = useCart();
     const currency = shop?.currency || 'USD';
@@ -191,7 +193,7 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
 
     return (
         <>
-            <Head title="Catalogue - Boutique" />
+            <StorefrontSeoHead pageSeo={pageSeo} />
             <StorefrontClientBootstrap />
 
             <StorefrontHeader shop={shop} cmsPages={cmsPages} availableCurrencies={availableCurrencies} />
@@ -492,6 +494,7 @@ function CatalogContent({ products = [], categories = [], filters = {}, shop, cm
                 </div>
             </div>
 
+            <StorefrontFooterReportBar shopName={shop?.name} />
             <WhatsAppFloatingButton phone={whatsappNumber} enabled={whatsappSupportEnabled} />
             <AISupportFloatingWidget />
         </>
@@ -508,6 +511,7 @@ export default function StorefrontCatalog({
     whatsapp = {},
     exchange_rates = {},
     available_currencies = [],
+    pageSeo = null,
 }) {
     const currency = shop?.currency || 'CDF';
 
@@ -527,6 +531,7 @@ export default function StorefrontCatalog({
                 whatsapp={whatsapp}
                 exchangeRates={exchange_rates || {}}
                 availableCurrencies={available_currencies || []}
+                pageSeo={pageSeo}
             />
         </CartProvider>
     );

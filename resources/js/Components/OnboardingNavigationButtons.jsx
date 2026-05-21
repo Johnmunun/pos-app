@@ -35,21 +35,11 @@ export default function OnboardingNavigationButtons({
                 <div className="w-full sm:w-auto flex-1">
                     <Link
                         href={previousRoute}
-                        className="w-full sm:hidden px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-center flex items-center justify-center gap-2"
+                        className="w-full sm:w-auto flex-1 px-4 py-3.5 border border-gray-200/90 dark:border-gray-700 text-gray-800 dark:text-gray-200 font-semibold rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800/80 transition-all text-center inline-flex items-center justify-center gap-2"
                         {...prevButtonProps}
                     >
-                        <ArrowLeft className="w-4 h-4" />
+                        <ArrowLeft className="w-4 h-4 shrink-0 sm:w-5 sm:h-5" aria-hidden />
                         Précédent
-                    </Link>
-                    
-                    {/* Bouton précédent icône seule sur mobile */}
-                    <Link
-                        href={previousRoute}
-                        className="w-full hidden sm:flex px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-center"
-                        {...prevButtonProps}
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                        <span className="sr-only">Précédent</span>
                     </Link>
                 </div>
             )}
@@ -59,7 +49,7 @@ export default function OnboardingNavigationButtons({
                     <button
                         type="submit"
                         disabled={processing || disabled}
-                        className="w-full sm:hidden flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                        className="w-full sm:hidden flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold py-3.5 px-4 rounded-2xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-amber-500/20 hover:shadow-lg flex items-center justify-center gap-2 active:scale-[0.99]"
                         {...nextButtonProps}
                     >
                         {processing ? (
@@ -85,7 +75,7 @@ export default function OnboardingNavigationButtons({
                     <button
                         type="submit"
                         disabled={processing || disabled}
-                        className="w-full hidden sm:flex items-center justify-center px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
+                        className="w-full hidden sm:flex items-center justify-center px-4 py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold rounded-2xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-amber-500/20 hover:shadow-lg active:scale-[0.99]"
                         {...nextButtonProps}
                     >
                         {processing ? (

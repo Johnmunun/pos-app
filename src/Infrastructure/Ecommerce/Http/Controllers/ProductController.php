@@ -44,10 +44,14 @@ class ProductController
         $search = $request->input('search', '');
         $categoryId = $request->input('category_id');
 
-        $products = $this->productRepository->search($shopId, $search, array_filter([
+        $perPage = max(10, min(100, (int) $request->input('per_page', 25)));
+        $page = max(1, (int) $request->input('page', 1));
+
+        $paginated = $this->productRepository->searchPaginated($shopId, (string) $search, array_filter([
             'category_id' => $categoryId,
             'shop_ids' => $gcShopIds,
-        ]));
+        ]), $page, $perPage);
+        $products = $paginated['items'];
 
         $productIds = array_map(fn ($p) => $p->getId(), $products);
         $models = ProductModel::whereIn('id', $productIds)->get()->keyBy('id');
@@ -129,7 +133,19 @@ class ProductController
         return Inertia::render('Ecommerce/Products/Index', [
             'products' => $productsData,
             'categories' => $categoriesData,
-            'filters' => ['search' => $search, 'category_id' => $categoryId],
+            'filters' => [
+                'search' => $search,
+                'category_id' => $categoryId,
+                'per_page' => $perPage,
+            ],
+            'pagination' => [
+                'current_page' => $paginated['current_page'],
+                'last_page' => $paginated['last_page'],
+                'per_page' => $paginated['per_page'],
+                'total' => $paginated['total'],
+                'from' => $paginated['from'],
+                'to' => $paginated['to'],
+            ],
         ]);
     }
 

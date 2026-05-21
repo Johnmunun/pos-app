@@ -20,6 +20,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
      * @property string|null $email
      * @property string|null $ecommerce_subdomain
      * @property bool $ecommerce_is_online
+ * @property \Illuminate\Support\Carbon|null $ecommerce_report_suspended_at
+ * @property string|null $ecommerce_report_suspend_reason
+ * @property int|null $ecommerce_report_suspended_by_user_id
      * @property string|null $currency
  * @property float|null $default_tax_rate
  * @property array<mixed>|null $ecommerce_storefront_config
@@ -48,6 +51,9 @@ class Shop extends Model
         'email',
         'ecommerce_subdomain',
         'ecommerce_is_online',
+        'ecommerce_report_suspended_at',
+        'ecommerce_report_suspend_reason',
+        'ecommerce_report_suspended_by_user_id',
         'currency',
         'default_tax_rate',
         'ecommerce_storefront_config',
@@ -63,6 +69,7 @@ class Shop extends Model
         return [
             'is_active' => 'boolean',
             'ecommerce_is_online' => 'boolean',
+            'ecommerce_report_suspended_at' => 'datetime',
             'default_tax_rate' => 'decimal:2',
             'ecommerce_storefront_config' => 'array',
         ];

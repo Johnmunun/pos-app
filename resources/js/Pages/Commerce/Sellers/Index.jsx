@@ -21,6 +21,7 @@ import {
     UserCheck,
 } from 'lucide-react';
 import axios from 'axios';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function SellersIndex({ sellers = [], availableRoles = [], availableDepots = [], stats = {}, allPermissions = {} }) {
     const { auth } = usePage().props;
@@ -159,17 +160,20 @@ export default function SellersIndex({ sellers = [], availableRoles = [], availa
     return (
         <AppLayout
             header={
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                            <Users className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                            <h2 className="font-semibold text-xl text-gray-800 dark:text-white leading-tight">
-                                Gestion des Vendeurs
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full min-w-0">
+                    <div className="min-w-0 flex items-center gap-3">
+                        <Users className="h-6 w-6 text-amber-500 shrink-0" />
+                        <div>
+                            <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">
+                                Gestion des vendeurs
                             </h2>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 hidden sm:block">
+                                Comptes vendeurs, rôles et accès au module commerce.
+                            </p>
                         </div>
                     </div>
                     {canCreate && (
-                        <Button onClick={handleOpenCreate} className="gap-2">
+                        <Button onClick={handleOpenCreate} className="gap-2 shrink-0 w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-md">
                             <Plus className="h-4 w-4" />
                             Ajouter un vendeur
                         </Button>
@@ -179,8 +183,8 @@ export default function SellersIndex({ sellers = [], availableRoles = [], availa
         >
             <Head title="Gestion des Vendeurs" />
 
-            <div className="py-6">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
                     {availableRoles.length === 0 && (
                         <div className="mb-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3 flex items-start gap-2 text-sm text-amber-800 dark:text-amber-200">
                             <Info className="h-5 w-5 shrink-0 mt-0.5" />
@@ -200,7 +204,7 @@ export default function SellersIndex({ sellers = [], availableRoles = [], availa
                     {/* Stats */}
                     {stats && Object.keys(stats).length > 0 && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                            <div className={`${cardShell} p-4`}>
                                 <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Total</div>
                                 <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{stats.total ?? 0}</div>
                             </div>
@@ -246,7 +250,7 @@ export default function SellersIndex({ sellers = [], availableRoles = [], availa
                     </div>
 
                     {/* Liste des vendeurs */}
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div className={cardShell}>
                         {filteredSellers.length === 0 ? (
                             <div className="py-12 text-center">
                                 <Users className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />

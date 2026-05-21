@@ -1,7 +1,9 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
+import StorefrontSeoHead from '@/Components/Ecommerce/StorefrontSeoHead';
 import { CartProvider } from '@/Contexts/CartContext';
 import ShoppingCart from '@/Components/Ecommerce/ShoppingCart';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
+import { StorefrontFooterReportBar } from '@/Components/Ecommerce/StorefrontReportShop';
 import AISupportFloatingWidget from '@/Components/Ecommerce/AISupportFloatingWidget';
 import StorefrontClientBootstrap from '@/Components/Ecommerce/StorefrontClientBootstrap';
 import { ArrowLeft, CalendarDays } from 'lucide-react';
@@ -51,7 +53,7 @@ function StorefrontBlogShowHeader({ shop, cmsPages = [] }) {
     );
 }
 
-function BlogShowContent({ shop, article, cmsPages = [], whatsapp = {} }) {
+function BlogShowContent({ shop, article, cmsPages = [], whatsapp = {}, pageSeo = null }) {
     const { shop: sharedShop } = usePage().props;
     const currency = shop?.currency || sharedShop?.currency || 'CDF';
     const whatsappNumber = whatsapp.number || null;
@@ -60,7 +62,7 @@ function BlogShowContent({ shop, article, cmsPages = [], whatsapp = {} }) {
 
     return (
         <>
-            <Head title={article?.title || 'Article'} />
+            <StorefrontSeoHead pageSeo={pageSeo} />
             <StorefrontClientBootstrap />
             <StorefrontBlogShowHeader shop={shop} cmsPages={cmsPages} />
 
@@ -120,18 +122,19 @@ function BlogShowContent({ shop, article, cmsPages = [], whatsapp = {} }) {
                     </div>
                 </main>
             </div>
+            <StorefrontFooterReportBar shopName={shop?.name} />
             <WhatsAppFloatingButton phone={whatsappNumber} enabled={whatsappSupportEnabled} />
             <AISupportFloatingWidget />
         </>
     );
 }
 
-export default function StorefrontBlogShow({ shop, article, cmsPages = [], whatsapp = {} }) {
+export default function StorefrontBlogShow({ shop, article, cmsPages = [], whatsapp = {}, pageSeo = null }) {
     const currency = shop?.currency || 'CDF';
 
     return (
         <CartProvider currency={currency} storageKey={`ecommerce_cart_${shop?.id ?? 'default'}`}>
-            <BlogShowContent shop={shop} article={article} cmsPages={cmsPages} whatsapp={whatsapp} />
+            <BlogShowContent shop={shop} article={article} cmsPages={cmsPages} whatsapp={whatsapp} pageSeo={pageSeo} />
         </CartProvider>
     );
 }

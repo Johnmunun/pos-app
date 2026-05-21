@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { pageY } from '@/lib/layoutClasses';
 
 export default function OrderShow({ order }) {
     const [modalOpen, setModalOpen] = useState(true);
@@ -57,18 +58,21 @@ export default function OrderShow({ order }) {
     return (
         <AppLayout
             header={
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between w-full min-w-0">
+                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                         <Link href={route('ecommerce.orders.index')}>
-                            <Button variant="ghost" size="sm" className="inline-flex items-center gap-2">
+                            <Button variant="ghost" size="sm" className="inline-flex items-center gap-2 shrink-0">
                                 <ArrowLeft className="h-4 w-4 shrink-0" />
                                 <span>Retour</span>
                             </Button>
                         </Link>
-                        <div className="flex items-center gap-2">
-                            <h2 className="font-semibold text-xl text-gray-800 dark:text-white leading-tight">
+                        <div className="min-w-0">
+                            <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight truncate">
                                 Commande {order.order_number}
                             </h2>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 hidden sm:block">
+                                Détail et actions sur la commande.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -76,7 +80,7 @@ export default function OrderShow({ order }) {
         >
             <Head title={`Commande ${order.order_number}`} />
 
-            <div className="py-6">
+            <div className={pageY}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <OrderDetailModal
                         order={order}

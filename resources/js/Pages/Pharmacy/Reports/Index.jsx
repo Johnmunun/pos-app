@@ -25,6 +25,7 @@ import {
     ArrowUpDown,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
+import GrabScroll from '@/Components/GrabScroll';
 
 function getDefaultFromTo() {
     const d = new Date();
@@ -86,16 +87,16 @@ export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy'
     return (
         <AppLayout
             header={
-                <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
+                <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-2xl">
                     Rapport d&apos;activité
                 </h2>
             }
         >
             <Head title="Rapport d'activité - Pharmacy" />
 
-            <div className="py-6 space-y-6">
+            <div className="space-y-6 py-8 sm:py-10">
                     {/* Filtres */}
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 shadow-sm">
+                    <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         <CardHeader className="pb-4">
                             <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-white">
                                 <SlidersHorizontal className="h-4 w-4 text-amber-500" />
@@ -192,7 +193,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy'
 
                     {/* KPIs */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">Chiffre d&apos;affaires</CardTitle>
                                 <DollarSign className="h-4 w-4 text-green-500 dark:text-green-400" />
@@ -203,7 +204,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy'
                             </CardContent>
                         </Card>
 
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">Ventes</CardTitle>
                                 <ShoppingCart className="h-4 w-4 text-blue-500 dark:text-blue-400" />
@@ -214,7 +215,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy'
                             </CardContent>
                         </Card>
 
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">Achats reçus</CardTitle>
                                 <Truck className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
@@ -225,7 +226,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy'
                             </CardContent>
                         </Card>
 
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">Mouvements stock</CardTitle>
                                 <BarChart3 className="h-4 w-4 text-slate-500 dark:text-slate-400" />
@@ -236,7 +237,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy'
                             </CardContent>
                         </Card>
 
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">Valeur stock</CardTitle>
                                 <Package className="h-4 w-4 text-amber-500 dark:text-amber-400" />
@@ -247,7 +248,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy'
                             </CardContent>
                         </Card>
 
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">Stock bas</CardTitle>
                                 <AlertTriangle className="h-4 w-4 text-orange-500 dark:text-orange-400" />
@@ -260,7 +261,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy'
                     </div>
 
                     {/* Détail mouvements de stock */}
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         <CardHeader>
                             <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-white">
                                 <TrendingUp className="h-5 w-5 text-amber-500" />
@@ -295,7 +296,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy'
                     </Card>
 
                     {/* Analyse par produit */}
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         <CardHeader>
                             <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-white">
                                 <Trophy className="h-5 w-5 text-amber-500" />
@@ -307,7 +308,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy'
                         </CardHeader>
                         <CardContent>
                             {sortedProducts.length > 0 ? (
-                                <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-slate-700">
+                                <GrabScroll className="rounded-xl border border-gray-200/80 bg-gray-50/30 dark:border-slate-700/80 dark:bg-slate-950/20">
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
@@ -366,7 +367,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy'
                                             ))}
                                         </tbody>
                                     </table>
-                                </div>
+                                </GrabScroll>
                             ) : (
                                 <p className="text-gray-500 dark:text-gray-400 py-6 text-center">Aucune vente par produit sur la période.</p>
                             )}
@@ -374,7 +375,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy'
                     </Card>
 
                     {/* Ventes par jour */}
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         <CardHeader>
                             <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-white">
                                 <ShoppingCart className="h-5 w-5 text-blue-500" />
@@ -383,7 +384,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy'
                         </CardHeader>
                         <CardContent>
                             {sales.by_day && sales.by_day.length > 0 ? (
-                                <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-slate-700">
+                                <GrabScroll className="rounded-xl border border-gray-200/80 bg-gray-50/30 dark:border-slate-700/80 dark:bg-slate-950/20">
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
@@ -402,7 +403,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy'
                                             ))}
                                         </tbody>
                                     </table>
-                                </div>
+                                </GrabScroll>
                             ) : (
                                 <p className="text-gray-500 dark:text-gray-400 py-6 text-center">Aucune vente sur la période.</p>
                             )}
@@ -410,7 +411,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy'
                     </Card>
 
                     {/* Achats par jour */}
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         <CardHeader>
                             <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-white">
                                 <Truck className="h-5 w-5 text-indigo-500" />
@@ -419,7 +420,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy'
                         </CardHeader>
                         <CardContent>
                             {purchases.by_day && purchases.by_day.length > 0 ? (
-                                <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-slate-700">
+                                <GrabScroll className="rounded-xl border border-gray-200/80 bg-gray-50/30 dark:border-slate-700/80 dark:bg-slate-950/20">
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
@@ -438,7 +439,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'pharmacy'
                                             ))}
                                         </tbody>
                                     </table>
-                                </div>
+                                </GrabScroll>
                             ) : (
                                 <p className="text-gray-500 dark:text-gray-400 py-6 text-center">Aucun achat reçu sur la période.</p>
                             )}

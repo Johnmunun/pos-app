@@ -763,7 +763,7 @@ export default function HardwareSalesCreate({ products = [], categories = [], cu
         <AppLayout fullWidth>
             <Head title="Point de Vente" />
             
-            <div className="min-h-[calc(100vh-64px)] flex flex-col lg:flex-row relative">
+            <div className="h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)] flex flex-col lg:flex-row relative overflow-hidden">
                 {/* Bandeau succès après validation */}
                 {showSuccessBanner && (
                     <div className="absolute top-0 left-0 right-0 z-40 bg-green-600 dark:bg-green-700 text-white py-3 px-4 text-center shadow-lg animate-in fade-in duration-300">
@@ -772,9 +772,9 @@ export default function HardwareSalesCreate({ products = [], categories = [], cu
                     </div>
                 )}
                 {/* Left Panel - Products */}
-                <div className="w-full lg:flex-1 flex flex-col bg-gray-50 dark:bg-slate-950 min-w-0">
+                <div className="w-full lg:flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden bg-gray-50 dark:bg-slate-950">
                     {/* Header with Search and View Toggle */}
-                    <div className="p-3 sm:p-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
+                    <div className="shrink-0 p-3 sm:p-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                             <Button 
                                 variant="ghost" 
@@ -854,7 +854,7 @@ export default function HardwareSalesCreate({ products = [], categories = [], cu
                                 </button>
                             </div>
                             
-                            <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline shrink-0">Raccourcis: <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">1</kbd> ventes · <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">2</kbd> ici · <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">P</kbd> paiement</span>
+                            <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline shrink-0">Raccourcis: <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">Ctrl+Shift+V</kbd> vente · <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">P</kbd> paiement · <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">+/-</kbd> qté</span>
                             <div className="w-full sm:flex-1 min-w-0 relative flex items-center gap-2">
                                 <div className="flex-1 relative">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -918,7 +918,7 @@ export default function HardwareSalesCreate({ products = [], categories = [], cu
                     </div>
 
                     {/* Categories */}
-                    <div className="p-3 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 overflow-x-auto">
+                    <div className="shrink-0 p-3 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 overflow-x-auto">
                         <div className="flex gap-2">
                             <button
                                 onClick={() => setSelectedCategory(null)}
@@ -948,7 +948,7 @@ export default function HardwareSalesCreate({ products = [], categories = [], cu
 
                     {/* Derniers produits */}
                     {recentProductIds.length > 0 && (
-                        <div className="px-4 py-2 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
+                        <div className="shrink-0 px-4 py-2 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
                             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Derniers produits</p>
                             <div className="flex gap-2 overflow-x-auto pb-1">
                                 {recentProductIds.map(id => {
@@ -978,19 +978,19 @@ export default function HardwareSalesCreate({ products = [], categories = [], cu
                     )}
 
                     {/* Products Grid/List */}
-                    <div className="flex-1 overflow-y-auto p-4">
+                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-3 sm:p-4">
                         {viewMode === 'thumbnails' ? (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5 sm:gap-3 md:gap-4">
                                 {filteredProducts.map(product => (
                                     <button
                                         key={product.id}
                                         onClick={() => addToCart(product)}
                                         disabled={product.stock < 1}
-                                        className={`bg-white dark:bg-slate-800 rounded-xl p-3 text-center shadow-sm hover:shadow-md transition-all border border-gray-200 dark:border-slate-700 ${
+                                        className={`bg-white dark:bg-slate-800 rounded-lg sm:rounded-xl p-1.5 sm:p-3 text-center shadow-sm hover:shadow-md transition-all border border-gray-200 dark:border-slate-700 ${
                                             product.stock < 1 ? 'opacity-50 cursor-not-allowed' : 'hover:border-amber-300 dark:hover:border-amber-500'
                                         }`}
                                     >
-                                        <div className="aspect-square mb-2 rounded-lg bg-gray-100 dark:bg-slate-700 overflow-hidden flex items-center justify-center">
+                                        <div className="aspect-square mb-1 sm:mb-2 rounded-md sm:rounded-lg bg-gray-100 dark:bg-slate-700 overflow-hidden flex items-center justify-center">
                                             {product.image_url ? (
                                                 <img 
                                                     src={product.image_url} 
@@ -1003,13 +1003,13 @@ export default function HardwareSalesCreate({ products = [], categories = [], cu
                                                 />
                                             ) : null}
                                             <div className={`flex items-center justify-center ${product.image_url ? 'hidden' : ''}`}>
-                                                <Package className="h-10 w-10 text-gray-400" />
+                                                <Package className="h-6 w-6 sm:h-10 sm:w-10 text-gray-400" />
                                             </div>
                                         </div>
-                                        <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2 mb-1">
+                                        <p className="text-[10px] sm:text-sm font-medium text-gray-900 dark:text-white line-clamp-2 mb-0.5 sm:mb-1 leading-tight">
                                             {product.name}
                                         </p>
-                                        <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold">
+                                        <p className="text-[10px] sm:text-xs text-amber-600 dark:text-amber-400 font-semibold">
                                             {fmt(convertToSelected(getProductPrice(product), product.price_currency ?? defaultCurrency))}
                                         </p>
                                         {product.stock > 0 && product.stock < LOW_STOCK_THRESHOLD && (
@@ -1078,9 +1078,9 @@ export default function HardwareSalesCreate({ products = [], categories = [], cu
                 </div>
 
                 {/* Right Panel - Cart */}
-                <div className="w-full lg:w-96 lg:min-w-[22rem] lg:max-w-md bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-slate-700 flex flex-col flex-shrink-0 lg:flex-shrink-0">
+                <div className="w-full lg:w-96 lg:min-w-[22rem] lg:max-w-md bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-slate-700 flex flex-col flex-shrink-0 min-h-0 overflow-hidden max-lg:max-h-[min(46dvh,440px)] lg:h-full lg:max-h-none">
                     {/* Cart Header */}
-                    <div className="p-4 border-b border-gray-200 dark:border-slate-700">
+                    <div className="shrink-0 p-4 border-b border-gray-200 dark:border-slate-700">
                         <div className="flex items-center gap-2 mb-2">
                             <Badge className={saleMode === 'wholesale' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}>
                                 {saleMode === 'wholesale' ? <><Package className="h-3 w-3 mr-1 inline" /> Vente en gros</> : <><Store className="h-3 w-3 mr-1 inline" /> Vente au détail</>}
@@ -1128,12 +1128,12 @@ export default function HardwareSalesCreate({ products = [], categories = [], cu
                     </div>
 
                     {cart.length > 0 && (
-                        <p className="px-4 py-1 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-slate-800">
+                        <p className="shrink-0 px-4 py-1 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-slate-800">
                             Cliquez une ligne · <kbd className="px-1 rounded bg-gray-200 dark:bg-gray-700 font-mono">+</kbd><kbd className="px-1 rounded bg-gray-200 dark:bg-gray-700 font-mono ml-0.5">-</kbd> quantité · <kbd className="px-1 rounded bg-gray-200 dark:bg-gray-700 font-mono">D</kbd> remise · <kbd className="px-1 rounded bg-gray-200 dark:bg-gray-700 font-mono">P</kbd> paiement
                         </p>
                     )}
                     {/* Cart Items */}
-                    <div className="flex-1 overflow-y-auto p-4">
+                    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-4">
                         {cart.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full text-gray-400">
                                 <ShoppingCart className="h-16 w-16 mb-4 opacity-50" />
@@ -1273,7 +1273,7 @@ export default function HardwareSalesCreate({ products = [], categories = [], cu
                     </div>
 
                     {/* Cart Footer */}
-                    <div className="border-t border-gray-200 dark:border-slate-700 p-4 space-y-3">
+                    <div className="shrink-0 border-t border-gray-200 dark:border-slate-700 p-3 sm:p-4 space-y-3 bg-white dark:bg-slate-900">
                         {/* Discount */}
                         <button 
                             className="w-full flex items-center justify-between py-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"

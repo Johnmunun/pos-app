@@ -3,6 +3,7 @@
 namespace Src\Infrastructure\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Support\TenantBillingUpgradePrompt;
 use App\Mail\PostRegistrationPaymentReminderMail;
 use App\Mail\WelcomeRegistrationMail;
 use App\Models\Role;
@@ -337,7 +338,9 @@ class OnboardingController extends Controller
             
             // Connecter l'utilisateur
             Auth::login($user);
-            $request->session()->flash('trial_upgrade_prompt', true);
+            if (TenantBillingUpgradePrompt::tenantHasEntryPlan($user)) {
+                $request->session()->flash('trial_upgrade_prompt', true);
+            }
 
             // Créer une notification système pour ROOT / admins (nouvelle inscription)
             try {

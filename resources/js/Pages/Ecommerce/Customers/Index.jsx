@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import EcommercePageHeader from '@/Components/Ecommerce/EcommercePageHeader';
 import EcommerceActionButton from '@/Components/Ecommerce/EcommerceActionButton';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function CustomersIndex({ customers = [] }) {
     const { auth } = usePage().props;
@@ -159,8 +160,8 @@ export default function CustomersIndex({ customers = [] }) {
         >
             <Head title="Clients Ecommerce" />
 
-            <div className="py-6">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
                     {/* Barre de recherche */}
                     <div className="mb-6">
                         <div className="flex gap-4">
@@ -185,7 +186,7 @@ export default function CustomersIndex({ customers = [] }) {
                     </div>
 
                     {/* Liste des clients */}
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div className={cardShell}>
                         {filteredCustomers.length === 0 ? (
                             <div className="py-12 text-center">
                                 <Users className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />

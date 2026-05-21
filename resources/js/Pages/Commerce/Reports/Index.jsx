@@ -25,6 +25,7 @@ import {
     ArrowUpDown,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 function getDefaultFromTo() {
     const d = new Date();
@@ -87,15 +88,21 @@ export default function ReportsIndex({ report, filters, routePrefix = 'commerce'
     return (
         <AppLayout
             header={
-                <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
-                    Rapport d&apos;activité
-                </h2>
+                <div>
+                    <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">
+                        Rapport d&apos;activité
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 max-w-2xl hidden sm:block">
+                        Ventes, achats, mouvements et analyse produits sur la période choisie.
+                    </p>
+                </div>
             }
         >
             <Head title="Rapport d'activité - Commerce" />
 
-            <div className="py-6 space-y-6">
-                <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 shadow-sm">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
+                <Card className={cardShell}>
                     <CardHeader className="pb-4">
                         <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-white">
                             <SlidersHorizontal className="h-4 w-4 text-amber-500" />
@@ -168,7 +175,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'commerce'
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <Card className={cardShell}>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">Chiffre d&apos;affaires</CardTitle>
                             <DollarSign className="h-4 w-4 text-green-500 dark:text-green-400" />
@@ -178,7 +185,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'commerce'
                             <p className="text-xs text-gray-500 dark:text-gray-400">{sales.count ?? 0} ventes</p>
                         </CardContent>
                     </Card>
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <Card className={cardShell}>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">Ventes</CardTitle>
                             <ShoppingCart className="h-4 w-4 text-blue-500 dark:text-blue-400" />
@@ -188,7 +195,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'commerce'
                             <p className="text-xs text-gray-500 dark:text-gray-400">Transactions complétées</p>
                         </CardContent>
                     </Card>
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <Card className={cardShell}>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">Achats reçus</CardTitle>
                             <Truck className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
@@ -198,7 +205,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'commerce'
                             <p className="text-xs text-gray-500 dark:text-gray-400">{fmt(purchases.total || 0)}</p>
                         </CardContent>
                     </Card>
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <Card className={cardShell}>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">Mouvements stock</CardTitle>
                             <BarChart3 className="h-4 w-4 text-slate-500 dark:text-slate-400" />
@@ -208,7 +215,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'commerce'
                             <p className="text-xs text-gray-500 dark:text-gray-400">Entrées / Sorties</p>
                         </CardContent>
                     </Card>
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <Card className={cardShell}>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">Valeur stock</CardTitle>
                             <Package className="h-4 w-4 text-amber-500 dark:text-amber-400" />
@@ -218,7 +225,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'commerce'
                             <p className="text-xs text-gray-500 dark:text-gray-400">{stock.product_count ?? 0} produits actifs</p>
                         </CardContent>
                     </Card>
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <Card className={cardShell}>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-200">Stock bas</CardTitle>
                             <AlertTriangle className="h-4 w-4 text-orange-500 dark:text-orange-400" />
@@ -230,7 +237,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'commerce'
                     </Card>
                 </div>
 
-                <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                <Card className={cardShell}>
                     <CardHeader>
                         <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-white">
                             <TrendingUp className="h-5 w-5 text-amber-500" />
@@ -257,7 +264,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'commerce'
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                <Card className={cardShell}>
                     <CardHeader>
                         <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-white">
                             <Trophy className="h-5 w-5 text-amber-500" />
@@ -323,7 +330,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'commerce'
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                <Card className={cardShell}>
                     <CardHeader>
                         <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-white">
                             <ShoppingCart className="h-5 w-5 text-blue-500" />
@@ -358,7 +365,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'commerce'
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                <Card className={cardShell}>
                     <CardHeader>
                         <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-white">
                             <Truck className="h-5 w-5 text-indigo-500" />
@@ -392,6 +399,7 @@ export default function ReportsIndex({ report, filters, routePrefix = 'commerce'
                         )}
                     </CardContent>
                 </Card>
+            </div>
             </div>
         </AppLayout>
     );

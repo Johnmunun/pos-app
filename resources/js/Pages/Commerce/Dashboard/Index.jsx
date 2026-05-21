@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Store, ShoppingCart, Receipt, TrendingUp } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function CommerceDashboardIndex({ dashboard }) {
     const currency = dashboard?.currency || 'USD';
@@ -19,19 +20,19 @@ export default function CommerceDashboardIndex({ dashboard }) {
             header={
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
-                        <h2 className="font-semibold text-lg sm:text-xl text-gray-800 dark:text-gray-100 leading-tight flex items-center gap-2">
-                            <Store className="h-5 w-5 text-emerald-500" />
+                        <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
+                            <Store className="h-6 w-6 text-amber-500 shrink-0" />
                             Dashboard Commerce
                         </h2>
-                        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-                            Vue rapide des ventes et achats Global Commerce.
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed max-w-2xl">
+                            Vue rapide des ventes et achats Global Commerce — accès direct aux listes.
                         </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        <Button asChild variant="outline" className="text-sm">
+                        <Button asChild variant="outline" className="text-sm rounded-xl border-gray-300 dark:border-slate-600">
                             <Link href={route('commerce.sales.index')}>Voir les ventes</Link>
                         </Button>
-                        <Button asChild variant="outline" className="text-sm">
+                        <Button asChild variant="outline" className="text-sm rounded-xl border-gray-300 dark:border-slate-600">
                             <Link href={route('commerce.purchases.index')}>Voir les achats</Link>
                         </Button>
                     </div>
@@ -39,18 +40,18 @@ export default function CommerceDashboardIndex({ dashboard }) {
             }
         >
             <Head title="Dashboard Commerce" />
-            <div className="py-6">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+                        <Card className={cardShell}>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1">
+                                <CardTitle className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-2">
                                     <ShoppingCart className="h-4 w-4 text-emerald-500" />
                                     Ventes du jour
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                                <p className="text-2xl font-bold tabular-nums text-gray-900 dark:text-white">
                                     {salesToday.total} {currency}
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -59,15 +60,15 @@ export default function CommerceDashboardIndex({ dashboard }) {
                             </CardContent>
                         </Card>
 
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className={cardShell}>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1">
+                                <CardTitle className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-2">
                                     <ShoppingCart className="h-4 w-4 text-indigo-500" />
                                     Ventes 7 jours
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                                <p className="text-2xl font-bold tabular-nums text-gray-900 dark:text-white">
                                     {salesLast7.total} {currency}
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -76,15 +77,15 @@ export default function CommerceDashboardIndex({ dashboard }) {
                             </CardContent>
                         </Card>
 
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className={cardShell}>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1">
+                                <CardTitle className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-2">
                                     <Receipt className="h-4 w-4 text-amber-500" />
                                     Achats du jour
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                                <p className="text-2xl font-bold tabular-nums text-gray-900 dark:text-white">
                                     {purchasesToday.total} {currency}
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -93,15 +94,15 @@ export default function CommerceDashboardIndex({ dashboard }) {
                             </CardContent>
                         </Card>
 
-                        <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                        <Card className={cardShell}>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1">
+                                <CardTitle className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-2">
                                     <TrendingUp className="h-4 w-4 text-emerald-500" />
                                     Achats 7 jours
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                                <p className="text-2xl font-bold tabular-nums text-gray-900 dark:text-white">
                                     {purchasesLast7.total} {currency}
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -111,7 +112,7 @@ export default function CommerceDashboardIndex({ dashboard }) {
                         </Card>
                     </div>
 
-                    <Card className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+                    <Card className={cardShell}>
                         <CardHeader className="pb-2">
                             <CardTitle className="text-base flex items-center gap-2 text-gray-900 dark:text-white">
                                 <TrendingUp className="h-5 w-5 text-emerald-500" />
@@ -138,14 +139,14 @@ export default function CommerceDashboardIndex({ dashboard }) {
                                                     name === 'sales_total'
                                                         ? 'Ventes'
                                                         : name === 'purchases_total'
-                                                        ? 'Achats'
-                                                        : name;
+                                                          ? 'Achats'
+                                                          : name;
                                                 return [`${value} ${currency}`, label];
                                             }}
                                             labelFormatter={(label) =>
                                                 new Date(label).toLocaleDateString('fr-FR')
                                             }
-                                            contentStyle={{ borderRadius: 8 }}
+                                            contentStyle={{ borderRadius: 12 }}
                                         />
                                         <Line
                                             type="monotone"
@@ -166,7 +167,7 @@ export default function CommerceDashboardIndex({ dashboard }) {
                                     </LineChart>
                                 </ResponsiveContainer>
                             ) : (
-                                <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400 text-sm">
+                                <div className="h-full flex items-center justify-center rounded-xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-950/30 text-gray-500 dark:text-gray-400 text-sm px-4 text-center">
                                     Pas encore de données sur les 7 derniers jours.
                                 </div>
                             )}
@@ -177,4 +178,3 @@ export default function CommerceDashboardIndex({ dashboard }) {
         </AppLayout>
     );
 }
-

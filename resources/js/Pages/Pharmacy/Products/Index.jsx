@@ -29,6 +29,7 @@ import {
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
 import { formatCurrency } from '@/lib/currency';
+import GrabScroll from '@/Components/GrabScroll';
 
 export default function ProductsIndex({ auth, products, categories, filters, canImport = false, routePrefix = 'pharmacy', pageTitle = 'Gestion des Produits' }) {
     const { auth: authPage, depots = [], currentDepot, shop } = usePage().props ?? {};
@@ -258,8 +259,8 @@ export default function ProductsIndex({ auth, products, categories, filters, can
     return (
         <AppLayout
             header={
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-                    <h2 className="font-semibold text-xl text-gray-800 dark:text-white leading-tight">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-2xl">
                         {pageTitle}
                     </h2>
                     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -354,11 +355,11 @@ export default function ProductsIndex({ auth, products, categories, filters, can
             }
         >
             <Head title={pageTitle} />
-            <div className="py-6 space-y-6">
+            <div className="space-y-6 py-8 sm:py-10">
                     {/* Search and Filters - Mobile optimisée */}
-                    <Card className="mb-6 bg-white dark:bg-gray-800">
+                    <Card className="mb-6 overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center text-gray-900 dark:text-white text-base sm:text-lg">
+                            <CardTitle className="flex items-center text-base text-gray-900 dark:text-white sm:text-lg">
                                 <Search className="h-4 w-4 sm:h-5 sm:w-5 mr-2" /> 
                                 <span className="hidden sm:inline">Search Products</span>
                                 <span className="sm:hidden">Rechercher produits, SKU...</span>
@@ -415,7 +416,7 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                     </Card>
 
                     {/* Products Table */}
-                    <Card className="bg-white dark:bg-gray-800">
+                    <Card className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-landing-soft dark:border-slate-700/80 dark:bg-slate-900/80">
                         <CardHeader>
                             <CardTitle className="flex items-center text-gray-900 dark:text-white">
                                 <Package className="h-5 w-5 mr-2" />
@@ -534,8 +535,8 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                                         })}
                                     </div>
 
-                                    {/* Vue Desktop - Tableau */}
-                                    <div className="hidden md:block overflow-x-auto">
+                                    {/* Vue Desktop — scroll horizontal : molette + clic-glisser */}
+                                    <GrabScroll className="hidden md:block rounded-xl border border-gray-100/90 bg-gray-50/30 dark:border-slate-700/60 dark:bg-slate-950/30">
                                         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                         <thead className="bg-gray-50 dark:bg-gray-800">
                                             <tr>
@@ -662,7 +663,7 @@ export default function ProductsIndex({ auth, products, categories, filters, can
                                             ))}
                                         </tbody>
                                     </table>
-                                    </div>
+                                    </GrabScroll>
                                 </>
                             )}
                         </CardContent>

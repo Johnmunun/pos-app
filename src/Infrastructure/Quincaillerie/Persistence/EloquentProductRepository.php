@@ -215,7 +215,7 @@ class EloquentProductRepository implements ProductRepositoryInterface
         $code = new ProductCode($model->code ?? '');
         $price = new Money((float) $model->price_amount, $model->price_currency ?? 'USD');
         $stock = new Quantity((float) ($model->stock ?? 0));
-        $typeUnite = isset($model->type_unite) ? new TypeUnite($model->type_unite) : new TypeUnite(TypeUnite::UNITE);
+        $typeUnite = new TypeUnite(TypeUnite::normalizeValue($model->type_unite ?? TypeUnite::UNITE));
         $quantiteParUnite = (int) ($model->quantite_par_unite ?? 1);
         $estDivisible = (bool) ($model->est_divisible ?? true);
         $minimumStock = new Quantity((float) ($model->minimum_stock ?? 0));

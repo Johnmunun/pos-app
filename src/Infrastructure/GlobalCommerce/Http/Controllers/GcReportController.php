@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use Carbon\Carbon;
+use App\Models\Shop;
+use Src\Infrastructure\GlobalCommerce\Support\GcShopResolver;
 use Src\Infrastructure\GlobalCommerce\Sales\Models\SaleModel;
 use Src\Infrastructure\GlobalCommerce\Sales\Models\SaleLineModel;
 use Src\Infrastructure\GlobalCommerce\Procurement\Models\PurchaseModel;
@@ -24,38 +26,14 @@ class GcReportController
      */
     private function getShopIdAndShop(Request $request): array
     {
-        $user = $request->user();
-        if ($user === null) {
-            abort(403);
-        }
+        $shopId = GcShopResolver::resolveShopId($request);
 
-        $depotId = $request->session()->get('current_depot_id');
-        if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
-            $shop = \App\Models\Shop::where('depot_id', (int) $depotId)
-                ->where('tenant_id', $user->tenant_id)
-                ->first();
-            if ($shop) {
-                return [(string) $shop->id, $shop];
-            }
-        }
-
-        if ($user->shop_id !== null && $user->shop_id !== '') {
-            $shop = \App\Models\Shop::find($user->shop_id);
-            return [(string) $user->shop_id, $shop];
-        }
-
-        if ($user->tenant_id) {
-            $shop = \App\Models\Shop::find($user->tenant_id);
-            return [(string) $user->tenant_id, $shop];
-        }
-
-        abort(403, 'Shop ID not found.');
+        return [$shopId, Shop::query()->find($shopId)];
     }
 
     private function getShopId(Request $request): string
     {
-        [$shopId] = $this->getShopIdAndShop($request);
-        return $shopId;
+        return GcShopResolver::resolveShopId($request);
     }
 
     public function index(Request $request): Response

@@ -27,6 +27,8 @@ import EcommercePageHeader from '@/Components/Ecommerce/EcommercePageHeader';
 import EcommerceActionButton from '@/Components/Ecommerce/EcommerceActionButton';
 import { Pagination } from '@/Components/ui/pagination';
 import axios from 'axios';
+import { cn } from '@/lib/utils';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function OrdersIndex({ orders = [], stats = {}, financial = {}, filters = {}, pagination }) {
     const { auth } = usePage().props;
@@ -202,12 +204,12 @@ export default function OrdersIndex({ orders = [], stats = {}, financial = {}, f
         >
             <Head title="Ventes Ecommerce" />
 
-            <div className="py-6">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
                     {/* Stats */}
                     {stats && Object.keys(stats).length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
-                            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+                            <div className={cn(cardShell, 'p-4')}>
                                 <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Total</div>
                                 <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{stats.total ?? 0}</div>
                             </div>
@@ -234,7 +236,7 @@ export default function OrdersIndex({ orders = [], stats = {}, financial = {}, f
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-4 border border-emerald-200 dark:border-emerald-800">
                             <div className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Montant payé (filtre)</div>
                             <div className="mt-1 text-2xl font-bold text-emerald-900 dark:text-emerald-300">
@@ -256,7 +258,7 @@ export default function OrdersIndex({ orders = [], stats = {}, financial = {}, f
                     </div>
 
                     {/* Filtres */}
-                    <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                    <div className={cn(cardShell, 'p-4')}>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -313,7 +315,7 @@ export default function OrdersIndex({ orders = [], stats = {}, financial = {}, f
                     </div>
 
                     {/* Barre de recherche */}
-                    <div className="mb-6">
+                    <div>
                         <form
                             onSubmit={(e) => { e.preventDefault(); handleFilter(); }}
                             className="flex gap-4"
@@ -333,7 +335,7 @@ export default function OrdersIndex({ orders = [], stats = {}, financial = {}, f
                     </div>
 
                     {/* Liste des commandes */}
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div className={cardShell}>
                         {orders.length === 0 ? (
                             <div className="py-12 text-center">
                                 <Package className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />

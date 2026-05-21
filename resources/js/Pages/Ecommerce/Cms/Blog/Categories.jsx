@@ -6,6 +6,7 @@ import { Button } from '@/Components/ui/button';
 import { ArrowLeft, Plus, Pencil, Trash2, HelpCircle } from 'lucide-react';
 import CmsBlogCategoryDrawer from '@/Components/Ecommerce/Cms/CmsBlogCategoryDrawer';
 import CmsHelpModal from '@/Components/Ecommerce/Cms/CmsHelpModal';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function CmsBlogCategories({ categories = [] }) {
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -51,8 +52,9 @@ export default function CmsBlogCategories({ categories = [] }) {
             }
         >
             <Head title="Catégories blog CMS - E-commerce" />
-            <div className="py-6 max-w-2xl">
-                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+            <div className={pageY}>
+                <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+                <Card className={cardShell}>
                     <CardContent className="p-0">
                         <div className="overflow-x-auto">
                             <table className="w-full">
@@ -90,6 +92,7 @@ export default function CmsBlogCategories({ categories = [] }) {
                         </div>
                     </CardContent>
                 </Card>
+            </div>
             </div>
 
             <CmsBlogCategoryDrawer isOpen={drawerOpen} onClose={handleCloseDrawer} category={editingCategory} />

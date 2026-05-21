@@ -49,6 +49,9 @@ Route::prefix('commerce')
         Route::post('/sales', [GcSaleController::class, 'store'])->name('sales.store');
         Route::post('/sales/quick-customer', [GcSaleController::class, 'quickCreateCustomer'])->name('sales.quick-customer');
         Route::post('/sales/{id}/finalize', [GcSaleController::class, 'finalize'])->name('sales.finalize');
+        Route::post('/sales/{id}/cancel', [GcSaleController::class, 'cancel'])
+            ->middleware('permission:commerce.sales.cancel|commerce.sales.manage')
+            ->name('sales.cancel');
         Route::get('/sales/{id}/receipt', [GcSaleController::class, 'receipt'])->name('sales.receipt');
         Route::get('/sales/{id}', [GcSaleController::class, 'show'])->name('sales.show');
 

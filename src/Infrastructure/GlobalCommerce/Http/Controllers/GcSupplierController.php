@@ -14,6 +14,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Ramsey\Uuid\Uuid;
 use Src\Application\Billing\Services\FeatureLimitService;
 use Src\Infrastructure\GlobalCommerce\Procurement\Models\SupplierModel;
+use Src\Infrastructure\GlobalCommerce\Support\GcShopResolver;
 use Illuminate\Support\Facades\Log;
 
 class GcSupplierController
@@ -25,31 +26,7 @@ class GcSupplierController
 
     private function getShopId(Request $request): string
     {
-        $user = $request->user();
-        if ($user === null) {
-            abort(403);
-        }
-
-        $depotId = $request->session()->get('current_depot_id');
-
-        if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
-            $shop = \App\Models\Shop::where('depot_id', (int) $depotId)
-                ->where('tenant_id', $user->tenant_id)
-                ->first();
-            if ($shop) {
-                return (string) $shop->id;
-            }
-        }
-
-        if ($user->shop_id !== null && $user->shop_id !== '') {
-            return (string) $user->shop_id;
-        }
-
-        if ($user->tenant_id) {
-            return (string) $user->tenant_id;
-        }
-
-        abort(403, 'Shop ID not found.');
+        return GcShopResolver::resolveShopId($request);
     }
 
     public function index(Request $request): Response

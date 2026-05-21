@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use App\Support\TenantBillingUpgradePrompt;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -34,9 +35,10 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        $user = Auth::user();
+
         // Enregistrer l'historique de connexion
         try {
-            $user = Auth::user();
             if ($user) {
                 UserLoginHistoryModel::create([
                     'user_id' => $user->id,
@@ -56,8 +58,11 @@ class AuthenticatedSessionController extends Controller
             return redirect()->intended(route('admin.dashboard', absolute: false));
         }
 
-        // Sinon → dashboard du tenant
-        $request->session()->flash('trial_upgrade_prompt', true);
+        // Sinon → dashboard du tenant (popup upgrade uniquement trial / starter)
+        if (TenantBillingUpgradePrompt::tenantHasEntryPlan($user)) {
+            $request->session()->flash('trial_upgrade_prompt', true);
+        }
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 

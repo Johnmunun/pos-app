@@ -138,6 +138,8 @@ class CmsPageController
             'metadata.phone' => 'nullable|string|max:100',
             'metadata.email' => 'nullable|string|max:255',
             'metadata.hours' => 'nullable|string|max:255',
+            'metadata.seo_title' => 'nullable|string|max:60',
+            'metadata.seo_description' => 'nullable|string|max:160',
             'is_active' => 'boolean',
             'published_at' => 'nullable|date',
         ]);
@@ -188,6 +190,8 @@ class CmsPageController
             'metadata.phone' => 'nullable|string|max:100',
             'metadata.email' => 'nullable|string|max:255',
             'metadata.hours' => 'nullable|string|max:255',
+            'metadata.seo_title' => 'nullable|string|max:60',
+            'metadata.seo_description' => 'nullable|string|max:160',
             'is_active' => 'boolean',
             'published_at' => 'nullable|date',
         ]);

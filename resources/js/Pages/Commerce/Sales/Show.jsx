@@ -12,12 +12,15 @@ import {
     User,
     Package,
     CheckCircle,
+    XCircle,
     Receipt,
     DollarSign,
     Printer,
     CheckCircle2,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/currency';
+import SaleFinalizeConfirmModal from '@/Components/SaleFinalizeConfirmModal';
+import SaleCancelConfirmModal from '@/Components/SaleCancelConfirmModal';
 
 export default function CommerceSalesShow({ sale }) {
     const { shop } = usePage().props;
@@ -25,12 +28,16 @@ export default function CommerceSalesShow({ sale }) {
     const lines = sale?.lines || [];
     const format = (amount) => formatCurrency(Number(amount), currency);
     const [finalizing, setFinalizing] = useState(false);
+    const [showFinalizeModal, setShowFinalizeModal] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
+    const [showCancelModal, setShowCancelModal] = useState(false);
 
     if (!sale) return null;
 
     const statusUpper = (sale?.status ?? '').toString().toUpperCase();
     const isCompleted = statusUpper === 'COMPLETED';
     const isDraft = statusUpper === 'DRAFT';
+    const isCancelled = statusUpper === 'CANCELLED';
 
     const hasReceiptRoute =
         typeof window !== 'undefined' &&
@@ -42,17 +49,42 @@ export default function CommerceSalesShow({ sale }) {
         window.Ziggy?.routes &&
         Object.prototype.hasOwnProperty.call(window.Ziggy.routes, 'commerce.sales.finalize');
 
+    const hasCancelRoute =
+        typeof window !== 'undefined' &&
+        window.Ziggy?.routes &&
+        Object.prototype.hasOwnProperty.call(window.Ziggy.routes, 'commerce.sales.cancel');
+
+    const canCancel = hasCancelRoute && !isCancelled && (isDraft || isCompleted);
+
     const handleFinalize = async () => {
-        if (!hasFinalizeRoute || !sale?.id) return;
+        if (!hasFinalizeRoute || !sale?.id || finalizing) return;
         setFinalizing(true);
         try {
-            await axios.post(route('commerce.sales.finalize', sale.id), { paid_amount: sale.total_amount });
-            toast.success('Vente finalisée avec succès.');
+            const paidAmount =
+                Number(sale.paid_amount) > 0 ? Number(sale.paid_amount) : Number(sale.total_amount);
+            await axios.post(route('commerce.sales.finalize', sale.id), { paid_amount: paidAmount });
+            setShowFinalizeModal(false);
+            toast.success('Vente confirmée avec succès.');
             router.visit(route('commerce.sales.show', sale.id));
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Erreur lors de la finalisation.');
+            toast.error(err.response?.data?.message || 'Erreur lors de la confirmation.');
         } finally {
             setFinalizing(false);
+        }
+    };
+
+    const handleCancel = async () => {
+        if (!canCancel || !sale?.id || cancelling) return;
+        setCancelling(true);
+        try {
+            await axios.post(route('commerce.sales.cancel', sale.id));
+            setShowCancelModal(false);
+            toast.success('Vente annulée.');
+            router.visit(route('commerce.sales.show', sale.id));
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Erreur lors de l\'annulation.');
+        } finally {
+            setCancelling(false);
         }
     };
 
@@ -82,12 +114,19 @@ export default function CommerceSalesShow({ sale }) {
                                 <Badge
                                     variant={isCompleted ? 'default' : 'secondary'}
                                     className={
-                                        isCompleted
-                                            ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'
-                                            : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                                        isCancelled
+                                            ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
+                                            : isCompleted
+                                              ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'
+                                              : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
                                     }
                                 >
-                                    {isCompleted ? (
+                                    {isCancelled ? (
+                                        <>
+                                            <XCircle className="h-3 w-3 mr-1" />
+                                            Annulée
+                                        </>
+                                    ) : isCompleted ? (
                                         <>
                                             <CheckCircle className="h-3 w-3 mr-1" />
                                             Terminée
@@ -103,20 +142,32 @@ export default function CommerceSalesShow({ sale }) {
                                 </Badge>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             {isDraft && hasFinalizeRoute && (
                                 <Button
                                     variant="default"
                                     size="sm"
-                                    onClick={handleFinalize}
+                                    onClick={() => setShowFinalizeModal(true)}
                                     disabled={finalizing}
                                     className="inline-flex items-center bg-green-600 hover:bg-green-700"
                                 >
                                     <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                                    {finalizing ? 'Finalisation...' : 'Finaliser la vente'}
+                                    Confirmer la vente
                                 </Button>
                             )}
-                            {hasReceiptRoute && (
+                            {canCancel && (
+                                <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => setShowCancelModal(true)}
+                                    disabled={cancelling}
+                                    className="inline-flex items-center"
+                                >
+                                    <XCircle className="h-4 w-4 mr-1.5" />
+                                    Annuler la vente
+                                </Button>
+                            )}
+                            {hasReceiptRoute && !isCancelled && (
                                 <Button variant="outline" size="sm" asChild>
                                     <a
                                         href={route('commerce.sales.receipt', sale.id)}
@@ -350,6 +401,25 @@ export default function CommerceSalesShow({ sale }) {
                     </div>
                 </div>
             </div>
+
+            <SaleFinalizeConfirmModal
+                show={showFinalizeModal}
+                onClose={() => !finalizing && setShowFinalizeModal(false)}
+                onConfirm={handleFinalize}
+                loading={finalizing}
+                sale={sale}
+                currency={currency}
+            />
+
+            <SaleCancelConfirmModal
+                show={showCancelModal}
+                onClose={() => !cancelling && setShowCancelModal(false)}
+                onConfirm={handleCancel}
+                loading={cancelling}
+                sale={sale}
+                currency={currency}
+                restoresStock={isCompleted}
+            />
         </AppLayout>
     );
 }

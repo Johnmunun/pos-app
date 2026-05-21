@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { usePage } from '@inertiajs/react';
 import Sidebar from '@/Components/Layout/Sidebar';
 import Navbar from '@/Components/Layout/Navbar';
@@ -6,9 +6,9 @@ import DepotAlert from '@/Components/DepotAlert';
 import FlashMessages from '@/Components/FlashMessages';
 import BillingPaymentSuccessModal from '@/Components/Billing/BillingPaymentSuccessModal';
 import TrialUpgradePromptModal from '@/Components/Billing/TrialUpgradePromptModal';
-import PharmacyAssistant from '@/Components/Pharmacy/PharmacyAssistant';
-import HardwareAssistant from '@/Components/Hardware/HardwareAssistant';
-import CommerceAssistant from '@/Components/Commerce/CommerceAssistant';
+const PharmacyAssistant = lazy(() => import('@/Components/Pharmacy/PharmacyAssistant'));
+const HardwareAssistant = lazy(() => import('@/Components/Hardware/HardwareAssistant'));
+const CommerceAssistant = lazy(() => import('@/Components/Commerce/CommerceAssistant'));
 import SupportFloatingButton from '@/Components/Support/SupportFloatingButton';
 import SupportChatWidget from '@/Components/Support/SupportChatWidget';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
@@ -76,13 +76,19 @@ function AssistantsContainer({ permissions, extraMobileBottomPx = 0 }) {
                 <SupportFloatingButton enabled bottomOffset={getBottomOffset(0)} />
             )}
             {hasPharmacy && pharmacyIndex >= 0 && (
-                <PharmacyAssistant bottomOffset={getBottomOffset(pharmacyIndex + supportBaseIndexOffset)} />
+                <Suspense fallback={null}>
+                    <PharmacyAssistant bottomOffset={getBottomOffset(pharmacyIndex + supportBaseIndexOffset)} />
+                </Suspense>
             )}
             {hasHardware && hardwareIndex >= 0 && (
-                <HardwareAssistant bottomOffset={getBottomOffset(hardwareIndex + supportBaseIndexOffset)} />
+                <Suspense fallback={null}>
+                    <HardwareAssistant bottomOffset={getBottomOffset(hardwareIndex + supportBaseIndexOffset)} />
+                </Suspense>
             )}
             {hasCommerce && commerceIndex >= 0 && (
-                <CommerceAssistant bottomOffset={getBottomOffset(commerceIndex + supportBaseIndexOffset)} />
+                <Suspense fallback={null}>
+                    <CommerceAssistant bottomOffset={getBottomOffset(commerceIndex + supportBaseIndexOffset)} />
+                </Suspense>
             )}
         </>
     );
@@ -153,7 +159,7 @@ export default function AppLayout({ children, header, fullWidth = false }) {
     }, [url]);
 
     return (
-        <div className="min-h-[100dvh] min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200 flex flex-col">
+        <div className="flex min-h-[100dvh] min-h-screen flex-col bg-gradient-to-br from-gray-50 via-white to-amber-50/20 transition-colors duration-200 dark:from-gray-900 dark:via-slate-900 dark:to-slate-950">
             {/* Sidebar - Desktop (fixe) / Mobile (drawer) */}
             <Sidebar 
                 permissions={permissions}
@@ -167,7 +173,7 @@ export default function AppLayout({ children, header, fullWidth = false }) {
             {/* Overlay pour mobile quand sidebar est ouvert */}
             {sidebarOpen && (
                 <div 
-                    className="fixed inset-0 bg-gray-900/50 z-40 lg:hidden transition-opacity max-md:backdrop-blur-[2px]"
+                    className="fixed inset-0 z-40 bg-gray-900/45 backdrop-blur-[2px] transition-opacity lg:hidden"
                     onClick={() => setSidebarOpen(false)}
                     aria-hidden
                 />
@@ -191,7 +197,7 @@ export default function AppLayout({ children, header, fullWidth = false }) {
 
                 {/* Header optionnel */}
                 {header && (
-                    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 max-md:pt-[env(safe-area-inset-top,0px)]">
+                    <header className="border-b border-gray-200/80 bg-white/90 text-gray-900 shadow-sm backdrop-blur-md dark:border-slate-700/80 dark:bg-slate-900/90 dark:text-gray-100 max-md:pt-[env(safe-area-inset-top,0px)]">
                         <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-3 sm:py-4 max-md:px-4 max-md:py-4">
                             {header}
                         </div>

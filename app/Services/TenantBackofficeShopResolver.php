@@ -52,15 +52,7 @@ final class TenantBackofficeShopResolver
             }
         }
 
-        if (!$shop && $tenantId !== null) {
-            $shop = Shop::query()
-                ->where('tenant_id', $tenantId)
-                ->where('is_active', true)
-                ->orderBy('id')
-                ->first();
-        }
-
-        if (!$shop && !empty($user->shop_id)) {
+        if (!$shop && ! empty($user->shop_id)) {
             $candidate = Shop::find($user->shop_id);
             if ($candidate) {
                 $cTenant = $candidate->tenant_id !== null ? (string) $candidate->tenant_id : null;
@@ -68,6 +60,14 @@ final class TenantBackofficeShopResolver
                     $shop = $candidate;
                 }
             }
+        }
+
+        if (!$shop && $tenantId !== null) {
+            $shop = Shop::query()
+                ->where('tenant_id', $tenantId)
+                ->where('is_active', true)
+                ->orderBy('id')
+                ->first();
         }
 
         if (!$shop && $tenantId !== null) {
@@ -96,22 +96,44 @@ final class TenantBackofficeShopResolver
     public function globalCommerceInventoryShopIds(Shop $shop, ?string $tenantId): array
     {
         $ids = [(string) $shop->id];
-        if ($tenantId === null || $tenantId === '' || !ctype_digit((string) $tenantId)) {
-            return $ids;
-        }
-        if ((string) $tenantId === (string) $shop->id) {
-            return $ids;
+
+        if ($tenantId === null || $tenantId === '' || ! ctype_digit((string) $tenantId)) {
+            return array_values(array_unique($ids));
         }
 
-        $hasLegacy = false;
-        if (Schema::hasTable('gc_products') && GcProductModel::query()->where('shop_id', $tenantId)->exists()) {
-            $hasLegacy = true;
+        if ((string) $tenantId !== (string) $shop->id) {
+            if (
+                Schema::hasTable('gc_products')
+                && GcProductModel::query()->where('shop_id', $tenantId)->exists()
+            ) {
+                $ids[] = (string) $tenantId;
+            }
+            if (
+                Schema::hasTable('gc_categories')
+                && CategoryModel::query()->where('shop_id', $tenantId)->exists()
+            ) {
+                $ids[] = (string) $tenantId;
+            }
         }
-        if (!$hasLegacy && Schema::hasTable('gc_categories') && CategoryModel::query()->where('shop_id', $tenantId)->exists()) {
-            $hasLegacy = true;
-        }
-        if ($hasLegacy) {
-            $ids[] = (string) $tenantId;
+
+        if (Schema::hasTable('shops')) {
+            $tenantShopIds = Shop::query()
+                ->where('tenant_id', $tenantId)
+                ->where('is_active', true)
+                ->pluck('id')
+                ->map(fn ($id) => (string) $id)
+                ->all();
+
+            foreach ($tenantShopIds as $shopId) {
+                if (in_array($shopId, $ids, true)) {
+                    continue;
+                }
+                $hasInventory = (Schema::hasTable('gc_products') && GcProductModel::query()->where('shop_id', $shopId)->exists())
+                    || (Schema::hasTable('gc_categories') && CategoryModel::query()->where('shop_id', $shopId)->exists());
+                if ($hasInventory) {
+                    $ids[] = $shopId;
+                }
+            }
         }
 
         return array_values(array_unique($ids));

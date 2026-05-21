@@ -10,6 +10,7 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import ImportModal from '@/Components/ImportModal';
 import CustomerDrawer from '@/Components/Commerce/CustomerDrawer';
+import { cardShell, pageY } from '@/lib/layoutClasses';
 
 export default function CommerceCustomersIndex({ customers = [], filters = {} }) {
     const { auth } = usePage().props;
@@ -98,9 +99,14 @@ export default function CommerceCustomersIndex({ customers = [], filters = {} })
         <AppLayout
             header={
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <h2 className="font-semibold text-lg sm:text-xl text-gray-800 dark:text-gray-100 leading-tight">
-                        Clients — Global Commerce
-                    </h2>
+                    <div>
+                        <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">
+                            Clients — Global Commerce
+                        </h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 max-w-2xl hidden sm:block">
+                            Fichier clients, import et export.
+                        </p>
+                    </div>
                     <div className="flex flex-wrap items-center gap-2">
                         <Button
                             type="button"
@@ -149,10 +155,10 @@ export default function CommerceCustomersIndex({ customers = [], filters = {} })
             }
         >
             <Head title="Clients - Commerce" />
-            <div className="py-6">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+            <div className={pageY}>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
                     {/* Recherche - Mobile optimisée */}
-                    <Card className="mb-6 bg-white dark:bg-gray-800">
+                    <Card className={`mb-6 ${cardShell}`}>
                         <CardHeader className="pb-3">
                             <CardTitle className="flex items-center text-gray-900 dark:text-white text-base sm:text-lg">
                                 <Search className="h-4 w-4 sm:h-5 sm:w-5 mr-2" /> 
@@ -183,7 +189,7 @@ export default function CommerceCustomersIndex({ customers = [], filters = {} })
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-white dark:bg-slate-900">
+                    <Card className={cardShell}>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
                                 <Users className="h-5 w-5" /> Liste des clients

@@ -9,6 +9,7 @@ use Inertia\Response;
 use Inertia\Inertia;
 use Src\Application\GlobalCommerce\Sales\DTO\CreateSaleDTO;
 use Src\Application\GlobalCommerce\Sales\UseCases\CreateSaleUseCase;
+use Src\Application\GlobalCommerce\Sales\UseCases\CancelGcSaleUseCase;
 use Src\Domain\GlobalCommerce\Sales\Repositories\SaleRepositoryInterface;
 use Src\Domain\GlobalCommerce\Inventory\Repositories\ProductRepositoryInterface;
 use Src\Infrastructure\GlobalCommerce\Inventory\Models\CategoryModel;
@@ -23,46 +24,21 @@ use Src\Application\Settings\UseCases\GetStoreSettingsUseCase;
 use Src\Infrastructure\Settings\Services\StoreLogoService;
 use Src\Shared\ValueObjects\Quantity;
 use Src\Application\Billing\Services\FeatureLimitService;
+use Src\Infrastructure\GlobalCommerce\Support\GcShopResolver;
+use Src\Application\Currency\Services\TenantDisplayCurrencyService;
 
 class GcSaleController
 {
     private function getShopId(Request $request): string
     {
-        $user = $request->user();
-        if ($user === null) {
-            abort(403);
-        }
-
-        // Mobile API (token auth) may not have session, allow depot_id input fallback.
-        $depotId = $request->filled('depot_id') ? (int) $request->input('depot_id') : null;
-        if (!$depotId && $request->hasSession()) {
-            $depotId = $request->session()->get('current_depot_id');
-        }
-
-        if ($depotId && $user->tenant_id && \Illuminate\Support\Facades\Schema::hasTable('shops')) {
-            $shop = \App\Models\Shop::where('depot_id', (int) $depotId)
-                ->where('tenant_id', $user->tenant_id)
-                ->first();
-            if ($shop) {
-                return (string) $shop->id;
-            }
-        }
-
-        if ($user->shop_id !== null && $user->shop_id !== '') {
-            return (string) $user->shop_id;
-        }
-
-        if ($user->tenant_id) {
-            return (string) $user->tenant_id;
-        }
-
-        abort(403, 'Shop ID not found.');
+        return GcShopResolver::resolveShopId($request);
     }
 
     public function __construct(
         private SaleRepositoryInterface $saleRepository,
         private ProductRepositoryInterface $productRepository,
         private CreateSaleUseCase $createSaleUseCase,
+        private CancelGcSaleUseCase $cancelGcSaleUseCase,
         private GetStoreSettingsUseCase $getStoreSettingsUseCase,
         private StoreLogoService $storeLogoService,
         private FeatureLimitService $featureLimitService
@@ -186,14 +162,11 @@ class GcSaleController
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        // Clients liés au tenant (pas au shop). Récupérer tenant_id depuis user ou depuis le shop.
-        $tenantId = $authUser?->tenant_id;
-        if (($tenantId === null || $tenantId === '') && Schema::hasTable('shops')) {
-            $shop = \App\Models\Shop::find($shopId);
-            $tenantId = $shop?->tenant_id ?? $shopId;
+        // Clients liés au tenant (pas au shop).
+        $tenantId = GcShopResolver::resolveTenantId($request);
+        if ($tenantId === null) {
+            $tenantId = (int) (\App\Models\Shop::find($shopId)?->tenant_id ?? 0);
         }
-        $tenantId = $tenantId ?? $shopId;
-        $tenantId = (int) $tenantId; // Cohérence pour la requête (customers.tenant_id = bigint)
         // Même requête que GcCustomerController::index (sans filtre is_active) pour cohérence
         $customers = Customer::where('tenant_id', $tenantId)
             ->orderBy('full_name')
@@ -208,10 +181,15 @@ class GcSaleController
             ->values()
             ->all();
 
-        $firstProduct = $productList[0] ?? null;
+        $shop = Shop::find($shopId);
+        $tenantId = (string) ($shop?->tenant_id ?? GcShopResolver::resolveTenantId($request) ?? 0);
+        $currencyBundle = app(TenantDisplayCurrencyService::class)->resolve($request, $tenantId, $shop, false);
+
         return Inertia::render('Commerce/Sales/Create', [
             'products' => $productList,
-            'currency' => $firstProduct['price_currency'] ?? $firstProduct['currency'] ?? 'USD',
+            'currency' => $currencyBundle['currency'],
+            'currencies' => $currencyBundle['available_currencies'],
+            'exchangeRates' => $currencyBundle['exchange_rates'],
             'categories' => $categories,
             'customers' => $customers,
             'canUseWholesale' => $canUseWholesale,
@@ -304,7 +282,7 @@ class GcSaleController
         $customerName = $validated['customer_name'] ?? null;
         if (empty($customerName) && !empty($validated['customer_id'])) {
             $customer = Customer::find($validated['customer_id']);
-            if ($customer && (string) $customer->tenant_id === (string) ($request->user()?->tenant_id ?? $shopId)) {
+            if ($customer && (string) $customer->tenant_id === (string) (GcShopResolver::resolveTenantId($request) ?? '')) {
                 $customerName = $customer->full_name;
             }
         }
@@ -410,6 +388,36 @@ class GcSaleController
                 'currency' => (string) $model->currency,
             ],
         ]);
+    }
+
+    public function cancel(Request $request, string $id): JsonResponse
+    {
+        $shopId = $this->getShopId($request);
+        $model = SaleModel::where('id', $id)->where('shop_id', $shopId)->first();
+        if (!$model) {
+            return response()->json(['message' => 'Vente introuvable.'], 404);
+        }
+
+        try {
+            $this->cancelGcSaleUseCase->execute($id, $shopId);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Vente annulée.',
+                'sale' => [
+                    'id' => (string) $model->id,
+                    'status' => 'cancelled',
+                ],
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 404);
+        } catch (\LogicException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (\Throwable $e) {
+            Log::error('GC sale cancel failed', ['sale_id' => $id, 'message' => $e->getMessage()]);
+
+            return response()->json(['message' => 'Erreur lors de l\'annulation de la vente.'], 500);
+        }
     }
 
     /**

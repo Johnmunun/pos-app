@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Src\Application\Common\Services\AssistantSalesProfitContextBuilder;
 use Src\Application\Pharmacy\Services\PharmacyAssistantContextService;
 
 class PharmacyAssistantController
@@ -21,7 +22,12 @@ class PharmacyAssistantController
      */
     public function ask(Request $request): JsonResponse
     {
-        $request->validate(['message' => 'required|string|max:2000']);
+        $request->validate([
+            'message' => 'required|string|max:2000',
+            'history' => 'nullable|array|max:6',
+            'history.*.role' => 'required_with:history|in:user,assistant',
+            'history.*.content' => 'required_with:history|string|max:2000',
+        ]);
 
         $message = trim($request->input('message'));
         if ($message === '') {
@@ -54,9 +60,11 @@ class PharmacyAssistantController
         $driver = config('pharmacy_assistant.llm_driver', 'fallback');
         $apiKey = config('services.openai.api_key');
 
+        $history = $this->normalizeHistory($request->input('history'));
+
         if ($driver === 'openai' && $apiKey !== null && $apiKey !== '') {
             try {
-                $result = $this->callOpenAI($apiKey, $systemPrompt, $context, $message);
+                $result = $this->callOpenAI($apiKey, $systemPrompt, $context, $message, $history);
                 return response()->json([
                     'answer' => $result['answer'],
                     'navigation' => $result['navigation'] ?? null,
@@ -101,22 +109,60 @@ class PharmacyAssistantController
     }
 
     /**
+     * @param array<int, array{role: string, content: string}> $history
+     * @return array<int, array{role: string, content: string}>
+     */
+    private function normalizeHistory(mixed $history): array
+    {
+        if (!is_array($history)) {
+            return [];
+        }
+        $out = [];
+        foreach ($history as $turn) {
+            if (!is_array($turn)) {
+                continue;
+            }
+            $role = ($turn['role'] ?? '') === 'user' ? 'user' : 'assistant';
+            $content = trim((string) ($turn['content'] ?? ''));
+            if ($content === '') {
+                continue;
+            }
+            $out[] = ['role' => $role, 'content' => mb_substr($content, 0, 2000)];
+            if (count($out) >= 6) {
+                break;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param array<int, array{role: string, content: string}> $history
      * @return array{answer: string|null, navigation: array|null}
      */
-    private function callOpenAI(string $apiKey, string $systemPrompt, array $context, string $userMessage): array
+    private function callOpenAI(string $apiKey, string $systemPrompt, array $context, string $userMessage, array $history): array
     {
         $contextJson = json_encode($context, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        $userContent = "Contexte (données uniquement, ne pas inventer):\n" . $contextJson . "\n\nQuestion utilisateur: " . $userMessage;
+        $userContent = "Contexte boutique (JSON — source unique pour chiffres, listes et routes ; ne rien inventer):\n"
+            . $contextJson
+            . "\n\nQuestion actuelle: "
+            . $userMessage;
+
+        $chatMessages = [['role' => 'system', 'content' => $systemPrompt]];
+        foreach ($history as $turn) {
+            $chatMessages[] = [
+                'role' => $turn['role'] === 'user' ? 'user' : 'assistant',
+                'content' => $turn['content'],
+            ];
+        }
+        $chatMessages[] = ['role' => 'user', 'content' => $userContent];
 
         /** @var \Illuminate\Http\Client\Response $response */
         $response = Http::withToken($apiKey)
             ->timeout(15)
             ->post('https://api.openai.com/v1/chat/completions', [
                 'model' => 'gpt-4o-mini',
-                'messages' => [
-                    ['role' => 'system', 'content' => $systemPrompt],
-                    ['role' => 'user', 'content' => $userContent],
-                ],
+                'messages' => $chatMessages,
                 'max_tokens' => 500,
                 'temperature' => 0.3,
             ]);
@@ -208,6 +254,11 @@ class PharmacyAssistantController
             }
             return sprintf("%s %s,\n\n%s", $hello, $userName, $body);
         };
+
+        $profitAnswer = AssistantSalesProfitContextBuilder::tryAnswerProfitQuestion($message, $context, $currency);
+        if ($profitAnswer !== null) {
+            return ['answer' => $greet($profitAnswer), 'navigation' => null];
+        }
 
         // Comparaison ventes aujourd'hui vs hier
         if ((str_contains($lower, 'plus') && str_contains($lower, 'vente')) || str_contains($lower, 'comparaison') && (str_contains($lower, 'aujourd') || str_contains($lower, 'hier'))) {
@@ -439,9 +490,35 @@ class PharmacyAssistantController
             $sellingPrice = $p['selling_price'] ?? $p['sale_price'] ?? 0;
             $curr = $p['currency'] ?? $currency;
             if (count($products) === 1) {
-                $exp = isset($p['expiration_date']) && $p['expiration_date'] ? ' Expiration la plus proche : ' . $p['expiration_date'] . '.' : '';
+                $exp = isset($p['expiration_date']) && $p['expiration_date'] ? "\nExpiration la plus proche : " . $p['expiration_date'] . '.' : '';
+                $cost = $p['cost_price'] ?? null;
+                $marginBlock = '';
+                if ($cost !== null) {
+                    $unitMargin = (float) ($p['unit_margin'] ?? ($sellingPrice - $cost));
+                    $marginBlock = sprintf(
+                        "\nPrix d'achat : %s %s\nMarge unitaire : %s %s (%s %%)\nBénéfice potentiel sur stock : %s %s",
+                        number_format((float) $cost, 0, ',', ' '),
+                        $curr,
+                        number_format($unitMargin, 0, ',', ' '),
+                        $curr,
+                        $p['margin_percent'] ?? '—',
+                        number_format((float) ($p['profit_on_stock'] ?? 0), 0, ',', ' '),
+                        $curr
+                    );
+                } else {
+                    $marginBlock = "\nPrix d'achat : non renseigné — marge non calculable.";
+                }
+                $movements = $p['recent_stock_movements'] ?? [];
+                $movBlock = '';
+                if ($movements !== []) {
+                    $movLines = array_map(
+                        fn ($mv) => sprintf('- %s : %s %s (%s)', $mv['date'] ?? '', $mv['type'] ?? '', $mv['quantity'] ?? '', $mv['reference'] ?? '—'),
+                        array_slice($movements, 0, 5)
+                    );
+                    $movBlock = "\n\nDerniers mouvements de stock :\n" . implode("\n", $movLines);
+                }
                 $body = sprintf(
-                    "Voici les informations sur le produit demandé :\n\n💊 Nom : %s (code %s)\n📦 Stock actuel : %d %s\n💰 Prix de vente : %s %s\n📉 Stock minimum : %d%s\n\nSouhaitez-vous voir les mouvements de stock récents pour ce produit ?",
+                    "Voici les informations sur le produit demandé :\n\nNom : %s (code %s)\nStock actuel : %d %s\nPrix de vente : %s %s\nStock minimum : %d%s%s%s",
                     $p['name'],
                     $p['code'] ?? '—',
                     $stockQty,
@@ -449,7 +526,9 @@ class PharmacyAssistantController
                     number_format((float) $sellingPrice, 0, ',', ' '),
                     $curr,
                     $p['minimum_stock'] ?? 0,
-                    $exp
+                    $exp,
+                    $marginBlock,
+                    $movBlock
                 );
                 return ['answer' => $greet($body), 'navigation' => null];
             }

@@ -4,6 +4,7 @@ namespace Src\Application\Pharmacy\Services;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Src\Application\Common\Services\AssistantSalesProfitContextBuilder;
 use Src\Infrastructure\Pharmacy\Models\SaleModel;
 use Src\Infrastructure\Pharmacy\Models\ProductModel;
 use Src\Infrastructure\Pharmacy\Models\ProductBatchModel;
@@ -52,6 +53,7 @@ class PharmacyAssistantContextService
             'dashboard_summary' => $this->getCachedOrCompute($cacheKey . ':dashboard', fn () => $this->getDashboardSummary($request, $shopId)),
             'expiring_soon_products' => $this->getCachedOrCompute($cacheKey . ':expiring', fn () => $this->getExpiringSoonProducts($shopId)),
             'currency' => $currency,
+            ...$this->getCachedOrCompute($cacheKey . ':profit', fn () => AssistantSalesProfitContextBuilder::forPharmacy($shopId, $currency)),
         ];
 
         if ($productSearch !== null && $productSearch !== '') {
@@ -312,7 +314,7 @@ class PharmacyAssistantContextService
                 $builder->where('name', 'like', $like)->orWhere('code', 'like', $like);
             })
             ->limit(5)
-            ->get(['id', 'name', 'code', 'stock', 'price_amount', 'price_currency', 'minimum_stock', 'unit']);
+            ->get(['id', 'name', 'code', 'stock', 'price_amount', 'price_currency', 'minimum_stock', 'unit', 'cost_amount']);
         if ($models->isEmpty()) {
             return [];
         }
@@ -334,17 +336,30 @@ class PharmacyAssistantContextService
                     : (string) $r->expiration_date;
             }
         }
-        return $models->map(fn ($m) => [
-            'id' => $m->id,
-            'name' => $m->name,
-            'code' => $m->code ?? '',
-            'stock_quantity' => (int) $m->stock,
-            'selling_price' => (float) $m->price_amount,
-            'currency' => $m->price_currency ?? $currency,
-            'minimum_stock' => (int) ($m->minimum_stock ?? 0),
-            'unit' => $m->unit ?? 'unité',
-            'expiration_date' => $nearestExpiry[$m->id] ?? null,
-        ])->toArray();
+        return $models->map(function ($m) use ($shopId, $currency, $nearestExpiry) {
+            $sell = (float) $m->price_amount;
+            $cost = $m->cost_amount !== null ? (float) $m->cost_amount : null;
+            $unitMargin = ($cost !== null && $sell > 0) ? round($sell - $cost, 2) : null;
+            $marginPercent = ($unitMargin !== null && $sell > 0) ? round(($unitMargin / $sell) * 100, 1) : null;
+            $stockQty = (int) $m->stock;
+
+            return [
+                'id' => $m->id,
+                'name' => $m->name,
+                'code' => $m->code ?? '',
+                'stock_quantity' => $stockQty,
+                'selling_price' => $sell,
+                'cost_price' => $cost,
+                'unit_margin' => $unitMargin,
+                'margin_percent' => $marginPercent,
+                'profit_on_stock' => ($unitMargin !== null) ? round($unitMargin * $stockQty, 2) : null,
+                'currency' => $m->price_currency ?? $currency,
+                'minimum_stock' => (int) ($m->minimum_stock ?? 0),
+                'unit' => $m->unit ?? 'unité',
+                'expiration_date' => $nearestExpiry[$m->id] ?? null,
+                'recent_stock_movements' => AssistantSalesProfitContextBuilder::pharmacyStockMovements($shopId, (string) $m->id, 8),
+            ];
+        })->toArray();
     }
 
     /** Navigation selon permissions (liste des modules accessibles) */

@@ -6,6 +6,7 @@ use Src\Domain\Pharmacy\Repositories\ProductRepositoryInterface;
 use Src\Domain\Pharmacy\Repositories\BatchRepositoryInterface;
 use Src\Domain\Pharmacy\Repositories\StockMovementRepositoryInterface;
 use Src\Application\Pharmacy\DTO\UpdateStockDTO;
+use Src\Application\Pharmacy\Services\OpeningBatchAligner;
 use Src\Domain\Pharmacy\Entities\Batch;
 use Src\Domain\Pharmacy\Entities\StockMovement;
 use Src\Domain\Pharmacy\ValueObjects\ExpiryDate;
@@ -18,7 +19,8 @@ class UpdateStockUseCase
     public function __construct(
         private ProductRepositoryInterface $productRepository,
         private BatchRepositoryInterface $batchRepository,
-        private StockMovementRepositoryInterface $stockMovementRepository
+        private StockMovementRepositoryInterface $stockMovementRepository,
+        private OpeningBatchAligner $openingBatchAligner,
     ) {}
 
     public function addStock(UpdateStockDTO $dto): Batch
@@ -27,12 +29,12 @@ class UpdateStockUseCase
             // Validate product exists
             $product = $this->productRepository->findById($dto->productId);
             if (!$product) {
-                throw new \InvalidArgumentException("Product not found");
+                throw new \InvalidArgumentException('Produit introuvable.');
             }
             
             // Validate batch number uniqueness
             if ($dto->batchNumber && $this->batchRepository->findByBatchNumber($dto->batchNumber, $dto->shopId)) {
-                throw new \InvalidArgumentException("Batch number already exists");
+                throw new \InvalidArgumentException('Ce numéro de lot existe déjà pour cette boutique.');
             }
             
             // Create expiry date
@@ -81,13 +83,20 @@ class UpdateStockUseCase
             // Validate product exists
             $product = $this->productRepository->findById($productId);
             if (!$product) {
-                throw new \InvalidArgumentException("Product not found");
+                throw new \InvalidArgumentException('Produit introuvable.');
             }
 
             // Validate sufficient stock (interdiction stock négatif)
             if ($product->getStock()->getValue() < $quantity) {
-                throw new \InvalidArgumentException("Insufficient stock available");
+                throw new \InvalidArgumentException('Stock insuffisant pour cette quantité.');
             }
+
+            // Boutique pré-configurée / ajustements sans lot : créer un lot d'ouverture si besoin
+            $this->openingBatchAligner->ensureProductStockCoveredByBatches(
+                $shopId,
+                $productId,
+                $product->getStock()->getValue()
+            );
 
             // Get available batches (FIFO approach)
             $batches = $this->batchRepository->findByProduct($productId);
@@ -114,7 +123,12 @@ class UpdateStockUseCase
             $this->productRepository->update($product);
 
             if ($remainingQuantity > 0.0001) {
-                throw new \LogicException("Could not consume all requested quantity");
+                throw new \LogicException(
+                    'Impossible de déduire toute la quantité depuis les lots en stock (FIFO). '
+                    . 'Le stock affiché du produit ne correspond pas à la somme des quantités disponibles sur les lots '
+                    . '(lots manquants, incohérence après import ou ajustement sans lot). '
+                    . 'Vérifiez les lots du produit ou réalignez le stock avec les entrées de lots.'
+                );
             }
 
             // Enregistrer le mouvement de stock (OUT)
@@ -137,7 +151,7 @@ class UpdateStockUseCase
             // Validate product exists
             $product = $this->productRepository->findById($productId);
             if (!$product) {
-                throw new \InvalidArgumentException("Product not found");
+                throw new \InvalidArgumentException('Produit introuvable.');
             }
 
             $currentStock = $product->getStock()->getValue();

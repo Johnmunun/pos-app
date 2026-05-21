@@ -67,16 +67,38 @@ class EloquentCategoryRepository implements CategoryRepositoryInterface
         if ($shopIds === []) {
             return [];
         }
-        $roots = CategoryModel::whereIn('shop_id', $shopIds)
-            ->whereNull('parent_id')
-            ->with(['children' => function ($q) {
-                $q->with('children')->orderBy('sort_order')->orderBy('name');
-            }])
+
+        $all = CategoryModel::query()
+            ->whereIn('shop_id', $shopIds)
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
 
-        return $roots->map(fn (CategoryModel $m) => $this->buildTree($m))->toArray();
+        if ($all->isEmpty()) {
+            return [];
+        }
+
+        $byId = $all->keyBy('id');
+        $childrenByParent = [];
+
+        foreach ($all as $model) {
+            $parentKey = $model->parent_id !== null && $byId->has($model->parent_id)
+                ? (string) $model->parent_id
+                : '__root__';
+            $childrenByParent[$parentKey][] = $model;
+        }
+
+        $buildBranch = function (CategoryModel $model) use (&$buildBranch, $childrenByParent): array {
+            $node = $this->buildTree($model);
+            $childModels = $childrenByParent[(string) $model->id] ?? [];
+            $node['children'] = array_map(fn (CategoryModel $c) => $buildBranch($c), $childModels);
+
+            return $node;
+        };
+
+        $roots = $childrenByParent['__root__'] ?? [];
+
+        return array_map(fn (CategoryModel $m) => $buildBranch($m), $roots);
     }
 
     /**

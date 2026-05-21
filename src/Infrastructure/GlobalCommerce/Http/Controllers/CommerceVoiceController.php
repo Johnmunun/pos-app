@@ -3,6 +3,7 @@
 namespace Src\Infrastructure\GlobalCommerce\Http\Controllers;
 
 use App\Models\CommerceAssistantSetting;
+use App\Models\Shop;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Src\Application\GlobalCommerce\Services\CommerceAssistantContextService;
 use Src\Application\Pharmacy\Services\VoiceSensitiveDetector;
+use Src\Infrastructure\GlobalCommerce\Support\GcShopResolver;
 
 class CommerceVoiceController
 {
@@ -218,38 +220,20 @@ class CommerceVoiceController
 
     private function resolveShopId(Request $request): ?string
     {
+        $shopId = GcShopResolver::tryResolveShopId($request);
+        if ($shopId !== null) {
+            return $shopId;
+        }
+
         $user = $request->user();
-        if (!$user || !\Illuminate\Support\Facades\Schema::hasTable('shops')) {
-            return null;
-        }
+        if ($user && method_exists($user, 'isRoot') && $user->isRoot() && $user->tenant_id) {
+            $shop = Shop::query()
+                ->where('tenant_id', $user->tenant_id)
+                ->where('is_active', true)
+                ->orderBy('id')
+                ->first();
 
-        $depotId = $request->session()->get('current_depot_id');
-        if ($depotId && $user->tenant_id) {
-            $shop = \App\Models\Shop::where('depot_id', $depotId)->where('tenant_id', $user->tenant_id)->first();
-            if ($shop) {
-                return (string) $shop->id;
-            }
-        }
-
-        $candidateId = $user->shop_id ?? null;
-        if ($candidateId !== null && $candidateId !== '') {
-            $shop = \App\Models\Shop::find($candidateId);
-            if ($shop) {
-                return (string) $shop->id;
-            }
-        }
-
-        if ($user->tenant_id) {
-            $shop = \App\Models\Shop::where('tenant_id', $user->tenant_id)->first();
-            if ($shop) {
-                return (string) $shop->id;
-            }
-        }
-
-        // Utilisateur normal ou ROOT : si l'utilisateur a accès à l'assistant (route protégée), utiliser la première boutique pour que la voix fonctionne
-        $shop = \App\Models\Shop::orderBy('id')->first();
-        if ($shop) {
-            return (string) $shop->id;
+            return $shop ? (string) $shop->id : null;
         }
 
         return null;
