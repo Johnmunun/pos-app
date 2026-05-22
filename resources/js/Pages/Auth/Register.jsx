@@ -276,11 +276,11 @@ export default function Register() {
                         <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-gray-700 dark:text-gray-300 text-center">
                             <p className="mb-2">
                                 En créant un compte, vous acceptez nos{' '}
-                                <Link href="#" className="text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium underline">
+                                <Link href={route('marketing.terms')} className="text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium underline">
                                     Conditions d'utilisation
                                 </Link>
                                 {' '}et notre{' '}
-                                <Link href="#" className="text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium underline">
+                                <Link href={route('marketing.privacy')} className="text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium underline">
                                     Politique de confidentialité
                                 </Link>
                             </p>

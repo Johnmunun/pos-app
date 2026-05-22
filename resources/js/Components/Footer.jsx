@@ -1,4 +1,6 @@
-import { Share2, Linkedin, MessageCircle, Camera } from 'lucide-react';
+import { Link } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
+import { Share2, Linkedin, MessageCircle, Mail } from 'lucide-react';
 import LandingReveal from './LandingReveal';
 
 /**
@@ -8,28 +10,62 @@ import LandingReveal from './LandingReveal';
  */
 export default function Footer() {
     const currentYear = new Date().getFullYear();
+    const appSeo = usePage().props.appSeo ?? {};
+    const siteName = appSeo.siteName ?? 'OmniSolution';
+    const contactEmail = appSeo.contactEmail ?? null;
 
     const sections = [
         {
             title: 'Produit',
-            links: ['Fonctionnalités', 'Tarifs', 'Documentation', 'Support'],
+            links: [
+                { label: 'Fonctionnalités', href: '/#features', external: true },
+                { label: 'Tarifs', href: '/#pricing', external: true },
+                { label: 'Témoignages', href: '/#testimonials', external: true },
+                { label: 'Contact', href: '/#contact', external: true },
+            ],
         },
         {
             title: 'Entreprise',
-            links: ['À propos', 'Blog', 'Carrières', 'Newsroom'],
+            links: [
+                { label: 'À propos de nous', href: route('marketing.about'), external: false },
+                { label: 'Contact', href: '/#contact', external: true },
+            ],
         },
         {
             title: 'Légal',
-            links: ['Mentions légales', 'Politique de confidentialité', "Conditions d'utilisation", 'RGPD'],
+            links: [
+                { label: 'Mentions légales', href: route('marketing.legal'), external: false },
+                { label: 'Politique de confidentialité', href: route('marketing.privacy'), external: false },
+                { label: "Conditions d'utilisation", href: route('marketing.terms'), external: false },
+            ],
         },
     ];
 
     const socials = [
-        { name: 'Twitter', icon: Share2, url: '#' },
         { name: 'LinkedIn', icon: Linkedin, url: '#' },
-        { name: 'Facebook', icon: MessageCircle, url: '#' },
-        { name: 'Instagram', icon: Camera, url: '#' },
+        { name: 'WhatsApp', icon: MessageCircle, url: '#' },
+        ...(contactEmail
+            ? [{ name: 'E-mail', icon: Mail, url: `mailto:${contactEmail}` }]
+            : []),
     ];
+
+    const linkClass =
+        'text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors duration-200';
+
+    const renderLink = (link) => {
+        if (link.external) {
+            return (
+                <a href={link.href} className={linkClass}>
+                    {link.label}
+                </a>
+            );
+        }
+        return (
+            <Link href={link.href} className={linkClass}>
+                {link.label}
+            </Link>
+        );
+    };
 
     return (
         <>
@@ -44,7 +80,7 @@ export default function Footer() {
                                     Prêt à commencer ?
                                 </h3>
                                 <p className="text-base sm:text-lg text-white/90 leading-relaxed">
-                                    Rejoignez des milliers de commerçants satisfaits.
+                                    Rejoignez des commerçants qui gèrent ventes, stock et boutique en ligne avec {siteName}.
                                 </p>
                             </div>
                             <a
@@ -65,12 +101,12 @@ export default function Footer() {
                             <div>
                                 <div className="flex items-center gap-2.5 mb-5">
                                     <div className="w-9 h-9 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-md shadow-amber-500/20">
-                                        <span className="text-white font-bold text-sm">OP</span>
+                                        <span className="text-white font-bold text-sm">OS</span>
                                     </div>
-                                    <span className="text-xl font-bold tracking-tight">OmniPOS</span>
+                                    <span className="text-xl font-bold tracking-tight">{siteName}</span>
                                 </div>
                                 <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-6">
-                                    La plateforme complète pour gérer vos ventes digitales et faire croître votre activité.
+                                    La plateforme complète pour gérer vos ventes, stocks et e-commerce.
                                 </p>
                                 <div className="flex gap-3">
                                     {socials.map((social, idx) => {
@@ -91,17 +127,12 @@ export default function Footer() {
 
                             {sections.map((section, idx) => (
                                 <div key={idx}>
-                                    <h3 className="font-semibold text-gray-900 dark:text-white mb-4 tracking-tight">{section.title}</h3>
+                                    <h3 className="font-semibold text-gray-900 dark:text-white mb-4 tracking-tight">
+                                        {section.title}
+                                    </h3>
                                     <ul className="space-y-2.5">
                                         {section.links.map((link, linkIdx) => (
-                                            <li key={linkIdx}>
-                                                <a
-                                                    href="#"
-                                                    className="text-sm text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors duration-200"
-                                                >
-                                                    {link}
-                                                </a>
-                                            </li>
+                                            <li key={linkIdx}>{renderLink(link)}</li>
                                         ))}
                                     </ul>
                                 </div>
@@ -112,11 +143,20 @@ export default function Footer() {
 
                         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                             <p className="text-sm text-gray-600 dark:text-gray-400">
-                                © {currentYear} OmniPOS. Tous droits réservés.
+                                © {currentYear} {siteName}. Tous droits réservés.
                             </p>
-                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                <span className="w-2 h-2 bg-emerald-500 rounded-full motion-safe:animate-pulse" />
-                                <span>Tous les systèmes opérationnels</span>
+                            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
+                                <Link href={route('marketing.legal')} className="hover:text-amber-600 dark:hover:text-amber-400">
+                                    Mentions légales
+                                </Link>
+                                <span className="hidden sm:inline text-gray-300 dark:text-gray-700">·</span>
+                                <Link href={route('marketing.privacy')} className="hover:text-amber-600 dark:hover:text-amber-400">
+                                    Confidentialité
+                                </Link>
+                                <span className="hidden sm:inline text-gray-300 dark:text-gray-700">·</span>
+                                <Link href={route('marketing.terms')} className="hover:text-amber-600 dark:hover:text-amber-400">
+                                    CGU
+                                </Link>
                             </div>
                         </div>
                     </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { usePage } from '@inertiajs/react';
 import { Menu, X } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -8,7 +9,7 @@ import clsx from 'clsx';
  * En-tête principal avec logo, navigation et CTA
  * Responsive et supporte le dark mode
  */
-export default function Header({ onScrollToSection }) {
+export default function Header({ onScrollToSection, linkMode = false }) {
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
 
@@ -34,8 +35,37 @@ export default function Header({ onScrollToSection }) {
     }, [isOpen]);
 
     const handleMenuClick = (id) => {
-        onScrollToSection(id);
+        if (linkMode) {
+            window.location.href = `/#${id}`;
+        } else {
+            onScrollToSection?.(id);
+        }
         setIsOpen(false);
+    };
+
+    const NavItem = ({ item }) => {
+        if (linkMode) {
+            return (
+                <a
+                    href={`/#${item.id}`}
+                    className="relative px-3.5 py-2 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 group"
+                >
+                    <span className="relative z-10">{item.label}</span>
+                    <span className="absolute inset-0 rounded-xl bg-gray-100/0 dark:bg-white/0 group-hover:bg-gray-100/90 dark:group-hover:bg-white/5 transition-colors duration-200" />
+                </a>
+            );
+        }
+        return (
+            <button
+                type="button"
+                onClick={() => handleMenuClick(item.id)}
+                className="relative px-3.5 py-2 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 group"
+            >
+                <span className="relative z-10">{item.label}</span>
+                <span className="absolute inset-0 rounded-xl bg-gray-100/0 dark:bg-white/0 group-hover:bg-gray-100/90 dark:group-hover:bg-white/5 transition-colors duration-200" />
+                <span className="absolute left-1/2 -translate-x-1/2 bottom-1 h-0.5 w-0 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full group-hover:w-4/5 transition-all duration-300 ease-out" />
+            </button>
+        );
     };
 
     return (
@@ -55,23 +85,14 @@ export default function Header({ onScrollToSection }) {
                                 <span className="text-white font-bold text-sm tracking-tight">OP</span>
                             </div>
                             <span className="text-lg sm:text-xl font-bold tracking-tight text-gray-900 dark:text-white">
-                                OmniPOS
+                                {siteName}
                             </span>
                         </a>
                     </div>
 
                     <nav className="hidden md:flex items-center gap-1 lg:gap-2">
                         {menuItems.map((item) => (
-                            <button
-                                key={item.id}
-                                type="button"
-                                onClick={() => handleMenuClick(item.id)}
-                                className="relative px-3.5 py-2 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 group"
-                            >
-                                <span className="relative z-10">{item.label}</span>
-                                <span className="absolute inset-0 rounded-xl bg-gray-100/0 dark:bg-white/0 group-hover:bg-gray-100/90 dark:group-hover:bg-white/5 transition-colors duration-200" />
-                                <span className="absolute left-1/2 -translate-x-1/2 bottom-1 h-0.5 w-0 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full group-hover:w-4/5 transition-all duration-300 ease-out" />
-                            </button>
+                            <NavItem key={item.id} item={item} />
                         ))}
                     </nav>
 

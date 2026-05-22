@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ApplicationSeoController;
+use App\Http\Controllers\MarketingLegalController;
 use App\Http\Controllers\DisplayCurrencyController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PwaIconController;
@@ -130,6 +131,15 @@ Route::get('/', function (\Illuminate\Http\Request $request) {
         ]),
     ]);
 })->name('landing');
+
+Route::get('/a-propos', fn (\Illuminate\Http\Request $request) => app(MarketingLegalController::class)->show($request, 'about'))
+    ->name('marketing.about');
+Route::get('/politique-de-confidentialite', fn (\Illuminate\Http\Request $request) => app(MarketingLegalController::class)->show($request, 'privacy'))
+    ->name('marketing.privacy');
+Route::get('/conditions-utilisation', fn (\Illuminate\Http\Request $request) => app(MarketingLegalController::class)->show($request, 'terms'))
+    ->name('marketing.terms');
+Route::get('/mentions-legales', fn (\Illuminate\Http\Request $request) => app(MarketingLegalController::class)->show($request, 'legal'))
+    ->name('marketing.legal');
 
 Route::get('/api/billing/plans', [BillingAdminController::class, 'publicPlansApi'])
     ->name('api.billing.plans.public');

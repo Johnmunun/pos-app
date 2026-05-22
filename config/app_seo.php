@@ -17,7 +17,7 @@ return [
 
     'description' => env('APP_SEO_DESCRIPTION', 'Gérez vos ventes, stocks, pharmacie, quincaillerie ou commerce avec OmniSolution : POS, rapports, paiements mobiles et boutique en ligne.'),
 
-    'keywords' => env('APP_SEO_KEYWORDS', 'logiciel caisse, POS, gestion stock, e-commerce, pharmacie, quincaillerie, RDC, Afrique'),
+    'keywords' => env('APP_SEO_KEYWORDS', 'logiciel caisse, POS, gestion stock, e-commerce, pharmacie, quincaillerie, RDC, Afrique, SAAS'),
 
     'indexing_enabled' => env('APP_SEO_INDEXING_ENABLED', true),
 

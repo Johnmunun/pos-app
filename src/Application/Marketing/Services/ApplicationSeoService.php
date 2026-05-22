@@ -95,6 +95,7 @@ final class ApplicationSeoService
             'publicBaseUrl' => $base,
             'sitemapUrl' => $base . '/sitemap.xml',
             'robotsUrl' => $base . '/robots.txt',
+            'contactEmail' => (string) config('marketing_legal.contact_email', '') ?: null,
         ];
     }
 
@@ -180,6 +181,18 @@ final class ApplicationSeoService
         $urls = [
             ['loc' => $base . '/', 'lastmod' => $now, 'changefreq' => 'weekly', 'priority' => '1.0'],
         ];
+
+        foreach ((array) config('marketing_legal.pages', []) as $def) {
+            if (!is_array($def) || empty($def['slug'])) {
+                continue;
+            }
+            $urls[] = [
+                'loc' => $base . '/' . ltrim((string) $def['slug'], '/'),
+                'lastmod' => $now,
+                'changefreq' => 'monthly',
+                'priority' => '0.6',
+            ];
+        }
 
         $xml = ['<?xml version="1.0" encoding="UTF-8"?>'];
         $xml[] = '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
