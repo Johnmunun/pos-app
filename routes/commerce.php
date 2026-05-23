@@ -154,11 +154,26 @@ Route::prefix('commerce')
             ->name('depots.deactivate');
 
         // Vendeurs (gestion des vendeurs pour Commerce)
-        Route::get('/sellers', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'index'])->name('sellers.index');
-        Route::post('/sellers', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'store'])->name('sellers.store');
-        Route::put('/sellers/{id}', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'update'])->name('sellers.update');
-        Route::delete('/sellers/{id}', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'destroy'])->name('sellers.destroy');
-        Route::post('/sellers/{id}/impersonate', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'impersonate'])->name('sellers.impersonate');
+        Route::get('/sellers', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'index'])
+            ->defaults('sellerModule', 'commerce')
+            ->middleware('permission:commerce.seller.view|commerce.seller.manage|module.commerce')
+            ->name('sellers.index');
+        Route::post('/sellers', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'store'])
+            ->defaults('sellerModule', 'commerce')
+            ->middleware('permission:commerce.seller.create|commerce.seller.manage')
+            ->name('sellers.store');
+        Route::put('/sellers/{id}', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'update'])
+            ->defaults('sellerModule', 'commerce')
+            ->middleware('permission:commerce.seller.edit|commerce.seller.manage')
+            ->name('sellers.update');
+        Route::delete('/sellers/{id}', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'destroy'])
+            ->defaults('sellerModule', 'commerce')
+            ->middleware('permission:commerce.seller.delete|commerce.seller.manage')
+            ->name('sellers.destroy');
+        Route::post('/sellers/{id}/impersonate', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'impersonate'])
+            ->defaults('sellerModule', 'commerce')
+            ->middleware('permission:commerce.seller.edit|commerce.seller.manage')
+            ->name('sellers.impersonate');
 
         // API - Mouvements de produits (GlobalCommerce)
         Route::prefix('api')->name('api.')->group(function () {

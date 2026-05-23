@@ -19,6 +19,7 @@ use Src\Domains\User\UseCases\ImpersonateSellerUseCase;
 use Src\Domains\User\Services\ModulePermissionService;
 use Illuminate\Support\Facades\Hash;
 use Src\Application\Billing\Services\FeatureLimitService;
+use App\Support\SellerModuleContext;
 
 /**
  * Controller: GcSellerController
@@ -45,9 +46,17 @@ class GcSellerController extends Controller
      */
     public function index(Request $request)
     {
+        $ctx = SellerModuleContext::fromRequest($request);
         $user = $request->user();
         if ($user === null) {
             abort(401, 'Non authentifié.');
+        }
+        if (
+            ! $user->hasPermission($ctx->permission('view'))
+            && ! $user->hasPermission($ctx->permission('manage'))
+            && ! in_array($user->type, ['ROOT', 'TENANT_ADMIN', 'MERCHANT'], true)
+        ) {
+            abort(403, 'Vous n\'avez pas la permission de voir les vendeurs.');
         }
         /** @var int|null $tenantId */
         $tenantId = $user->tenant_id;
@@ -159,12 +168,14 @@ class GcSellerController extends Controller
             return $sellerItem;
         });
 
-        return Inertia::render('Commerce/Sellers/Index', [
+        return Inertia::render($ctx->inertiaPage, [
             'sellers' => $sellersWithSales,
             'availableRoles' => $availableRoles,
             'availableDepots' => $availableDepots,
             'tenantSector' => $sector,
             'stats' => $stats,
+            'routePrefix' => $ctx->routePrefix,
+            'permissionPrefix' => $ctx->permissionPrefix,
         ]);
     }
 
@@ -176,6 +187,7 @@ class GcSellerController extends Controller
      */
     public function store(Request $request)
     {
+        $ctx = SellerModuleContext::fromRequest($request);
         $user = $request->user();
         if ($user === null) {
             abort(401, 'Non authentifié.');
@@ -192,8 +204,10 @@ class GcSellerController extends Controller
         $tenant = Tenant::find($tenantId);
         $sector = $tenant?->sector;
 
-        // Vérifier les permissions
-        if (!$user->hasPermission('commerce.seller.create')) {
+        $canManageSellers = in_array($user->type, ['TENANT_ADMIN', 'MERCHANT'], true)
+            || $user->hasPermission($ctx->permission('create'))
+            || $user->hasPermission($ctx->permission('manage'));
+        if (! $canManageSellers) {
             abort(403, 'Vous n\'avez pas la permission de créer des vendeurs.');
         }
 
@@ -238,6 +252,7 @@ class GcSellerController extends Controller
                                 'kiosk' => 'Kiosque',
                                 'supermarket' => 'Supermarché',
                                 'hardware' => 'Quincaillerie',
+                                'commerce', 'global_commerce' => 'Commerce',
                                 default => 'votre secteur',
                             };
                             $fail("Le rôle contient des permissions non autorisées pour le secteur {$sectorLabel}.");
@@ -273,7 +288,7 @@ class GcSellerController extends Controller
                 ->toArray();
             $seller->depots()->sync($validDepotIds);
 
-            return redirect()->route('commerce.sellers.index')
+            return redirect()->route($ctx->routePrefix.'.index')
                 ->with('success', 'Vendeur créé avec succès.');
         } catch (\InvalidArgumentException $e) {
             return redirect()->back()
@@ -301,6 +316,7 @@ class GcSellerController extends Controller
      */
     public function update(Request $request, $id)
     {
+        $ctx = SellerModuleContext::fromRequest($request);
         $user = $request->user();
         if ($user === null) {
             abort(401, 'Non authentifié.');
@@ -361,6 +377,7 @@ class GcSellerController extends Controller
                                 'kiosk' => 'Kiosque',
                                 'supermarket' => 'Supermarché',
                                 'hardware' => 'Quincaillerie',
+                                'commerce', 'global_commerce' => 'Commerce',
                                 default => 'votre secteur',
                             };
                             $fail("Le rôle contient des permissions non autorisées pour le secteur {$sectorLabel}.");
@@ -464,7 +481,7 @@ class GcSellerController extends Controller
 
             DB::commit();
 
-            return redirect()->route('commerce.sellers.index')
+            return redirect()->route($ctx->routePrefix.'.index')
                 ->with('success', 'Vendeur mis à jour avec succès.');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -493,6 +510,7 @@ class GcSellerController extends Controller
      */
     public function destroy($id)
     {
+        $ctx = SellerModuleContext::fromRequest(request());
         $user = request()->user();
         if ($user === null) {
             abort(401, 'Non authentifié.');
@@ -510,18 +528,19 @@ class GcSellerController extends Controller
             ->where('type', 'SELLER')
             ->firstOrFail();
 
-        // Vérifier les permissions
-        if (!$user->hasPermission('commerce.seller.delete')) {
+        $canDelete = in_array($user->type, ['TENANT_ADMIN', 'MERCHANT'], true)
+            || $user->hasPermission($ctx->permission('delete'))
+            || $user->hasPermission($ctx->permission('manage'));
+        if (! $canDelete) {
             abort(403, 'Vous n\'avez pas la permission de supprimer des vendeurs.');
         }
 
-        // Ne pas supprimer physiquement, juste désactiver
         $seller->update([
             'status' => 'blocked',
             'is_active' => false,
         ]);
 
-        return redirect()->route('commerce.sellers.index')
+        return redirect()->route($ctx->routePrefix.'.index')
             ->with('success', 'Vendeur désactivé avec succès.');
     }
 
@@ -533,6 +552,7 @@ class GcSellerController extends Controller
      */
     public function impersonate($id)
     {
+        $ctx = SellerModuleContext::fromRequest(request());
         $user = request()->user();
         if ($user === null) {
             abort(401, 'Non authentifié.');
@@ -540,8 +560,7 @@ class GcSellerController extends Controller
 
         try {
             $this->impersonateSellerUseCase->execute((int) $id);
-            // Rediriger vers la caisse (ventes) : les vendeurs ont commerce.sales.view|manage
-            $redirectUrl = route('commerce.sales.index');
+            $redirectUrl = route($ctx->salesIndexRoute);
             if (request()->wantsJson()) {
                 return response()->json(['redirect' => $redirectUrl]);
             }

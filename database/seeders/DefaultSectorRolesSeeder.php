@@ -114,9 +114,10 @@ class DefaultSectorRolesSeeder extends Seeder
         ]);
 
         $codes = [
-            'module.hardware', // Permission essentielle pour voir le module dans la sidebar
+            'module.hardware',
             'hardware.product.view',
             'hardware.sales.view',
+            'hardware.sales.create',
             'hardware.sales.manage',
             'hardware.stock.view',
             'hardware.customer.view',
@@ -174,10 +175,11 @@ class DefaultSectorRolesSeeder extends Seeder
         ]);
 
         $codes = [
-            'module.commerce', // Permission essentielle pour voir le module dans la sidebar
+            'module.commerce',
             'commerce.product.view',
-            'sales.view', // Permissions générales pour les ventes
-            'sales.create',
+            'commerce.sales.view',
+            'commerce.sales.create',
+            'commerce.sales.manage',
             'commerce.stock.view',
             'commerce.customer.view',
         ];

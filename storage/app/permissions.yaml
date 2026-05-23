@@ -14,6 +14,7 @@ admin:
   - admin.tenants.view
   - admin.users.view
   - admin.access.permissions.view
+  - admin.billing.manage
   - users.assign_role
   - users.delete
   - users.impersonate
@@ -122,6 +123,7 @@ support:
 settings:
   - settings.view
   - settings.update
+  - settings.branding
   - settings.currency.view
   - settings.currency.create
   - settings.currency.update

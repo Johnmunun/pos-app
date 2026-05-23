@@ -362,6 +362,28 @@ Route::prefix('hardware')
             ->middleware('permission:hardware.stock.manage')
             ->name('depots.deactivate');
 
+        // Vendeurs (quincaillerie)
+        Route::get('/sellers', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'index'])
+            ->defaults('sellerModule', 'hardware')
+            ->middleware('permission:hardware.seller.view|hardware.seller.manage|module.hardware')
+            ->name('sellers.index');
+        Route::post('/sellers', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'store'])
+            ->defaults('sellerModule', 'hardware')
+            ->middleware('permission:hardware.seller.create|hardware.seller.manage')
+            ->name('sellers.store');
+        Route::put('/sellers/{id}', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'update'])
+            ->defaults('sellerModule', 'hardware')
+            ->middleware('permission:hardware.seller.edit|hardware.seller.manage')
+            ->name('sellers.update');
+        Route::delete('/sellers/{id}', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'destroy'])
+            ->defaults('sellerModule', 'hardware')
+            ->middleware('permission:hardware.seller.delete|hardware.seller.manage')
+            ->name('sellers.destroy');
+        Route::post('/sellers/{id}/impersonate', [\Src\Infrastructure\GlobalCommerce\Http\Controllers\GcSellerController::class, 'impersonate'])
+            ->defaults('sellerModule', 'hardware')
+            ->middleware('permission:hardware.seller.edit|hardware.seller.manage')
+            ->name('sellers.impersonate');
+
         // Transferts inter-dépôts (alias Hardware vers le contrôleur Pharmacy)
         Route::get('/transfers', [StockTransferController::class, 'index'])
             ->middleware('permission:transfer.view')

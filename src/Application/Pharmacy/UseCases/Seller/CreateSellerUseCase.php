@@ -8,6 +8,7 @@ use Src\Application\Pharmacy\DTO\CreateSellerDTO;
 use Domains\User\Services\UserService;
 use Src\Domains\User\UseCases\AssignUserRoleUseCase;
 use Src\Domains\User\Services\ModulePermissionService;
+use App\Support\DefaultSellerRoleResolver;
 use App\Models\User as UserModel;
 use App\Models\Role;
 use App\Models\Tenant;
@@ -84,10 +85,13 @@ final class CreateSellerUseCase
             $userModel->update(['status' => 'pending']);
         }
 
-        // Assigner les rôles si fournis
-        // Sécurité : Vérifier que les rôles appartiennent au tenant ou sont globaux avec permissions secteur
-        $roleIds = $dto->roleIds;
-        if (is_array($roleIds) && $roleIds !== []) {
+        // Assigner les rôles (rôle système par défaut si aucun rôle choisi)
+        $roleIds = is_array($dto->roleIds) ? $dto->roleIds : [];
+        if ($roleIds === []) {
+            $roleIds = DefaultSellerRoleResolver::roleIdsForTenant($dto->tenantId);
+        }
+
+        if ($roleIds !== []) {
             // Récupérer le secteur d'activité du tenant
             $tenant = Tenant::find($dto->tenantId);
             $sector = $tenant?->sector;

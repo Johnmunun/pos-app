@@ -3,6 +3,8 @@ import { usePage } from '@inertiajs/react';
 import { Menu, X } from 'lucide-react';
 import clsx from 'clsx';
 
+const DEFAULT_SITE_NAME = 'OmniSolution';
+
 /**
  * Component: Header
  *
@@ -10,6 +12,9 @@ import clsx from 'clsx';
  * Responsive et supporte le dark mode
  */
 export default function Header({ onScrollToSection, linkMode = false }) {
+    const { appSeo } = usePage().props;
+    const siteName = appSeo?.siteName ?? DEFAULT_SITE_NAME;
+
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
 

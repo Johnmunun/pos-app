@@ -23,7 +23,15 @@ import {
 import axios from 'axios';
 import { cardShell, pageY } from '@/lib/layoutClasses';
 
-export default function SellersIndex({ sellers = [], availableRoles = [], availableDepots = [], stats = {}, allPermissions = {} }) {
+export default function SellersIndex({
+    sellers = [],
+    availableRoles = [],
+    availableDepots = [],
+    stats = {},
+    allPermissions = {},
+    routePrefix = 'commerce.sellers',
+    permissionPrefix = 'commerce.seller',
+}) {
     const { auth } = usePage().props;
     const permissions = auth?.permissions || [];
 
@@ -32,10 +40,10 @@ export default function SellersIndex({ sellers = [], availableRoles = [], availa
         return permissions.includes(permission);
     };
 
-    const canCreate = hasPermission('commerce.seller.create');
-    const canEdit = hasPermission('commerce.seller.edit');
-    const canDelete = hasPermission('commerce.seller.delete');
-    const canView = hasPermission('commerce.seller.view');
+    const canCreate = hasPermission(`${permissionPrefix}.create`) || hasPermission(`${permissionPrefix}.manage`);
+    const canEdit = hasPermission(`${permissionPrefix}.edit`) || hasPermission(`${permissionPrefix}.manage`);
+    const canDelete = hasPermission(`${permissionPrefix}.delete`) || hasPermission(`${permissionPrefix}.manage`);
+    const canView = hasPermission(`${permissionPrefix}.view`) || hasPermission(`${permissionPrefix}.manage`);
     const canImpersonate = canEdit;
 
     const [search, setSearch] = useState('');
@@ -46,7 +54,7 @@ export default function SellersIndex({ sellers = [], availableRoles = [], availa
     const [impersonateModalSeller, setImpersonateModalSeller] = useState(null);
 
     const handleSearch = () => {
-        router.get(route('commerce.sellers.index'), { search }, {
+        router.get(route(`${routePrefix}.index`), { search }, {
             preserveState: true,
             preserveScroll: true,
         });
@@ -94,7 +102,7 @@ export default function SellersIndex({ sellers = [], availableRoles = [], availa
         const seller = impersonateModalSeller;
         setImpersonating(seller.id);
         try {
-            const res = await axios.post(route('commerce.sellers.impersonate', seller.id), {}, {
+            const res = await axios.post(route(`${routePrefix}.impersonate`, seller.id), {}, {
                 headers: { Accept: 'application/json' },
             });
             toast.success('Impersonation démarrée avec succès');
@@ -118,7 +126,7 @@ export default function SellersIndex({ sellers = [], availableRoles = [], availa
 
         setDeleting(seller.id);
         try {
-            await router.delete(route('commerce.sellers.destroy', seller.id), {
+            await router.delete(route(`${routePrefix}.destroy`, seller.id), {
                 preserveScroll: true,
                 onSuccess: () => {
                     toast.success('Vendeur désactivé avec succès');
@@ -417,6 +425,7 @@ export default function SellersIndex({ sellers = [], availableRoles = [], availa
                     seller={selectedSeller}
                     availableRoles={availableRoles}
                     availableDepots={availableDepots}
+                    routePrefix={routePrefix}
                     open={drawerOpen}
                     onClose={handleCloseDrawer}
                     onSuccess={handleDrawerSuccess}

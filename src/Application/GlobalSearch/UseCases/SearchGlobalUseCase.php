@@ -58,7 +58,11 @@ class SearchGlobalUseCase
                         return true;
                     }
 
-                    // Vérifier si l'utilisateur a la permission
+                    // Permission wildcard ou permission exacte
+                    if (in_array('*', $userPermissions, true)) {
+                        return true;
+                    }
+
                     return in_array($requiredPermission, $userPermissions, true);
                 }
             );

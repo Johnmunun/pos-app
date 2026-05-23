@@ -268,6 +268,7 @@ export default function Sidebar({ permissions: permissionsProp, tenantSector = n
                 { label: 'Ventes', href: '/hardware/sales', permission: 'hardware.sales.view|hardware.sales.manage', icon: ShoppingCart },
                 { label: 'Caisse', href: '/hardware/sales/create', permission: 'hardware.sales.manage', icon: Plus },
                 { label: 'Clients', href: '/hardware/customers', permission: 'hardware.customer.view', icon: Users },
+                { label: 'Vendeurs', href: '/hardware/sellers', permission: 'hardware.seller.view|hardware.seller.manage|module.hardware', icon: User },
                 { label: 'Fournisseurs', href: '/hardware/suppliers', permission: 'hardware.supplier.view', icon: Truck },
                 { label: 'Bons de commande', href: '/hardware/purchases', permission: 'hardware.purchases.view|hardware.purchases.manage', icon: FileText },
                 { label: 'Dépôts', href: '/hardware/depots', permission: 'hardware.warehouse.view_all|hardware.warehouse.view|hardware.stock.view|hardware.stock.manage', icon: Warehouse },

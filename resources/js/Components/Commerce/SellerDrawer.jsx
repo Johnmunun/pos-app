@@ -8,7 +8,15 @@ import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
 import { User, Mail, Lock, Shield, CheckCircle, X, Warehouse } from 'lucide-react';
 
-export default function SellerDrawer({ seller = null, availableRoles = [], availableDepots = [], open, onClose, onSuccess }) {
+export default function SellerDrawer({
+    seller = null,
+    availableRoles = [],
+    availableDepots = [],
+    open,
+    onClose,
+    onSuccess,
+    routePrefix = 'commerce.sellers',
+}) {
     const { auth } = usePage().props;
     const tenantSector = auth?.tenantSector || 'supermarket';
     const isEditing = !!seller;
@@ -119,9 +127,9 @@ export default function SellerDrawer({ seller = null, availableRoles = [], avail
             depot_ids: selectedDepots.map(d => d.id),
         };
 
-        const url = isEditing 
-            ? route('commerce.sellers.update', seller.id)
-            : route('commerce.sellers.store');
+        const url = isEditing
+            ? route(`${routePrefix}.update`, seller.id)
+            : route(`${routePrefix}.store`);
 
         const method = isEditing ? 'put' : 'post';
 

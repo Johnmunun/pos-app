@@ -42,15 +42,15 @@ class ModulePermissionService
                 match ($sector) {
                     'pharmacy' => $query->orWhere('code', 'like', 'pharmacy.%')
                                        ->orWhere('code', '=', 'module.pharmacy'),
-                    'butchery' => $query->orWhere('code', 'like', 'butchery.%')
-                                       ->orWhere('code', '=', 'module.butchery'),
-                    'kiosk' => $query->orWhere('code', 'like', 'kiosk.%')
-                                     ->orWhere('code', '=', 'module.kiosk'),
-                    'supermarket' => $query->orWhere('code', 'like', 'supermarket.%')
-                                          ->orWhere('code', '=', 'module.supermarket'),
+                    'butchery', 'kiosk', 'supermarket', 'other' => $query->orWhere('code', 'like', 'commerce.%')
+                                       ->orWhere('code', '=', 'module.commerce'),
+                    'commerce', 'global_commerce' => $query->orWhere('code', 'like', 'commerce.%')
+                                       ->orWhere('code', '=', 'module.commerce'),
+                    'ecommerce' => $query->orWhere('code', 'like', 'ecommerce.%')
+                                      ->orWhere('code', '=', 'module.ecommerce'),
                     'hardware' => $query->orWhere('code', 'like', 'hardware.%')
                                        ->orWhere('code', '=', 'module.hardware'),
-                    default => null, // Pas de permissions spécifiques pour "other"
+                    default => null,
                 };
             })
             ->pluck('code')
