@@ -2,11 +2,13 @@
 
 namespace Src\Infrastructure\Hardware\Http\Controllers;
 
+use Illuminate\Http\Client\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Src\Application\Common\Services\AssistantSalesProfitContextBuilder;
+use Src\Application\Common\Services\AssistantUserFacingResponse;
 use Src\Application\Quincaillerie\Services\HardwareAssistantContextService;
 
 /**
@@ -43,7 +45,7 @@ class HardwareAssistantController
         }
 
         $enabled = config('hardware_assistant.enabled', true);
-        if (!$enabled) {
+        if (! $enabled) {
             return response()->json([
                 'answer' => "L'assistant Quincaillerie est temporairement désactivé. Contactez l'administrateur.",
                 'context_used' => false,
@@ -57,11 +59,10 @@ class HardwareAssistantController
         $context = $this->contextService->getContext($request, $productSearch, $permissions);
 
         if (isset($context['error'])) {
-            return response()->json([
+            return $this->assistantJsonResponse([
                 'answer' => $this->fallbackForError($context['error'], $context),
                 'navigation' => null,
-                'context_used' => false,
-            ]);
+            ], false);
         }
 
         $systemPrompt = (string) config('hardware_assistant.system_prompt', '');
@@ -73,21 +74,29 @@ class HardwareAssistantController
         if ($driver === 'openai' && $apiKey !== '') {
             try {
                 $result = $this->callOpenAI($apiKey, $systemPrompt, $context, $message, $history);
-                return response()->json([
-                    'answer' => $result['answer'],
-                    'navigation' => $result['navigation'] ?? null,
-                    'context_used' => true,
-                ]);
+
+                return $this->assistantJsonResponse($result, true);
             } catch (\Throwable $e) {
                 Log::warning('Hardware assistant OpenAI error', ['message' => $e->getMessage()]);
             }
         }
 
         $result = $this->fallbackAnswer($context, $message);
+
+        return $this->assistantJsonResponse($result, true);
+    }
+
+    /**
+     * @param  array{answer?: string|null, navigation?: array|null}  $result
+     */
+    private function assistantJsonResponse(array $result, bool $contextUsed): JsonResponse
+    {
+        $result = AssistantUserFacingResponse::finalize($result);
+
         return response()->json([
-            'answer' => $result['answer'],
+            'answer' => $result['answer'] ?? null,
             'navigation' => $result['navigation'] ?? null,
-            'context_used' => true,
+            'context_used' => $contextUsed,
         ]);
     }
 
@@ -102,7 +111,7 @@ class HardwareAssistantController
             if ($pos !== false) {
                 $rest = trim(mb_substr($message, $pos + mb_strlen($p)));
                 $candidate = preg_split('/\s+/', $rest, 2, PREG_SPLIT_NO_EMPTY)[0] ?? '';
-                if ($candidate !== '' && strlen($candidate) > 1 && !in_array(mb_strtolower($candidate), $stopWords, true)) {
+                if ($candidate !== '' && strlen($candidate) > 1 && ! in_array(mb_strtolower($candidate), $stopWords, true)) {
                     return $candidate;
                 }
             }
@@ -111,7 +120,7 @@ class HardwareAssistantController
         $words = preg_split('/\s+/', trim($message), -1, PREG_SPLIT_NO_EMPTY);
         foreach ($words as $w) {
             $wClean = preg_replace('/[^\p{L}\p{N}-]/u', '', $w);
-            if (strlen($wClean) > 2 && !in_array(mb_strtolower($wClean), $stopWords, true)) {
+            if (strlen($wClean) > 2 && ! in_array(mb_strtolower($wClean), $stopWords, true)) {
                 return $wClean;
             }
         }
@@ -120,17 +129,17 @@ class HardwareAssistantController
     }
 
     /**
-     * @param array<int, array{role: string, content: string}> $history
+     * @param  array<int, array{role: string, content: string}>  $history
      * @return array<int, array{role: string, content: string}>
      */
     private function normalizeHistory(mixed $history): array
     {
-        if (!is_array($history)) {
+        if (! is_array($history)) {
             return [];
         }
         $out = [];
         foreach ($history as $turn) {
-            if (!is_array($turn)) {
+            if (! is_array($turn)) {
                 continue;
             }
             $role = ($turn['role'] ?? '') === 'user' ? 'user' : 'assistant';
@@ -148,16 +157,16 @@ class HardwareAssistantController
     }
 
     /**
-     * @param array<int, array{role: string, content: string}> $history
+     * @param  array<int, array{role: string, content: string}>  $history
      * @return array{answer: string|null, navigation: array|null}
      */
     private function callOpenAI(string $apiKey, string $systemPrompt, array $context, string $userMessage, array $history): array
     {
         $contextJson = json_encode($context, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        $userContent = "Contexte quincaillerie (JSON — source unique pour chiffres, listes et routes ; ne rien inventer):\n"
-            . $contextJson
-            . "\n\nQuestion actuelle: "
-            . $userMessage;
+        $userContent = "Contexte quincaillerie (JSON — source unique pour chiffres et listes ; routes navigation internes, ne jamais les afficher à l'utilisateur):\n"
+            .$contextJson
+            ."\n\nQuestion actuelle: "
+            .$userMessage;
 
         $chatMessages = [['role' => 'system', 'content' => $systemPrompt]];
         foreach ($history as $turn) {
@@ -168,7 +177,7 @@ class HardwareAssistantController
         }
         $chatMessages[] = ['role' => 'user', 'content' => $userContent];
 
-        /** @var \Illuminate\Http\Client\Response $response */
+        /** @var Response $response */
         $response = Http::withToken($apiKey)
             ->timeout(15)
             ->post('https://api.openai.com/v1/chat/completions', [
@@ -178,8 +187,8 @@ class HardwareAssistantController
                 'temperature' => 0.3,
             ]);
 
-        if (!$response->successful()) {
-            throw new \RuntimeException('OpenAI API error: ' . $response->body());
+        if (! $response->successful()) {
+            throw new \RuntimeException('OpenAI API error: '.$response->body());
         }
 
         $data = $response->json();
@@ -214,12 +223,12 @@ class HardwareAssistantController
         }
 
         $json = json_decode($content, true);
-        if (!is_array($json) || ($json['type'] ?? '') !== 'navigation') {
+        if (! is_array($json) || ($json['type'] ?? '') !== 'navigation') {
             return null;
         }
 
         $route = $json['route'] ?? '';
-        if ($route === '' || !in_array($route, $allowedRoutes, true)) {
+        if ($route === '' || ! in_array($route, $allowedRoutes, true)) {
             return null;
         }
 
@@ -239,8 +248,8 @@ class HardwareAssistantController
 
         if ($error === 'no_shop') {
             $nav = $context['navigation'] ?? [];
-            $lines = array_map(fn ($n) => $n['label'] . ' : ' . $n['path'], $nav);
-            return 'Aucun magasin de quincaillerie associé. Modules accessibles : ' . implode(', ', array_slice($lines, 0, 5)) . '.';
+
+            return 'Aucun magasin de quincaillerie associé. '.AssistantUserFacingResponse::formatAccessibleModulesList($nav, 5, 'quincaillerie');
         }
 
         return 'Données quincaillerie temporairement indisponibles.';
@@ -275,7 +284,7 @@ class HardwareAssistantController
 
         // Ventes du jour (combien de ventes aujourd'hui ?)
         if ($salesToday !== null
-            && (str_contains($lower, 'aujourd') || str_contains($lower, "au jourd"))
+            && (str_contains($lower, 'aujourd') || str_contains($lower, 'au jourd'))
             && (str_contains($lower, 'vente') || str_contains($lower, 'ventes'))
         ) {
             $count = (int) ($salesToday['total_sales'] ?? 0);
@@ -313,14 +322,15 @@ class HardwareAssistantController
 
         // Produits en rupture
         if ((str_contains($lower, 'rupture') || str_contains($lower, 'plus en stock')) && str_contains($lower, 'produit')) {
-            if (!empty($outOfStock)) {
+            if (! empty($outOfStock)) {
                 $list = array_map(
-                    fn ($p) => $p['name'] . ' (' . ($p['code'] ?: '—') . ')',
+                    fn ($p) => $p['name'].' ('.($p['code'] ?: '—').')',
                     array_slice($outOfStock, 0, 15)
                 );
                 $body = "Produits actuellement en rupture de stock :\n\n";
-                $body .= '🔧 ' . implode("\n🔧 ", $list);
+                $body .= '🔧 '.implode("\n🔧 ", $list);
                 $body .= "\n\nVous pouvez créer un bon de commande dans le module Achats pour ces références.";
+
                 return ['answer' => $greet($body), 'navigation' => null];
             }
 
@@ -329,14 +339,15 @@ class HardwareAssistantController
 
         // Produits en stock bas
         if (str_contains($lower, 'stock bas') || (str_contains($lower, 'alerte') && str_contains($lower, 'stock'))) {
-            if (!empty($lowStock)) {
+            if (! empty($lowStock)) {
                 $list = array_map(
-                    fn ($p) => $p['name'] . ' (stock ' . ($p['stock'] ?? 0) . ', min ' . ($p['minimum_stock'] ?? 0) . ')',
+                    fn ($p) => $p['name'].' (stock '.($p['stock'] ?? 0).', min '.($p['minimum_stock'] ?? 0).')',
                     array_slice($lowStock, 0, 15)
                 );
                 $body = "Produits en stock bas :\n\n";
-                $body .= '⚠️ ' . implode("\n⚠️ ", $list);
+                $body .= '⚠️ '.implode("\n⚠️ ", $list);
                 $body .= "\n\nPensez à réapprovisionner ces articles pour éviter la rupture.";
+
                 return ['answer' => $greet($body), 'navigation' => null];
             }
 
@@ -344,7 +355,7 @@ class HardwareAssistantController
         }
 
         // Détail d'un produit spécifique (via products_matching)
-        if (!empty($products)) {
+        if (! empty($products)) {
             if (count($products) === 1) {
                 $p = $products[0];
                 $stockQty = $p['stock_quantity'] ?? 0;
@@ -367,9 +378,10 @@ class HardwareAssistantController
                 return ['answer' => $greet($body), 'navigation' => null];
             }
 
-            $names = array_map(fn ($x) => $x['name'] . ' (' . ($x['code'] ?? '') . ')', $products);
+            $names = array_map(fn ($x) => $x['name'].' ('.($x['code'] ?? '').')', $products);
             $body = "Plusieurs articles correspondent à votre recherche. Lequel souhaitez-vous détailler ?\n\n";
-            $body .= '🔧 ' . implode("\n🔧 ", $names);
+            $body .= '🔧 '.implode("\n🔧 ", $names);
+
             return ['answer' => $greet($body), 'navigation' => null];
         }
 
@@ -396,7 +408,7 @@ class HardwareAssistantController
                     break;
                 }
             }
-            if (!$isAnalytic) {
+            if (! $isAnalytic) {
                 $match = $this->matchNavigationIntent('produits', $nav);
                 if ($match !== null) {
                     return ['answer' => null, 'navigation' => $match];
@@ -410,20 +422,23 @@ class HardwareAssistantController
             if ($match !== null) {
                 return ['answer' => null, 'navigation' => $match];
             }
-            $list = array_slice(array_map(fn ($n) => $n['label'] . ' (' . $n['path'] . ')', $nav), 0, 10);
-            return ['answer' => $greet('Modules Quincaillerie accessibles : ' . implode('. ', $list)), 'navigation' => null];
+
+            return [
+                'answer' => $greet(AssistantUserFacingResponse::formatAccessibleModulesList($nav, 10, 'quincaillerie')),
+                'navigation' => null,
+            ];
         }
 
         // Réponse générique si aucune règle spécifique ne s'applique
         $body = "Je peux vous aider sur :\n\n"
-            . "• l'état du stock (produits en rupture, en stock bas),\n"
-            . "• le détail d'un article (nom, code ou code-barres),\n"
-            . "• la navigation vers les pages du module Quincaillerie (produits, catégories, stock, ventes, achats).\n\n"
-            . "Par exemple :\n"
-            . "- \"Quels produits de quincaillerie sont en rupture ?\"\n"
-            . "- \"Produits en stock bas ?\"\n"
-            . "- \"Infos sur la vis 8x40 ?\"\n"
-            . "- \"Où est la page des ventes quincaillerie ?\"";
+            ."• l'état du stock (produits en rupture, en stock bas),\n"
+            ."• le détail d'un article (nom, code ou code-barres),\n"
+            ."• la navigation vers les pages du module Quincaillerie (produits, catégories, stock, ventes, achats).\n\n"
+            ."Par exemple :\n"
+            ."- \"Quels produits de quincaillerie sont en rupture ?\"\n"
+            ."- \"Produits en stock bas ?\"\n"
+            ."- \"Infos sur la vis 8x40 ?\"\n"
+            .'- "Où est la page des ventes quincaillerie ?"';
 
         return ['answer' => $greet($body), 'navigation' => null];
     }
@@ -432,7 +447,7 @@ class HardwareAssistantController
      * Retourne un payload de navigation si la question fait clairement référence
      * à une page connue (produits, stock, ventes, achats, rapports).
      *
-     * @param array<int, array{name: string, route: string, label?: string, path?: string}> $nav
+     * @param  array<int, array{name: string, route: string, label?: string, path?: string}>  $nav
      * @return array{type: string, label: string, route: string, method: string}|null
      */
     private function matchNavigationIntent(string $lowerMessage, array $nav): ?array
@@ -463,7 +478,7 @@ class HardwareAssistantController
                         continue;
                     }
                     foreach ($nav as $n) {
-                        $route = $n['route'] ?? $n['path'] ?? '';
+                        $route = $n['route'] ?? '';
                         if ($route === $wantedRoute) {
                             return [
                                 'type' => 'navigation',
@@ -480,4 +495,3 @@ class HardwareAssistantController
         return null;
     }
 }
-

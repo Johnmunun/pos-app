@@ -27,9 +27,9 @@ class FinalizeSaleUseCase
      * @param float $paidAmount
      * @param int $userId utilisé pour created_by des mouvements de stock
      */
-    public function execute(string $saleId, float $paidAmount, int $userId): void
+    public function execute(string $saleId, float $paidAmount, int $userId, float $loyaltyDiscountAmount = 0.0): void
     {
-        DB::transaction(function () use ($saleId, $paidAmount, $userId): void {
+        DB::transaction(function () use ($saleId, $paidAmount, $userId, $loyaltyDiscountAmount): void {
             $sale = $this->saleRepository->findById($saleId);
 
             if (!$sale) {
@@ -50,6 +50,11 @@ class FinalizeSaleUseCase
 
             foreach ($lines as $line) {
                 $total = $total->add($line->getLineTotal());
+            }
+
+            $loyaltyDiscount = max(0, round($loyaltyDiscountAmount, 2));
+            if ($loyaltyDiscount > 0) {
+                $total = $total->subtract(new Money($loyaltyDiscount, $currency));
             }
 
             $paid = new Money($paidAmount, $currency);

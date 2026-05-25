@@ -381,7 +381,7 @@ class PharmacyAssistantContextService
         $nav = [];
         $push = function (string $name, string $route, array $perms) use (&$nav, $has): void {
             if ($has($perms)) {
-                $nav[] = ['name' => $name, 'route' => $route, 'label' => $name, 'path' => $route];
+                $nav[] = ['name' => $name, 'route' => $route, 'label' => $name];
             }
         };
         $push('Dashboard Pharmacie', '/pharmacy/dashboard', ['module.pharmacy', 'pharmacy.sales.view']);
@@ -401,7 +401,7 @@ class PharmacyAssistantContextService
         $push('Paramètres de la boutique', '/settings', ['settings.view']);
         $push('Gestion des devises', '/settings/currencies', ['settings.currency.view']);
         if ($isRoot) {
-            $nav[] = ['name' => 'Gestion des utilisateurs', 'route' => '/admin/users', 'label' => 'Gestion des utilisateurs', 'path' => '/admin/users'];
+            $nav[] = ['name' => 'Gestion des utilisateurs', 'route' => '/admin/users', 'label' => 'Gestion des utilisateurs'];
         }
 
         return $nav;

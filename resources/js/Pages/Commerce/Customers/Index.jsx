@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Badge } from '@/Components/ui/badge';
-import { Users, Plus, Search, Pencil, Mail, Phone, CheckCircle, XCircle } from 'lucide-react';
+import { Users, Plus, Search, Pencil, Mail, Phone, CheckCircle, XCircle, Eye } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import ImportModal from '@/Components/ImportModal';
@@ -230,15 +230,24 @@ export default function CommerceCustomersIndex({ customers = [], filters = {} })
                                                             <h3 className="font-semibold text-gray-900 dark:text-white text-sm truncate">
                                                                 {c.full_name}
                                                             </h3>
-                                                            {canEdit && (
-                                                                <button
-                                                                    onClick={() => handleOpenEdit(c)}
-                                                                    className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex-shrink-0"
-                                                                    title="Modifier"
+                                                            <div className="flex gap-1 shrink-0">
+                                                                <Link
+                                                                    href={route('commerce.customers.show', c.id)}
+                                                                    className="p-1.5 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                                                    title="Voir fiche"
                                                                 >
-                                                                    <Pencil className="h-4 w-4" />
-                                                                </button>
-                                                            )}
+                                                                    <Eye className="h-4 w-4" />
+                                                                </Link>
+                                                                {canEdit && (
+                                                                    <button
+                                                                        onClick={() => handleOpenEdit(c)}
+                                                                        className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                                                        title="Modifier"
+                                                                    >
+                                                                        <Pencil className="h-4 w-4" />
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                         
                                                         {/* Informations de contact */}
@@ -315,6 +324,17 @@ export default function CommerceCustomersIndex({ customers = [], filters = {} })
                                                             </Badge>
                                                         </td>
                                                         <td className="py-2 px-2 text-right">
+                                                            <div className="flex justify-end gap-1">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                asChild
+                                                                title="Voir fiche"
+                                                            >
+                                                                <Link href={route('commerce.customers.show', c.id)}>
+                                                                    <Eye className="h-4 w-4" />
+                                                                </Link>
+                                                            </Button>
                                                             {canEdit && (
                                                                 <Button 
                                                                     variant="ghost" 
@@ -325,6 +345,7 @@ export default function CommerceCustomersIndex({ customers = [], filters = {} })
                                                                     <Pencil className="h-4 w-4" />
                                                                 </Button>
                                                             )}
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 ))}

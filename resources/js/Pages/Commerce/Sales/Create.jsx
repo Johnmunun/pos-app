@@ -4,7 +4,11 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Badge } from '@/Components/ui/badge';
-import BarcodeScanner from '@/Components/BarcodeScanner';
+import usePosProductScan from '@/hooks/usePosProductScan';
+import usePosScanAutoFocus from '@/hooks/usePosScanAutoFocus';
+import PosBarcodeScannerModal from '@/Components/Pos/PosBarcodeScannerModal';
+import PosSalesScanButton from '@/Components/Pos/PosSalesScanButton';
+import LoyaltyPosPanel from '@/Components/Loyalty/LoyaltyPosPanel';
 import {
     ShoppingCart,
     Plus,
@@ -28,6 +32,7 @@ import {
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { formatCurrency, getCurrencySymbol } from '@/lib/currency';
+import PosSaleCreateMobileCheckout from '@/Components/Pos/PosSaleCreateMobileCheckout';
 
 function QuickAddCustomerModal({ onClose, onCreated, routePrefix = 'commerce' }) {
     const [name, setName] = useState('');
@@ -149,6 +154,7 @@ export default function CommerceSalesCreate({
     currencies: pageCurrencies = [],
     exchangeRates: pageExchangeRates = {},
     routePrefix = 'commerce',
+    loyaltySettings = { enabled: false },
 }) {
     const { shop, displayCurrency, exchangeRates: sharedExchangeRates = {} } = usePage().props;
     const defaultCurrency = (pageCurrency ?? displayCurrency ?? shop?.currency ?? 'CDF').toString().toUpperCase();
@@ -208,7 +214,9 @@ export default function CommerceSalesCreate({
     const [selectedCartIndex, setSelectedCartIndex] = useState(0);
     const [showSuccessBanner, setShowSuccessBanner] = useState(null);
     const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+    const [scanModalOpen, setScanModalOpen] = useState(false);
     const [customersList, setCustomersList] = useState(customers);
+    const [loyaltyPointsRedeem, setLoyaltyPointsRedeem] = useState(0);
     const searchInputRef = useRef(null);
     const paidAmountInputRef = useRef(null);
     const RECENT_PRODUCTS_KEY = 'commerce_recent_product_ids';
@@ -217,10 +225,6 @@ export default function CommerceSalesCreate({
     useEffect(() => {
         setCustomersList(customers);
     }, [customers]);
-
-    useEffect(() => {
-        searchInputRef.current?.focus();
-    }, []);
 
     useEffect(() => {
         const idx = Math.min(selectedCartIndex, Math.max(0, cart.length - 1));
@@ -392,6 +396,20 @@ export default function CommerceSalesCreate({
         persistRecentProduct(product.id);
     };
 
+    const { processScan, tryResolveFromSearch } = usePosProductScan({
+        products,
+        onProductFound: addToCart,
+        onClearSearch: () => setSearch(''),
+        searchInputRef,
+    });
+
+    usePosScanAutoFocus({
+        inputRef: searchInputRef,
+        scanModalOpen,
+        showPaymentModal,
+        showAddCustomerModal,
+    });
+
     const editUnitPrice = (item) => {
         if (!item) return;
         const val = prompt(`Prix unitaire (${currency}) ?`, String(item.price ?? 0));
@@ -469,25 +487,6 @@ export default function CommerceSalesCreate({
         toast.success(`Prix réinitialisé: ${fmt(baseInSelected)}`);
     };
 
-    const handleBarcodeScan = useCallback(
-        (barcode) => {
-            if (!barcode || !barcode.trim()) return;
-
-            const scannedBarcode = barcode.trim();
-            const product = products.find(
-                (p) => p.barcode && p.barcode.toLowerCase() === scannedBarcode.toLowerCase(),
-            );
-
-            if (product) {
-                addToCart(product);
-                setSearch('');
-            } else {
-                toast.error('Produit introuvable pour ce code-barres');
-            }
-        },
-        [products],
-    );
-
     const updateQuantity = (productId, newQuantity) => {
         const q = Number(newQuantity);
         if (Number.isNaN(q) || q <= 0) {
@@ -555,6 +554,11 @@ export default function CommerceSalesCreate({
         () => Math.max(0, subtotal + taxAmount - orderDiscount),
         [subtotal, taxAmount, orderDiscount],
     );
+
+    const selectedCustomer = useMemo(() => {
+        if (!customerId) return null;
+        return customersList.find((c) => String(c.id) === String(customerId)) ?? null;
+    }, [customerId, customersList]);
 
     const paid = Number(paidAmount) || 0;
     const balance = Math.max(0, total - paid);
@@ -864,6 +868,7 @@ export default function CommerceSalesCreate({
                 sale_mode: saleMode,
                 draft: false,
                 lines: payloadLines,
+                loyalty_points_redeem: loyaltyPointsRedeem > 0 ? loyaltyPointsRedeem : undefined,
             };
 
             if (activeCashSession) {
@@ -923,6 +928,15 @@ export default function CommerceSalesCreate({
             const saleId = storeRes.data.sale.id;
             const saleTotal = total;
             toast.success('Vente finalisée avec succès!');
+            if (storeRes.data?.loyalty?.points_earned > 0) {
+                toast.success(`Vous avez gagné ${storeRes.data.loyalty.points_earned} points fidélité`, {
+                    icon: '🎁',
+                });
+            }
+            if (loyaltyPointsRedeem > 0) {
+                toast.success('Points utilisés avec succès', { icon: '✓' });
+            }
+            setLoyaltyPointsRedeem(0);
             setShowPaymentModal(false);
             clearCart();
             setPaidAmount('');
@@ -995,17 +1009,13 @@ export default function CommerceSalesCreate({
         }
     };
 
-    useEffect(() => {
-        if (!showPaymentModal && !showAddCustomerModal) {
-            searchInputRef.current?.focus();
-        }
-    }, [showPaymentModal, showAddCustomerModal]);
-
     return (
         <AppLayout fullWidth>
             <Head title="Point de Vente - Commerce" />
 
-            <div className="h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)] flex flex-col lg:flex-row relative overflow-hidden">
+            <div
+                className={`pos-sale-create pos-sale-create--commerce pos-sale-create__shell h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)] flex flex-col lg:flex-row relative overflow-hidden${cart.length > 0 ? ' pos-sale-create--has-cart' : ''}`}
+            >
                 {/* Bandeau succès après validation */}
                 {showSuccessBanner && (
                     <div className="absolute top-0 left-0 right-0 z-40 bg-green-600 dark:bg-green-700 text-white py-3 px-4 text-center shadow-lg animate-in fade-in duration-300">
@@ -1015,9 +1025,9 @@ export default function CommerceSalesCreate({
                 )}
 
                 {/* Colonne gauche - produits */}
-                <div className="w-full lg:flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden bg-gray-50 dark:bg-slate-950">
+                <div className="pos-sale-create__products w-full lg:flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden bg-gray-50 dark:bg-slate-950">
                     {/* Header */}
-                    <div className="shrink-0 p-3 sm:p-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
+                    <div className="pos-sale-create__header shrink-0 p-3 sm:p-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                             <Button
                                 variant="ghost"
@@ -1027,7 +1037,7 @@ export default function CommerceSalesCreate({
                             >
                                 <Link href={route(`${routePrefix}.sales.index`)} className="inline-flex items-center gap-1.5">
                                     <ArrowLeft className="h-4 w-4 shrink-0" />
-                                    Retour
+                                    <span className="pos-sale-create__hide-mobile">Retour</span>
                                 </Link>
                             </Button>
 
@@ -1082,7 +1092,7 @@ export default function CommerceSalesCreate({
                                     Gros
                                 </button>
                             </div>
-                            <div className="flex items-center bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
+                            <div className="pos-sale-create__toolbar-secondary flex items-center bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
                                 <button
                                     type="button"
                                     onClick={() => setViewMode('list')}
@@ -1107,7 +1117,7 @@ export default function CommerceSalesCreate({
                                 </button>
                             </div>
 
-                            <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline shrink-0">
+                            <span className="pos-sale-create__hide-mobile text-xs text-gray-400 dark:text-gray-500 hidden sm:inline shrink-0">
                                 Raccourcis:{' '}
                                 <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">Ctrl+Shift+V</kbd>{' '}
                                 vente ·{' '}
@@ -1122,55 +1132,29 @@ export default function CommerceSalesCreate({
                                     <Input
                                         ref={searchInputRef}
                                         type="text"
-                                        placeholder="Recherche ou scan code-barres"
+                                        placeholder="Recherche ou scan code-barres (douchette : scannez ici)"
+                                        aria-label="Recherche produit ou scan code-barres"
+                                        autoComplete="off"
+                                        autoCorrect="off"
+                                        spellCheck={false}
+                                        className="pos-sale-create__scan-input pl-10 bg-gray-100 dark:bg-slate-800 border-0 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
                                         value={search}
                                         onChange={(e) => {
                                             const v = e.target.value;
                                             setSearch(v);
-                                            if (v.length >= 6) {
-                                                const code = v.trim();
-                                                const byCode = products.find(
-                                                    (p) =>
-                                                        (p.code || '').toLowerCase() ===
-                                                            code.toLowerCase() ||
-                                                        (p.barcode || '').toLowerCase() ===
-                                                            code.toLowerCase(),
-                                                );
-                                                if (byCode) {
-                                                    addToCart(byCode);
-                                                    setSearch('');
-                                                }
+                                            if (v.trim()) {
+                                                tryResolveFromSearch(v);
                                             }
                                         }}
                                         onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && search.trim().length >= 6) {
-                                                const code = search.trim();
-                                                const byCode = products.find(
-                                                    (p) =>
-                                                        (p.code || '').toLowerCase() ===
-                                                            code.toLowerCase() ||
-                                                        (p.barcode || '').toLowerCase() ===
-                                                            code.toLowerCase(),
-                                                );
-                                                if (byCode) {
-                                                    addToCart(byCode);
-                                                    setSearch('');
-                                                    e.preventDefault();
-                                                }
+                                            if (e.key === 'Enter' && search.trim()) {
+                                                processScan(search.trim());
+                                                e.preventDefault();
                                             }
                                         }}
-                                        className="pl-10 bg-gray-100 dark:bg-slate-800 border-0 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
                                     />
                                 </div>
-                                <div className="flex-shrink-0">
-                                    <BarcodeScanner
-                                        id="commerce-sales-barcode-scanner"
-                                        value=""
-                                        onChange={handleBarcodeScan}
-                                        placeholder=""
-                                        buttonOnly
-                                    />
-                                </div>
+                                <PosSalesScanButton onClick={() => setScanModalOpen(true)} />
                             </div>
 
                             <Button
@@ -1185,7 +1169,7 @@ export default function CommerceSalesCreate({
                     </div>
 
                     {/* Catégories */}
-                    <div className="shrink-0 p-3 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 overflow-x-auto">
+                    <div className="pos-sale-create__categories shrink-0 p-3 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 overflow-x-auto">
                         <div className="flex gap-2">
                             <button
                                 type="button"
@@ -1217,7 +1201,7 @@ export default function CommerceSalesCreate({
 
                     {/* Derniers produits */}
                     {recentProductIds.length > 0 && (
-                        <div className="shrink-0 px-4 py-2 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
+                        <div className="pos-sale-create__recent shrink-0 px-4 py-2 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
                             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
                                 Derniers produits
                             </p>
@@ -1262,16 +1246,16 @@ export default function CommerceSalesCreate({
                     )}
 
                     {/* Grille / liste de produits */}
-                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-3 sm:p-4">
+                    <div className="pos-sale-create__scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-3 sm:p-4">
                         {viewMode === 'thumbnails' ? (
-                            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5 sm:gap-3 md:gap-4">
+                            <div className="pos-sale-create__grid grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5 sm:gap-3 md:gap-4">
                                 {filteredProducts.map((product) => (
                                     <button
                                         key={product.id}
                                         type="button"
                                         onClick={() => addToCart(product)}
                                         disabled={product.stock < 1}
-                                        className={`bg-white dark:bg-slate-800 rounded-lg sm:rounded-xl p-1.5 sm:p-3 text-center shadow-sm hover:shadow-md transition-all border border-gray-200 dark:border-slate-700 ${
+                                        className={`pos-sale-create__product-card bg-white dark:bg-slate-800 rounded-lg sm:rounded-xl p-1.5 sm:p-3 text-center shadow-sm hover:shadow-md transition-all border border-gray-200 dark:border-slate-700 ${
                                             product.stock < 1
                                                 ? 'opacity-50 cursor-not-allowed'
                                                 : 'hover:border-amber-300 dark:hover:border-amber-500'
@@ -1399,9 +1383,9 @@ export default function CommerceSalesCreate({
                 </div>
 
                 {/* Colonne droite - panier */}
-                <div className="w-full lg:w-96 lg:min-w-[22rem] lg:max-w-md bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-slate-700 flex flex-col flex-shrink-0 min-h-0 overflow-hidden max-lg:max-h-[min(46dvh,440px)] lg:h-full lg:max-h-none">
+                <div className="pos-sale-create__cart w-full lg:w-96 lg:min-w-[22rem] lg:max-w-md bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-slate-700 flex flex-col flex-shrink-0 min-h-0 overflow-hidden max-lg:max-h-[min(46dvh,440px)] lg:h-full lg:max-h-none">
                     {/* En-tête panier */}
-                    <div className="shrink-0 p-4 border-b border-gray-200 dark:border-slate-700">
+                    <div className="pos-sale-create__cart-header shrink-0 p-4 border-b border-gray-200 dark:border-slate-700">
                         <div className="flex items-center gap-2 mb-2">
                             <Badge
                                 className={
@@ -1466,7 +1450,7 @@ export default function CommerceSalesCreate({
                     </div>
 
                     {cart.length > 0 && (
-                        <p className="shrink-0 px-4 py-1 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-slate-800">
+                        <p className="pos-sale-create__hide-mobile shrink-0 px-4 py-1 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-slate-800">
                             Cliquez une ligne ·{' '}
                             <kbd className="px-1 rounded bg-gray-200 dark:bg-gray-700 font-mono">
                                 +
@@ -1487,7 +1471,7 @@ export default function CommerceSalesCreate({
                     )}
 
                     {/* Lignes panier */}
-                    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-4">
+                    <div className="pos-sale-create__cart-scroll flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-4">
                         {cart.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full text-gray-400">
                                 <ShoppingCart className="h-16 w-16 mb-4 opacity-50" />
@@ -1651,7 +1635,7 @@ export default function CommerceSalesCreate({
                     </div>
 
                     {/* Pied de page panier */}
-                    <div className="shrink-0 border-t border-gray-200 dark:border-slate-700 p-3 sm:p-4 space-y-3 bg-white dark:bg-slate-900">
+                    <div className="pos-sale-create__cart-footer shrink-0 border-t border-gray-200 dark:border-slate-700 p-3 sm:p-4 space-y-3 bg-white dark:bg-slate-900">
                         {/* Remise commande */}
                         <button
                             type="button"
@@ -1714,7 +1698,7 @@ export default function CommerceSalesCreate({
                         </button>
 
                         {/* Total & CTA */}
-                        <div className="bg-blue-500 dark:bg-blue-600 rounded-xl p-4 text-white">
+                        <div className="pos-sale-create__total-box bg-blue-500 dark:bg-blue-600 rounded-xl p-4 text-white">
                             <div className="flex items-center justify-between">
                                 <span className="text-lg font-medium">Total</span>
                                 <span className="text-2xl font-bold">{fmt(total)}</span>
@@ -1730,14 +1714,27 @@ export default function CommerceSalesCreate({
                             type="button"
                             onClick={() => setShowPaymentModal(true)}
                             disabled={cart.length === 0 || submitting || hasCartStockExceeded}
-                            className="w-full bg-amber-500 hover:bg-amber-600 text-white py-6 text-lg font-semibold disabled:opacity-60"
+                            className="pos-sale-create__finalize-btn w-full bg-amber-500 hover:bg-amber-600 text-white py-6 text-lg font-semibold disabled:opacity-60"
                         >
                             <Receipt className="h-5 w-5 mr-2" />
                             {submitting ? 'Traitement...' : 'Finaliser la vente'}
                         </Button>
                     </div>
                 </div>
+
+                <PosSaleCreateMobileCheckout
+                    cartLength={cart.length}
+                    totalLabel={fmt(total)}
+                    disabled={submitting || hasCartStockExceeded}
+                    onCheckout={() => setShowPaymentModal(true)}
+                />
             </div>
+
+            <PosBarcodeScannerModal
+                open={scanModalOpen}
+                onClose={() => setScanModalOpen(false)}
+                onScan={(code) => processScan(code)}
+            />
 
             {/* Modal paiement */}
             {showPaymentModal && (
@@ -1940,6 +1937,30 @@ export default function CommerceSalesCreate({
                                     </Button>
                                 </div>
                             </div>
+
+                            <LoyaltyPosPanel
+                                loyaltySettings={loyaltySettings}
+                                loyaltyModule="commerce"
+                                selectedCustomer={selectedCustomer}
+                                cartSubtotal={subtotal}
+                                pointsToRedeem={loyaltyPointsRedeem}
+                                onPointsToRedeemChange={setLoyaltyPointsRedeem}
+                                onScanCustomer={(c) => {
+                                    const exists = customersList.some((x) => String(x.id) === String(c.id));
+                                    if (!exists) {
+                                        setCustomersList((prev) => [
+                                            ...prev,
+                                            {
+                                                id: c.id,
+                                                full_name: c.full_name || 'Client fidélité',
+                                                phone: '',
+                                                email: '',
+                                            },
+                                        ]);
+                                    }
+                                    setCustomerId(String(c.id));
+                                }}
+                            />
                         </div>
 
                         <div className="p-6 bg-gray-50 dark:bg-slate-800 flex gap-3">

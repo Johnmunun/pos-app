@@ -10,7 +10,6 @@ const PharmacyAssistant = lazy(() => import('@/Components/Pharmacy/PharmacyAssis
 const HardwareAssistant = lazy(() => import('@/Components/Hardware/HardwareAssistant'));
 const CommerceAssistant = lazy(() => import('@/Components/Commerce/CommerceAssistant'));
 import SupportFloatingButton from '@/Components/Support/SupportFloatingButton';
-import SupportChatWidget from '@/Components/Support/SupportChatWidget';
 import WhatsAppFloatingButton from '@/Components/Ecommerce/WhatsAppFloatingButton';
 import { ensureFcmToken, wireForegroundMessages } from '@/lib/firebaseMessaging';
 import MobileBottomNav from '@/Components/Layout/MobileBottomNav';
@@ -236,8 +235,6 @@ export default function AppLayout({ children, header, fullWidth = false }) {
                 liftForMobileBottomNav={Boolean(user && isMobile)}
             />
 
-            {/* Support chat (flottant) */}
-            <SupportChatWidget liftForMobileBottomNav={Boolean(user && isMobile)} />
         </div>
     );
 }

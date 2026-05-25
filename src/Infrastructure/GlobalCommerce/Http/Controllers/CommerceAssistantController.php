@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Src\Application\Common\Services\AssistantSalesProfitContextBuilder;
+use Src\Application\Common\Services\AssistantUserFacingResponse;
 use Src\Application\GlobalCommerce\Services\CommerceAssistantContextService;
 
 class CommerceAssistantController
@@ -35,7 +36,7 @@ class CommerceAssistantController
         }
 
         $enabled = config('commerce_assistant.enabled', true);
-        if (!$enabled) {
+        if (! $enabled) {
             return response()->json([
                 'answer' => "L'assistant est temporairement désactivé. Contactez l'administrateur.",
                 'context_used' => false,
@@ -49,11 +50,10 @@ class CommerceAssistantController
         $context = $this->contextService->getContext($request, $productSearch, $permissions);
 
         if (isset($context['error'])) {
-            return response()->json([
+            return $this->assistantJsonResponse([
                 'answer' => $this->fallbackForError($context['error'], $context),
                 'navigation' => null,
-                'context_used' => false,
-            ]);
+            ], false);
         }
 
         $systemPrompt = config('commerce_assistant.system_prompt', '');
@@ -65,21 +65,29 @@ class CommerceAssistantController
         if ($driver === 'openai' && $apiKey !== null && $apiKey !== '') {
             try {
                 $result = $this->callOpenAI($apiKey, $systemPrompt, $context, $message, $history);
-                return response()->json([
-                    'answer' => $result['answer'],
-                    'navigation' => $result['navigation'] ?? null,
-                    'context_used' => true,
-                ]);
+
+                return $this->assistantJsonResponse($result, true);
             } catch (\Throwable $e) {
                 Log::warning('Commerce assistant OpenAI error', ['message' => $e->getMessage()]);
             }
         }
 
         $result = $this->fallbackAnswer($context, $message);
+
+        return $this->assistantJsonResponse($result, true);
+    }
+
+    /**
+     * @param  array{answer?: string|null, navigation?: array|null}  $result
+     */
+    private function assistantJsonResponse(array $result, bool $contextUsed): JsonResponse
+    {
+        $result = AssistantUserFacingResponse::finalize($result);
+
         return response()->json([
-            'answer' => $result['answer'],
+            'answer' => $result['answer'] ?? null,
             'navigation' => $result['navigation'] ?? null,
-            'context_used' => true,
+            'context_used' => $contextUsed,
         ]);
     }
 
@@ -93,7 +101,7 @@ class CommerceAssistantController
             if ($pos !== false) {
                 $rest = trim(mb_substr($message, $pos + mb_strlen($p)));
                 $candidate = preg_split('/\s+/', $rest, 2, PREG_SPLIT_NO_EMPTY)[0] ?? '';
-                if ($candidate !== '' && strlen($candidate) > 1 && !in_array(mb_strtolower($candidate), $stopWords, true)) {
+                if ($candidate !== '' && strlen($candidate) > 1 && ! in_array(mb_strtolower($candidate), $stopWords, true)) {
                     return $candidate;
                 }
             }
@@ -101,10 +109,11 @@ class CommerceAssistantController
         $words = preg_split('/\s+/', trim($message), -1, PREG_SPLIT_NO_EMPTY);
         foreach ($words as $w) {
             $wClean = preg_replace('/[^\p{L}\p{N}-]/u', '', $w);
-            if (strlen($wClean) > 2 && !in_array(mb_strtolower($wClean), $stopWords, true)) {
+            if (strlen($wClean) > 2 && ! in_array(mb_strtolower($wClean), $stopWords, true)) {
                 return $wClean;
             }
         }
+
         return null;
     }
 
@@ -113,12 +122,12 @@ class CommerceAssistantController
      */
     private function normalizeHistory(mixed $history): array
     {
-        if (!is_array($history)) {
+        if (! is_array($history)) {
             return [];
         }
         $out = [];
         foreach ($history as $turn) {
-            if (!is_array($turn)) {
+            if (! is_array($turn)) {
                 continue;
             }
             $role = ($turn['role'] ?? '') === 'user' ? 'user' : 'assistant';
@@ -136,16 +145,16 @@ class CommerceAssistantController
     }
 
     /**
-     * @param array<int, array{role: string, content: string}> $history
+     * @param  array<int, array{role: string, content: string}>  $history
      * @return array{answer: string|null, navigation: array|null}
      */
     private function callOpenAI(string $apiKey, string $systemPrompt, array $context, string $userMessage, array $history): array
     {
         $contextJson = json_encode($context, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        $userContent = "Contexte commerce (JSON — source unique pour chiffres, listes et routes ; ne rien inventer):\n"
-            . $contextJson
-            . "\n\nQuestion actuelle: "
-            . $userMessage;
+        $userContent = "Contexte commerce (JSON — source unique pour chiffres et listes ; routes navigation internes, ne jamais les afficher à l'utilisateur):\n"
+            .$contextJson
+            ."\n\nQuestion actuelle: "
+            .$userMessage;
 
         $chatMessages = [['role' => 'system', 'content' => $systemPrompt]];
         foreach ($history as $turn) {
@@ -165,8 +174,8 @@ class CommerceAssistantController
                 'temperature' => 0.3,
             ]);
 
-        if (!$response->successful()) {
-            throw new \RuntimeException('OpenAI API error: ' . $response->body());
+        if (! $response->successful()) {
+            throw new \RuntimeException('OpenAI API error: '.$response->body());
         }
 
         $data = $response->json();
@@ -175,6 +184,7 @@ class CommerceAssistantController
         if ($navigation !== null) {
             return ['answer' => null, 'navigation' => $navigation];
         }
+
         return ['answer' => $content ?: 'Je n\'ai pas pu générer de réponse.', 'navigation' => null];
     }
 
@@ -189,13 +199,14 @@ class CommerceAssistantController
             $content = trim($m[1]);
         }
         $json = json_decode($content, true);
-        if (!is_array($json) || ($json['type'] ?? '') !== 'navigation') {
+        if (! is_array($json) || ($json['type'] ?? '') !== 'navigation') {
             return null;
         }
         $route = $json['route'] ?? '';
-        if ($route === '' || !in_array($route, $allowedRoutes, true)) {
+        if ($route === '' || ! in_array($route, $allowedRoutes, true)) {
             return null;
         }
+
         return [
             'type' => 'navigation',
             'label' => $json['label'] ?? 'Aller',
@@ -211,9 +222,10 @@ class CommerceAssistantController
         }
         if ($error === 'no_shop') {
             $nav = $context['navigation'] ?? [];
-            $lines = array_map(fn ($n) => $n['label'] . ' : ' . $n['path'], $nav);
-            return 'Aucune boutique associée. Vous pouvez accéder aux modules : ' . implode(', ', array_slice($lines, 0, 5)) . '.';
+
+            return 'Aucune boutique associée. '.AssistantUserFacingResponse::formatAccessibleModulesList($nav, 5, 'commerce');
         }
+
         return 'Données temporairement indisponibles.';
     }
 
@@ -233,6 +245,7 @@ class CommerceAssistantController
         $greet = function (string $body) use ($userName): string {
             $hour = (int) now()->format('H');
             $hello = $hour < 12 ? 'Bonjour' : ($hour < 18 ? 'Bon après-midi' : 'Bonsoir');
+
             return sprintf("%s %s,\n\n%s", $hello, $userName, $body);
         };
 
@@ -251,6 +264,7 @@ class CommerceAssistantController
                 number_format($rev, 0, ',', ' '),
                 $currency
             );
+
             return ['answer' => $greet($body), 'navigation' => null];
         }
 
@@ -258,23 +272,32 @@ class CommerceAssistantController
         if (str_contains($lower, 'rupture') || (str_contains($lower, 'stock') && str_contains($lower, 'alerte'))) {
             $out = $alerts['out_of_stock_count'] ?? 0;
             $low = $alerts['low_stock_count'] ?? 0;
-            if (!empty($productsOutOfStock)) {
-                $list = array_map(fn ($p) => $p['name'] . ' (' . ($p['code'] ?: '—') . ')', array_slice($productsOutOfStock, 0, 10));
-                $body = "Produits en rupture :\n\n📦 " . implode("\n📦 ", $list);
+            if (! empty($productsOutOfStock)) {
+                $list = array_map(fn ($p) => $p['name'].' ('.($p['code'] ?: '—').')', array_slice($productsOutOfStock, 0, 10));
+                $body = "Produits en rupture :\n\n📦 ".implode("\n📦 ", $list);
+
                 return ['answer' => $greet($body), 'navigation' => null];
             }
             $body = sprintf("⚠️ Produits en stock bas : %d\n⛔ Produits en rupture : %d", $low, $out);
+
             return ['answer' => $greet($body), 'navigation' => null];
         }
 
         // Navigation
-        if (str_contains($lower, 'où') || str_contains($lower, 'trouver')) {
-            $list = array_slice(array_map(fn ($n) => $n['label'] . ' (' . $n['path'] . ')', $nav), 0, 10);
-            return ['answer' => 'Modules accessibles : ' . implode('. ', $list), 'navigation' => null];
+        if (str_contains($lower, 'où') || str_contains($lower, 'ou ') || str_contains($lower, 'trouver') || str_contains($lower, 'page')) {
+            $match = $this->matchNavigationIntent($lower, $nav);
+            if ($match !== null) {
+                return ['answer' => null, 'navigation' => $match];
+            }
+
+            return [
+                'answer' => AssistantUserFacingResponse::formatAccessibleModulesList($nav, 10, 'commerce'),
+                'navigation' => null,
+            ];
         }
 
         // Produit spécifique
-        if (!empty($products)) {
+        if (! empty($products)) {
             $p = $products[0];
             $curr = $p['currency'] ?? $currency;
             $marginBlock = ($p['cost_price'] ?? null) !== null
@@ -288,7 +311,7 @@ class CommerceAssistantController
                 : "\nPrix d'achat : non renseigné.";
             $movements = $p['recent_stock_movements'] ?? [];
             $movBlock = $movements !== []
-                ? "\n\nDerniers mouvements :\n" . implode("\n", array_map(
+                ? "\n\nDerniers mouvements :\n".implode("\n", array_map(
                     fn ($mv) => sprintf('- %s %s %s', $mv['date'] ?? '', $mv['type'] ?? '', $mv['quantity'] ?? ''),
                     array_slice($movements, 0, 5)
                 ))
@@ -303,10 +326,63 @@ class CommerceAssistantController
                 $marginBlock,
                 $movBlock
             );
+
             return ['answer' => $greet($body), 'navigation' => null];
         }
 
-        $body = "Je peux vous aider avec :\n- les ventes d'aujourd'hui\n- les produits en rupture ou en stock bas\n- le détail d'un produit\n- la navigation dans le système";
+        $body = "Je peux vous aider avec :\n- les ventes d'aujourd'hui\n- les produits en rupture ou en stock bas\n- le détail d'un produit\n- pour vous orienter dans l'application (demandez par exemple « Où sont les rapports ? »)";
+
         return ['answer' => $greet($body), 'navigation' => null];
+    }
+
+    /**
+     * @param  array<int, array{name: string, route: string, label?: string}>  $nav
+     * @return array{type: string, label: string, route: string, method: string}|null
+     */
+    private function matchNavigationIntent(string $lowerMessage, array $nav): ?array
+    {
+        $keywords = [
+            'rapport' => ['rapport', 'rapports', 'report'],
+            'produit' => ['produit', 'produits', 'catalogue', 'articles'],
+            'stock' => ['stock', 'inventaire'],
+            'vente' => ['vente', 'ventes', 'caisse'],
+            'achat' => ['achat', 'achats'],
+            'client' => ['client', 'clients'],
+            'fournisseur' => ['fournisseur', 'fournisseurs'],
+            'categorie' => ['catégorie', 'catégories', 'categorie'],
+        ];
+        $routeByKey = [
+            'rapport' => '/commerce/reports',
+            'produit' => '/commerce/products',
+            'stock' => '/commerce/stock',
+            'vente' => '/commerce/sales',
+            'achat' => '/commerce/purchases',
+            'client' => '/commerce/customers',
+            'fournisseur' => '/commerce/suppliers',
+            'categorie' => '/commerce/categories',
+        ];
+
+        foreach ($keywords as $key => $terms) {
+            foreach ($terms as $term) {
+                if (! str_contains($lowerMessage, $term)) {
+                    continue;
+                }
+                $wantedRoute = $routeByKey[$key];
+                foreach ($nav as $n) {
+                    if (($n['route'] ?? '') === $wantedRoute) {
+                        return [
+                            'type' => 'navigation',
+                            'label' => $n['label'] ?? $n['name'] ?? 'Aller',
+                            'route' => $wantedRoute,
+                            'method' => 'GET',
+                        ];
+                    }
+                }
+
+                return null;
+            }
+        }
+
+        return null;
     }
 }

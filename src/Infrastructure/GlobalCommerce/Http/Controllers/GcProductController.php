@@ -16,7 +16,9 @@ use Src\Application\GlobalCommerce\Inventory\DTO\UpdateProductDTO;
 use Src\Application\GlobalCommerce\Inventory\UseCases\CreateProductUseCase;
 use Src\Application\GlobalCommerce\Inventory\UseCases\DeleteProductUseCase;
 use Src\Application\GlobalCommerce\Inventory\UseCases\UpdateProductUseCase;
+use App\Support\InertiaBillingPayloadCache;
 use Src\Application\Billing\Services\FeatureLimitService;
+use Src\Application\Billing\Services\PromotionLimitService;
 use Src\Domain\GlobalCommerce\Inventory\Repositories\CategoryRepositoryInterface;
 use Src\Domain\GlobalCommerce\Inventory\Repositories\ProductRepositoryInterface;
 use Src\Infrastructure\GlobalCommerce\Inventory\Models\CategoryModel;
@@ -37,6 +39,7 @@ class GcProductController
         private DeleteProductUseCase $deleteProductUseCase,
         private ProductImageService $imageService,
         private FeatureLimitService $featureLimitService,
+        private PromotionLimitService $promotionLimitService,
         private TenantBackofficeShopResolver $shopResolver,
     ) {}
 
@@ -295,7 +298,10 @@ class GcProductController
                 $extra['min_wholesale_price_amount'] = (float) $validated['min_wholesale_price'];
             }
             if (isset($validated['discount_percent']) && $validated['discount_percent'] !== null) {
-                $extra['discount_percent'] = (float) $validated['discount_percent'];
+                $discount = (float) $validated['discount_percent'];
+                $tenantId = $user && $user->tenant_id !== null ? (string) $user->tenant_id : null;
+                $this->promotionLimitService->assertCanSetProductPromotion($tenantId, $discount);
+                $extra['discount_percent'] = $discount;
             }
             $extra['price_non_negotiable'] = (bool) ($validated['price_non_negotiable'] ?? false);
             if (array_key_exists('product_type', $validated)) {
@@ -359,6 +365,9 @@ class GcProductController
 
             if ($extra !== []) {
                 $model->update($extra);
+                if ($user && $user->tenant_id !== null && array_key_exists('discount_percent', $extra)) {
+                    InertiaBillingPayloadCache::forget((string) $user->tenant_id);
+                }
             }
         }
         return redirect()->route('commerce.products.index')->with('success', 'Produit créé.');
@@ -560,7 +569,10 @@ class GcProductController
                 $extra['min_wholesale_price_amount'] = (float) $validated['min_wholesale_price'];
             }
             if (isset($validated['discount_percent']) && $validated['discount_percent'] !== null) {
-                $extra['discount_percent'] = (float) $validated['discount_percent'];
+                $discount = (float) $validated['discount_percent'];
+                $tenantId = $request->user()?->tenant_id ? (string) $request->user()->tenant_id : null;
+                $this->promotionLimitService->assertCanSetProductPromotion($tenantId, $discount, $id);
+                $extra['discount_percent'] = $discount;
             }
             $extra['price_non_negotiable'] = (bool) ($validated['price_non_negotiable'] ?? $model->price_non_negotiable);
             if (array_key_exists('product_type', $validated)) {
@@ -639,6 +651,10 @@ class GcProductController
 
             if ($extra !== []) {
                 $model->update($extra);
+                $tenantId = $request->user()?->tenant_id ? (string) $request->user()->tenant_id : null;
+                if ($tenantId !== null && array_key_exists('discount_percent', $extra)) {
+                    InertiaBillingPayloadCache::forget($tenantId);
+                }
             }
         }
         return redirect()->route('commerce.products.index')->with('success', 'Produit mis à jour.');

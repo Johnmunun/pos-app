@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { usePage } from '@inertiajs/react';
 import { MessageCircle, X, Send, Circle, User, Image as ImageIcon } from 'lucide-react';
 import { playChatNotificationSound } from '@/lib/chatNotify';
 
@@ -13,6 +14,7 @@ function formatTime(ts) {
 }
 
 export default function SupportPublicChatWidget() {
+    const { auth } = usePage().props;
     const [open, setOpen] = useState(false);
     const [supportOnline] = useState(true);
     const [conversationId, setConversationId] = useState(null);
@@ -148,6 +150,10 @@ export default function SupportPublicChatWidget() {
             setSending(false);
         }
     };
+
+    if (auth?.user) {
+        return null;
+    }
 
     return (
         <>

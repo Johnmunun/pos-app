@@ -17,8 +17,10 @@ final class CreateSaleDTO
         public readonly array $lines,
         public readonly string $currency,
         public readonly ?string $customerName = null,
+        public readonly ?string $customerId = null,
         public readonly ?string $notes = null,
         public readonly ?int $createdByUserId = null,
-        public readonly bool $isDraft = false
+        public readonly bool $isDraft = false,
+        public readonly float $loyaltyDiscountAmount = 0.0
     ) {}
 }

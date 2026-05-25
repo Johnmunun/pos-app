@@ -379,6 +379,10 @@ class HandleInertiaRequests extends Middleware
                             }
                         }
 
+                        /** @var \Src\Application\Billing\Services\PromotionLimitService $promotionLimitService */
+                        $promotionLimitService = app(\Src\Application\Billing\Services\PromotionLimitService::class);
+                        $promotionQuota = $promotionLimitService->getQuotaSummary($tenantId);
+
                         $billingSummary = [
                             'plan_name' => $subscription?->plan_name ?? 'Plan par defaut',
                             'plan_code' => $subscription?->plan_code ?? null,
@@ -397,7 +401,13 @@ class HandleInertiaRequests extends Middleware
                             'depots_limit' => $depotsConfig['enabled'] ? $depotsConfig['limit'] : 0,
                             'sales_used' => (int) $salesCount,
                             'sales_limit' => $salesConfig['enabled'] ? $salesConfig['limit'] : 0,
+                            'promotions_products_used' => $promotionQuota['products']['used'],
+                            'promotions_products_limit' => $promotionQuota['products']['limit'],
+                            'promotions_campaigns_used' => $promotionQuota['campaigns']['used'],
+                            'promotions_campaigns_limit' => $promotionQuota['campaigns']['limit'],
                         ];
+
+                        $planUsage['promotions'] = $promotionQuota;
                     }
                 } catch (\Throwable $e) {
                     Log::debug('Billing summary fallback', ['error' => $e->getMessage()]);

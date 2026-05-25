@@ -24,6 +24,7 @@ use Src\Application\Settings\UseCases\GetStoreSettingsUseCase;
 use Src\Infrastructure\Settings\Services\StoreLogoService;
 use Src\Shared\ValueObjects\Quantity;
 use Src\Application\Billing\Services\FeatureLimitService;
+use Src\Application\Loyalty\Services\LoyaltySaleIntegration;
 use Src\Infrastructure\GlobalCommerce\Support\GcShopResolver;
 use Src\Application\Currency\Services\TenantDisplayCurrencyService;
 
@@ -41,7 +42,8 @@ class GcSaleController
         private CancelGcSaleUseCase $cancelGcSaleUseCase,
         private GetStoreSettingsUseCase $getStoreSettingsUseCase,
         private StoreLogoService $storeLogoService,
-        private FeatureLimitService $featureLimitService
+        private FeatureLimitService $featureLimitService,
+        private LoyaltySaleIntegration $loyaltySaleIntegration,
     ) {
     }
 
@@ -185,6 +187,8 @@ class GcSaleController
         $tenantId = (string) ($shop?->tenant_id ?? GcShopResolver::resolveTenantId($request) ?? 0);
         $currencyBundle = app(TenantDisplayCurrencyService::class)->resolve($request, $tenantId, $shop, false);
 
+        $loyaltySettings = $this->loyaltySaleIntegration->settingsForPos((int) $tenantId);
+
         return Inertia::render('Commerce/Sales/Create', [
             'products' => $productList,
             'currency' => $currencyBundle['currency'],
@@ -193,6 +197,7 @@ class GcSaleController
             'categories' => $categories,
             'customers' => $customers,
             'canUseWholesale' => $canUseWholesale,
+            'loyaltySettings' => $loyaltySettings,
         ]);
     }
 
@@ -269,6 +274,7 @@ class GcSaleController
             'lines.*.discount_percent' => 'nullable|numeric|min:0|max:100',
             'customer_id' => 'nullable|string|max:255',
             'customer_name' => 'nullable|string|max:255',
+            'loyalty_points_redeem' => 'nullable|integer|min:0',
             'notes' => 'nullable|string',
         ]);
         $lines = array_values(array_filter($validated['lines'], fn ($l) => ((float) ($l['quantity'] ?? 0)) > 0));
@@ -288,25 +294,71 @@ class GcSaleController
         }
 
         $isDraft = (bool) ($validated['draft'] ?? false);
+        $tenantIdInt = (int) ($request->user()?->tenant_id ?? 0);
+        if ($tenantIdInt === 0) {
+            $shopRow = Shop::query()->find($shopId);
+            $tenantIdInt = (int) ($shopRow?->tenant_id ?? 0);
+        }
+
+        $lineSubtotal = 0.0;
+        foreach ($lines as $line) {
+            $qty = (float) ($line['quantity'] ?? 0);
+            $price = isset($line['unit_price']) ? (float) $line['unit_price'] : 0.0;
+            if ($price <= 0) {
+                $product = $this->productRepository->findById($line['product_id']);
+                $price = $product ? (float) $product->getSalePrice()->getAmount() : 0.0;
+            }
+            $disc = isset($line['discount_percent']) ? (float) $line['discount_percent'] : 0.0;
+            $lineTotal = $qty * $price;
+            $lineSubtotal += $lineTotal - ($disc > 0 ? $lineTotal * $disc / 100 : 0);
+        }
+        $lineSubtotal = round(max(0, $lineSubtotal), 2);
+
+        $customerId = !empty($validated['customer_id']) ? (string) $validated['customer_id'] : null;
+        $loyaltyPoints = (int) ($validated['loyalty_points_redeem'] ?? 0);
+        $loyaltyDiscount = 0.0;
+        $pointsRedeemed = 0;
+        if (!$isDraft && $customerId && $loyaltyPoints > 0 && $tenantIdInt > 0) {
+            $preview = $this->loyaltySaleIntegration->previewCommerceRedemption($tenantIdInt, $customerId, $lineSubtotal, $loyaltyPoints);
+            $loyaltyDiscount = (float) ($preview['discount_amount'] ?? 0);
+            $pointsRedeemed = (int) ($preview['points_redeemed'] ?? 0);
+        }
+
         $dto = new CreateSaleDTO(
             $shopId,
             $lines,
             strtoupper($validated['currency']),
             $customerName,
+            $customerId,
             $validated['notes'] ?? null,
             $request->user()?->id,
-            $isDraft
+            $isDraft,
+            $loyaltyDiscount
         );
         try {
             if (!$isDraft) {
-                $tenantId = $request->user()?->tenant_id ? (string) $request->user()->tenant_id : null;
-                if ($tenantId === null) {
-                    $shopRow = Shop::query()->find($shopId);
-                    $tenantId = $shopRow ? (string) $shopRow->tenant_id : null;
-                }
-                $this->featureLimitService->assertCanRecordSale($tenantId);
+                $this->featureLimitService->assertCanRecordSale($tenantIdInt > 0 ? (string) $tenantIdInt : null);
             }
             $sale = $this->createSaleUseCase->execute($dto);
+
+            $loyaltyResult = null;
+            if (!$isDraft && $customerId && $tenantIdInt > 0) {
+                try {
+                    $loyaltyResult = $this->loyaltySaleIntegration->recordCommerceSale(
+                        $tenantIdInt,
+                        $sale->getId(),
+                        $customerId,
+                        $lineSubtotal,
+                        $loyaltyDiscount,
+                        $pointsRedeemed
+                    );
+                } catch (\Throwable $loyaltyEx) {
+                    if ($request->expectsJson()) {
+                        return response()->json(['message' => $loyaltyEx->getMessage()], 422);
+                    }
+                    throw $loyaltyEx;
+                }
+            }
 
             if (!$isDraft) {
                 app(\App\Services\AppNotificationService::class)->notifySaleCompleted(
@@ -329,6 +381,7 @@ class GcSaleController
                         'customer_name' => $sale->getCustomerName(),
                         'notes' => $sale->getNotes(),
                     ],
+                    'loyalty' => $loyaltyResult,
                 ]);
             }
 
@@ -400,6 +453,10 @@ class GcSaleController
 
         try {
             $this->cancelGcSaleUseCase->execute($id, $shopId);
+            $tenantId = (int) ($request->user()?->tenant_id ?? Shop::find($shopId)?->tenant_id ?? 0);
+            if ($tenantId > 0) {
+                $this->loyaltySaleIntegration->reverseSale($tenantId, \Src\Application\Loyalty\Services\LoyaltyService::MODULE_COMMERCE, $id);
+            }
 
             return response()->json([
                 'success' => true,

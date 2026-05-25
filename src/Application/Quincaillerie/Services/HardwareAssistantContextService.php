@@ -282,7 +282,7 @@ class HardwareAssistantContextService
         $nav = [];
         $push = function (string $name, string $route, array $perms) use (&$nav, $has): void {
             if ($has($perms)) {
-                $nav[] = ['name' => $name, 'route' => $route, 'label' => $name, 'path' => $route];
+                $nav[] = ['name' => $name, 'route' => $route, 'label' => $name];
             }
         };
 

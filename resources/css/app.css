@@ -1,3 +1,5 @@
+@import './pos-sale-create-mobile.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

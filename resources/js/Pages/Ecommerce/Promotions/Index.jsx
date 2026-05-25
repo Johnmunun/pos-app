@@ -5,9 +5,11 @@ import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
 import { Percent, Plus, Pencil, Trash2 } from 'lucide-react';
 import EcommercePageHeader from '@/Components/Ecommerce/EcommercePageHeader';
+import PromotionQuotaBanner from '@/Components/Billing/PromotionQuotaBanner';
 import { cardShell, pageY } from '@/lib/layoutClasses';
 
-export default function EcommercePromotionsIndex({ promotions }) {
+export default function EcommercePromotionsIndex({ promotions, promotionQuota }) {
+    const campaignsAtLimit = promotionQuota?.campaigns?.at_limit;
     const typeLabels = {
         percentage: 'Pourcentage',
         fixed_amount: 'Montant fixe',
@@ -25,8 +27,14 @@ export default function EcommercePromotionsIndex({ promotions }) {
         <AppLayout
             header={
                 <EcommercePageHeader title="Promotions" icon={Percent}>
-                    <Button asChild>
-                        <Link href={route('ecommerce.promotions.create')} className="inline-flex items-center justify-center gap-2 p-2 sm:px-3 sm:py-2 min-w-[36px] sm:min-w-0" title="Nouvelle promotion">
+                    <Button asChild disabled={campaignsAtLimit}>
+                        <Link
+                            href={route('ecommerce.promotions.create')}
+                            className={`inline-flex items-center justify-center gap-2 p-2 sm:px-3 sm:py-2 min-w-[36px] sm:min-w-0 ${campaignsAtLimit ? 'pointer-events-none opacity-50' : ''}`}
+                            title={campaignsAtLimit ? 'Limite de promotions atteinte' : 'Nouvelle promotion'}
+                            aria-disabled={campaignsAtLimit}
+                            onClick={(e) => campaignsAtLimit && e.preventDefault()}
+                        >
                             <Plus className="h-4 w-4 shrink-0" />
                             <span className="hidden sm:inline">Nouvelle promotion</span>
                         </Link>
@@ -37,6 +45,7 @@ export default function EcommercePromotionsIndex({ promotions }) {
             <Head title="Promotions - E-commerce" />
             <div className={pageY}>
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <PromotionQuotaBanner quota={promotionQuota} mode="campaigns" />
                 <Card className={cardShell}>
                     <CardContent className="p-0">
                         {/* Mobile: cartes */}

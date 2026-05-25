@@ -37,6 +37,8 @@ use Src\Shared\ValueObjects\Money;
 use Src\Domain\Pharmacy\Entities\Sale as SaleEntity;
 use Src\Application\Referral\Services\ReferralService;
 use Src\Application\Billing\Services\FeatureLimitService;
+use Src\Application\Loyalty\Services\LoyaltySaleIntegration;
+use Src\Application\Loyalty\Services\LoyaltyService;
 
 class SaleController
 {
@@ -496,6 +498,11 @@ class SaleController
             }
         }
 
+        $loyaltyModule = $this->getModule() === 'Hardware'
+            ? LoyaltyService::MODULE_HARDWARE
+            : LoyaltyService::MODULE_PHARMACY;
+        $loyaltySettings = app(LoyaltySaleIntegration::class)->settingsForPos((int) $tenantId);
+
         return Inertia::render($this->getModule() . '/Sales/Create', [
             'products' => $products,
             'categories' => $categories,
@@ -506,6 +513,8 @@ class SaleController
             'currencies' => $currenciesForPos,
             'exchangeRates' => $exchangeRatesMap,
             'routePrefix' => $this->getModule() === 'Hardware' ? 'hardware' : 'pharmacy',
+            'loyaltySettings' => $loyaltySettings,
+            'loyaltyModule' => $loyaltyModule,
         ]);
     }
 
@@ -909,6 +918,7 @@ class SaleController
     {
         $request->validate([
             'paid_amount' => 'required|numeric|min:0',
+            'loyalty_points_redeem' => 'nullable|integer|min:0',
         ]);
 
         $shopId = $this->getShopId($request);
@@ -933,10 +943,34 @@ class SaleController
             }
             // Si module Hardware, utiliser un flux de finalisation adapté (sans lots Pharmacy)
             $isHardware = $this->getModule() === 'Hardware';
+            $loyaltyModule = $isHardware ? LoyaltyService::MODULE_HARDWARE : LoyaltyService::MODULE_PHARMACY;
+            $tenantIdInt = (int) ($authUser->tenant_id ?? $shopId);
+            $loyaltyDiscount = 0.0;
+            $pointsRedeemed = 0;
+            $customerId = $sale->getCustomerId();
+            $lines = $this->saleLineRepository->findBySale($id);
+            $subtotal = 0.0;
+            foreach ($lines as $line) {
+                $subtotal += $line->getLineTotal()->getAmount();
+            }
+            $subtotal = round($subtotal, 2);
+            $loyaltyPoints = (int) $request->input('loyalty_points_redeem', 0);
+            if ($customerId && $loyaltyPoints > 0) {
+                $preview = app(LoyaltySaleIntegration::class)->previewRedemption(
+                    $tenantIdInt,
+                    $loyaltyModule,
+                    $customerId,
+                    $subtotal,
+                    $loyaltyPoints
+                );
+                $loyaltyDiscount = (float) ($preview['discount_amount'] ?? 0);
+                $pointsRedeemed = (int) ($preview['points_redeemed'] ?? 0);
+            }
+
             if ($isHardware) {
-                $this->finalizeHardwareSale($sale, (float) $request->input('paid_amount'), (int) $authUser->id);
+                $this->finalizeHardwareSale($sale, (float) $request->input('paid_amount'), (int) $authUser->id, $loyaltyDiscount);
             } else {
-                $this->finalizeSaleUseCase->execute($id, (float) $request->input('paid_amount'), (int) $authUser->id);
+                $this->finalizeSaleUseCase->execute($id, (float) $request->input('paid_amount'), (int) $authUser->id, $loyaltyDiscount);
             }
 
             // Liaison Caisse → Finance : facture + dette client si paiement partiel
@@ -987,6 +1021,28 @@ class SaleController
                     null,
                     $authUser->tenant_id ? (int) $authUser->tenant_id : null
                 );
+
+                $loyaltyResult = null;
+                if ($customerId) {
+                    try {
+                        $loyaltyResult = app(LoyaltySaleIntegration::class)->afterPharmacyOrHardwareSale(
+                            $tenantIdInt,
+                            $loyaltyModule,
+                            $id,
+                            $customerId,
+                            $subtotal,
+                            $pointsRedeemed,
+                            $loyaltyDiscount
+                        );
+                    } catch (\Throwable $loyaltyEx) {
+                        return response()->json(['message' => $loyaltyEx->getMessage()], 422);
+                    }
+                }
+
+                return response()->json([
+                    'message' => 'Sale finalized successfully',
+                    'loyalty' => $loyaltyResult,
+                ]);
             }
 
             return response()->json(['message' => 'Sale finalized successfully']);
@@ -1002,9 +1058,9 @@ class SaleController
      * Reprend la logique métier de FinalizeSaleUseCase mais avec HardwareUpdateStockUseCase
      * qui ne dépend pas des lots Pharmacy (batches).
      */
-    private function finalizeHardwareSale(SaleEntity $sale, float $paidAmount, int $userId): void
+    private function finalizeHardwareSale(SaleEntity $sale, float $paidAmount, int $userId, float $loyaltyDiscountAmount = 0.0): void
     {
-        \Illuminate\Support\Facades\DB::transaction(function () use ($sale, $paidAmount, $userId): void {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($sale, $paidAmount, $userId, $loyaltyDiscountAmount): void {
             if ($sale->getStatus() !== SaleEntity::STATUS_DRAFT) {
                 \Illuminate\Support\Facades\Log::warning('Hardware sale finalization failed: sale is not in DRAFT status', [
                     'sale_id' => $sale->getId(),
@@ -1026,6 +1082,11 @@ class SaleController
 
             foreach ($lines as $line) {
                 $total = $total->add($line->getLineTotal());
+            }
+
+            $loyaltyDiscount = max(0, round($loyaltyDiscountAmount, 2));
+            if ($loyaltyDiscount > 0) {
+                $total = $total->subtract(new Money($loyaltyDiscount, $currency));
             }
 
             $paid = new Money($paidAmount, $currency);
@@ -1082,6 +1143,15 @@ class SaleController
 
         try {
             $this->cancelSaleUseCase->execute($id);
+            $authUser = $request->user();
+            $tenantId = (int) ($authUser?->tenant_id ?? 0);
+            if ($tenantId > 0) {
+                $module = $this->getModule() === 'Hardware'
+                    ? LoyaltyService::MODULE_HARDWARE
+                    : LoyaltyService::MODULE_PHARMACY;
+                app(LoyaltySaleIntegration::class)->reverseSale($tenantId, $module, $id);
+            }
+
             return response()->json(['message' => 'Sale cancelled']);
         } catch (\Throwable $e) {
             return response()->json(['message' => $e->getMessage()], 422);

@@ -442,8 +442,9 @@ export default function CommerceAssistant({ bottomOffset = null }) {
                                     >
                                         {msg.navigation?.type === 'navigation' ? (
                                             <div className="space-y-2">
-                                                <p className="text-xs text-slate-600 dark:text-slate-300">
-                                                    Page recommandée :
+                                                <p className="text-sm text-slate-700 dark:text-slate-200">
+                                                    {msg.navigation.message
+                                                        || `Accédez à « ${msg.navigation.label || 'cette section'} » depuis le menu latéral, ou utilisez le bouton ci-dessous.`}
                                                 </p>
                                                 <NavigationAction navigation={msg.navigation} />
                                             </div>

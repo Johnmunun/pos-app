@@ -113,6 +113,7 @@ Route::prefix('commerce')
 
         Route::get('/customers', [GcCustomerController::class, 'index'])->name('customers.index');
         Route::get('/customers/create', [GcCustomerController::class, 'create'])->name('customers.create');
+        Route::get('/customers/{id}', [GcCustomerController::class, 'show'])->name('customers.show');
         Route::post('/customers', [GcCustomerController::class, 'store'])->name('customers.store');
         Route::put('/customers/{id}', [GcCustomerController::class, 'update'])->name('customers.update');
 

@@ -74,6 +74,29 @@ class GcCustomerController
         return Inertia::render('Commerce/Customers/Create');
     }
 
+    public function show(Request $request, string $id): Response
+    {
+        $tenantId = $this->getTenantId($request);
+        $customer = Customer::where('tenant_id', $tenantId)->find($id);
+
+        if (!$customer) {
+            abort(404, 'Client introuvable.');
+        }
+
+        return Inertia::render('Commerce/Customers/Show', [
+            'customer' => [
+                'id' => (string) $customer->id,
+                'full_name' => $customer->full_name,
+                'email' => $customer->email,
+                'phone' => $customer->phone,
+                'address' => $customer->address,
+                'code' => $customer->code,
+                'is_active' => (bool) $customer->is_active,
+                'created_at' => $customer->created_at?->format('d/m/Y'),
+            ],
+        ]);
+    }
+
     public function store(Request $request): JsonResponse|RedirectResponse
     {
         $tenantId = $this->getTenantId($request);

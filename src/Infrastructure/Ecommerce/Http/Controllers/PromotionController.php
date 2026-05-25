@@ -6,10 +6,16 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Support\InertiaBillingPayloadCache;
+use Src\Application\Billing\Services\PromotionLimitService;
 use Src\Infrastructure\Ecommerce\Models\PromotionModel;
 
 class PromotionController
 {
+    public function __construct(
+        private readonly PromotionLimitService $promotionLimitService
+    ) {
+    }
     private function getShopId(Request $request): string
     {
         $user = $request->user();
@@ -29,7 +35,10 @@ class PromotionController
             ->orderBy('starts_at', 'desc')
             ->get();
 
+        $tenantId = $request->user()?->tenant_id ? (string) $request->user()->tenant_id : null;
+
         return Inertia::render('Ecommerce/Promotions/Index', [
+            'promotionQuota' => $this->promotionLimitService->getQuotaSummary($tenantId),
             'promotions' => $promotions->map(fn ($p) => [
                 'id' => $p->id,
                 'name' => $p->name,
@@ -66,16 +75,20 @@ class PromotionController
     {
         $shopId = $this->getShopId($request);
         [$products, $categories] = $this->getProductsAndCategories($shopId);
+        $tenantId = $request->user()?->tenant_id ? (string) $request->user()->tenant_id : null;
+
         return Inertia::render('Ecommerce/Promotions/Form', [
             'promotion' => null,
             'products' => $products,
             'categories' => $categories,
+            'promotionQuota' => $this->promotionLimitService->getQuotaSummary($tenantId),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $shopId = $this->getShopId($request);
+        $tenantId = $request->user()?->tenant_id ? (string) $request->user()->tenant_id : null;
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -95,6 +108,12 @@ class PromotionController
             'applicable_categories.*' => 'string',
         ]);
 
+        $this->promotionLimitService->assertCanActivateEcommercePromotion(
+            $tenantId,
+            (bool) ($validated['is_active'] ?? true),
+            (string) $validated['type']
+        );
+
         PromotionModel::create([
             'shop_id' => $shopId,
             'name' => $validated['name'],
@@ -112,6 +131,10 @@ class PromotionController
             'applicable_categories' => !empty($validated['applicable_categories']) ? $validated['applicable_categories'] : null,
         ]);
 
+        if ($tenantId !== null) {
+            InertiaBillingPayloadCache::forget($tenantId);
+        }
+
         return redirect()->route('ecommerce.promotions.index')->with('success', 'Promotion créée.');
     }
 
@@ -121,7 +144,10 @@ class PromotionController
         $p = PromotionModel::where('shop_id', $shopId)->findOrFail($id);
         [$products, $categories] = $this->getProductsAndCategories($shopId);
 
+        $tenantId = $request->user()?->tenant_id ? (string) $request->user()->tenant_id : null;
+
         return Inertia::render('Ecommerce/Promotions/Form', [
+            'promotionQuota' => $this->promotionLimitService->getQuotaSummary($tenantId),
             'promotion' => [
                 'id' => $p->id,
                 'name' => $p->name,
@@ -146,6 +172,7 @@ class PromotionController
     public function update(Request $request, string $id): RedirectResponse
     {
         $shopId = $this->getShopId($request);
+        $tenantId = $request->user()?->tenant_id ? (string) $request->user()->tenant_id : null;
         $p = PromotionModel::where('shop_id', $shopId)->findOrFail($id);
 
         $validated = $request->validate([
@@ -166,6 +193,13 @@ class PromotionController
             'applicable_categories.*' => 'string',
         ]);
 
+        $this->promotionLimitService->assertCanActivateEcommercePromotion(
+            $tenantId,
+            (bool) ($validated['is_active'] ?? true),
+            (string) $validated['type'],
+            $id
+        );
+
         $p->update([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
@@ -182,6 +216,10 @@ class PromotionController
             'applicable_categories' => !empty($validated['applicable_categories']) ? $validated['applicable_categories'] : null,
         ]);
 
+        if ($tenantId !== null) {
+            InertiaBillingPayloadCache::forget($tenantId);
+        }
+
         return redirect()->route('ecommerce.promotions.index')->with('success', 'Promotion mise à jour.');
     }
 
@@ -190,6 +228,11 @@ class PromotionController
         $shopId = $this->getShopId($request);
         $p = PromotionModel::where('shop_id', $shopId)->findOrFail($id);
         $p->delete();
+        $tenantId = $request->user()?->tenant_id ? (string) $request->user()->tenant_id : null;
+        if ($tenantId !== null) {
+            InertiaBillingPayloadCache::forget($tenantId);
+        }
+
         return redirect()->route('ecommerce.promotions.index')->with('success', 'Promotion supprimée.');
     }
 }

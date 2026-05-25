@@ -16,7 +16,8 @@ import {
   FileText,
   Crown,
   Info,
-  AlertCircle
+  AlertCircle,
+  Gift
 } from 'lucide-react';
 
 export default function SettingsIndex({ auth, settings, permissions }) {
@@ -209,6 +210,35 @@ export default function SettingsIndex({ auth, settings, permissions }) {
                                     </div>
                                 </div>
                             </Modal>
+
+                            {/* Programme fidélité */}
+                            <Card className="bg-white dark:bg-gray-800 lg:col-span-2">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+                                        <Gift className="h-5 w-5" />
+                                        Programme fidélité
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        Points, cartes clients, niveaux Bronze à VIP — commerce, pharmacie et quincaillerie.
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        <Link
+                                            href={route('loyalty.settings.index')}
+                                            className="inline-flex h-10 items-center justify-center rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-4 text-sm font-medium"
+                                        >
+                                            Configurer la fidélité
+                                        </Link>
+                                        <Link
+                                            href={route('loyalty.reports.index')}
+                                            className="inline-flex h-10 items-center justify-center rounded-lg border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 px-4 text-sm font-medium hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+                                        >
+                                            Rapports fidélité
+                                        </Link>
+                                    </div>
+                                </CardContent>
+                            </Card>
 
                             {/* Identité entreprise */}
                             <Card className="bg-white dark:bg-gray-800">

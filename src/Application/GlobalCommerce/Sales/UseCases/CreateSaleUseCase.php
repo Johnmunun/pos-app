@@ -78,6 +78,11 @@ final class CreateSaleUseCase
             throw new \InvalidArgumentException('La vente doit contenir au moins une ligne avec une quantité > 0.');
         }
 
+        $loyaltyDiscount = max(0, round((float) $dto->loyaltyDiscountAmount, 2));
+        if ($loyaltyDiscount > 0) {
+            $totalAmount = round(max(0, $totalAmount - $loyaltyDiscount), 2);
+        }
+
         $sale = Sale::create(
             $dto->shopId,
             round($totalAmount, 2),

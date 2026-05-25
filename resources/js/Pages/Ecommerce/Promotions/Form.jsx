@@ -8,9 +8,12 @@ import { Textarea } from '@/Components/ui/textarea';
 import { ArrowLeft, Percent } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Drawer from '@/Components/Drawer';
+import PromotionQuotaBanner from '@/Components/Billing/PromotionQuotaBanner';
 
-export default function EcommercePromotionsForm({ promotion, products = [], categories = [] }) {
+export default function EcommercePromotionsForm({ promotion, products = [], categories = [], promotionQuota }) {
     const isEdit = !!promotion?.id;
+    const campaignsAtLimit = promotionQuota?.campaigns?.at_limit && !isEdit;
+    const advancedEnabled = promotionQuota?.advanced_enabled !== false;
 
     const { data, setData, post, put, processing, errors } = useForm({
         name: promotion?.name ?? '',
@@ -39,6 +42,16 @@ export default function EcommercePromotionsForm({ promotion, products = [], cate
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (campaignsAtLimit && data.is_active) {
+            toast.error(
+                `Votre plan actuel limite les promotions actives à ${promotionQuota?.campaigns?.limit ?? '—'}. Veuillez mettre à niveau votre abonnement.`,
+            );
+            return;
+        }
+        if (!advancedEnabled && ['buy_x_get_y', 'free_shipping'].includes(data.type)) {
+            toast.error('Ce type de promotion nécessite un plan supérieur.');
+            return;
+        }
         const payload = {
             ...data,
             discount_value: data.discount_value === '' ? null : parseFloat(data.discount_value),
@@ -52,12 +65,18 @@ export default function EcommercePromotionsForm({ promotion, products = [], cate
         if (isEdit) {
             router.put(route('ecommerce.promotions.update', promotion.id), payload, {
                 onSuccess: () => toast.success('Promotion mise à jour'),
-                onError: () => toast.error('Erreur'),
+                onError: (errs) => {
+                    const msg = errs?.message || (errs && Object.values(errs)[0]);
+                    toast.error(msg ? String(msg) : 'Erreur');
+                },
             });
         } else {
             router.post(route('ecommerce.promotions.store'), payload, {
                 onSuccess: () => toast.success('Promotion créée'),
-                onError: () => toast.error('Erreur'),
+                onError: (errs) => {
+                    const msg = errs?.message || (errs && Object.values(errs)[0]);
+                    toast.error(msg ? String(msg) : 'Erreur');
+                },
             });
         }
     };
@@ -96,6 +115,7 @@ export default function EcommercePromotionsForm({ promotion, products = [], cate
                 size="lg"
             >
                 <form onSubmit={handleSubmit}>
+                    <PromotionQuotaBanner quota={promotionQuota} mode="campaigns" />
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
@@ -133,8 +153,12 @@ export default function EcommercePromotionsForm({ promotion, products = [], cate
                                 >
                                     <option value="percentage">Pourcentage</option>
                                     <option value="fixed_amount">Montant fixe</option>
-                                    <option value="buy_x_get_y">Achat X obtenir Y</option>
-                                    <option value="free_shipping">Livraison gratuite</option>
+                                    <option value="buy_x_get_y" disabled={!advancedEnabled}>
+                                        Achat X obtenir Y{!advancedEnabled ? ' (plan supérieur)' : ''}
+                                    </option>
+                                    <option value="free_shipping" disabled={!advancedEnabled}>
+                                        Livraison gratuite{!advancedEnabled ? ' (plan supérieur)' : ''}
+                                    </option>
                                 </select>
                             </div>
                             {showDiscountValue && (

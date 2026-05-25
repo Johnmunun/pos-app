@@ -15,7 +15,9 @@ use Src\Application\GlobalCommerce\Inventory\DTO\UpdateProductDTO;
 use Src\Application\GlobalCommerce\Inventory\UseCases\CreateProductUseCase;
 use Src\Application\GlobalCommerce\Inventory\UseCases\UpdateProductUseCase;
 use Src\Application\GlobalCommerce\Inventory\UseCases\DeleteProductUseCase;
+use App\Support\InertiaBillingPayloadCache;
 use Src\Application\Billing\Services\FeatureLimitService;
+use Src\Application\Billing\Services\PromotionLimitService;
 use Src\Infrastructure\Ecommerce\Http\Concerns\ResolvesEcommerceInventoryScope;
 
 class ProductController
@@ -30,6 +32,7 @@ class ProductController
         private readonly UpdateProductUseCase $updateProductUseCase,
         private readonly DeleteProductUseCase $deleteProductUseCase,
         private readonly FeatureLimitService $featureLimitService,
+        private readonly PromotionLimitService $promotionLimitService,
     ) {}
 
     public function index(Request $request): Response
@@ -249,7 +252,10 @@ class ProductController
                 $extra['min_wholesale_price_amount'] = (float) $validated['min_wholesale_price'];
             }
             if (array_key_exists('discount_percent', $validated) && $validated['discount_percent'] !== null) {
-                $extra['discount_percent'] = (float) $validated['discount_percent'];
+                $discount = (float) $validated['discount_percent'];
+                $tenantId = $user->tenant_id !== null ? (string) $user->tenant_id : null;
+                $this->promotionLimitService->assertCanSetProductPromotion($tenantId, $discount);
+                $extra['discount_percent'] = $discount;
             }
             $extra['price_non_negotiable'] = (bool) ($validated['price_non_negotiable'] ?? false);
             if (array_key_exists('product_type', $validated)) {
@@ -456,7 +462,10 @@ class ProductController
                 $extra['min_wholesale_price_amount'] = (float) $validated['min_wholesale_price'];
             }
             if (array_key_exists('discount_percent', $validated) && $validated['discount_percent'] !== null) {
-                $extra['discount_percent'] = (float) $validated['discount_percent'];
+                $discount = (float) $validated['discount_percent'];
+                $tenantId = $request->user()?->tenant_id ? (string) $request->user()->tenant_id : null;
+                $this->promotionLimitService->assertCanSetProductPromotion($tenantId, $discount, $id);
+                $extra['discount_percent'] = $discount;
             }
             $extra['price_non_negotiable'] = (bool) ($validated['price_non_negotiable'] ?? $model->price_non_negotiable);
             if (array_key_exists('product_type', $validated)) {

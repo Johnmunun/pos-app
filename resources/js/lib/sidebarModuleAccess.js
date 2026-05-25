@@ -54,3 +54,32 @@ export function hasItemPermission(permissions, isRoot, itemPermission) {
         .filter(Boolean);
     return perms.some((p) => permissions.includes(p));
 }
+
+/**
+ * Bouton « Prévisualiser la boutique » : uniquement module E-commerce (pas Commerce POS / pharmacie / quincaillerie).
+ */
+export function canShowEcommerceStorefrontPreview({
+    permissions,
+    tenantSector,
+    isRoot,
+    url,
+    planFeatures = {},
+}) {
+    if (planFeatures.ecommerce_module === false) {
+        return false;
+    }
+
+    if (!hasItemPermission(permissions, isRoot, 'ecommerce.catalog.view|ecommerce.view|module.ecommerce')) {
+        return false;
+    }
+
+    const onEcommerceContext =
+        tenantSector === 'ecommerce'
+        || (typeof url === 'string' && url.startsWith('/ecommerce'));
+
+    if (!onEcommerceContext) {
+        return false;
+    }
+
+    return hasEcommerceModuleAccess({ permissions, tenantSector, isRoot, url });
+}

@@ -13,6 +13,9 @@ export default function CommerceProductDrawer({ isOpen, onClose, product = null,
     const { props } = usePage();
     const shopCurrency = props.shop?.currency || 'USD';
     const shop = props.shop || {};
+    const promotionQuota = props.auth?.planUsage?.promotions;
+    const productPromoAtLimit = promotionQuota?.products?.at_limit;
+    const hasExistingProductPromo = isEditing && Number(product?.discount_percent) > 0;
 
     const [imagePreview, setImagePreview] = useState(product?.image_url || null);
 
@@ -190,6 +193,18 @@ export default function CommerceProductDrawer({ isOpen, onClose, product = null,
 
     const handleSubmit = (e) => {
         e.preventDefault();
+
+        const discountPct = Number(data.discount_percent);
+        if (
+            discountPct > 0 &&
+            !hasExistingProductPromo &&
+            productPromoAtLimit
+        ) {
+            toast.error(
+                `Votre plan actuel limite les promotions à ${promotionQuota?.products?.limit ?? '—'} produit(s). Veuillez mettre à niveau votre abonnement.`,
+            );
+            return;
+        }
 
         if (isEditing) {
             post(route('commerce.products.update', product.id), {
@@ -635,13 +650,29 @@ export default function CommerceProductDrawer({ isOpen, onClose, product = null,
                             <Label htmlFor="discount_percent">
                                 Remise (%) sur le prix de vente
                             </Label>
+                            {promotionQuota?.products?.enabled && promotionQuota.products.limit != null && (
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    Promotions catalogue : {promotionQuota.products.used} /{' '}
+                                    {promotionQuota.products.limit} produit(s)
+                                    {productPromoAtLimit && !hasExistingProductPromo
+                                        ? ' — limite atteinte'
+                                        : ''}
+                                </p>
+                            )}
                             <Input
                                 id="discount_percent"
                                 type="number"
                                 step="0.01"
+                                min="0"
+                                max="100"
                                 value={data.discount_percent}
                                 onChange={(e) => setData('discount_percent', e.target.value)}
                                 className="bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+                                disabled={
+                                    productPromoAtLimit &&
+                                    !hasExistingProductPromo &&
+                                    !(Number(data.discount_percent) > 0)
+                                }
                             />
                         </div>
                         <div className="space-y-2">

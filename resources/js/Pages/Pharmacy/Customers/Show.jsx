@@ -4,6 +4,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
 import CustomerDrawer from '@/Components/Pharmacy/CustomerDrawer';
+import LoyaltyCustomerSection from '@/Components/Loyalty/LoyaltyCustomerSection';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
 import {
@@ -152,6 +153,14 @@ export default function ShowCustomer({ customer, routePrefix = 'pharmacy' }) {
                             </Button>
                         )}
                     </div>
+                </div>
+
+                <div className="mb-6">
+                    <LoyaltyCustomerSection
+                        customerId={customer.id}
+                        customerName={customer.name}
+                        routePrefix={routePrefix}
+                    />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

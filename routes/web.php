@@ -48,6 +48,9 @@ if (file_exists(__DIR__.'/logs.php')) {
 if (file_exists(__DIR__.'/crm.php')) {
     require __DIR__.'/crm.php';
 }
+if (file_exists(__DIR__.'/loyalty.php')) {
+    require __DIR__.'/loyalty.php';
+}
 
 // Icônes PWA (manifest) – générées à la volée pour éviter 404
 Route::get('/icons/{filename}', PwaIconController::class)

@@ -2,11 +2,14 @@
 
 namespace Src\Infrastructure\Pharmacy\Http\Controllers;
 
+use Carbon\Carbon;
+use Illuminate\Http\Client\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Src\Application\Common\Services\AssistantSalesProfitContextBuilder;
+use Src\Application\Common\Services\AssistantUserFacingResponse;
 use Src\Application\Pharmacy\Services\PharmacyAssistantContextService;
 
 class PharmacyAssistantController
@@ -35,7 +38,7 @@ class PharmacyAssistantController
         }
 
         $enabled = config('pharmacy_assistant.enabled', true);
-        if (!$enabled) {
+        if (! $enabled) {
             return response()->json([
                 'answer' => "L'assistant est temporairement désactivé. Contactez l'administrateur.",
                 'context_used' => false,
@@ -49,11 +52,10 @@ class PharmacyAssistantController
         $context = $this->contextService->getContext($request, $productSearch, $permissions);
 
         if (isset($context['error'])) {
-            return response()->json([
+            return $this->assistantJsonResponse([
                 'answer' => $this->fallbackForError($context['error'], $context),
                 'navigation' => null,
-                'context_used' => false,
-            ]);
+            ], false);
         }
 
         $systemPrompt = config('pharmacy_assistant.system_prompt', '');
@@ -65,21 +67,29 @@ class PharmacyAssistantController
         if ($driver === 'openai' && $apiKey !== null && $apiKey !== '') {
             try {
                 $result = $this->callOpenAI($apiKey, $systemPrompt, $context, $message, $history);
-                return response()->json([
-                    'answer' => $result['answer'],
-                    'navigation' => $result['navigation'] ?? null,
-                    'context_used' => true,
-                ]);
+
+                return $this->assistantJsonResponse($result, true);
             } catch (\Throwable $e) {
                 Log::warning('Pharmacy assistant OpenAI error', ['message' => $e->getMessage()]);
             }
         }
 
         $result = $this->fallbackAnswer($context, $message);
+
+        return $this->assistantJsonResponse($result, true);
+    }
+
+    /**
+     * @param  array{answer?: string|null, navigation?: array|null}  $result
+     */
+    private function assistantJsonResponse(array $result, bool $contextUsed): JsonResponse
+    {
+        $result = AssistantUserFacingResponse::finalize($result);
+
         return response()->json([
-            'answer' => $result['answer'],
+            'answer' => $result['answer'] ?? null,
             'navigation' => $result['navigation'] ?? null,
-            'context_used' => true,
+            'context_used' => $contextUsed,
         ]);
     }
 
@@ -93,7 +103,7 @@ class PharmacyAssistantController
             if ($pos !== false) {
                 $rest = trim(mb_substr($message, $pos + mb_strlen($p)));
                 $candidate = preg_split('/\s+/', $rest, 2, PREG_SPLIT_NO_EMPTY)[0] ?? '';
-                if ($candidate !== '' && strlen($candidate) > 1 && !in_array(mb_strtolower($candidate), $stopWords, true)) {
+                if ($candidate !== '' && strlen($candidate) > 1 && ! in_array(mb_strtolower($candidate), $stopWords, true)) {
                     return $candidate;
                 }
             }
@@ -101,25 +111,26 @@ class PharmacyAssistantController
         $words = preg_split('/\s+/', trim($message), -1, PREG_SPLIT_NO_EMPTY);
         foreach ($words as $w) {
             $wClean = preg_replace('/[^\p{L}\p{N}-]/u', '', $w);
-            if (strlen($wClean) > 2 && !in_array(mb_strtolower($wClean), $stopWords, true)) {
+            if (strlen($wClean) > 2 && ! in_array(mb_strtolower($wClean), $stopWords, true)) {
                 return $wClean;
             }
         }
+
         return null;
     }
 
     /**
-     * @param array<int, array{role: string, content: string}> $history
+     * @param  array<int, array{role: string, content: string}>  $history
      * @return array<int, array{role: string, content: string}>
      */
     private function normalizeHistory(mixed $history): array
     {
-        if (!is_array($history)) {
+        if (! is_array($history)) {
             return [];
         }
         $out = [];
         foreach ($history as $turn) {
-            if (!is_array($turn)) {
+            if (! is_array($turn)) {
                 continue;
             }
             $role = ($turn['role'] ?? '') === 'user' ? 'user' : 'assistant';
@@ -137,16 +148,16 @@ class PharmacyAssistantController
     }
 
     /**
-     * @param array<int, array{role: string, content: string}> $history
+     * @param  array<int, array{role: string, content: string}>  $history
      * @return array{answer: string|null, navigation: array|null}
      */
     private function callOpenAI(string $apiKey, string $systemPrompt, array $context, string $userMessage, array $history): array
     {
         $contextJson = json_encode($context, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        $userContent = "Contexte boutique (JSON — source unique pour chiffres, listes et routes ; ne rien inventer):\n"
-            . $contextJson
-            . "\n\nQuestion actuelle: "
-            . $userMessage;
+        $userContent = "Contexte boutique (JSON — source unique pour chiffres et listes ; les routes navigation sont internes, ne jamais les afficher à l'utilisateur):\n"
+            .$contextJson
+            ."\n\nQuestion actuelle: "
+            .$userMessage;
 
         $chatMessages = [['role' => 'system', 'content' => $systemPrompt]];
         foreach ($history as $turn) {
@@ -157,7 +168,7 @@ class PharmacyAssistantController
         }
         $chatMessages[] = ['role' => 'user', 'content' => $userContent];
 
-        /** @var \Illuminate\Http\Client\Response $response */
+        /** @var Response $response */
         $response = Http::withToken($apiKey)
             ->timeout(15)
             ->post('https://api.openai.com/v1/chat/completions', [
@@ -167,8 +178,8 @@ class PharmacyAssistantController
                 'temperature' => 0.3,
             ]);
 
-        if (!$response->successful()) {
-            throw new \RuntimeException('OpenAI API error: ' . $response->body());
+        if (! $response->successful()) {
+            throw new \RuntimeException('OpenAI API error: '.$response->body());
         }
 
         $data = $response->json();
@@ -177,11 +188,13 @@ class PharmacyAssistantController
         if ($navigation !== null) {
             return ['answer' => null, 'navigation' => $navigation];
         }
+
         return ['answer' => $content ?: 'Je n\'ai pas pu générer de réponse.', 'navigation' => null];
     }
 
     /**
      * Parse la réponse LLM : si c'est un JSON avec type "navigation" et route autorisée, retourne l'objet.
+     *
      * @return array{type: string, label: string, route: string, method: string}|null
      */
     private function parseNavigationResponse(string $content, array $context): ?array
@@ -195,13 +208,14 @@ class PharmacyAssistantController
             $content = trim($m[1]);
         }
         $json = json_decode($content, true);
-        if (!is_array($json) || ($json['type'] ?? '') !== 'navigation') {
+        if (! is_array($json) || ($json['type'] ?? '') !== 'navigation') {
             return null;
         }
         $route = $json['route'] ?? '';
-        if ($route === '' || !in_array($route, $allowedRoutes, true)) {
+        if ($route === '' || ! in_array($route, $allowedRoutes, true)) {
             return null;
         }
+
         return [
             'type' => 'navigation',
             'label' => $json['label'] ?? 'Aller',
@@ -217,9 +231,10 @@ class PharmacyAssistantController
         }
         if ($error === 'no_shop') {
             $nav = $context['navigation'] ?? [];
-            $lines = array_map(fn ($n) => $n['label'] . ' : ' . $n['path'], $nav);
-            return 'Aucune boutique associée. Vous pouvez accéder aux modules : ' . implode(', ', array_slice($lines, 0, 5)) . '.';
+
+            return 'Aucune boutique associée. '.AssistantUserFacingResponse::formatAccessibleModulesList($nav, 5, 'disponibles');
         }
+
         return 'Données temporairement indisponibles.';
     }
 
@@ -252,6 +267,7 @@ class PharmacyAssistantController
             } else {
                 $hello = 'Bonsoir';
             }
+
             return sprintf("%s %s,\n\n%s", $hello, $userName, $body);
         };
 
@@ -272,13 +288,14 @@ class PharmacyAssistantController
                 }
             }
             $diff = $todaySales - $yesterdaySales;
-            $trend = $diff > 0 ? "📈 Une hausse de {$diff} vente(s) par rapport à hier." : ($diff < 0 ? "📉 Une baisse de " . abs($diff) . " vente(s) par rapport à hier." : "➖ Volume stable par rapport à hier.");
+            $trend = $diff > 0 ? "📈 Une hausse de {$diff} vente(s) par rapport à hier." : ($diff < 0 ? '📉 Une baisse de '.abs($diff).' vente(s) par rapport à hier.' : '➖ Volume stable par rapport à hier.');
             $body = sprintf(
                 "Voici la comparaison des ventes :\n\n🧾 Aujourd'hui : %d vente(s).\n📅 Hier : %d vente(s).\n\n%s\n\nSouhaitez-vous voir le détail par jour sur les 7 derniers jours ?",
                 $todaySales,
                 $yesterdaySales,
                 $trend
             );
+
             return ['answer' => $greet($body), 'navigation' => null];
         }
 
@@ -287,8 +304,9 @@ class PharmacyAssistantController
             if (empty($expiringSoonProducts)) {
                 return ['answer' => "Aucun produit n'expire prochainement.", 'navigation' => null];
             }
-            $lines = array_map(fn ($p) => $p['name'] . ' (' . ($p['code'] ?: '—') . ') — expire dans ' . ($p['days_remaining'] ?? 0) . ' jour(s), ' . ($p['expiration_date'] ?? ''), $expiringSoonProducts);
-            return ['answer' => "Produits qui expirent bientôt : " . implode('. ', $lines), 'navigation' => null];
+            $lines = array_map(fn ($p) => $p['name'].' ('.($p['code'] ?: '—').') — expire dans '.($p['days_remaining'] ?? 0).' jour(s), '.($p['expiration_date'] ?? ''), $expiringSoonProducts);
+
+            return ['answer' => 'Produits qui expirent bientôt : '.implode('. ', $lines), 'navigation' => null];
         }
 
         // Revenu total depuis le début / total boutique
@@ -301,6 +319,7 @@ class PharmacyAssistantController
                 number_format($rev, 0, ',', ' '),
                 $currency
             );
+
             return ['answer' => $greet($body), 'navigation' => null];
         }
 
@@ -311,11 +330,12 @@ class PharmacyAssistantController
                 "Voici l'information sur vos clients :\n\n👥 Nombre total de clients actifs : %d\n\nSouhaitez-vous que je vous affiche la liste des clients en retard de paiement ou ceux créés récemment ?",
                 $totalCustomers
             );
+
             return ['answer' => $greet($body), 'navigation' => null];
         }
 
         // Ventes aujourd'hui
-        if (str_contains($lower, 'vente') && (str_contains($lower, 'aujourd') || (str_contains($lower, 'jour') && !str_contains($lower, 'hier') && !str_contains($lower, 'début') && !str_contains($lower, '20') && !str_contains($lower, 'février')))) {
+        if (str_contains($lower, 'vente') && (str_contains($lower, 'aujourd') || (str_contains($lower, 'jour') && ! str_contains($lower, 'hier') && ! str_contains($lower, 'début') && ! str_contains($lower, '20') && ! str_contains($lower, 'février')))) {
             $n = $sales['total_sales'] ?? 0;
             $rev = $sales['total_revenue'] ?? 0;
             $body = sprintf(
@@ -324,6 +344,7 @@ class PharmacyAssistantController
                 number_format($rev, 0, ',', ' '),
                 $currency
             );
+
             return ['answer' => $greet($body), 'navigation' => null];
         }
 
@@ -334,7 +355,7 @@ class PharmacyAssistantController
                 if (isset($d['date']) && (str_starts_with((string) $d['date'], $yesterday) || $d['date'] === $yesterday)) {
                     $rev = $d['total_revenue'] ?? 0;
                     $cnt = $d['total_sales'] ?? 0;
-                    $dateFr = \Carbon\Carbon::parse($yesterday)->locale('fr_FR')->isoFormat('D MMMM YYYY');
+                    $dateFr = Carbon::parse($yesterday)->locale('fr_FR')->isoFormat('D MMMM YYYY');
                     $body = sprintf(
                         "Voici les ventes d'hier (%s) :\n\n🧾 Nombre de ventes : %d\n💰 Montant total : %s %s\n\nSouhaitez-vous comparer hier avec aujourd'hui ou voir une autre date ?",
                         $dateFr,
@@ -342,14 +363,16 @@ class PharmacyAssistantController
                         number_format($rev, 0, ',', ' '),
                         $currency
                     );
+
                     return ['answer' => $greet($body), 'navigation' => null];
                 }
             }
-            $dateFr = \Carbon\Carbon::parse($yesterday)->locale('fr_FR')->isoFormat('D MMMM YYYY');
+            $dateFr = Carbon::parse($yesterday)->locale('fr_FR')->isoFormat('D MMMM YYYY');
             $body = sprintf(
                 "Pour hier (%s), aucune vente n'est enregistrée dans les données disponibles.\n\nSouhaitez-vous que je vous affiche les ventes d'un autre jour ou de la semaine en cours ?",
                 $dateFr
             );
+
             return ['answer' => $greet($body), 'navigation' => null];
         }
 
@@ -368,7 +391,7 @@ class PharmacyAssistantController
             if ($dateMatch !== null) {
                 $rev = $dateMatch['total_revenue'] ?? 0;
                 $cnt = $dateMatch['total_sales'] ?? 0;
-                $dateFr = \Carbon\Carbon::parse($dateMatch['date'])->locale('fr_FR')->isoFormat('D MMMM YYYY');
+                $dateFr = Carbon::parse($dateMatch['date'])->locale('fr_FR')->isoFormat('D MMMM YYYY');
                 $body = sprintf(
                     "Pour le %s :\n\n🧾 Nombre de ventes : %d\n💰 Montant total : %s %s\n\nSouhaitez-vous comparer cette date avec aujourd'hui ou voir une autre période ?",
                     $dateFr,
@@ -376,39 +399,45 @@ class PharmacyAssistantController
                     number_format($rev, 0, ',', ' '),
                     $currency
                 );
+
                 return ['answer' => $greet($body), 'navigation' => null];
             }
-            $dateFr = $day . ' février ' . $year;
+            $dateFr = $day.' février '.$year;
             $body = sprintf(
                 "Les données pour le %s ne sont pas disponibles dans le contexte actuel (seuls les 30 derniers jours sont chargés côté assistant).\n\nVous pouvez consulter les rapports détaillés dans le module Rapports pour plus d'historique.",
                 $dateFr
             );
+
             return ['answer' => $greet($body), 'navigation' => null];
         }
 
         // Quels produits en rupture ? (liste)
         if ((str_contains($lower, 'rupture') || str_contains($lower, 'en rupture')) && (str_contains($lower, 'produit') || str_contains($lower, 'quel') || str_contains($lower, 'qui'))) {
-            if (!empty($productsOutOfStock)) {
-                $list = array_map(fn ($p) => $p['name'] . ' (' . ($p['code'] ?: '—') . ')', $productsOutOfStock);
+            if (! empty($productsOutOfStock)) {
+                $list = array_map(fn ($p) => $p['name'].' ('.($p['code'] ?: '—').')', $productsOutOfStock);
                 $body = "Voici les produits actuellement en rupture de stock :\n\n";
-                $body .= '📦 ' . implode("\n📦 ", $list);
+                $body .= '📦 '.implode("\n📦 ", $list);
                 $body .= "\n\nSouhaitez-vous voir les produits en stock bas ou les produits qui expirent bientôt ?";
+
                 return ['answer' => $greet($body), 'navigation' => null];
             }
             $body = "Actuellement, aucun produit n'est en rupture de stock.\n\nVous pouvez me demander la liste des produits en stock bas ou des produits qui expirent bientôt.";
+
             return ['answer' => $greet($body), 'navigation' => null];
         }
 
         // Quels produits en stock bas ? (liste)
         if (str_contains($lower, 'stock bas') && (str_contains($lower, 'produit') || str_contains($lower, 'quel') || str_contains($lower, 'liste'))) {
-            if (!empty($productsLowStock)) {
-                $list = array_map(fn ($p) => $p['name'] . ' (stock ' . $p['stock'] . ', min ' . ($p['minimum_stock'] ?? 0) . ')', $productsLowStock);
+            if (! empty($productsLowStock)) {
+                $list = array_map(fn ($p) => $p['name'].' (stock '.$p['stock'].', min '.($p['minimum_stock'] ?? 0).')', $productsLowStock);
                 $body = "Voici les produits en stock bas :\n\n";
-                $body .= '⚠️ ' . implode("\n⚠️ ", $list);
+                $body .= '⚠️ '.implode("\n⚠️ ", $list);
                 $body .= "\n\nVous pouvez demander la liste des produits déjà en rupture ou la valeur totale du stock.";
+
                 return ['answer' => $greet($body), 'navigation' => null];
             }
             $body = "Aucun produit n'est actuellement signalé en stock bas.\n\nSouhaitez-vous que je vous donne les produits en rupture ou un résumé global du stock ?";
+
             return ['answer' => $greet($body), 'navigation' => null];
         }
 
@@ -420,6 +449,7 @@ class PharmacyAssistantController
                 $low,
                 $out
             );
+
             return ['answer' => $greet($body), 'navigation' => null];
         }
 
@@ -457,13 +487,14 @@ class PharmacyAssistantController
 
             if (empty($items)) {
                 $body = "D'après les informations disponibles, aucun produit n'est actuellement en rupture ou en stock bas. Il n'est donc pas nécessaire de générer un bon d'achat pour le moment.\n\nVous pouvez me demander les produits en rupture ou en stock bas pour vérifier l'état actuel du stock.";
+
                 return ['answer' => $greet($body), 'navigation' => null];
             }
 
             // Limiter à 15 lignes pour garder la réponse lisible
             $items = array_slice($items, 0, 15);
             $lines = array_map(
-                fn (array $i) => sprintf("💊 %s (code %s) — quantité à commander suggérée : %d", $i['name'], $i['code'] ?: '—', $i['qty']),
+                fn (array $i) => sprintf('💊 %s (code %s) — quantité à commander suggérée : %d', $i['name'], $i['code'] ?: '—', $i['qty']),
                 $items
             );
 
@@ -480,17 +511,20 @@ class PharmacyAssistantController
             if ($match !== null) {
                 return ['answer' => null, 'navigation' => $match];
             }
-            $list = array_slice(array_map(fn ($n) => $n['label'] . ' (' . $n['path'] . ')', $nav), 0, 10);
-            return ['answer' => 'Modules accessibles : ' . implode('. ', $list), 'navigation' => null];
+
+            return [
+                'answer' => AssistantUserFacingResponse::formatAccessibleModulesList($nav, 10, 'de la pharmacie'),
+                'navigation' => null,
+            ];
         }
 
-        if (!empty($products)) {
+        if (! empty($products)) {
             $p = $products[0];
             $stockQty = $p['stock_quantity'] ?? $p['stock'] ?? 0;
             $sellingPrice = $p['selling_price'] ?? $p['sale_price'] ?? 0;
             $curr = $p['currency'] ?? $currency;
             if (count($products) === 1) {
-                $exp = isset($p['expiration_date']) && $p['expiration_date'] ? "\nExpiration la plus proche : " . $p['expiration_date'] . '.' : '';
+                $exp = isset($p['expiration_date']) && $p['expiration_date'] ? "\nExpiration la plus proche : ".$p['expiration_date'].'.' : '';
                 $cost = $p['cost_price'] ?? null;
                 $marginBlock = '';
                 if ($cost !== null) {
@@ -515,7 +549,7 @@ class PharmacyAssistantController
                         fn ($mv) => sprintf('- %s : %s %s (%s)', $mv['date'] ?? '', $mv['type'] ?? '', $mv['quantity'] ?? '', $mv['reference'] ?? '—'),
                         array_slice($movements, 0, 5)
                     );
-                    $movBlock = "\n\nDerniers mouvements de stock :\n" . implode("\n", $movLines);
+                    $movBlock = "\n\nDerniers mouvements de stock :\n".implode("\n", $movLines);
                 }
                 $body = sprintf(
                     "Voici les informations sur le produit demandé :\n\nNom : %s (code %s)\nStock actuel : %d %s\nPrix de vente : %s %s\nStock minimum : %d%s%s%s",
@@ -530,11 +564,13 @@ class PharmacyAssistantController
                     $marginBlock,
                     $movBlock
                 );
+
                 return ['answer' => $greet($body), 'navigation' => null];
             }
-            $names = array_map(fn ($x) => $x['name'] . ' (' . ($x['code'] ?? '') . ')', array_slice($products, 0, 5));
+            $names = array_map(fn ($x) => $x['name'].' ('.($x['code'] ?? '').')', array_slice($products, 0, 5));
             $body = "Plusieurs produits correspondent à votre demande. Lequel souhaitez-vous consulter plus en détail ?\n\n";
-            $body .= '💊 ' . implode("\n💊 ", $names);
+            $body .= '💊 '.implode("\n💊 ", $names);
+
             return ['answer' => $greet($body), 'navigation' => null];
         }
 
@@ -549,16 +585,19 @@ class PharmacyAssistantController
                 $currency,
                 $exp
             );
+
             return ['answer' => $greet($body), 'navigation' => null];
         }
 
         $body = "Je ne trouve pas cette information dans les données actuellement chargées.\n\nVous pouvez par exemple me demander :\n- les ventes d'aujourd'hui ou d'hier,\n- les produits en rupture ou en stock bas,\n- les produits qui expirent bientôt,\n- la valeur totale du stock,\n- ou le détail d'un produit (nom ou code).";
+
         return ['answer' => $greet($body), 'navigation' => null];
     }
 
     /**
      * Pour une question de type "où est la page X", retourne un payload navigation si une entrée correspond.
-     * @param array<int, array{name: string, route: string, label?: string, path?: string}> $nav
+     *
+     * @param  array<int, array{name: string, route: string, label?: string, path?: string}>  $nav
      * @return array{type: string, label: string, route: string, method: string}|null
      */
     private function matchNavigationIntent(string $lowerMessage, array $nav): ?array
@@ -580,7 +619,7 @@ class PharmacyAssistantController
                 if (str_contains($lowerMessage, $term)) {
                     $wantedRoute = $routeByKey[$key];
                     foreach ($nav as $n) {
-                        $route = $n['route'] ?? $n['path'] ?? '';
+                        $route = $n['route'] ?? '';
                         if ($route === $wantedRoute) {
                             return [
                                 'type' => 'navigation',
@@ -590,10 +629,12 @@ class PharmacyAssistantController
                             ];
                         }
                     }
+
                     return null;
                 }
             }
         }
+
         return null;
     }
 }

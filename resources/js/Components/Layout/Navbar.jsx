@@ -4,6 +4,7 @@ import { toast } from 'react-hot-toast';
 import Dropdown from '@/Components/Dropdown';
 import GlobalSearch from '@/Components/GlobalSearch';
 import DepotSelector from '@/Components/DepotSelector';
+import { canShowEcommerceStorefrontPreview } from '@/lib/sidebarModuleAccess';
 
 /**
  * Component: Navbar
@@ -20,6 +21,9 @@ import DepotSelector from '@/Components/DepotSelector';
 export default function Navbar({ user, permissions, onMenuClick, isImpersonating = false }) {
     const props = usePage().props;
     const auth = props.auth;
+    const tenantSector = auth?.tenantSector ?? null;
+    const planFeatures = props.planFeatures ?? {};
+    const currentUrl = props.url ?? '';
     // Dépôts : auth (partagé par HandleInertiaRequests) ou fallback sur les props de la page (module Hardware)
     const depotsList = (auth?.depots?.length ? auth.depots : props.depots) ?? [];
     const depots = Array.isArray(depotsList) ? depotsList : [];
@@ -45,6 +49,14 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
     const [showNotifications, setShowNotifications] = useState(false);
 
     const isRoot = user?.type === 'ROOT' || permissions.includes('admin.dashboard.view');
+
+    const showStorefrontPreview = canShowEcommerceStorefrontPreview({
+        permissions,
+        tenantSector,
+        isRoot: user?.type === 'ROOT',
+        url: currentUrl,
+        planFeatures,
+    });
 
     const fetchNotifications = async () => {
         if (!isRoot) return;
@@ -165,8 +177,8 @@ export default function Navbar({ user, permissions, onMenuClick, isImpersonating
                         </div>
                     )}
 
-                    {/* Prévisualisation boutique e-commerce */}
-                    {(permissions.includes('module.ecommerce') || permissions.some((p) => typeof p === 'string' && p.startsWith('ecommerce.'))) && (
+                    {/* Prévisualisation boutique — module E-commerce uniquement */}
+                    {showStorefrontPreview && (
                         <Link
                             href={route('ecommerce.storefront.index')}
                             target="_blank"
