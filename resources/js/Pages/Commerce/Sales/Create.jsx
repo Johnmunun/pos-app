@@ -1048,7 +1048,7 @@ export default function CommerceSalesCreate({
                                 <select
                                     value={currency}
                                     onChange={onDisplayCurrencyChange}
-                                    className="h-9 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 text-sm font-medium px-3 w-full sm:w-auto min-w-0 sm:min-w-[100px]"
+                                    className="pos-sale-create__currency-desktop hidden lg:block h-9 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 text-sm font-medium px-3 w-full sm:w-auto min-w-0 sm:min-w-[100px]"
                                     title="Devise d'affichage (conversion selon le taux configuré)"
                                 >
                                     {availableCurrencies.map((c) => (
@@ -1129,8 +1129,23 @@ export default function CommerceSalesCreate({
                                 <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 font-mono text-[10px]">+/-</kbd>{' '}
                                 qté
                             </span>
-                            <div className="w-full sm:flex-1 min-w-0 relative flex items-center gap-2">
-                                <div className="flex-1 relative">
+                            <div className="pos-sale-create__search-row w-full sm:flex-1 min-w-0 relative flex items-center gap-2">
+                                {availableCurrencies.length >= 1 && (
+                                    <select
+                                        value={currency}
+                                        onChange={onDisplayCurrencyChange}
+                                        className="pos-sale-create__currency-mobile lg:hidden h-9 shrink-0 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 text-sm font-medium px-2"
+                                        title="Devise d'affichage"
+                                        aria-label="Devise d'affichage"
+                                    >
+                                        {availableCurrencies.map((c) => (
+                                            <option key={c.code} value={c.code}>
+                                                {c.code}
+                                            </option>
+                                        ))}
+                                    </select>
+                                )}
+                                <div className="flex-1 relative min-w-0">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                                     <Input
                                         ref={searchInputRef}
