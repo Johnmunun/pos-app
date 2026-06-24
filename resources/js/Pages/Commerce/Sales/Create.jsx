@@ -33,6 +33,8 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { formatCurrency, getCurrencySymbol } from '@/lib/currency';
 import PosSaleCreateMobileCheckout from '@/Components/Pos/PosSaleCreateMobileCheckout';
+import PosSaleCreateMobileCartDrawer from '@/Components/Pos/PosSaleCreateMobileCartDrawer';
+import PosSaleCreatePaymentModal from '@/Components/Pos/PosSaleCreatePaymentModal';
 
 function QuickAddCustomerModal({ onClose, onCreated, routePrefix = 'commerce' }) {
     const [name, setName] = useState('');
@@ -207,6 +209,7 @@ export default function CommerceSalesCreate({
     const [holdOrders, setHoldOrders] = useState([]);
     const [currentOrderNumber, setCurrentOrderNumber] = useState(generateOrderNumber());
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [showMobileCart, setShowMobileCart] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState('cash');
     const [discount, setDiscount] = useState({ type: 'percent', value: 0 });
     const [taxRate, setTaxRate] = useState(0);
@@ -1058,7 +1061,7 @@ export default function CommerceSalesCreate({
                             )}
 
                             <div
-                                className="flex items-center bg-amber-50 dark:bg-amber-900/20 rounded-lg p-1 border border-amber-200 dark:border-amber-800"
+                                className="pos-sale-create__sale-mode flex items-center bg-amber-50 dark:bg-amber-900/20 rounded-lg p-1 border border-amber-200 dark:border-amber-800"
                                 title={
                                     saleMode === 'wholesale' && !canUseWholesale
                                         ? 'Droits vente en gros requis'
@@ -1383,7 +1386,7 @@ export default function CommerceSalesCreate({
                 </div>
 
                 {/* Colonne droite - panier */}
-                <div className="pos-sale-create__cart w-full lg:w-96 lg:min-w-[22rem] lg:max-w-md bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-slate-700 flex flex-col flex-shrink-0 min-h-0 overflow-hidden max-lg:max-h-[min(46dvh,440px)] lg:h-full lg:max-h-none">
+                <div className="pos-sale-create__cart w-full lg:w-96 lg:min-w-[22rem] lg:max-w-md bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-slate-700 flex flex-col flex-shrink-0 min-h-0 overflow-hidden lg:h-full lg:max-h-none">
                     {/* En-tête panier */}
                     <div className="pos-sale-create__cart-header shrink-0 p-4 border-b border-gray-200 dark:border-slate-700">
                         <div className="flex items-center gap-2 mb-2">
@@ -1722,10 +1725,30 @@ export default function CommerceSalesCreate({
                     </div>
                 </div>
 
+                {!showPaymentModal && (
                 <PosSaleCreateMobileCheckout
                     cartLength={cart.length}
                     totalLabel={fmt(total)}
                     disabled={submitting || hasCartStockExceeded}
+                    onCheckout={() => setShowMobileCart(true)}
+                />
+                )}
+
+                <PosSaleCreateMobileCartDrawer
+                    open={showMobileCart && !showPaymentModal}
+                    onClose={() => setShowMobileCart(false)}
+                    cart={cart}
+                    selectedCartIndex={selectedCartIndex}
+                    onSelectCartIndex={setSelectedCartIndex}
+                    onUpdateQuantity={updateQuantity}
+                    onRemoveFromCart={removeFromCart}
+                    fmt={(amount) => fmt(amount)}
+                    formatCartLine={(item) =>
+                        fmt(convertToSelected(item.price * item.quantity, item.price_currency ?? defaultCurrency))
+                    }
+                    total={total}
+                    hasCartStockExceeded={hasCartStockExceeded}
+                    submitting={submitting}
                     onCheckout={() => setShowPaymentModal(true)}
                 />
             </div>
@@ -1736,46 +1759,49 @@ export default function CommerceSalesCreate({
                 onScan={(code) => processScan(code)}
             />
 
-            {/* Modal paiement */}
-            {showPaymentModal && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-                    onKeyDown={(e) => {
-                        if (e.key === 'Escape') {
-                            setShowPaymentModal(false);
+            <PosSaleCreatePaymentModal
+                open={showPaymentModal}
+                onClose={() => setShowPaymentModal(false)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                        setShowPaymentModal(false);
+                        e.preventDefault();
+                    }
+                    if (e.key === 'F2') {
+                        setPaidAmount(String(Math.round(total * 100) / 100));
+                        setTimeout(() => paidAmountInputRef.current?.focus(), 0);
+                        e.preventDefault();
+                    }
+                    if (e.key === 'Enter' && !e.target.closest('button') && !e.target.closest('select')) {
+                        if (paid >= total && canFinalize) {
+                            handleFinalize();
                             e.preventDefault();
                         }
-                        if (e.key === 'F2') {
-                            setPaidAmount(String(Math.round(total * 100) / 100));
-                            setTimeout(() => paidAmountInputRef.current?.focus(), 0);
-                            e.preventDefault();
-                        }
-                        if (e.key === 'Enter' && !e.target.closest('button') && !e.target.closest('select')) {
-                            if (paid >= total && canFinalize) {
-                                handleFinalize();
-                                e.preventDefault();
-                            }
-                        }
-                    }}
-                >
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md mx-4 overflow-hidden">
-                        <div className="p-6 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between gap-2">
-                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white shrink-0">
-                                Mode de paiement
-                            </h3>
-                            <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">
-                                Échap · F2 tout · Entrée valider
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() => setShowPaymentModal(false)}
-                                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 shrink-0"
-                            >
-                                <X className="h-6 w-6" />
-                            </button>
-                        </div>
-
-                        <div className="p-6 space-y-4">
+                    }
+                }}
+                footer={
+                    <div className="pos-sale-create__payment-footer-actions flex gap-3">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleSaveDraft}
+                            disabled={submitting || hasCartStockExceeded}
+                            className="flex-1"
+                        >
+                            Enregistrer brouillon
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleFinalize}
+                            disabled={submitting || !canFinalize}
+                            className="flex-1 bg-amber-500 hover:bg-amber-600 text-white"
+                        >
+                            {submitting ? 'Traitement...' : 'Valider la vente'}
+                        </Button>
+                    </div>
+                }
+            >
+                        <div className="space-y-4">
                             {/* Méthodes de paiement */}
                             <div className="grid grid-cols-3 gap-3">
                                 {[
@@ -1962,29 +1988,7 @@ export default function CommerceSalesCreate({
                                 }}
                             />
                         </div>
-
-                        <div className="p-6 bg-gray-50 dark:bg-slate-800 flex gap-3">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={handleSaveDraft}
-                                disabled={submitting || hasCartStockExceeded}
-                                className="flex-1"
-                            >
-                                Enregistrer brouillon
-                            </Button>
-                            <Button
-                                type="button"
-                                onClick={handleFinalize}
-                                disabled={submitting || !canFinalize}
-                                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white"
-                            >
-                                {submitting ? 'Traitement...' : 'Valider la vente'}
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            </PosSaleCreatePaymentModal>
 
             {/* Modal création rapide client */}
             {showAddCustomerModal && (

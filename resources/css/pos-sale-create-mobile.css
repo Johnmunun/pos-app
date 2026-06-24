@@ -1,28 +1,37 @@
 /**
- * POS vente — design mobile uniquement (≤767px).
- * Desktop / tablette (≥768px) : inchangé.
+ * POS vente — layout mobile / tablette portrait (≤1023px).
+ * Desktop (≥1024px) : inchangé (panier latéral).
  */
-/* Champ scan — visible quand prêt pour douchette USB / Bluetooth */
 .pos-sale-create__scan-input:focus {
     outline: 2px solid #0d9488;
     outline-offset: 2px;
     box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2);
 }
 
-@media (max-width: 767px) {
+/* Barre checkout fixe — masquée sur desktop */
+.pos-sale-create__mobile-checkout {
+    display: none;
+}
+
+@media (max-width: 1023px) {
     .pos-sale-create {
         --pos-accent: #0d9488;
         --pos-accent-hover: #0f766e;
         --pos-card-footer: #37474f;
-        --pos-card-footer-dark: #1e293b;
 
         height: calc(100dvh - 3.5rem) !important;
         max-height: calc(100dvh - 3.5rem) !important;
         padding-bottom: env(safe-area-inset-bottom, 0);
         -webkit-tap-highlight-color: transparent;
+        overflow-x: hidden;
     }
 
+    /* Produits = écran principal */
     .pos-sale-create__products {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        width: 100% !important;
         background: #f8fafc !important;
     }
 
@@ -30,7 +39,12 @@
         background: #0f172a !important;
     }
 
-    /* Header compact type app native */
+    /* Panier latéral masqué — remplacé par bottom sheet */
+    .pos-sale-create__cart {
+        display: none !important;
+    }
+
+    /* Header compact */
     .pos-sale-create__header {
         padding: 0.5rem 0.75rem !important;
         box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06);
@@ -38,10 +52,11 @@
 
     .pos-sale-create__header > div {
         gap: 0.5rem !important;
+        flex-wrap: wrap !important;
     }
 
-    .pos-sale-create__header a span:not(.sr-only),
-    .pos-sale-create__header .pos-sale-create__hide-mobile {
+    .pos-sale-create__header .pos-sale-create__hide-mobile,
+    .pos-sale-create__header .pos-sale-create__hide-tablet {
         display: none !important;
     }
 
@@ -49,10 +64,15 @@
         display: none !important;
     }
 
+    .pos-sale-create__header .pos-sale-create__sale-mode {
+        order: 10;
+        width: 100%;
+    }
+
     .pos-sale-create__header select {
         min-height: 2.5rem;
         font-size: 0.8125rem;
-        border-radius: 0.5rem;
+        max-width: 6rem;
     }
 
     .pos-sale-create__header input {
@@ -66,11 +86,12 @@
         background: #1e293b !important;
     }
 
-    /* Onglets catégories — style référence (soulignement teal) */
+    /* Onglets catégories — style référence */
     .pos-sale-create__categories {
         padding: 0 0.75rem !important;
         border-bottom: 1px solid #e2e8f0 !important;
         background: #fff !important;
+        -webkit-overflow-scrolling: touch;
     }
 
     .dark .pos-sale-create__categories {
@@ -80,19 +101,19 @@
 
     .pos-sale-create__categories .flex {
         gap: 0.25rem !important;
-        padding-bottom: 0 !important;
     }
 
     .pos-sale-create__categories button {
         border-radius: 0 !important;
         background: transparent !important;
-        padding: 0.625rem 0.875rem !important;
-        font-size: 0.8125rem !important;
+        padding: 0.625rem 0.75rem !important;
+        font-size: 0.75rem !important;
         font-weight: 600 !important;
-        letter-spacing: 0.02em;
+        letter-spacing: 0.03em;
         text-transform: uppercase;
         color: #64748b !important;
         border-bottom: 3px solid transparent !important;
+        min-height: 2.75rem;
     }
 
     .pos-sale-create__categories button.bg-amber-500,
@@ -107,23 +128,29 @@
         background: transparent !important;
     }
 
-    /* Derniers produits — bandeau discret */
     .pos-sale-create__recent {
         padding: 0.5rem 0.75rem !important;
     }
 
     .pos-sale-create__scroll {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
         padding: 0.5rem !important;
-        padding-bottom: 0.25rem !important;
+        -webkit-overflow-scrolling: touch;
     }
 
-    /* Grille produits — cartes image + bandeau sombre */
+    .pos-sale-create--has-cart .pos-sale-create__scroll {
+        padding-bottom: 4.75rem !important;
+    }
+
+    /* Grille produits — 3 colonnes, cartes tactiles */
     .pos-sale-create__grid {
-        gap: 0.375rem !important;
+        gap: 0.5rem !important;
         grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     }
 
     .pos-sale-create__product-card {
+        position: relative;
         display: flex !important;
         flex-direction: column !important;
         align-items: stretch !important;
@@ -133,7 +160,8 @@
         border-radius: 0.5rem !important;
         border: none !important;
         box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12) !important;
-        transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+        min-height: 7.5rem;
+        touch-action: manipulation;
     }
 
     .pos-sale-create__product-card:active:not(:disabled) {
@@ -145,6 +173,7 @@
         border-radius: 0 !important;
         aspect-ratio: 1 / 1 !important;
         background: #e2e8f0 !important;
+        min-height: 4.5rem;
     }
 
     .pos-sale-create__product-card > p {
@@ -171,7 +200,6 @@
         font-size: 0.625rem !important;
         font-weight: 500 !important;
         color: #e2e8f0 !important;
-        padding-top: 0 !important;
         padding-bottom: 0.4rem !important;
     }
 
@@ -182,91 +210,16 @@
         right: 0.25rem;
         margin: 0 !important;
         font-size: 0.5625rem !important;
-        padding: 0.125rem 0.25rem !important;
         z-index: 2;
     }
 
-    .pos-sale-create__product-card {
-        position: relative;
+    /* Liste produits — lignes tactiles */
+    .pos-sale-create__scroll .space-y-2 > button {
+        min-height: 4.5rem;
+        touch-action: manipulation;
     }
 
-    /* Panier mobile */
-    .pos-sale-create__cart {
-        max-height: min(42dvh, 380px) !important;
-        border-top: 1px solid #e2e8f0 !important;
-        box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.1) !important;
-        border-radius: 1rem 1rem 0 0 !important;
-    }
-
-    .dark .pos-sale-create__cart {
-        border-color: #334155 !important;
-        box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35) !important;
-    }
-
-    .pos-sale-create__cart-header {
-        padding: 0.625rem 0.75rem !important;
-    }
-
-    .pos-sale-create__cart-header .pos-sale-create__hide-mobile {
-        display: none !important;
-    }
-
-    .pos-sale-create__cart-scroll {
-        padding: 0.5rem 0.75rem !important;
-    }
-
-    .pos-sale-create__cart-scroll .space-y-3 > div {
-        padding: 0.625rem !important;
-        border-radius: 0.75rem !important;
-        gap: 0.625rem !important;
-    }
-
-    .pos-sale-create__cart-scroll .w-12 {
-        width: 3rem !important;
-        height: 3rem !important;
-    }
-
-    .pos-sale-create__cart-scroll button {
-        min-width: 2.25rem;
-        min-height: 2.25rem;
-    }
-
-    /* Pied panier — CTA type référence */
-    .pos-sale-create__cart-footer {
-        padding: 0.625rem 0.75rem calc(0.625rem + env(safe-area-inset-bottom, 0)) !important;
-        gap: 0.5rem !important;
-        background: #fff !important;
-    }
-
-    .dark .pos-sale-create__cart-footer {
-        background: #0f172a !important;
-    }
-
-    .pos-sale-create__total-box {
-        background: var(--pos-accent) !important;
-        border-radius: 0.75rem !important;
-        padding: 0.75rem 1rem !important;
-    }
-
-    .pos-sale-create__finalize-btn {
-        background: var(--pos-accent) !important;
-        border-radius: 0.75rem !important;
-        min-height: 3.25rem !important;
-        font-size: 1rem !important;
-        font-weight: 700 !important;
-        box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35) !important;
-        transition: background 0.2s ease, transform 0.1s ease !important;
-    }
-
-    .pos-sale-create__finalize-btn:hover {
-        background: var(--pos-accent-hover) !important;
-    }
-
-    .pos-sale-create__finalize-btn:active {
-        transform: scale(0.98);
-    }
-
-    /* Barre checkout fixe (référence) — visible si panier non vide */
+    /* Barre checkout fixe */
     .pos-sale-create__mobile-checkout {
         display: flex;
         align-items: center;
@@ -284,7 +237,7 @@
         font-size: 1rem;
         font-weight: 600;
         box-shadow: 0 -4px 20px rgba(13, 148, 136, 0.4);
-        transition: background 0.2s ease;
+        touch-action: manipulation;
     }
 
     .pos-sale-create__mobile-checkout:active {
@@ -295,27 +248,49 @@
         opacity: 0.55;
     }
 
-    .pos-sale-create--has-cart .pos-sale-create__cart-footer .pos-sale-create__finalize-btn,
-    .pos-sale-create--has-cart .pos-sale-create__total-box {
+    /* Modal paiement — bottom sheet plein écran */
+    .pos-sale-create__payment-overlay {
+        padding: 0 !important;
+    }
+
+    .pos-sale-create__payment-modal {
+        max-height: min(96dvh, 100%) !important;
+        border-radius: 1rem 1rem 0 0 !important;
+    }
+
+    .pos-sale-create__payment-body {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .pos-sale-create__payment-body .grid.grid-cols-3 button {
+        min-height: 4.5rem;
+        touch-action: manipulation;
+    }
+
+    .pos-sale-create__payment-footer-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .pos-sale-create__payment-footer-actions button {
+        min-height: 3rem;
+        width: 100%;
+    }
+
+    @media (min-width: 640px) {
+        .pos-sale-create__payment-footer-actions {
+            flex-direction: row;
+        }
+    }
+}
+
+@media (max-width: 639px) {
+    .pos-sale-create__header .pos-sale-create__sale-mode {
         display: none !important;
     }
 
-    .pos-sale-create--has-cart .pos-sale-create__cart {
-        padding-bottom: 4.25rem;
-    }
-
-    .pos-sale-create {
-        overflow-x: hidden;
-    }
-}
-
-/* Desktop : masquer la barre mobile */
-.pos-sale-create__mobile-checkout {
-    display: none;
-}
-
-@media (min-width: 768px) {
-    .pos-sale-create__mobile-checkout {
+    .pos-sale-create__recent {
         display: none !important;
     }
 }
