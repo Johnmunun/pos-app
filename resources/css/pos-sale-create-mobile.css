@@ -56,7 +56,10 @@
     }
 
     .pos-sale-create__header .pos-sale-create__hide-mobile,
-    .pos-sale-create__header .pos-sale-create__hide-tablet {
+    .pos-sale-create__header .pos-sale-create__hide-tablet,
+    .pos-sale-create__header .pos-sale-create__back-btn,
+    .pos-sale-create__header .pos-sale-create__scan-camera-btn,
+    .pos-sale-create__header .pos-sale-create__grid-btn {
         display: none !important;
     }
 

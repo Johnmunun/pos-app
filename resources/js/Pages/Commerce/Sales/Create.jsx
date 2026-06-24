@@ -1036,7 +1036,7 @@ export default function CommerceSalesCreate({
                                 variant="ghost"
                                 size="sm"
                                 asChild
-                                className="text-gray-600 dark:text-gray-300"
+                                className="pos-sale-create__back-btn text-gray-600 dark:text-gray-300"
                             >
                                 <Link href={route(`${routePrefix}.sales.index`)} className="inline-flex items-center gap-1.5">
                                     <ArrowLeft className="h-4 w-4 shrink-0" />
@@ -1157,14 +1157,14 @@ export default function CommerceSalesCreate({
                                         }}
                                     />
                                 </div>
-                                <PosSalesScanButton onClick={() => setScanModalOpen(true)} />
+                                <PosSalesScanButton onClick={() => setScanModalOpen(true)} className="pos-sale-create__scan-camera-btn" />
                             </div>
 
                             <Button
                                 type="button"
                                 variant="outline"
                                 size="icon"
-                                className="bg-blue-500 hover:bg-blue-600 text-white border-0"
+                                className="pos-sale-create__grid-btn bg-blue-500 hover:bg-blue-600 text-white border-0"
                             >
                                 <Grid3X3 className="h-4 w-4" />
                             </Button>
